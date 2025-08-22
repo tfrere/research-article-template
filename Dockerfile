@@ -12,7 +12,6 @@ RUN npm install
 
 # Copy the rest of the application code
 COPY app/ .
-COPY analysis/data ../analysis/data
 
 # Build the application
 RUN npm run build
