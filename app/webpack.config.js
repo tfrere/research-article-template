@@ -1,6 +1,7 @@
 const path = require("path");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
 
 const COLOR_KEYS = ["color", "bgColor", "fillcolor"];
@@ -51,8 +52,9 @@ module.exports = {
         main: "./src/index.js",
     },
     output: {
-        filename: "[name].bundle.js",
+        filename: "[name].[contenthash:8].bundle.js",
         path: path.resolve(__dirname, "dist"),
+        clean: true,
     },
     module: {
         rules: [
@@ -81,12 +83,28 @@ module.exports = {
                     to: "assets",
                 },
                 { from: "src/style.css", to: "style.css" },
-                { from: "src/bibliography.bib", to: "bibliography.bib" },
-                { from: "src/index.html", to: "index.html" }
+                { from: "src/bibliography.bib", to: "bibliography.bib" }
             ],
+        }),
+        new HtmlWebpackPlugin({
+            template: path.resolve(__dirname, "src/index.html"),
+            inject: "body",
+            minify: process.env.NODE_ENV === 'production' ? {
+                collapseWhitespace: true,
+                removeComments: true,
+                removeRedundantAttributes: true,
+                removeScriptTypeAttributes: true,
+                useShortDoctype: true,
+            } : false,
         }),
     ],
     devtool: process.env.NODE_ENV === 'production' ? 'source-map' : 'eval-source-map',
+    optimization: {
+        splitChunks: {
+            chunks: 'all',
+        },
+        runtimeChunk: 'single',
+    },
     devServer: {
         static: "./dist",
         open: process.env.NODE_ENV !== 'production',
