@@ -1,0 +1,428 @@
+/* style.css */
+/* Define colors */
+:root {
+    --distill-gray: rgb(107, 114, 128);
+    --distill-gray-light: rgb(185, 185, 185);
+    --distill-gray-lighter: rgb(228, 228, 228);
+    --distill-gray-lightest: rgb(245, 245, 245);
+    --distill-blue: #007BFF;
+}
+
+d-byline .byline {
+  grid-template-columns: 1fr;
+  grid-column: text;
+  font-size: 0.9rem;
+  line-height: 1.8em;
+}
+
+@media (min-width: 768px) {
+  d-byline .byline {
+    grid-template-columns: 5fr 1fr 1fr;
+  }
+}
+
+d-contents > nav a.active {
+    text-decoration: underline;
+}
+
+@media (max-width: 1199px) {
+    d-contents {
+        display: none;
+        justify-self: start;
+        align-self: start;
+        padding-bottom: 0.5em;
+        margin-bottom: 1em;
+        padding-left: 0.25em;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        border-bottom-width: 1px;
+        border-bottom-style: solid;
+        border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+}
+
+d-contents a:hover {
+    border-bottom: none;
+}
+
+
+@media (min-width: 1200px) {
+    d-article {
+        /* Ensure d-article does not prevent sticky positioning */
+        overflow: visible;
+    }
+
+    d-contents {
+        align-self: start;
+        grid-column-start: 1 !important;
+        grid-column-end: 4 !important;
+        grid-row: auto / span 6;
+        justify-self: end;
+        margin-top: 0em;
+        padding-right: 3em;
+        padding-left: 2em;
+        /*border-right: 1px solid rgba(0, 0, 0, 0.1);*/
+        /*border-right-width: 1px;*/
+        /*border-right-style: solid;*/
+        /*border-right-color: rgba(0, 0, 0, 0.1);*/
+        position: -webkit-sticky; /* For Safari */
+        position: sticky;
+        top: 10px; /* Adjust this value if needed */
+        z-index: -1;
+    }
+}
+
+d-contents nav h3 {
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+d-contents nav div {
+    color: rgba(0, 0, 0, 0.8);
+    font-weight: bold;
+}
+
+d-contents nav a {
+    color: rgba(0, 0, 0, 0.8);
+    border-bottom: none;
+    text-decoration: none;
+}
+
+d-contents li {
+    list-style-type: none;
+}
+
+d-contents ul, d-article d-contents ul {
+    padding-left: 1em;
+}
+
+d-contents nav ul li {
+    margin-bottom: .25em;
+}
+
+d-contents nav a:hover {
+    text-decoration: underline solid rgba(0, 0, 0, 0.6);
+}
+
+d-contents nav ul {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+
+
+d-contents nav > div {
+    display: block;
+    outline: none;
+    margin-bottom: 0.5em;
+}
+
+d-contents nav > div > a {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+d-article aside {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    d-article aside {
+        display: block;
+        height: 0px;
+        overflow: visible;
+        margin-bottom: 1em;
+        z-index: 1000;
+    }
+}
+
+@media (min-width: 768px) {
+    d-article aside {
+        margin-bottom: 0;
+    }
+}
+
+d-contents nav > div > a:hover,
+d-contents nav > ul > li > a:hover {
+    text-decoration: none;
+}
+
+
+/* Controlls for Plotting Applet */
+.controls {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.controls select {
+  padding: 2px 4px;
+  line-height: 1.5em;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 0.7em;
+  background-color: var(--distill-gray-lightest);
+  outline: none;
+}
+
+.controls label {
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+
+/* Specific style for the task dropdown */
+#task {
+  max-width: 180px;
+}
+
+.controls select option {
+  max-width: 300px;
+  overflow: visible;
+}
+
+.task-signal-plot {
+  width: 100%;
+  max-width: 500px; /* Adjust this value as needed */
+  margin: 0 auto;
+}
+
+
+.stats-container {
+  margin-bottom: 5px;
+}
+.compact-stats {
+  display: grid;
+  place-items: center;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  font-weight: bold;
+  font-size: 12px;
+}
+.compact-stats-single {
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.fine-tasks-controls,
+.leaderboard-controls {
+  margin-bottom: 20px;
+}
+
+.fine-tasks-table-wrapper {
+  margin-top: 20px;
+}
+
+.fine-tasks-results-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed; /* This ensures that the table respects column widths */
+}
+
+.fine-tasks-results-table th,
+.fine-tasks-results-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fine-tasks-results-table th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+.fine-tasks-results-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.fine-tasks-results-table tr:nth-child(odd) {
+  background-color: #fff;
+}
+
+.fine-tasks-results-table tr:hover {
+  background-color: #ddd;
+}
+
+/* Remove the horizontal line above the pagination */
+.fine-tasks-table-wrapper .datatable-bottom {
+  border-top: none;
+}
+
+/* Hide the "Showing X to Y of Z entries" text */
+.fine-tasks-table-wrapper .datatable-info {
+  display: none;
+}
+
+.fine-tasks-title {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.fine-tasks-results-table td[title] {
+  cursor: help;
+}
+
+.leaderboard-title {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+
+.leaderboard-results-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.leaderboard-results-table th,
+.leaderboard-results-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-results-table th:first-child,
+.leaderboard-results-table td:first-child {
+  width: 50px; /* For the rank column */
+}
+
+.leaderboard-results-table th:nth-child(2),
+.leaderboard-results-table td:nth-child(2) {
+  width: 200px; /* For the model name column */
+}
+
+.leaderboard-results-table th:nth-child(3),
+.leaderboard-results-table td:nth-child(3) {
+  width: 100px; /* For the macro score column */
+}
+
+.leaderboard-results-table th:nth-child(4),
+.leaderboard-results-table td:nth-child(4) {
+  width: 150px; /* For the extra column */
+}
+
+.leaderboard-results-table th {
+  background-color: #f9f9f9;
+  font-weight: bold;
+}
+
+.leaderboard-results-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.leaderboard-results-table tr:hover {
+  background-color: #ddd;
+}
+
+/* Remove the horizontal line above the pagination */
+.leaderboard-table-wrapper .datatable-bottom {
+  border-top: none;
+}
+
+/* Hide the "Showing X to Y of Z entries" text */
+.leaderboard-table-wrapper .datatable-info {
+  display: none;
+}
+
+.leaderboard-results-table td[title] {
+  cursor: help;
+}
+
+/* Tooltip styles */
+.leaderboard-results-table td[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background-color: #f9f9f9;
+  color: #000;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  z-index: 1000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.table-caption {
+  text-align: center;
+  margin-bottom: 10px;
+  font-style: italic;
+  color: #666;
+  width: 100%; /* Ensure the figcaption takes full width */
+  display: block; /* Make it a block element */
+}
+
+html, body {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* for smoother scrolling on iOS */
+}
+
+.main-container {
+    -webkit-overflow-scrolling: touch;
+}
+
+body {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Changelog styles */
+
+.changelog-container {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.changelog-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Increased space between arrow and label */
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.changelog-header:hover {
+  background-color: #ebebeb;
+}
+
+.changelog-arrow {
+  font-size: 12px;
+  color: #666;
+}
+
+.changelog-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.changelog-content {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  line-height: 1.4;
+  white-space: pre-line;
+}

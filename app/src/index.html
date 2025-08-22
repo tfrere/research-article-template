@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="distill.bundle.js" type="module" fetchpriority="high" blocking></script>
+    <script src="main.bundle.js" type="module" fetchpriority="low" defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf8">
+    <base target="_blank">
+    <title>Scaling FineWeb to 1000+ languages: Step 1: finding signal in 100s of evaluation tasks</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<d-front-matter>
+    <script id='distill-front-matter' type="text/json">{
+    "title": "📝 Scaling FineWeb to 1000+ languages: Step 1: finding signal in 100s of evaluation tasks",
+    "description": "This blog covers a discussion on multilingual evaluation and task signal, the processes for selecting existing evaluation tasks based on signal resulting in FineTasks, and comparisson of open and closed sourced on the FineTasks.",
+    "published": "Oct 23, 2024",
+    "affiliation": {"name": "HuggingFace"},
+    "authors": [
+      {
+        "author":"Hynek Kydlíček",
+        "authorURL":"https://huggingface.co/hynky"
+      },
+      {
+        "author":"Guilherme Penedo",
+        "authorURL":"https://huggingface.co/guipenedo"
+      },
+      {
+        "author":"Clémentine Fourier",
+        "authorURL":"https://huggingface.co/clefourrier"
+      },
+      {
+        "author":"Nathan Habib",
+        "authorURL":"https://huggingface.co/SaylorTwift"
+      },
+      {
+        "author":"Thomas Wolf",
+        "authorURL":"https://huggingface.co/thomwolf"
+      }
+    ]
+    }</script>
+</d-front-matter>
+
+<d-title>
+    <h1 class="l-page" style="text-align: center; display: none;">📝 Scaling FineWeb to 1000+ languages: Step 1: finding signal in 100s of evaluation tasks</h1>
+    <div id="title-plot" class="main-plot-container l-page">
+        <figure>
+            <img src="assets/images/banner.png" alt="FineTasks">
+        </figure>
+    </div>
+</d-title>
+<d-byline></d-byline>
+<d-article>
+    <d-contents>
+    </d-contents>
+
+    <p>Following the strong community reception of our FineWeb English dataset<d-cite key="penedo2024finewebdatasetsdecantingweb"></d-cite>, we have been hard at work on a <b>multilingual version</b>, which will cover 1000+ languages (that we hope to release <em>soon</em>!).</p>
+
+    <p>However, we quickly encountered a significant challenge: how can one effectively evaluate models across different languages during training?</p>
+
+    <p>For English, it's straightforward: we can utilize well-established benchmarks like <b>MMLU</b><d-cite key="hendryckstest2021"></d-cite> or <b>HellaSwag</b><d-cite key="zellers2019hellaswag"></d-cite>, widely used by most labs and implemented in all the major evaluation frameworks. Unfortunately, non-English tasks are often scarce and lack broader community validation and, when available, are frequently of questionable quality: many are machine-translated and may even include English words in their formulations. Additionally, they are often unsuitable for early pre-training evaluation due to suboptimal task formulations and/or too high difficulty resulting in random scores.</p>
+
+    <p>To address these challenges, we developed a <b>scalable and data-driven framework</b> for evaluation task selection, which allows anyone to choose strong model evaluations for their language from existing tasks! We then applied this framework to a set of <b>9 diverse languages</b>, resulting in the creation of <b>FineTasks</b> - a comprehensive and diverse multilingual evaluation suite.</p>
+
+    <p>In this blog post, we discuss:</p>
+    <ol>
+        <li>Our <b>data-driven process</b> to create a multilingual evaluation suite: <b>FineTasks</b></li>
+        <li>Results of evaluating <b>35 major open and closed-source models</b> on FineTasks</li>
+        <li>A guide for extending FineTasks to your <b>target language</b></li>
+    </ol>
+
+
+    <h2>What Makes a Task "Fine"?</h2>
+    <p>Covering all 7000+ languages spoken over the world would be monumental endeavor, so we settled on using <b>9 languages</b> that offered diversity in script, language family and resource availability: <b>Chinese, French, Arabic, Russian, Thai, Hindi, Turkish, Swahili, and Telugu</b>.</p>
+            <p>For these languages, we collected all available tasks that we could find, implementing a total of <b>185 tasks across languages</b> in <a href="https://github.com/huggingface/lighteval">LightEval</a>, HuggingFace's model evaluation library.</p>
+
+    <p>Then, we began task selection with two primary goals: ensuring <b>evaluation diversity</b>, and making sure each task provided a <b>reliable signal</b> during pre-training.</p>
+
+    <p>For evaluation diversity, we aimed to assess a broad range of model capabilities, including:</p>
+    <ul>
+        <li><b>Reading comprehension (RC)</b>: Understanding provided context and answering questions based on it.</li>
+        <li><b>General knowledge (GK)</b>: Answering questions about facts from various fields without added context.</li>
+        <li><b>Natural Language Understanding (NLU)</b>: Comprehending the semantics of provided input.</li>
+        <li><b>Common-sense reasoning (RES)</b>: Demonstrating the ability to perform simple reasoning requiring embodied knowledge.</li>
+        <li><b>Generative tasks</b>: Ability to generate text in the target language without the "help" of multiple choice options.</li>
+    </ul>
+
+    <p>We consider that tasks provide a reliable signal if they provide a dependable score. This means the score should be above the random baseline, increase as training progresses, show low variability across different seeds, and provide consistent model ranking at each training step<d-footnote>For similar sized models trained with the same hyperparameters on the same amount of data.</d-footnote>.</p>
+
+    <h3>Finding how much signal our tasks give during pre-training</h3>
+    <p>To thoroughly examine the signal our tasks provide, we trained many 1.5B parameter models for each language, using 30B tokens from subsets of the supported languages of the five largest openly available multilingual web datasets. These models were trained with the same hyperparameters and tokenizer. We then evaluated them at regular checkpoint intervals on the collected tasks (with no instruction and no system prompt in a 0-shot setting).</p>
+
+    <p>This process required multiple evaluation runs for each task due to iterations on its implementation, resulting in a total of <b>73 000 GPU hours consumed</b> 🔥!</p>
+
+    <p>With <b>49 models trained</b> we could finally define what a <b>reliable signal</b> means to us!</p>
+
+    <h4>Monotonicity</h4>
+    <p>One of our core requirements for a task is that it can be learned from training data and this <b>learning can be gradually observed as the training progresses</b>. Without this improvement through time, it's uncertain whether there will ever be an improvement in the future.</p>
+
+    <p>To measure this, we used the <b>Spearman rank correlation</b> to quantify the correlation between steps and score. Spearman rank correlation can capture monotonicity even when scores don't evolve linearly with the number of steps. We required each task to have at least an average correlation of 0.5 over all model training runs.</p>
+
+
+    <div style="display: flex; grid-column: middle">
+        <div class="task-signal-plot" data-language="French" data-task="mlmm_hellaswag_fra_cf" data-show-controls="false" data-task-metrics="monotonicity" data-metric="acc_norm_token" data-group-seeds="true" data-title="✅ Good monotonicity: mlmm_hellaswag_fra_cf [fr]"></div>
+        <div class="task-signal-plot" data-language="Arabic" data-task="mlmm_truthfulqa_ara_cf:mc1" data-show-controls="false" data-task-metrics="monotonicity" data-metric="acc_norm_token" data-group-seeds="true" data-title="❌ Bad monotonicity: mlmm_truthfulqa_ara_cf:mc1 [ar]"></div>
+    </div>
+
+    <h4>Low noise</h4>
+    <p>When comparing model performance on tasks, we need to consider whether differences are due to <b>evaluation noise or genuine performance variations</b>.</p>
+
+    <p>Noise can arise from the stochastic processes involved in model training, such as random token sampling, data shuffling, or model initialization.<d-cite key="madaan2024quantifyingvarianceevaluationbenchmarks"></d-cite> To measure how sensitive each task is to this noise, we trained four additional models on our own monolingual corpora (unfiltered CommonCrawl data in each language) using different seeds.</p>
+
+    <p>For each task, we computed:</p>
+    <ol>
+        <li>First, a <b></b>standard deviation of model scores for every step (approximately every 1B tokens), which we call the <b>per-step-std</b>.</li>
+        <li>Then, to obtain a global variability measurement, we averaged all the per-step-std values to get the <b>avg-std</b> over the full training. We assume this value is an upper-bound across model architectures and training datasets (as it was approximated by models trained on a "dirtier" dataset, therefore with higher variability).</li>
+        <li>Finally, we computed the <b>signal-to-noise ratio</b> (SNR) as the main metric for task variability. We calculate SNR as the mean score at 30B tokens of all runs divided by the avg-std. This metric measures how significant the overall score is relative to the score variations (noise).</li>
+    </ol>
+
+    <p>We aimed for each task to have an SNR > 20. The only exception to this rule are generative tasks, which typically have relatively low SNR, but are still worth including as they provide insights into how the model behaves when prompted to generate unconstrained (without answer options). In a multilingual setting, this is particularly relevant as some models trained on multiple languages can exhibit high task scores but then suddenly reply in the wrong language for generative tasks!</p>
+
+    <div style="display: flex; grid-column: middle">
+        <div class="task-signal-plot" data-language="Telugu" data-task="xstory_cloze_tel_cf" data-show-controls="false" data-task-metrics="snr" data-metric="acc_norm_token" data-group-seeds="false" data-title="✅ Good SNR: xstory_cloze_tel_cf [te]"></div>
+        <div class="task-signal-plot" data-language="Telugu" data-task="tydiqa_tel" data-show-controls="false" data-task-metrics="snr" data-metric="acc_norm_token" data-group-seeds="false" data-title="❌ Bad SNR: tydiqa_tel [te]"></div>
+    </div>
+
+    <aside>Assuming model performance is normally distributed across different seeds, we want the benchmark-run performance to be at least 3 final-stds above the benchmark random baseline. This would mean that 99.85% of seed scores are above the random baseline (formally, benchmark-run performance - benchmark random baseline > 3 * final-std).</aside>
+    <h4>Non-Random Performance</h4>
+    <p>Many model capabilities are acquired later in training, thus <b>many tasks</b> (especially harder ones, such as math-related ones) <b>show baseline-level performance for an extended period</b>. While these tasks are useful, they're not ideal for early pre-training evaluation, and <b>we did not want to keep them</b> for this setting.</p>
+
+    <p>We first computed the baseline random performance of the task (as the sum of 1/n_choices for all samples for multiple choice questions, and as zero for generative evaluations). Then we calculated the task's distance from the baseline as the maximum score across all models minus the baseline.</p>
+
+
+    <div style="display: flex; grid-column: middle">
+        <div class="task-signal-plot" data-language="Chinese" data-task="agieval_zho_cf:_average" data-show-controls="false" data-task-metrics="randomness" data-metric="acc_norm_pmi" data-group-seeds="true" data-title="✅ Non-random: agieval_zho_cf/acc_pmi [zh]"></div>
+        <div class="task-signal-plot" data-language="Chinese" data-task="agieval_zho_cf:_average" data-show-controls="false" data-task-metrics="randomness" data-metric="acc" data-group-seeds="true" data-title="❌ Random perf: agieval_zho_cf/acc [zh]"></div>
+    </div>
+
+    <h4>Model Ordering Consistency</h4>
+    <p>Let's not forget that the main goal of these evaluations is to compare models and datasets!</p>
+
+    <p>In the future, we want to use these evaluations to select the best datasets for full model pretraining. This means <b>our tasks should rank datasets trained using very few tokens (we typically run data ablations on 30B tokens), in the same order as they would when trained for longer, after significantly more steps.</b></p>
+
+    <p>In other words, we would like tasks to have <b>predictive capability regarding future performance during pre-training</b>: if pre-training dataset A outperforms pre-training dataset B at 30 billion tokens, we would like this trend to continue at 300 billion tokens.</p>
+
+    <p>Proving this is inherently impossible, but there is a necessary preliminary condition that we can test for: for the results to be consistent at large scales, they must also first show consistency at smaller scales!</p>
+
+    <p>To measure this consistency in task ordering, we computed the average <b>Kendall's Tau</b> of models ranking between every two consecutive steps. We only considered steps starting after 15B tokens of pre-training, as we found orderings before the range incredibly noisy. A high value of this metric indicates that the ordering remains consistent as training progresses.</p>
+
+    <aside>We had no strict minimum value requirement for this property, instead using it to establish comparisons between tasks.</aside>
+
+    <div style="display: flex; grid-column: middle">
+        <div class="task-signal-plot" data-language="Arabic" data-task="xcsqa_ara_cf" data-show-controls="false" data-task-metrics="ordering" data-metric="acc_norm_token" data-group-seeds="true" data-title="✅ Good ordering: xcsqa_ara_cf [ar]"></div>
+        <div class="task-signal-plot" data-language="Thai" data-task="thai_exams_tha_cf:_average" data-show-controls="false" data-task-metrics="ordering" data-metric="acc_norm_token" data-group-seeds="true" data-title="❌ Bad ordering: thai_exams_tha_cf [th]"></div>
+    </div>
+
+
+    <h2>Important properties of evaluation impacting stability</h2>
+    <p>Now that we covered what we were looking for in our tasks, let's examine two important aspects that can affect the above properties: task formulations and metric choice.</p>
+
+    <aside>Both of these aspects are thoroughly described and studied in the brilliant OLMES paper<d-cite key="gu2024olmesstandardlanguagemodel"></d-cite>, which greatly inspired our work.</aside>
+
+    <h3>Task Formulations</h3>
+    <p>The way tasks are presented to the model is crucial, particularly for multiple-choice (MC) tasks. In these scenarios, we must carefully determine how the choices are displayed and what the model is expected to predict.</p>
+
+    <p>There are two common approaches: <b>Cloze Formulation</b> (CF) and <b>Multi-Choice Formulation</b> (MCF). In CF, choices are not provided in context, allowing the model to predict each option directly. In contrast, MCF presents the choices in the prompt, using A/B/C/D prefixes, with the targets being those letter prefixes.</p>
+
+    <!-- side-by-side comparison of MCF vs. CF on a specific task -->
+
+    <p>It's important to know that:</p>
+    <ul>
+        <li>The choice of formulation significantly impacts task scores <d-cite key="open-llm-leaderboard-v2"></d-cite>.</li>
+        <li>Both formulations <b>behave very differently during training</b>. As noted by both OLMES<d-cite key="gu2024olmesstandardlanguagemodel"></d-cite> and DataComp-LM<d-cite key="li2024datacomplmsearchgenerationtraining"></d-cite>, when employing MCF, task scores initially show random performance over extended training periods before experiencing a sudden increase. Conversely, with CF, task scores improve right from the beginning but tend to plateau relatively early.</li>
+    </ul>
+
+    <p>Therefore, we decided to utilize CF for task selection and MCF for later evaluation of major open source models, as they have generally undergone enough training for these evaluations to have a signal.</p>
+
+    <h3>Metrics</h3>
+    <p>As the targets in CF of multiple choice tasks are choices themselves, each target can have a different number of tokens, characters, and unconditional probability (probability of generating the choice without a context prefix).</p>
+    <aside>Measuring accuracy without normalization would have the models prefer answers with fewer tokens, for example.</aside>
+
+    <p>To account for this, we consider the following accuracy variations:</p>
+    <ul>
+        <li><b>Accuracy</b> : <br>
+            <code>acc</code> = <d-math>\underset{i}{\arg\max}(ln(P (a_i|q)))</d-math></li>
+        <li><b>Accuracy normalized over character length</b> : <br>
+            <code>acc_char</code> = <d-math> \underset{i}{\arg\max}\frac{ln(P (a_i|q))}{num\_characters(a_i)}</d-math></li>
+        <li><b>Accuracy normalized over token length</b> :<br>
+            <code>acc_token</code> = <d-math> \underset{i}{\arg\max}\frac{ln(P (a_i|q))}{num\_tokens(a_i)}</d-math></li>
+        <li><b>PMI Accuracy</b> : <br>
+            <code>acc_pmi</code> = <d-math> \underset{i}{\arg\max}ln\frac{P (a_i|q)}{P (a_i|u)}</d-math>, where <d-math>u =</d-math>''Answer:''</li>
+    </ul>
+
+    <p>Where <d-math>a_i</d-math> is the answer choice <d-math>i</d-math>, <d-math>q</d-math> is a question prompt and <d-math>P (a_i|q)</d-math> is the probability of having <d-math>a_i</d-math> follow <d-math>q</d-math>. For more details see <d-cite key="gu2024olmesstandardlanguagemodel"></d-cite> and <d-cite key="biderman2024lessonstrenchesreproducibleevaluation"></d-cite>.</p>
+
+    <aside><code>acc_pmi</code> metric measures how much more likely a model is to predict A_i if provided with question context compared to if there was no context at all. This can be useful if the correct choice contains generally unlikely tokens, making the model less likely to choose such an answer.</aside>
+
+    <p>For our generative tasks on the other hand, we used the following metrics:</p>
+    <ul>
+        <li><code>prefix_match</code>: Exact match where only the prefix of the answer must match</li>
+        <li><code>f1</code>: F1 score computed over predicted/gold words extracted using a word tokenizer</li>
+    </ul>
+
+    <p>For both generative metrics, minor preprocessing is applied to remove articles and punctuation, and lowercase the text.</p>
+
+    <h2>The Fine selection</h2>
+    <p>With our goals and evaluation setup properly defined, we proceeded with <b>task selection</b>!</p>
+
+    <p>We reviewed tasks one by one, choosing based on the quantified properties. For each language, we aimed to have at least one task for each of the four categories outlined above. Additionally we wanted to have at least 1 generative task for each language.</p>
+
+    <p>In cases where multiple versions of a task existed (e.g., MMLU with different translation methods or native versions), we <b>prioritized native versions</b> as long as their metrics were reasonable, followed by human translations of English tasks. If no such version was available, we made our selection entirely based on metrics.</p>
+
+    <p>Thus, <b>after removing about half of the tasks</b>, we arrived at <b>96 final ones</b>, forming "FineTasks."</p>
+
+    <h3>Explore tasks</h3>
+    <p>Use the dropdowns below to navigate the list of tasks and how different metrics affect them.</p>
+    <div id="fine-tasks-results"></div>
+
+    <p>All tasks from the selection <b>comply with the criteria</b> outlined in previous sections, with the only exception being indicqa_tel, which we chose to include to ensure we had at least one generative task for Telugu. Overall we managed to cover all task categories for each language (the only exception being Thai Reasoning, where all tasks were unfortunately too noisy with low monotonicity to consider them).</p>
+
+    <p>One of the <b>biggest surprises</b> was that some tasks, even when translated using the same method, were <b>reliable in one language but not in others</b>. This was evident with xWinograd, which worked quite well for Russian but did not meet our conditions for French. An even more extreme example was XNLI, which performed well for 6 out of 7 languages, failing to satisfy the reliability properties for Chinese. We had to test four different implementations before finding a reliable version, which, interestingly, was the only one that was created by native speakers and not machine translated.</p>
+
+    <p>Feel free to use the dropdowns below to explore the evolution of scores over training for all tested tasks and metrics.</p>
+    <div class="task-signal-plot" data-language="French" data-task="frenchbench_hellaswag_fra_cf" data-show-controls="true" data-metric="acc_norm_token" data-group-seeds="true" data-title=""></div>
+
+
+    <h3>Metrics recommendation</h3>
+    <p>Selecting the best evaluation metrics proved to be a <b>challenging task</b>. Not only is there no single metric that consistently outperforms the rest, but we often encountered situations where one metric had better monotonicity while another had a higher signal-to-noise ratio. In such cases, we typically made our decision based on the selected metric for tasks' implementation in a different language. We are aware that such hand-picking is often not possible and thus offer the following recommendations:</p>
+
+    <h4>Multichoice Tasks</h4>
+    <ul>
+        <li>We found <b>base accuracy</b> to perform well for tasks with answer options varying subtly (e.g. Yes/No/Also), particularly NLI tasks. In such cases, where the answer options are often each a single token, the base accuracy is advisable to use.</li>
+        <li>While OLMES<d-cite key="gu2024olmesstandardlanguagemodel"></d-cite> recommends using PMI for tasks with unusual words, we found <b>PMI</b> to be highly effective for "difficult" reasoning and knowledge tasks like AGIEVAL or MMLU. In these cases, PMI provided the best results and was often the only metric delivering performance above random. That said, PMI was, on average, the weakest metric across all other tasks, while also being two times more expensive to compute. We therefore only recommend its use for complex reasoning and knowledge tasks.</li>
+        <li>The metrics we found to be <b>most reliable overall</b> were length normalization metrics (token or character-based). However, the best choice was dependent on language, rather than being consistent for a given task. Due to that, we recommend using the maximum of acc_char and acc_token for the most reliable results.<d-footnote>Note that acc_token is heavily tokenizer dependent. On our ablations all models were trained using the same tokenizer.</d-footnote></li>
+    </ul>
+
+    <h4>Generative Tasks</h4>
+    <p>For <b>generative metrics</b>, the choice is clearer: we suggest using the F1 score unless exact matching is required, as in math-related tasks. F1 is generally less noisy and more resilient to small changes in the generations.</p>
+
+
+    <h2>Open/Closed Source models tackle FineTasks</h2>
+    <p>Since we spent a lot of time and compute on task selection, we were interested in how well major <b>open-source</b> models would do on FineTasks. Given that our evaluation suite primarily targets pretrained models, we focused on these, with a few exceptions for models that don't offer a base (pretrained) version. These exceptions were included mainly out of curiosity, and their results should be interpreted with <b>caution</b>. Such models may significantly outperform other models due to the inclusion of supervised fine-tuning (SFT) data.</p>
+
+    <p>To assess the multilingual performance disparity between open-source and closed-source models, we expanded our selection by adding a closed source model: <b>gpt-4o-mini</b>.</p>
+
+    <p>As outlined in the task formulations, we are using MCF for this evaluation and employing a 5-shot approach, as recommended by OLMES<d-cite key="gu2024olmesstandardlanguagemodel"></d-cite> (and made possible by the large context size of the models).</p>
+
+    <h3>Computing a global "multilingual" score</h3>
+    <p>In the previous sections, we treated each task independently. However, to determine an overall "multilingual" score of a model, we need to <b>aggregate</b> the results from these tasks. We begin by <b>rescaling</b> the individual task scores in line with the OpenLLM leaderboard <d-cite key="open-llm-leaderboard-v2"></d-cite>. Then, we <b>average the scores</b> across task types (GK, RES, etc) for each language separately. To compute the score for each language, we take the average of the task type scores.<d-footnote>We first average by task type to properly measure all model capabilities without letting a single category dominate.</d-footnote></p>
+
+    <p>For the final global "multilingual" score we followed a different approach. Instead of averaging the language scores directly, we <b>ranked the model's performance across languages</b> in comparison to other models and then averaged those rank scores. This method ensures that the result reflects the overall model's performance across all languages, preventing an exceptionally high score in one language from skewing the final outcome.</p>
+
+    <h3>FineTasks Results</h3>
+    <p>After spending <b>even more compute</b> 🔥 on evaluating the selected models, we gathered the results in the following table. Here are our insights:</p>
+
+    <div id="leaderboard-results" class="l-middle" data-caption="Chat models are indicated by 💬 while 🟢 indicates a base model.">
+    </div>
+
+    <h4>Qwen family of models takes both top spots!</h4>
+    <p>The Qwen models <b>perform exceptionally well</b>, taking both first and second place with their 72B and 32B versions. Their key strength appears to be in handling high- and mid-resource languages (particularly Chinese), where they consistently ranked first. However, they <b>struggled with lower-resource languages</b>, especially Swahili and Telugu, where their performance lagged.</p>
+
+    <h4>General Knowledge: The curse of monolingual models</h4>
+    <p>The most surprising finding from our evaluation is how models explicitly trained to specialize in a <b>narrow set of languages</b> — like Sarvam-2B-v0.5 for Telugu, or Typhoon-v1.5-8B for Thai — tend to <b>perform exceptionally well on generative tasks</b>, while <b>falling short when it comes to reasoning</b> and general knowledge (GK) tasks, oftentimes getting close to random performance. We hypothesize two explanations: The models haven't undergone extensive enough training to be able to understand the MCF format or the higher exposure to various languages and especially English allows the non-specialized models to perform better at such GK/RES tasks. We note that good generative task performance reveals a good understanding of the target language.</p>
+
+    <p>The only <b>exceptions to this rule</b> are typhoon-v1.5-72b and Yi-1.5-34B, both tackling the RES/GK tasks well and managing to rank in the top 4 for their respective languages. We note that typhoon-v1.5-72b is based on Qwen models, and that Yi also included English in its training data.</p>
+
+    <h4>A lower resource winner: Gemma-2</h4>
+    <p>Although it didn't take first place, Gemma2 performed really well in the multilingual domain, especially <b>considering its size</b>. It showed consistent results across all the languages we tested, <b>excelling in low-resource languages</b> like Telugu and Swahili. For anyone working with low-resource languages, we highly recommend Gemma-2 as a strong option.</p>
+
+    <h4>Is there even a gap between open and closed source models?</h4>
+    <p>As mentioned in the beginning, comparing closed-source models requires extra caution. These models often undergo extensive supervised fine-tuning (SFT), employ highly optimized prompting techniques, and may even generate multiple responses and select the best one. <b>Despite these advantages, the o4-mini ranks only just above the medium-sized 27B Gemma-2.</b> Based on this evidence, <b>we believe that the gap between open-source and closed-source models is very narrow, if not entirely negligible.</b></p>
+
+    <h3>Evaluating on FineTasks</h3>
+    <p>If you would like to evaluate your models on FineTasks and expand the above table we made it easy for you. Simply run the following command with your model of choice:</p>
+
+    <pre><code>lighteval accelerate\
+    --model_args vllm,pretrained=model_name,pairwise_tokenization=True \
+    --custom_task lighteval.tasks.multilingual.tasks \
+    --tasks 'examples/tasks/finetasks/{cf,mcf}/{ara,fra,rus,tur,swa,hin,tel,tha,zho}' \
+    --max_samples '1000'</code></pre>
+
+    <h2>Can we cover all the languages of the world together?</h2>
+    <p>FineTasks is <b>just the beginning</b> of our multilingual journey. As a first step in the creation of the <b>future FineWeb multilingual release</b>, we are using this evaluation setup to curate a high quality pretraining dataset covering a large number of languages. You can expect more news from us soon! We plan to also continue working to make evaluation in non-English domains as seamless as it is in English—and <b>we need your help to achieve that</b>!</p>
+
+    <p>LightEval now supports <b>over 550 tasks</b> across various non-English languages, making it the evaluation framework with the best multilingual coverage available. However, there's still much more to do. For many languages, no tasks exist yet, despite our ongoing work. This is where we believe <b>the strong Hugging Face community can make a difference</b>.</p>
+
+    <p>We've made it  <a href="https://github.com/huggingface/lighteval/wiki/Contributing-to-multilingual-evaluations"><b>incredibly easy</b> to contribute new tasks</a>, by developing a templating system which supports most of the popular task types, while maintaining authenticity of native language use, right down to correct punctuation. Even if you aren't able to contribute full evaluation tasks, you can still help. Many languages currently <b>lack translations</b> for anchor words used in evaluation, leaving hundreds of tasks unusable. You can help fill this gap by adding them following <a href="https://github.com/huggingface/lighteval/wiki/Contributing-to-multilingual-evaluations">our mini guide</a>.</p>
+
+    <p>We're looking forward to revisiting this analysis in the future, not with just 9 languages, but at least 50—thanks to community contributions! Let's level the playing field between English and other languages together! 🤗</p>
+</d-article>
+
+<d-appendix>
+    <d-bibliography src="bibliography.bib"></d-bibliography>
+    <style>
+      d-appendix .citation {
+        font-size: 11px;
+        line-height: 15px;
+        border-left: 1px solid rgba(0, 0, 0, 0.1);
+        padding-left: 18px;
+        border: 1px solid rgba(0,0,0,0.1);
+        background: rgba(0, 0, 0, 0.02);
+        padding: 10px 18px;
+        border-radius: 3px;
+        color: rgba(150, 150, 150, 1);
+        overflow: hidden;
+        margin-top: -12px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+    </style>
+
+    <h3 id="citation">Citation</h3>
+    <p>For attribution in academic contexts, please cite this work as</p>
+    <pre class="citation short">Kydlicek, et al., "FineTasks: Finding signal in a haystack of 200+ multilingual tasks", 2024.</pre>
+    <p>BibTeX citation</p>
+    <pre class="citation long">@misc{kydlicek2024finetasksmultilingualtasks,
+      title={FineTasks: Finding signal in a haystack of 200+ multilingual tasks},
+      author={Hynek Kydlíček and Guilherme Penedo and Clémentine Fourier and Nathan Habib and Thomas Wolf},
+      url={https://huggingface.co/spaces/HuggingFaceFW/blogpost-fine-tasks},
+}</pre>
+</d-appendix>
+
+<script>
+    const article = document.querySelector('d-article');
+    const toc = document.querySelector('d-contents');
+    if (toc) {
+        const headings = article.querySelectorAll('h2, h3, h4');
+        let ToC = `<nav role="navigation" class="l-text figcaption"><h3>Table of contents</h3>`;
+        let prevLevel = 0;
+
+        for (const el of headings) {
+            // should element be included in TOC?
+            const isInTitle = el.parentElement.tagName == 'D-TITLE';
+            const isException = el.getAttribute('no-toc');
+            if (isInTitle || isException) continue;
+            el.setAttribute('id', el.textContent.toLowerCase().replaceAll(" ", "_"))
+            const link = '<a target="_self" href="' + '#' + el.getAttribute('id') + '">' + el.textContent + '</a>';
+
+            const level = el.tagName === 'H2' ? 0 : (el.tagName === 'H3' ? 1 : 2);
+            while (prevLevel < level) {
+                ToC += '<ul>'
+                prevLevel++;
+            }
+            while (prevLevel > level) {
+                ToC += '</ul>'
+                prevLevel--;
+            }
+            if (level === 0)
+                ToC += '<div>' + link + '</div>';
+            else
+                ToC += '<li>' + link + '</li>';
+        }
+
+        while (prevLevel > 0) {
+            ToC += '</ul>'
+            prevLevel--;
+        }
+        ToC += '</nav>';
+        toc.innerHTML = ToC;
+        toc.setAttribute('prerendered', 'true');
+        const toc_links = document.querySelectorAll('d-contents > nav a');
+
+        window.addEventListener('scroll', (_event) => {
+            if (typeof (headings) != 'undefined' && headings != null && typeof (toc_links) != 'undefined' && toc_links != null) {
+                // Then iterate forwards, on the first match highlight it and break
+                find_active: {
+                    for (let i = headings.length - 1; i >= 0; i--) {
+                        if (headings[i].getBoundingClientRect().top - 50 <= 0) {
+                            if (!toc_links[i].classList.contains("active")) {
+                                toc_links.forEach((link, _index) => {
+                                    link.classList.remove("active");
+                                });
+                                toc_links[i].classList.add('active');
+                            }
+                            break find_active;
+                        }
+                    }
+                    toc_links.forEach((link, _index) => {
+                        link.classList.remove("active");
+                    });
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
