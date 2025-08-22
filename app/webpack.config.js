@@ -82,14 +82,7 @@ module.exports = {
                 },
                 { from: "src/style.css", to: "style.css" },
                 { from: "src/bibliography.bib", to: "bibliography.bib" },
-                { from: "src/index.html", to: "index.html" },
-                { 
-                    from: "../analysis/data",
-                    to: "data",
-                    globOptions: {
-                        ignore: ["**/*.json"],
-                    },
-                },
+                { from: "src/index.html", to: "index.html" }
             ],
         }),
     ],
