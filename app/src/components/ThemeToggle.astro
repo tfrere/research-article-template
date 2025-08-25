@@ -15,7 +15,7 @@ import moonIconUrl from "../assets/images/moon.svg?url";
       document.documentElement.dataset.theme = mode;
     };
 
-    // Initial mode: localStorage overrides system preference
+    // Initial mode: default to light, then use localStorage, else system
     apply(saved || (prefersDark ? 'dark' : 'light'));
 
     // If user hasn't chosen manually, follow system changes

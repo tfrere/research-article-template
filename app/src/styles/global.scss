@@ -1,6 +1,8 @@
-@import "./components/variables";
-@import "./components/base";
-@import "./components/layout";
+@use "./variables" as *;
+@use "./base" as *;
+@use "./layout" as *;
+@use "./components/footer" as *;
+
 /* Dark-mode form tweak */
 [data-theme="dark"] .plotly_input_container > select { background-color: #1a1f27; border-color: var(--border-color); color: var(--text-color); }
 
@@ -11,29 +13,6 @@
 [data-theme="dark"] .distill-footer { border-top-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .citation-text,
 [data-theme="dark"] .citation-bibtex { background: #12151b; border-color: rgba(255,255,255,.15); color: var(--text-color); }
-
-
-.margin-aside { position: relative; margin: 12px 0; }
-
-.margin-aside__main { /* main text stays full width of the main column */ }
-.margin-aside__aside {
-  position: absolute;
-  top: 0;
-  right: -260px; /* push into the right grid column (width 260 + gap 32) */
-  width: 260px;
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 0.9rem;
-  color: var(--muted-color);
-}
-@media (max-width: 1100px) {
-  .margin-aside__aside {
-    position: static;
-    width: auto;
-    margin-top: 8px;
-  }
-}
-
 
 /* Opt-in zoomable images */
 img[data-zoomable] { cursor: zoom-in; }
@@ -110,3 +89,4 @@ img[data-zoomable] { cursor: zoom-in; }
 [data-theme="dark"] #theme-toggle .icon.light { display: none; }
 [data-theme="dark"] #theme-toggle .icon.dark { display: inline; }
 [data-theme="dark"] #theme-toggle .icon { filter: invert(1) brightness(1.2); }
+

@@ -14,27 +14,30 @@ ogImage: "https://example.com/your-og-image.png"
 ---
 
 import HtmlFragment from "../components/HtmlFragment.astro";
+import Wide from "../components/Wide.astro";
+import FullBleed from "../components/FullBleed.astro";
 import { Image } from 'astro:assets';
 import placeholder from "../assets/images/placeholder.jpg";
 import audioDemo from "../assets/audio/audio-example.wav";
 import Aside from "../components/Aside.astro";
 import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
-
 <Aside>
-  Welcome to this single-page research article template built with Astro and MDX.
-  It’s designed to help you write clear, modern, and interactive technical articles with minimal setup.
+  Welcome to this single-page research article template built with **Astro** and **MDX**.
+  It’s designed to help you write clear, modern, and **interactive** technical articles with **minimal setup**.
   Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
   <Fragment slot="aside">
     Reading time: 10–15 minutes.
   </Fragment>
   In this guide, you’ll learn how to install the template,
   write content (math, citations, images, code, asides, interactive fragments),
-  customize styles and behavior, and follow a few best practices for publishing.
+  customize styles and behavior, and follow a few **best practices** for publishing.
   <Fragment slot="aside">
     If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/tfrere/science-blog-template/discussions?status=open&type=discussion">Community tab</a>!
   </Fragment>
 </Aside>
+
+Ce template est heavely inspired by distill.
 
 ## Features
 
@@ -55,32 +58,60 @@ import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
 ## Getting Started
 
-Installation:
+### Installation
 
 ```bash
+git lfs install
+git lfs pull
+cd app
 npm install
+```
+
+
+### Development
+
+```bash
 npm run dev
 ```
 
-Build for production:
+### Build
 
 ```bash
 npm run build
 ```
 
-Deployment: serve the `dist/` directory on any static host. A Docker/Nginx setup is included and works well on Spaces or similar environments.
+Serving the `dist/` directory on any static host is enough to deliver the site.
 
-Large assets: track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. This project is preconfigured to store such files via LFS.
+### Deploy
+
+The easiest way to get online is to clone [this Hugging Face Space](https://huggingface.co/spaces/tfrere/science-blog-template) and push your changes; every push triggers an automatic build and deploy.
+
+### Large files (Git LFS)
+
+Track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. This project is preconfigured to store such files via LFS.
+
 
 ## Writing Your Content
 
-Author content in MDX. Below are minimal examples for the core elements.
+### MDX
 
-### MDX: frontmatter and imports (minimal example)
+Author your content in MDX for a pleasant, productive writing flow that combines familiar Markdown with reusable components when needed.
+Below are minimal examples of the core elements.
+
+
+Don't forget to enable syntax highlighting for MDX to make your editing experience even smoother!
+
+```bash
+# For VS Code but alternatively, use the Extensions marketplace UI and search for "MDX" by unifiedjs.
+code --install-extension unifiedjs.vscode-mdx
+```
+
+
 
 The initial skeleton of this article looks like this:
 
 ```mdx
+{/* HEADER */}
 ---
 title: "The science template:\nCraft Beautiful Blogs"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
@@ -96,14 +127,14 @@ tags:
 ogImage: "https://example.com/your-og-image.png"
 ---
 
-import HtmlFragment from "../components/HtmlFragment.astro";
+{/* IMPORTS */}
 import { Image } from 'astro:assets';
+import Aside from "../components/Aside.astro";
+import HtmlFragment from "../components/HtmlFragment.astro";
 import placeholder from "../assets/images/placeholder.png";
 import audioDemo from "../assets/audio/audio-example.wav";
-import Aside from "../components/Aside.astro";
-import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
-
+{/* CONTENT */}
 <Aside>
   Welcome to this single-page research article template built with Astro and MDX.
   It’s designed to help you write clear, modern, and interactive technical articles with minimal setup.
@@ -122,20 +153,40 @@ import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
 ```
 
+It is composed of three parts:
+
+- **Header**: which contains the title and the article's metadata.
+- **Imports**: the imports of the different modules / images used in the article
+- **Content**: the content of the article
+
+**Available blocs**:
+
+<div className="tag-list">
+  <a className="tag" href="#math">Math</a>
+  <a className="tag" href="#images">Images</a>
+  <a className="tag" href="#code-blocks">Code</a>
+  <a className="tag" href="#citations-and-notes">Citations & notes</a>
+  <a className="tag" href="#asides">Asides</a>
+  <a className="tag" href="#minimal-table">Array</a>
+  <a className="tag" href="#audio">Audio</a>
+  <a className="tag" href="#interactive-fragments">Interactive fragments</a>
+  <a className="tag" href="#tracking-training-metrics-with-trackio">TrackIO</a>
+</div>
+
 ### Math
 
 Inline example: $x^2 + y^2 = z^2$.
 
-Block (scaled dot-product attention):
+Block example:
 
 $$
-\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right) V
+x^2 + y^2 = z^2
 $$
 
 ```mdx
-Inline: $x^2 + y^2 = z^2$
+Inline example: $x^2 + y^2 = z^2$
 
-Block:
+Block example:
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
@@ -146,6 +197,8 @@ $$
 Responsive images automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control lazy loading/decoding for better performance.
 
 **Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
+
+**Optional:** Figcaption and credits
 
 <figure>
   <Image
@@ -199,35 +252,6 @@ greet("Astro")
 ```
 ````
 
-
-### GitHub code embeds
-
-Finally, if you want to include code from GitHub you can use emgithub.com and, for example, create a collapsible widget like this:
-
-```html
-<details style="background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0;">
-  <summary style="padding: 12px; cursor: pointer; user-select: none; background: #f3f4f6; border-bottom: 1px solid #d0d7de;">
-    👉 Naive DP implementation with overlap in Picotron (Click to expand)
-  </summary>
-  <div class="code-embed-container" style="margin: 0; border-radius: 0; overflow-x: scroll; width: max-content; min-width: 100%; font-size: 8px;"></div>
-  <script 
-    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
-  </script>
-</details>
-```
-
-Which will display as follows:
-
-<details style="background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0;">
-  <summary style="padding: 12px; cursor: pointer; user-select: none; background: #f3f4f6; border-bottom: 1px solid #d0d7de;">
-    👉 Naive DP implementation with overlap in Picotron (Click to expand)
-  </summary>
-  <div class="code-embed-container" style="margin: 0; border-radius: 0; overflow-x: scroll; width: max-content; min-width: 100%; font-size: 8px;"></div>
-  <script 
-    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
-  </script>
-</details>
-
 ### Citations and notes
 
 Here are a few variations using the same bibliography:
@@ -251,20 +275,6 @@ Here are a few variations using the same bibliography:
 ```
 
 
-### Interactive fragments
-
-Plotly example (line):
-
-<div className="plot-card">
-  <HtmlFragment src="line.html" />
-</div>
-
-```mdx
-import HtmlFragment from '../components/HtmlFragment.astro'
-
-<HtmlFragment src="line.html" />
-```
-
 ### Asides
 
 <Aside>
@@ -282,6 +292,39 @@ import Aside from '../components/Aside.astro'
   <Fragment slot="aside">Short side note.</Fragment>
 </Aside>
 ```
+
+### Width helpers
+
+Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
+
+**Wide example**
+
+<Wide>
+  <div className="demo-wide">demo wide</div>
+</Wide>
+
+```mdx
+import Wide from '../components/Wide.astro'
+
+<Wide>
+  Your content here...
+</Wide>
+```
+
+**Full-bleed example**
+
+<FullBleed>
+  <div className="demo-full-bleed">demo full-bleed</div>
+</FullBleed>
+
+```mdx
+import FullBleed from '../components/FullBleed.astro'
+
+<FullBleed>
+  Your content here...
+</FullBleed>
+```
+
 
 ### Minimal table
 
@@ -311,19 +354,51 @@ import audioDemo from '../assets/audio/audio-example.wav'
 </audio>
 ```
 
-### Tracking training metrics with TrackIO
 
-TrackIO is a lightweight dashboard to monitor ML experiments. The embed below opens a demo project and shows a couple of metrics. You can customize the query parameters (`project`, `metrics`, `sidebar`) to fit your setup.
 
-<div style="margin-top: 8px;">
-  <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden" width="100%" height="600" frameborder="0"></iframe>
+### Embeds
+
+
+#### HtmlFragments
+
+The main purpose of the ```HtmlFragment``` component is to embed a plotly or d3 chart in your article. Libraries are already imported in the template.
+
+<div className="plot-card">
+  <HtmlFragment src="line.html" />
 </div>
+
+```mdx
+import HtmlFragment from '../components/HtmlFragment.astro'
+
+<HtmlFragment src="line.html" />
+
+```
+
+#### Iframes
+
+You can embed external content in your article using **iframes**. For example, TrackIO—a lightweight dashboard to monitor machine learning experiments—can be used this way. The example below opens a demo project and displays a couple of metrics. You can customize the query parameters (`project`, `metrics`, `sidebar`, etc.) to fit your needs.
+
+<iframe className="plot-card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
 
 To embed TrackIO in your own page, copy the following HTML and adjust the `src` parameters:
 
+#### GitHub code embeds
+
+Finally, if you want to include code from GitHub you can use emgithub.com and, for example, create a collapsible widget like this:
+
+
+  <div class="code-embed-container"></div>
+  <script 
+    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
+  </script>
+
 ```html
-<iframe src="https://org_name-space_name.hf.space/?project=fake-training&metrics=train_loss,train_accuracy&sidebar=hidden" width="100%" height="600" frameBorder="0"></iframe>
+  <div class="code-embed-container"></div>
+  <script 
+    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
+  </script>
 ```
+
 
 ## Best Practices
 

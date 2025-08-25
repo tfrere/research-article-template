@@ -31,3 +31,65 @@ main > nav:first-of-type { display: none; }
   .right-aside { display: none; }
   main > nav:first-of-type { display: block; }
 }
+
+
+
+.margin-aside { position: relative; margin: 12px 0; }
+
+.margin-aside__aside {
+  position: absolute;
+  top: 0;
+  right: -260px; /* push into the right grid column (width 260 + gap 32) */
+  width: 260px;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 0.9rem;
+  color: var(--muted-color);
+}
+@media (max-width: 1100px) {
+  .margin-aside__aside {
+    position: static;
+    width: auto;
+    margin-top: 8px;
+  }
+}
+
+
+// ============================================================================
+// Width helpers – slightly wider than main column, and full-bleed to viewport
+// ----------------------------------------------------------------------------
+// Usage in MDX:
+// <div className="wide"> ... </div>
+// <div className="full-bleed"> ... </div>
+// These center the content relative to the viewport while keeping it responsive.
+//
+// Notes:
+// - These helpers work inside the main article column; they break out visually
+//   to be wider or fully span the viewport. On small screens, they fall back to 100%.
+// - Adjust the target width in .wide if desired.
+.wide,
+.full-bleed { box-sizing: border-box; }
+
+.wide {
+  /* Target up to ~1100px while staying within viewport minus page gutters */
+  width: min(1100px, 100vw - 32px);
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.full-bleed {
+  /* Span the full viewport width */
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 1100px) {
+  .wide,
+  .full-bleed {
+    width: 100%;
+    margin-left: 0;
+    transform: none;
+  }
+}
+

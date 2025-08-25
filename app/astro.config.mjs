@@ -7,13 +7,21 @@ import remarkFootnotes from 'remark-footnotes';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeCitation from 'rehype-citation';
-import rehypePrettyCode from 'rehype-pretty-code';
+// Shiki intégré (dual themes) — pas de rehype-pretty-code
 
 export default defineConfig({
   output: 'static',
   integrations: [mdx()]
   ,
   markdown: {
+    shikiConfig: {
+      themes: {
+        light: 'github-light',
+        dark: 'github-dark'
+      },
+      defaultColor: false,
+      wrap: true
+    },
     remarkPlugins: [
       [remarkToc, { heading: 'Table of Contents', maxDepth: 3 }],
       remarkMath,
@@ -23,14 +31,6 @@ export default defineConfig({
       rehypeSlug,
       [rehypeAutolinkHeadings, { behavior: 'wrap' }],
       rehypeKatex,
-      [rehypePrettyCode, {
-        theme: {
-          light: 'github-light',
-          dark: 'github-dark'
-        },
-        keepBackground: false,
-        defaultLang: 'text'
-      }],
       [rehypeCitation, {
         bibliography: 'src/content/bibliography.bib',
         linkCitations: true

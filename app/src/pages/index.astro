@@ -48,12 +48,23 @@ const keyTitle = titleFlat.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_
 const bibKey = `${keyAuthor}${year ?? ''}_${keyTitle}`;
 const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBib}},\n  ${year ? `year={${year}}` : ''}\n}`;
 ---
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{docTitle}</title>
     <SeoHead title={docTitle} description={description} authors={authors} published={published} tags={tags} image={imageAbs} />
+    <script is:inline>
+      (() => {
+        try {
+          const saved = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch {}
+      })();
+    </script>
+    
     
     <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"></script>
   </head>
@@ -154,6 +165,8 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
         else window.addEventListener('load', bootstrap, { once: true });
       })();
     </script>
+    
+
     <script>
       // Open external links in a new tab; keep internal anchors in-page
       const setExternalTargets = () => {

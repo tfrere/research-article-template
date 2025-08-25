@@ -1,0 +1,8 @@
+.distill-footer { margin-top: 40px; border-top: 1px solid var(--border-color); }
+.footer-inner { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+.citation-block h3 { margin: 0 0 8px; }
+.citation-block h4 { margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: var(--muted-color); }
+.citation-text, .citation-bibtex { width: 100%; min-height: 44px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-bg); padding: 8px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: var(--text-color); white-space: pre-wrap; overflow-y: hidden; line-height: 1.4; }
+.references-block h3 { margin: 24px 0 8px; }
+.references-block .footnotes { margin-top: 8px; }
+.references-block .bibliography { margin-top: 8px; }
