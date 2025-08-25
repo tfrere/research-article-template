@@ -1,4 +1,5 @@
 ---
+import banner from "../assets/images/banner.png";
 const title = 'Hello Astro on HF Spaces';
 ---
 <html lang="en">
@@ -11,6 +12,9 @@ const title = 'Hello Astro on HF Spaces';
     <main style="max-width: 720px; margin: 40px auto; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji;">
       <h1 style="margin:0 0 16px;">🚀 Hello World</h1>
       <p>Astro est déployé statiquement via Nginx sur le port 8080.</p>
+      <figure>
+        <img src={banner} alt="FineTasks banner" style="width:100%;height:auto;" loading="lazy" decoding="async" />
+      </figure>
     </main>
   </body>
 </html>
