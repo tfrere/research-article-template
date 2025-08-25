@@ -18,6 +18,8 @@ const title = 'The Distill Blog Template (Astro)';
       .l-page { max-width: var(--page-width); margin: 0 auto; }
       .l-screen { width: 100%; }
       figure { margin: 16px 0; }
+      /* Assurer que les images ne dépassent jamais le conteneur */
+      :where(picture, img) { max-width: 100%; width: 100%; height: auto; display: block; }
       .figcaption, figcaption { color: rgba(0,0,0,.6); font-size: 12px; }
       .plot-card { background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 8px; padding: 12px; }
       d-contents nav { border-left: 1px solid rgba(0,0,0,.1); padding-left: 16px; margin: 16px 0; }
