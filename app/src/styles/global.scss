@@ -137,6 +137,26 @@ html { font-size: 14px; line-height: 1.6; }
 figure { margin: 16px 0; }
 figcaption { color: var(--muted-color); font-size: 12px; }
 
+// Inline feature tags
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 999px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+[data-theme="dark"] .tag { background: #1a1f27; border-color: rgba(255,255,255,.15); }
+
+/* Opt-in zoomable images */
+img[data-zoomable] { cursor: zoom-in; }
+.medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
+
 // ============================================================================
 // Hero (full-bleed)
 // ============================================================================

@@ -6,6 +6,7 @@ import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import SeoHead from '../components/SeoHead.astro';
 import ogDefault from '../assets/images/visual-vocabulary-poster.png';
+import 'katex/dist/katex.min.css';
 import '../styles/global.scss';
 const docTitle = articleFM?.title ?? 'Untitled article';
 // Autoriser un retour à la ligne dans le titre via "\n" ou sauts de ligne YAML
@@ -28,7 +29,7 @@ const imageAbs = fmOg && fmOg.startsWith('http')
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{docTitle}</title>
     <SeoHead title={docTitle} description={description} authors={authors} published={published} tags={tags} image={imageAbs} />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous" />
+    
     <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"></script>
   </head>
   <body>
@@ -71,47 +72,69 @@ const imageAbs = fmOg && fmOg.startsWith('http')
     <!-- Medium-like image zoom (lightbox) -->
     <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
     <script>
-      // Init zoom on data-zoomable images, close on scroll/move like Medium
-      const initMediumZoom = () => {
-        if (!window.mediumZoom) return;
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const background = isDark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)';
-        const zoom = window.mediumZoom('section.content-grid main img[data-zoomable]', {
-          background,
-          margin: 24,
-          scrollOffset: 0
-        });
+      // Init zoom sur img[data-zoomable] avec attente du script & contenu; close on scroll like Medium
+      (() => {
+        let zoomInstance = null;
 
-        let onMove;
-        const attachCloseOnMove = () => {
-          if (onMove) return;
-          onMove = () => { zoom.close(); };
-          window.addEventListener('mousemove', onMove, { passive: true });
-          window.addEventListener('wheel', onMove, { passive: true });
-          window.addEventListener('touchmove', onMove, { passive: true });
-        };
-        const detachCloseOnMove = () => {
-          if (!onMove) return;
-          window.removeEventListener('mousemove', onMove);
-          window.removeEventListener('wheel', onMove);
-          window.removeEventListener('touchmove', onMove);
-          onMove = null;
+        const ensureMediumZoomReady = (cb) => {
+          if (window.mediumZoom) return cb();
+          const retry = () => (window.mediumZoom ? cb() : setTimeout(retry, 30));
+          retry();
         };
 
-        zoom.on('open', attachCloseOnMove);
-        zoom.on('close', detachCloseOnMove);
+        const collectTargets = () => Array.from(document.querySelectorAll('section.content-grid main img[data-zoomable]'));
 
-        // React to theme toggle
-        const observer = new MutationObserver(() => {
-          const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-          zoom.update({ background: dark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)' });
+        const initOrUpdateZoom = () => {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          const background = isDark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)';
+          const targets = collectTargets();
+          if (!targets.length) return;
+
+          if (!zoomInstance) {
+            zoomInstance = window.mediumZoom(targets, { background, margin: 24, scrollOffset: 0 });
+
+            let onScrollLike;
+            const attachCloseOnScroll = () => {
+              if (onScrollLike) return;
+              onScrollLike = () => { zoomInstance && zoomInstance.close(); };
+              window.addEventListener('wheel', onScrollLike, { passive: true });
+              window.addEventListener('touchmove', onScrollLike, { passive: true });
+              window.addEventListener('scroll', onScrollLike, { passive: true });
+            };
+            const detachCloseOnScroll = () => {
+              if (!onScrollLike) return;
+              window.removeEventListener('wheel', onScrollLike);
+              window.removeEventListener('touchmove', onScrollLike);
+              window.removeEventListener('scroll', onScrollLike);
+              onScrollLike = null;
+            };
+            zoomInstance.on('open', attachCloseOnScroll);
+            zoomInstance.on('close', detachCloseOnScroll);
+
+            const themeObserver = new MutationObserver(() => {
+              const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+              zoomInstance && zoomInstance.update({ background: dark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)' });
+            });
+            themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+          } else {
+            zoomInstance.attach(targets);
+            zoomInstance.update({ background });
+          }
+        };
+
+        const bootstrap = () => ensureMediumZoomReady(() => {
+          initOrUpdateZoom();
+          setTimeout(initOrUpdateZoom, 0);
+          const main = document.querySelector('section.content-grid main');
+          if (main) {
+            const mo = new MutationObserver(() => initOrUpdateZoom());
+            mo.observe(main, { childList: true, subtree: true });
+          }
         });
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-      };
 
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initMediumZoom, { once: true });
-      } else { initMediumZoom(); }
+        if (document.readyState === 'complete') bootstrap();
+        else window.addEventListener('load', bootstrap, { once: true });
+      })();
     </script>
     <script>
       // Open external links in a new tab; keep internal anchors in-page

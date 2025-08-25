@@ -1,5 +1,5 @@
 ---
-title: "The science Template:\nCraft Beautiful Blogs"
+title: "The science template:\nCraft Beautiful Blogs"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
   - "Hynek Kydlíček"
@@ -29,12 +29,19 @@ In this guide, you’ll learn how to install the template, write content (math, 
 
 ## Features
 
-- Math via KaTeX (remark-math/rehype-katex)
-- Citations and footnotes
-- Responsive images with `astro:assets`
-- Anchored headings and a generated table of contents
-- Dark/light theme toggle
-- HTML fragments for self-contained visualizations (e.g., Plotly)
+<div className="tag-list">
+  <span className="tag">Markdown based</span>
+  <span className="tag">KaTeX math</span>
+  <span className="tag">Citations & footnotes</span>
+  <span className="tag">Automatic build</span>
+  <span className="tag">Auto table of content</span>
+  <span className="tag">Dark theme</span>
+  <span className="tag">HTML fragments</span>
+  <span className="tag">Plotly ready</span>
+  <span className="tag">SEO Friendly</span>
+  <span className="tag">Lightweight bundle(\<500ko)</span>
+  <span className="tag">TO DO: Zoomable images</span>
+</div>
 
 ## Getting Started
 
@@ -182,7 +189,7 @@ import audioDemo from '../assets/audio/audio-example.wav'
 Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from analytical task to chart types.
 
 <figure>
-  <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
+  <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" data-zoomable />
   <figcaption>
     Visual Vocabulary: a handy reference to select chart types by purpose (comparison, distribution, part-to-whole, correlation, and more).
   </figcaption>
