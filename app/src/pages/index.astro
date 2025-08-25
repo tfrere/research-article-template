@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import banner from "../assets/images/banner.png";
+import HtmlFragment from "../components/HtmlFragment.astro";
 const title = 'The Distill Blog Template (Astro)';
 ---
 <html lang="en">
@@ -45,6 +46,9 @@ const title = 'The Distill Blog Template (Astro)';
               <Image src={banner} alt="Banner" widths={[480,768,1080,1440]} formats={["avif","webp","png"]} sizes="(max-width: 768px) 100vw, var(--page-width)" loading="eager" />
             </figure>
           </div>
+          <div class="l-page" style="margin-top:12px;">
+            <HtmlFragment src="banner.html" />
+          </div>
           <p style="text-align: center; font-style: italic; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto;">It's nice to have a cute interactive banner!</p>
         </div>
       </d-title>
@@ -85,15 +89,8 @@ const title = 'The Distill Blog Template (Astro)';
 
         <h2>Interactive Components</h2>
         <div class="plot-card">
-          <div id="fragment-line"></div>
+          <HtmlFragment src="banner.html" />
         </div>
-        <script>
-          // Example: simple Plotly line chart using the CDN
-          const container = document.getElementById('fragment-line');
-          if (container && window.Plotly) {
-            window.Plotly.newPlot(container, [{x:[1,2,3,4], y:[1,3,2,4], type:'scatter'}], {margin:{t:16,r:16,b:32,l:32}});
-          }
-        </script>
 
       </d-article>
 

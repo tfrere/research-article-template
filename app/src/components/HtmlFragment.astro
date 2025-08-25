@@ -1,0 +1,27 @@
+---
+interface Props { src: string }
+const { src } = Astro.props as Props;
+
+// Charge tous les fragments .html sous src/fragments/** en tant que string (dev & build)
+const fragments = import.meta.glob('../fragments/**/*.html', { as: 'raw', eager: true }) as Record<string, string>;
+
+function resolveFragment(requested: string): string | null {
+  // Autorise "banner.html" ou "fragments/banner.html"
+  const needle = requested.replace(/^\/*/, '');
+  for (const [key, html] of Object.entries(fragments)) {
+    if (key.endsWith('/' + needle) || key.endsWith('/' + needle.replace(/^fragments\//, ''))) {
+      return html;
+    }
+  }
+  return null;
+}
+
+const html = resolveFragment(src);
+---
+{ html ? (
+  <div set:html={html} />
+ ) : (
+  <div><!-- Fragment introuvable: {src} --></div>
+ ) }
+
+

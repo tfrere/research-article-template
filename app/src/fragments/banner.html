@@ -1,0 +1,13 @@
+<div id="fragment-banner" style="max-width: 980px; margin: 0 auto;">
+  <div id="banner-plot" style="width:100%;height:360px;"></div>
+  <script>
+    if (window.Plotly && document.getElementById('banner-plot')) {
+      const el = document.getElementById('banner-plot');
+      const x = Array.from({length: 200}, (_, i) => i/10);
+      const y = x.map(v => Math.sin(v));
+      window.Plotly.newPlot(el, [{x, y, mode:'lines'}], {margin:{t:16,r:16,b:32,l:32}});
+    }
+  </script>
+</div>
+
+
