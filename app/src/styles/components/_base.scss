@@ -1,0 +1,153 @@
+// ============================================================================
+// Base / Reset
+// ============================================================================
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji; color: var(--text-color); }
+
+/* Avoid constraining <main> inside grid; scope container sizing elsewhere if needed */
+/* main { max-width: 980px; margin: 24px auto; padding: 16px; } */
+
+// ============================================================================
+// Typography (inspired by Distill)
+// ============================================================================
+html { font-size: 14px; line-height: 1.6; }
+@media (min-width: 768px) { html { font-size: 16px; } }
+@media (min-width: 1024px) { html { font-size: 17px; } }
+
+.content-grid main { color: var(--text-color); }
+.content-grid main p { margin: 0 0 var(--spacing-3); }
+
+.content-grid main h2 {
+  font-weight: 600;
+  font-size: clamp(22px, 2.6vw, 32px);
+  line-height: 1.2;
+  margin: var(--spacing-5) 0 var(--spacing-3);
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.content-grid main h3 {
+  font-weight: 700;
+  font-size: clamp(18px, 2.1vw, 22px);
+  line-height: 1.25;
+  margin: var(--spacing-4) 0 var(--spacing-2);
+}
+
+.content-grid main h4 {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 14px;
+  line-height: 1.2;
+  margin: var(--spacing-3) 0 var(--spacing-2);
+}
+
+.content-grid main a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--link-underline); }
+.content-grid main a:hover { border-bottom: 1px solid var(--link-underline-hover); }
+
+/* Ne pas souligner les liens de titres dans l'article (pas le TOC) */
+.content-grid main h2 a,
+.content-grid main h3 a,
+.content-grid main h4 a { border-bottom: none; text-decoration: none; }
+.content-grid main h2 a:hover,
+.content-grid main h3 a:hover,
+.content-grid main h4 a:hover { border-bottom: none; text-decoration: none; }
+
+.content-grid main ul,
+.content-grid main ol { padding-left: 24px; margin: 0 0 var(--spacing-3); }
+.content-grid main li { margin-bottom: var(--spacing-2); }
+.content-grid main li:last-child { margin-bottom: 0; }
+
+.content-grid main blockquote {
+  border-left: 2px solid var(--border-color);
+  padding-left: var(--spacing-4);
+  font-style: italic;
+  color: var(--muted-color);
+  margin: var(--spacing-4) 0;
+}
+
+.content-grid main pre { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; overflow: auto; }
+.content-grid main code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+/* Pretty-code language label (visible chip at top-right) */
+.content-grid main pre:has(code[data-language]),
+.content-grid main pre:has(code[class*="language-"]) {
+  position: relative;
+  padding-top: 28px; /* space for the label */
+}
+.content-grid main pre > code[data-language]::after,
+.content-grid main pre > code[class*="language-"]::after {
+  content: attr(data-language);
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* JS fallback chip */
+.content-grid main pre.has-lang-chip { position: relative; padding-top: 22px; }
+.content-grid main pre .code-lang-chip {
+  position: absolute;
+  top: 0px; right: 0px;
+  font-size: 10px; line-height: 1;
+  color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.1);
+  border: none;
+  border-radius: 0px; padding: 6px 6px 4px 4px; pointer-events: none; z-index: 1;
+}
+
+.content-grid main table { border-collapse: collapse; width: 100%; margin: 0 0 var(--spacing-4); }
+.content-grid main th, .content-grid main td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; font-size: 15px; }
+.content-grid main thead th { border-bottom: 1px solid var(--border-color); }
+
+.content-grid main hr { border: none; border-bottom: 1px solid var(--border-color); margin: var(--spacing-5) 0; }
+
+
+
+
+// ============================================================================
+// Media / Figures
+// ============================================================================
+:where(picture, img) {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+figure { margin: 16px 0; }
+figcaption { color: var(--muted-color); font-size: 12px; }
+
+// Inline feature tags
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 999px;
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+[data-theme="dark"] .tag { background: #1a1f27; border-color: rgba(255,255,255,.15); }
+
+
+// ============================================================================
+// Figures, captions & image credits
+// ============================================================================
+figure { margin: 12px 0; }
+figcaption { text-align: center; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
+.image-credit { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-color); }
+.image-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

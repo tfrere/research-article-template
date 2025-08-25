@@ -22,6 +22,31 @@ const fmOg = articleFM?.ogImage as string | undefined;
 const imageAbs = fmOg && fmOg.startsWith('http')
   ? fmOg
   : (Astro.site ? new URL((fmOg ?? ogDefault.src), Astro.site).toString() : (fmOg ?? ogDefault.src));
+
+// ---- Build citation text & BibTeX from frontmatter ----
+const rawTitle = articleFM?.title ?? 'Untitled article';
+const titleFlat = String(rawTitle)
+  .replace(/\\n/g, ' ')
+  .replace(/\n/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+const extractYear = (val: string | undefined): number | undefined => {
+  if (!val) return undefined;
+  const d = new Date(val);
+  if (!Number.isNaN(d.getTime())) return d.getFullYear();
+  const m = String(val).match(/(19|20)\d{2}/);
+  return m ? Number(m[0]) : undefined;
+};
+
+const year = extractYear(published);
+const citationAuthorsText = authors.join(', ');
+const citationText = `${citationAuthorsText}${year ? ` (${year})` : ''}. "${titleFlat}".`;
+
+const authorsBib = authors.join(' and ');
+const keyAuthor = (authors[0] || 'article').split(/\s+/).slice(-1)[0].toLowerCase();
+const keyTitle = titleFlat.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24);
+const bibKey = `${keyAuthor}${year ?? ''}_${keyTitle}`;
+const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBib}},\n  ${year ? `year={${year}}` : ''}\n}`;
 ---
 <html lang="en">
   <head>
@@ -60,14 +85,7 @@ const imageAbs = fmOg && fmOg.startsWith('http')
       </main>
     </section>
 
-    <Footer citationText='"The Distill Blog Template", 2025.' bibtex={`@misc{distill_blog_template,
-  title={The Distill Blog Template},
-  author={Some Authors et al},
-  year={2025},
-}`}
-    >
-      <div class="references"><h3>References</h3></div>
-    </Footer>
+    <Footer citationText={citationText} bibtex={bibtex} />
 
     <!-- Medium-like image zoom (lightbox) -->
     <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
@@ -211,6 +229,43 @@ const imageAbs = fmOg && fmOg.startsWith('http')
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', buildTOC, { once: true });
       } else { buildTOC(); }
+    </script>
+
+    <script>
+      // Inject visible language badges for code blocks when data-language is missing
+      const addCodeLangChips = () => {
+        const blocks = document.querySelectorAll('section.content-grid pre > code');
+        blocks.forEach(code => {
+          const pre = code.parentElement;
+          if (!pre || pre.querySelector('.code-lang-chip')) return;
+          // Try several places to detect language
+          const getLang = () => {
+            const direct = code.getAttribute('data-language') || code.dataset?.language;
+            if (direct) return direct;
+            const codeClass = (code.className || '').match(/language-([a-z0-9+\-]+)/i);
+            if (codeClass) return codeClass[1];
+            const preData = pre.getAttribute('data-language') || pre.dataset?.language;
+            if (preData) return preData;
+            const wrapper = pre.closest('.astro-code');
+            if (wrapper) {
+              const wrapData = wrapper.getAttribute('data-language') || wrapper.dataset?.language;
+              if (wrapData) return wrapData;
+              const wrapClass = (wrapper.className || '').match(/language-([a-z0-9+\-]+)/i);
+              if (wrapClass) return wrapClass[1];
+            }
+            return 'text';
+          };
+          const lang = getLang().toUpperCase();
+          const chip = document.createElement('span');
+          chip.className = 'code-lang-chip';
+          chip.textContent = lang;
+          pre.classList.add('has-lang-chip');
+          pre.appendChild(chip);
+        });
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addCodeLangChips, { once: true });
+      } else { addCodeLangChips(); }
     </script>
   </body>
 </html>

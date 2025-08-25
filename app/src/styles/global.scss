@@ -1,41 +1,6 @@
-// ============================================================================
-// Theme Variables (inspired by Distill)
-// ============================================================================
-:root {
-  --distill-gray: rgb(107, 114, 128);
-  --distill-gray-light: rgb(185, 185, 185);
-  --distill-gray-lighter: rgb(228, 228, 228);
-  --distill-gray-lightest: rgb(245, 245, 245);
-  --distill-blue: #007BFF;
-
-  --text-color: rgba(0,0,0,.85);
-  --muted-color: rgba(0,0,0,.6);
-  --border-color: rgba(0,0,0,.1);
-
-  /* Light surfaces & links */
-  --surface-bg: #fafafa;
-  --code-bg: #f6f8fa;
-  --link-underline: rgba(0,0,0,.4);
-  --link-underline-hover: rgba(0,0,0,.8);
-
-  --spacing-1: 8px;
-  --spacing-2: 12px;
-  --spacing-3: 16px;
-  --spacing-4: 24px;
-  --spacing-5: 32px;
-}
-// Theme tokens for dark mode
-[data-theme="dark"] {
-  --text-color: rgba(255,255,255,.9);
-  --muted-color: rgba(255,255,255,.7);
-  --border-color: rgba(255,255,255,.15);
-  --surface-bg: #12151b;
-  --code-bg: #12151b;
-  --link-underline: rgba(255,255,255,.5);
-  --link-underline-hover: rgba(255,255,255,.9);
-  color-scheme: dark;
-  background: #0f1115;
-}
+@import "./components/variables";
+@import "./components/base";
+@import "./components/layout";
 /* Dark-mode form tweak */
 [data-theme="dark"] .plotly_input_container > select { background-color: #1a1f27; border-color: var(--border-color); color: var(--text-color); }
 
@@ -47,115 +12,33 @@
 [data-theme="dark"] .citation-text,
 [data-theme="dark"] .citation-bibtex { background: #12151b; border-color: rgba(255,255,255,.15); color: var(--text-color); }
 
-// ============================================================================
-// Base / Reset
-// ============================================================================
-html { box-sizing: border-box; }
-*, *::before, *::after { box-sizing: inherit; }
-body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji; color: var(--text-color); }
 
-/* Avoid constraining <main> inside grid; scope container sizing elsewhere if needed */
-/* main { max-width: 980px; margin: 24px auto; padding: 16px; } */
+.margin-aside { position: relative; margin: 12px 0; }
 
-// ============================================================================
-// Typography (inspired by Distill)
-// ============================================================================
-html { font-size: 14px; line-height: 1.6; }
-@media (min-width: 768px) { html { font-size: 16px; } }
-@media (min-width: 1024px) { html { font-size: 17px; } }
-
-.content-grid main { color: var(--text-color); }
-.content-grid main p { margin: 0 0 var(--spacing-3); }
-
-.content-grid main h2 {
-  font-weight: 600;
-  font-size: clamp(22px, 2.6vw, 32px);
-  line-height: 1.2;
-  margin: var(--spacing-5) 0 var(--spacing-3);
-  padding-bottom: var(--spacing-2);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.content-grid main h3 {
-  font-weight: 700;
-  font-size: clamp(18px, 2.1vw, 22px);
-  line-height: 1.25;
-  margin: var(--spacing-4) 0 var(--spacing-2);
-}
-
-.content-grid main h4 {
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 14px;
-  line-height: 1.2;
-  margin: var(--spacing-3) 0 var(--spacing-2);
-}
-
-.content-grid main a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--link-underline); }
-.content-grid main a:hover { border-bottom: 1px solid var(--link-underline-hover); }
-
-/* Ne pas souligner les liens de titres dans l'article (pas le TOC) */
-.content-grid main h2 a,
-.content-grid main h3 a,
-.content-grid main h4 a { border-bottom: none; text-decoration: none; }
-.content-grid main h2 a:hover,
-.content-grid main h3 a:hover,
-.content-grid main h4 a:hover { border-bottom: none; text-decoration: none; }
-
-.content-grid main ul,
-.content-grid main ol { padding-left: 24px; margin: 0 0 var(--spacing-3); }
-.content-grid main li { margin-bottom: var(--spacing-2); }
-.content-grid main li:last-child { margin-bottom: 0; }
-
-.content-grid main blockquote {
-  border-left: 2px solid var(--border-color);
-  padding-left: var(--spacing-4);
-  font-style: italic;
+.margin-aside__main { /* main text stays full width of the main column */ }
+.margin-aside__aside {
+  position: absolute;
+  top: 0;
+  right: -260px; /* push into the right grid column (width 260 + gap 32) */
+  width: 260px;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.9rem;
   color: var(--muted-color);
-  margin: var(--spacing-4) 0;
+}
+@media (max-width: 1100px) {
+  .margin-aside__aside {
+    position: static;
+    width: auto;
+    margin-top: 8px;
+  }
 }
 
-.content-grid main pre { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; overflow: auto; }
-.content-grid main code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
-.content-grid main table { border-collapse: collapse; width: 100%; margin: 0 0 var(--spacing-4); }
-.content-grid main th, .content-grid main td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; font-size: 15px; }
-.content-grid main thead th { border-bottom: 1px solid var(--border-color); }
-
-.content-grid main hr { border: none; border-bottom: 1px solid var(--border-color); margin: var(--spacing-5) 0; }
-
-// ============================================================================
-// Media / Figures
-// ============================================================================
-:where(picture, img) {
-  max-width: 100%;
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-figure { margin: 16px 0; }
-figcaption { color: var(--muted-color); font-size: 12px; }
-
-// Inline feature tags
-.tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  line-height: 1;
-  border-radius: 999px;
-  background: var(--surface-bg);
-  border: 1px solid var(--border-color);
-  color: var(--text-color);
-}
-[data-theme="dark"] .tag { background: #1a1f27; border-color: rgba(255,255,255,.15); }
 
 /* Opt-in zoomable images */
 img[data-zoomable] { cursor: zoom-in; }
 .medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
+
 
 // ============================================================================
 // Hero (full-bleed)
@@ -201,40 +84,6 @@ img[data-zoomable] { cursor: zoom-in; }
     letter-spacing: .02em;
   }
   .meta-container-cell p { margin: 0; }
-
-// ============================================================================
-// Layout – 3-column grid (TOC / Article / Aside)
-// ============================================================================
-.content-grid { max-width: 1280px; margin: 0 auto; padding: 0 16px; margin-top: 40px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
-.content-grid > main { max-width: 100%; margin: 0; padding: 0; }
-
-// TOC (left column)
-.toc { position: sticky; top: 24px; }
-.toc nav { border-left: 1px solid var(--border-color); padding-left: 16px; font-size: 13px; }
-.toc .title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
-
-// Hide in-article TOC (duplicated by sticky aside)
-main > nav:first-of-type { display: none; }
-
-// TOC look & feel
-.toc nav ul { margin: 0 0 6px; padding-left: 1em; }
-.toc nav li { list-style: none; margin: .25em 0; }
-.toc nav a { color: var(--text-color); text-decoration: none; border-bottom: none; }
-.toc nav > ul > li > a { font-weight: 700; }
-.toc nav a:hover { text-decoration: underline solid var(--muted-color); }
-.toc nav a.active { text-decoration: underline; }
-
-// Right aside (notes)
-.right-aside { position: sticky; top: 24px; }
-.right-aside .aside-card { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-color); }
-
-// Responsive – collapse to single column
-@media (max-width: 1100px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .toc { position: static; }
-  .right-aside { display: none; }
-  main > nav:first-of-type { display: block; }
-}
 
 // ============================================================================
 // Plotly – fragments & controls

@@ -2,9 +2,9 @@
 title: "The science template:\nCraft Beautiful Blogs"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
-  - "Hynek Kydlíček"
-  - "Guilherme Penedo"
-  - "Clémentine Fourier"
+  - "John Doe"
+  - "Alice Martin"
+  - "Robert Brown"
 affiliation: "Hugging Face"
 published: "Feb 19, 2025"
 tags:
@@ -15,17 +15,26 @@ ogImage: "https://example.com/your-og-image.png"
 
 import HtmlFragment from "../components/HtmlFragment.astro";
 import { Image } from 'astro:assets';
-import placeholder from "../assets/images/placeholder.png";
+import placeholder from "../assets/images/placeholder.jpg";
 import audioDemo from "../assets/audio/audio-example.wav";
 import Aside from "../components/Aside.astro";
 import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
 
-Welcome to this single-page research article template built with Astro and MDX. It’s designed to help you write clear, modern, and interactive technical articles with minimal setup. Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
-
-Reading time: 10–15 minutes.
-
-In this guide, you’ll learn how to install the template, write content (math, citations, images, code, asides, interactive fragments), customize styles and behavior, and follow a few best practices for publishing.
+<Aside>
+  Welcome to this single-page research article template built with Astro and MDX.
+  It’s designed to help you write clear, modern, and interactive technical articles with minimal setup.
+  Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
+  <Fragment slot="aside">
+    Reading time: 10–15 minutes.
+  </Fragment>
+  In this guide, you’ll learn how to install the template,
+  write content (math, citations, images, code, asides, interactive fragments),
+  customize styles and behavior, and follow a few best practices for publishing.
+  <Fragment slot="aside">
+    If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/tfrere/science-blog-template/discussions?status=open&type=discussion">Community tab</a>!
+  </Fragment>
+</Aside>
 
 ## Features
 
@@ -34,13 +43,14 @@ In this guide, you’ll learn how to install the template, write content (math, 
   <span className="tag">KaTeX math</span>
   <span className="tag">Citations & footnotes</span>
   <span className="tag">Automatic build</span>
-  <span className="tag">Auto table of content</span>
+  <span className="tag">Table of content</span>
   <span className="tag">Dark theme</span>
   <span className="tag">HTML fragments</span>
   <span className="tag">Plotly ready</span>
   <span className="tag">SEO Friendly</span>
   <span className="tag">Lightweight bundle(\<500ko)</span>
-  <span className="tag">TO DO: Zoomable images</span>
+  <span className="tag">Aside notes</span>
+  <span className="tag">Medium like zoomable images</span>
 </div>
 
 ## Getting Started
@@ -66,6 +76,52 @@ Large assets: track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the rep
 
 Author content in MDX. Below are minimal examples for the core elements.
 
+### MDX: frontmatter and imports (minimal example)
+
+The initial skeleton of this article looks like this:
+
+```mdx
+---
+title: "The science template:\nCraft Beautiful Blogs"
+description: "A modern, MDX-first research article template with math, citations, and interactive figures."
+authors:
+  - "John Doe"
+  - "Alice Martin"
+  - "Robert Brown"
+affiliation: "Hugging Face"
+published: "Feb 19, 2025"
+tags:
+  - research
+  - template
+ogImage: "https://example.com/your-og-image.png"
+---
+
+import HtmlFragment from "../components/HtmlFragment.astro";
+import { Image } from 'astro:assets';
+import placeholder from "../assets/images/placeholder.png";
+import audioDemo from "../assets/audio/audio-example.wav";
+import Aside from "../components/Aside.astro";
+import visualPoster from "../assets/images/visual-vocabulary-poster.png";
+
+
+<Aside>
+  Welcome to this single-page research article template built with Astro and MDX.
+  It’s designed to help you write clear, modern, and interactive technical articles with minimal setup.
+  Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
+  <Fragment slot="aside">
+    Reading time: 10–15 minutes.
+  </Fragment>
+  In this guide, you’ll learn how to install the template,
+  write content (math, citations, images, code, asides, interactive fragments),
+  customize styles and behavior, and follow a few best practices for publishing.
+  <Fragment slot="aside">
+    If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/lvwerra/distill-blog-template/discussions?status=open&type=discussion">Community tab</a>!
+  </Fragment>
+</Aside>
+
+
+```
+
 ### Math
 
 Inline example: $x^2 + y^2 = z^2$.
@@ -87,28 +143,113 @@ $$
 
 ### Images
 
-Responsive image using `astro:assets`:
+Responsive images automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control lazy loading/decoding for better performance.
 
-<Image src={placeholder} alt="Responsive example image" />
+**Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
+
+<figure>
+  <Image
+    src={placeholder}
+    data-zoomable
+    alt="Example with caption and credit"
+  />
+  <figcaption>
+    Optimized image with a descriptive caption.
+    <span className="image-credit">Crédit: Photo by <a href="https://example.com">Author</a></span>
+  </figcaption>
+</figure>
 
 ```mdx
 import { Image } from 'astro:assets'
-import myImage from '../assets/images/placeholder.png'
+import myImage from '../assets/images/placeholder.jpg'
 
-<Image src={myImage} alt="Responsive example image" />
+<Image src={myImage} alt="Responsive, optimized example image" />
+
+<figure>
+  <Image src={myImage} data-zoomable alt="Example with caption and credit" loading="lazy" />
+  <figcaption>
+    Optimized image with a descriptive caption.
+    <span className="image-credit">Crédit: Photo by <a href="https://example.com">Author</a></span>
+  </figcaption>
+</figure>
 ```
+
+
+### Code blocks
+
+Use fenced code blocks with a language for syntax highlighting.
+
+Python block example:
+
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+
+greet("Astro")
+```
+
+How to write it in MDX:
+
+````mdx
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+
+greet("Astro")
+```
+````
+
+
+### GitHub code embeds
+
+Finally, if you want to include code from GitHub you can use emgithub.com and, for example, create a collapsible widget like this:
+
+```html
+<details style="background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0;">
+  <summary style="padding: 12px; cursor: pointer; user-select: none; background: #f3f4f6; border-bottom: 1px solid #d0d7de;">
+    👉 Naive DP implementation with overlap in Picotron (Click to expand)
+  </summary>
+  <div class="code-embed-container" style="margin: 0; border-radius: 0; overflow-x: scroll; width: max-content; min-width: 100%; font-size: 8px;"></div>
+  <script 
+    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
+  </script>
+</details>
+```
+
+Which will display as follows:
+
+<details style="background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; margin: 1em 0;">
+  <summary style="padding: 12px; cursor: pointer; user-select: none; background: #f3f4f6; border-bottom: 1px solid #d0d7de;">
+    👉 Naive DP implementation with overlap in Picotron (Click to expand)
+  </summary>
+  <div class="code-embed-container" style="margin: 0; border-radius: 0; overflow-x: scroll; width: max-content; min-width: 100%; font-size: 8px;"></div>
+  <script 
+    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
+  </script>
+</details>
 
 ### Citations and notes
 
-A short citation [@example2023]. A footnote[^note].
+Here are a few variations using the same bibliography:
 
-[^note]: Example footnote.
+1) In-text citation with brackets: [@example2023].
+
+2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
+
+3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
+
+[^f1]: Footnote attached to the sentence above.
 
 ```mdx
-As shown in [@example2023]. A footnote[^note].
+1) In-text citation with brackets: [@example2023].
 
-[^note]: Example footnote.
+2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
+
+3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
+
+[^f1]: Footnote attached to the sentence above.
 ```
+
 
 ### Interactive fragments
 
@@ -170,12 +311,19 @@ import audioDemo from '../assets/audio/audio-example.wav'
 </audio>
 ```
 
-## Advanced Customization
+### Tracking training metrics with TrackIO
 
-- Styling: customize `src/styles/global.scss` for layout, typography, color scheme, and dark mode variables.
-- Headings/TOC: tweak the TOC builder in `src/pages/index.astro` to match your preferred levels and behavior.
-- Components: extend `components/` with bespoke MDX-friendly blocks (callouts, figures, widgets).
-- Fragments: generate self-contained HTML fragments (e.g., Plotly) and include them via `<HtmlFragment src="..." />`.
+TrackIO is a lightweight dashboard to monitor ML experiments. The embed below opens a demo project and shows a couple of metrics. You can customize the query parameters (`project`, `metrics`, `sidebar`) to fit your setup.
+
+<div style="margin-top: 8px;">
+  <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden" width="100%" height="600" frameborder="0"></iframe>
+</div>
+
+To embed TrackIO in your own page, copy the following HTML and adjust the `src` parameters:
+
+```html
+<iframe src="https://org_name-space_name.hf.space/?project=fake-training&metrics=train_loss,train_accuracy&sidebar=hidden" width="100%" height="600" frameBorder="0"></iframe>
+```
 
 ## Best Practices
 

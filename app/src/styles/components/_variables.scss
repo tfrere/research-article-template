@@ -1,0 +1,40 @@
+// ============================================================================
+// Theme Variables (inspired by Distill)
+// ============================================================================
+:root {
+  --distill-gray: rgb(107, 114, 128);
+  --distill-gray-light: rgb(185, 185, 185);
+  --distill-gray-lighter: rgb(228, 228, 228);
+  --distill-gray-lightest: rgb(245, 245, 245);
+  --distill-blue: #007BFF;
+
+  --text-color: rgba(0,0,0,.85);
+  --muted-color: rgba(0,0,0,.6);
+  --border-color: rgba(0,0,0,.1);
+
+  /* Light surfaces & links */
+  --surface-bg: #fafafa;
+  --code-bg: #f6f8fa;
+  --link-underline: rgba(0,0,0,.4);
+  --link-underline-hover: rgba(0,0,0,.8);
+
+  --spacing-1: 8px;
+  --spacing-2: 12px;
+  --spacing-3: 16px;
+  --spacing-4: 24px;
+  --spacing-5: 32px;
+}
+// Theme tokens for dark mode
+[data-theme="dark"] {
+  --text-color: rgba(255,255,255,.9);
+  --muted-color: rgba(255,255,255,.7);
+  --border-color: rgba(255,255,255,.15);
+  --surface-bg: #12151b;
+  --code-bg: #12151b;
+  --link-underline: rgba(255,255,255,.5);
+  --link-underline-hover: rgba(255,255,255,.9);
+  color-scheme: dark;
+  background: #0f1115;
+}
+
+

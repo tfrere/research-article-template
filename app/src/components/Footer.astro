@@ -26,7 +26,101 @@ const { citationText, bibtex } = Astro.props as Props;
   .footer-inner { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
   .citation-block h3 { margin: 0 0 8px; }
   .citation-block h4 { margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: var(--muted-color); }
-  .citation-text, .citation-bibtex { width: 100%; min-height: 44px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-bg); padding: 8px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: var(--text-color); }
+  .citation-text, .citation-bibtex { width: 100%; min-height: 44px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-bg); padding: 8px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: var(--text-color); white-space: pre-wrap; overflow-y: hidden; line-height: 1.4; }
+  .references-block h3 { margin: 24px 0 8px; }
+  .references-block .footnotes { margin-top: 8px; }
+  .references-block .bibliography { margin-top: 8px; }
 </style>
+
+
+<script is:inline>
+  (() => {
+    const getFooter = () => document.currentScript?.closest('footer') || document.querySelector('footer.distill-footer');
+    const footer = getFooter();
+    if (!footer) return;
+    const target = footer.querySelector('.references-block');
+    if (!target) return;
+
+    const contentRoot = document.querySelector('section.content-grid main') || document.querySelector('main') || document.body;
+
+    const findFirstOutsideFooter = (selectors) => {
+      for (const sel of selectors) {
+        const el = contentRoot.querySelector(sel);
+        if (el && !footer.contains(el)) return el;
+      }
+      return null;
+    };
+
+    const ensureHeading = (text) => {
+      const exists = Array.from(target.children).some((c) => c.tagName === 'H3' && c.textContent.trim().toLowerCase() === text.toLowerCase());
+      if (!exists) {
+        const h = document.createElement('h3');
+        h.textContent = text;
+        target.appendChild(h);
+      }
+    };
+
+    const moveIntoFooter = (element, headingText) => {
+      if (!element) return false;
+      if (element.classList.contains('footnotes')) {
+        const hr = element.querySelector('hr');
+        if (hr) hr.remove();
+      }
+      // Supprimer un éventuel titre déjà inclus dans le bloc (pour éviter doublons)
+      const firstHeading = element.querySelector(':scope > h1, :scope > h2, :scope > h3');
+      if (firstHeading) {
+        const txt = (firstHeading.textContent || '').trim().toLowerCase();
+        const targetTxt = headingText.trim().toLowerCase();
+        if (txt === targetTxt || txt.includes('reference') || txt.includes('bibliograph')) {
+          firstHeading.remove();
+        }
+      }
+      ensureHeading(headingText);
+      target.appendChild(element);
+      return true;
+    };
+
+    const autoResizeTextareas = () => {
+      const areas = footer.querySelectorAll('.citation-text, .citation-bibtex');
+      areas.forEach((ta) => {
+        ta.style.height = 'auto';
+        const min = 44;
+        const next = Math.max(ta.scrollHeight, min);
+        ta.style.height = next + 'px';
+      });
+    };
+
+    const run = () => {
+      const referencesEl = findFirstOutsideFooter(['#references', '.references', '.bibliography']);
+      const footnotesEl = findFirstOutsideFooter(['.footnotes']);
+      const movedRefs = moveIntoFooter(referencesEl, 'References');
+      const movedNotes = moveIntoFooter(footnotesEl, 'Footnotes');
+      autoResizeTextareas();
+      return movedRefs || movedNotes;
+    };
+
+    // Try now; if not found yet, try again on DOM ready
+    const done = run();
+    if (!done) {
+      const onReady = () => run();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', onReady, { once: true });
+      } else {
+        setTimeout(onReady, 0);
+      }
+    }
+
+    // Resize on window changes (e.g., fonts, layout)
+    window.addEventListener('resize', () => {
+      // throttle via rAF
+      let raf = null;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        autoResizeTextareas();
+        raf = null;
+      });
+    }, { passive: true });
+  })();
+</script>
 
 

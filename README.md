@@ -1,5 +1,5 @@
 ---
-title: 'Scaling FineWeb to 1000+ languages: Step 1: finding signal in 100s of evaluation tasks'
+title: 'The science article template'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo
