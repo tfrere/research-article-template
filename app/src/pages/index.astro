@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import banner from "../assets/images/banner.png";
 const title = 'Hello Astro on HF Spaces';
 ---
@@ -13,7 +14,7 @@ const title = 'Hello Astro on HF Spaces';
       <h1 style="margin:0 0 16px;">🚀 Hello World</h1>
       <p>Astro est déployé statiquement via Nginx sur le port 8080.</p>
       <figure>
-        <img src={banner} alt="FineTasks banner" style="width:100%;height:auto;" loading="lazy" decoding="async" />
+        <Image src={banner} alt="FineTasks banner" widths={[480,768,1080,1440]} formats={["avif","webp","png"]} sizes="(max-width: 768px) 100vw, 720px" loading="lazy" decoding="async" />
       </figure>
     </main>
   </body>
