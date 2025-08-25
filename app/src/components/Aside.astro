@@ -1,0 +1,18 @@
+---
+---
+<div class="margin-aside">
+  <div class="margin-aside__main">
+    <slot />
+  </div>
+  <aside class="margin-aside__aside">
+    <slot name="aside" />
+  </aside>
+</div>
+
+<style>
+  .margin-aside { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 16px; align-items: start; margin: 12px 0; }
+  .margin-aside__aside { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 0.9rem; color: var(--text-color); }
+  @media (max-width: 1100px) { .margin-aside { grid-template-columns: 1fr; } }
+</style>
+
+

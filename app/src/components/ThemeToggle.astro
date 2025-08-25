@@ -1,0 +1,36 @@
+---
+import sunIconUrl from "../assets/images/sun.svg?url";
+import moonIconUrl from "../assets/images/moon.svg?url";
+---
+<button id="theme-toggle" aria-label="Toggle color theme">
+  <img class="icon light" src={sunIconUrl} alt="light" width="20" height="20" />
+  <img class="icon dark" src={moonIconUrl} alt="dark" width="20" height="20" />
+  <script>
+    const btn = document.getElementById('theme-toggle');
+    const media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    const prefersDark = media && media.matches;
+    const saved = localStorage.getItem('theme'); // 'light' | 'dark' | null
+
+    const apply = (mode) => {
+      document.documentElement.dataset.theme = mode;
+    };
+
+    // Initial mode: localStorage overrides system preference
+    apply(saved || (prefersDark ? 'dark' : 'light'));
+
+    // If user hasn't chosen manually, follow system changes
+    if (!saved && media) {
+      const syncWithSystem = (e) => apply(e.matches ? 'dark' : 'light');
+      if (media.addEventListener) media.addEventListener('change', syncWithSystem);
+      else if (media.addListener) media.addListener(syncWithSystem);
+    }
+
+    btn.addEventListener('click', () => {
+      const next = (document.documentElement.dataset.theme === 'dark') ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      apply(next);
+    });
+  </script>
+</button>
+
+

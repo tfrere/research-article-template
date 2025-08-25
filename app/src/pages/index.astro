@@ -1,157 +1,194 @@
 ---
-import { Image } from 'astro:assets';
-import banner from "../assets/images/banner.png";
-import HtmlFragment from "../components/HtmlFragment.astro";
-const title = 'The Distill Blog Template (Astro)';
+import Article, { frontmatter as articleFM } from './article.mdx';
+import Meta from '../components/Meta.astro';
+import HtmlFragment from '../components/HtmlFragment.astro';
+import Footer from '../components/Footer.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import SeoHead from '../components/SeoHead.astro';
+import ogDefault from '../assets/images/visual-vocabulary-poster.png';
+import '../styles/global.scss';
+const docTitle = articleFM?.title ?? 'Untitled article';
+// Autoriser un retour à la ligne dans le titre via "\n" ou sauts de ligne YAML
+const docTitleHtml = (articleFM?.title ?? 'Untitled article')
+  .replace(/\\n/g, '<br/>')
+  .replace(/\n/g, '<br/>');
+const description = articleFM?.description ?? '';
+const authors = articleFM?.authors ?? [];
+const published = articleFM?.published ?? undefined;
+const tags = articleFM?.tags ?? [];
+// Prefer ogImage from frontmatter if provided
+const fmOg = articleFM?.ogImage as string | undefined;
+const imageAbs = fmOg && fmOg.startsWith('http')
+  ? fmOg
+  : (Astro.site ? new URL((fmOg ?? ogDefault.src), Astro.site).toString() : (fmOg ?? ogDefault.src));
 ---
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <base target="_blank" />
-    <title>{title}</title>
+    <title>{docTitle}</title>
+    <SeoHead title={docTitle} description={description} authors={authors} published={published} tags={tags} image={imageAbs} />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous" />
     <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"></script>
-    <style>
-      :root { --page-width: 980px; }
-      body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji; }
-      main { max-width: var(--page-width); margin: 24px auto; padding: 16px; }
-      .l-page { max-width: var(--page-width); margin: 0 auto; }
-      .l-screen { width: 100%; }
-      figure { margin: 16px 0; }
-      /* Assurer que les images ne dépassent jamais le conteneur */
-      :where(picture, img) { max-width: 100%; width: 100%; height: auto; display: block; }
-      .figcaption, figcaption { color: rgba(0,0,0,.6); font-size: 12px; }
-      .plot-card { background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 8px; padding: 12px; }
-      d-contents nav { border-left: 1px solid rgba(0,0,0,.1); padding-left: 16px; margin: 16px 0; }
-      .toc-header { display:flex; align-items:center; gap: 8px; cursor: pointer; user-select:none; }
-      .toc-title { font-weight: 600; }
-      .toggle-icon { transition: transform .2s ease; display:inline-block; }
-      .toggle-icon.collapsed { transform: rotate(-90deg); }
-      .toc-content.collapsed { display:none; }
-      d-article pre, d-code[block] { overflow:auto; background:#f6f8fa; border:1px solid #d0d7de; border-radius:6px; padding:12px; }
-      d-article table { border-collapse: collapse; width: 100%; }
-      d-article th, d-article td { border-bottom: 1px solid rgba(0,0,0,.1); padding: 6px 8px; text-align: left; }
-      aside { color: rgba(0,0,0,.6); font-size: 14px; }
-    </style>
   </head>
   <body>
-    <main>
-      <d-front-matter>
-        <script id='distill-front-matter' type="application/json">{ "title": "The Distill Blog Template", "description": "Building beautiful blog posts.", "published": "Feb 19, 2025", "affiliation": {"name": "YourCompany"}, "authors": [ { "author":"The Author (you!)", "authorURL":"https://huggingface.co/" } ] }</script>
-      </d-front-matter>
+    <ThemeToggle />
+    <section class="hero">
+      <h1 class="hero-title" set:html={docTitleHtml}></h1>
+      <div class="hero-banner">
+        <HtmlFragment src="banner.html" />
+        <p class="hero-desc">It's nice to have a cute interactive banner!</p>
+      </div>
+    </section>
 
-      <d-title>
-        <h1 class="l-page" style="text-align: center;">The Distill Template:<br/>Craft Beautiful Blogs</h1>
-        <div id="title-plot" class="main-plot-container l-screen" style="overflow-x: hidden; width: 100%; text-align: center;">
-          <div style="display: flex; justify-content: center; position: relative;">
-            <figure class="l-page" style="margin:0;">
-              <Image src={banner} alt="Banner" widths={[480,768,1080,1440]} formats={["avif","webp","png"]} sizes="(max-width: 768px) 100vw, var(--page-width)" loading="eager" />
-            </figure>
-          </div>
-          <div class="l-page" style="margin-top:12px;">
-            <HtmlFragment src="banner.html" />
-          </div>
-          <p style="text-align: center; font-style: italic; margin-top: 10px; max-width: 900px; margin-left: auto; margin-right: auto;">It's nice to have a cute interactive banner!</p>
-        </div>
-      </d-title>
+    <section class="article-header">
+      <Meta title={docTitle} authors={articleFM?.authors} affiliation={articleFM?.affiliation} published={articleFM?.published} />
+    </section>
 
-      <d-byline></d-byline>
+    <section class="content-grid">
+      <aside class="toc">
+        <div class="title">Table of Contents</div>
+        <div id="toc-placeholder"></div>
+      </aside>
+      <main>
+        <Article />
+        <style is:inline>
+          /* Inline tweak for details blocks used in MDX */
+          details { background: var(--code-bg) !important; border: 1px solid var(--border-color) !important; border-radius: 6px; margin: 1em 0; padding: .5em .75em; }
+        </style>
+      </main>
+    </section>
 
-      <d-article>
-        <d-contents></d-contents>
+    <Footer citationText='"The Distill Blog Template", 2025.' bibtex={`@misc{distill_blog_template,
+  title={The Distill Blog Template},
+  author={Some Authors et al},
+  year={2025},
+}`}
+    >
+      <div class="references"><h3>References</h3></div>
+    </Footer>
 
-        <p>Welcome to the Distill Blog Template! This framework is based on the <a href="https://distill.pub/">distill.pub</a> design and has been adapted to make it easy for you to create beautiful, interactive technical blogs.</p>
-        <aside>Reading time: 10-15 minutes.</aside>
-        <p>This template includes support for mathematics, interactive visualizations, citations, footnotes, and more.</p>
+    <!-- Medium-like image zoom (lightbox) -->
+    <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
+    <script>
+      // Init zoom on data-zoomable images, close on scroll/move like Medium
+      const initMediumZoom = () => {
+        if (!window.mediumZoom) return;
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const background = isDark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)';
+        const zoom = window.mediumZoom('section.content-grid main img[data-zoomable]', {
+          background,
+          margin: 24,
+          scrollOffset: 0
+        });
 
-        <h2>Getting Started with the Template</h2>
-        <h3>Installation and Setup</h3>
-        <d-code block language="bash">npm install\nnpm run dev</d-code>
+        let onMove;
+        const attachCloseOnMove = () => {
+          if (onMove) return;
+          onMove = () => { zoom.close(); };
+          window.addEventListener('mousemove', onMove, { passive: true });
+          window.addEventListener('wheel', onMove, { passive: true });
+          window.addEventListener('touchmove', onMove, { passive: true });
+        };
+        const detachCloseOnMove = () => {
+          if (!onMove) return;
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('wheel', onMove);
+          window.removeEventListener('touchmove', onMove);
+          onMove = null;
+        };
 
-        <h3>Mathematical Equations</h3>
-        <p>You can include inline math using <code>x^2 + y^2 = z^2</code>.</p>
+        zoom.on('open', attachCloseOnMove);
+        zoom.on('close', detachCloseOnMove);
 
-        <h3>Figures and Images</h3>
-        <figure>
-          <Image src={banner} alt="Example figure" widths={[480,768,1080]} formats={["avif","webp","png"]} sizes="(max-width: 768px) 100vw, var(--page-width)" />
-          <figcaption>Caption for your figure</figcaption>
-        </figure>
+        // React to theme toggle
+        const observer = new MutationObserver(() => {
+          const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+          zoom.update({ background: dark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)' });
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      };
 
-        <h3>Tables</h3>
-        <table>
-          <thead>
-            <tr><th><strong>Model</strong></th><th><strong>Accuracy</strong></th><th><strong>Speed</strong></th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Model A</td><td>95%</td><td>Fast</td></tr>
-            <tr><td>Model B</td><td>98%</td><td>Medium</td></tr>
-            <tr><td>Model C</td><td>99%</td><td>Slow</td></tr>
-          </tbody>
-        </table>
-
-        <h2>Interactive Components</h2>
-        <div class="plot-card">
-          <HtmlFragment src="banner.html" />
-        </div>
-
-      </d-article>
-
-      <d-appendix>
-        <h3 id="citation">Citation</h3>
-        <pre class="citation short">"The Distill Blog Template", 2025.</pre>
-      </d-appendix>
-
-      <script>
-        function toggleTOC() {
-          const content = document.querySelector('.toc-content');
-          const icon = document.querySelector('.toggle-icon');
-          if (content) content.classList.toggle('collapsed');
-          if (icon) icon.classList.toggle('collapsed');
-        }
-      </script>
-
-      <script>
-        const article = document.querySelector('d-article');
-        const toc = document.querySelector('d-contents');
-        if (toc && article) {
-          const headings = article.querySelectorAll('h2, h3, h4');
-          let ToC = `<nav role="navigation" class="l-text figcaption"><div class="toc-header" onclick="toggleTOC()"><span class="toc-title">Table of Contents</span><span class="toggle-icon">▼</span></div><div class="toc-content">`;
-          let prevLevel = 0;
-          for (const el of headings) {
-            const isInTitle = el.parentElement.tagName == 'D-TITLE';
-            const isException = el.getAttribute('no-toc');
-            if (isInTitle || isException) continue;
-            el.setAttribute('id', el.textContent.toLowerCase().replaceAll(" ", "_"));
-            const link = '<a target="_self" href="#' + el.getAttribute('id') + '">' + el.textContent + '</a>';
-            const level = el.tagName === 'H2' ? 0 : (el.tagName === 'H3' ? 1 : 2);
-            while (prevLevel < level) { ToC += '<ul>'; prevLevel++; }
-            while (prevLevel > level) { ToC += '</ul>'; prevLevel--; }
-            if (level === 0) ToC += '<div>' + link + '</div>'; else ToC += '<li>' + link + '</li>';
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMediumZoom, { once: true });
+      } else { initMediumZoom(); }
+    </script>
+    <script>
+      // Open external links in a new tab; keep internal anchors in-page
+      const setExternalTargets = () => {
+        const isExternal = (href) => {
+          try { const u = new URL(href, location.href); return u.origin !== location.origin; } catch { return false; }
+        };
+        document.querySelectorAll('a[href]').forEach(a => {
+          const href = a.getAttribute('href');
+          if (!href) return;
+          if (isExternal(href)) {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+          } else {
+            a.removeAttribute('target');
           }
-          while (prevLevel > 0) { ToC += '</ul>'; prevLevel--; }
-          ToC += '</div></nav>';
-          toc.innerHTML = ToC;
-          toc.setAttribute('prerendered', 'true');
-          const toc_links = document.querySelectorAll('d-contents > nav div a');
-          window.addEventListener('scroll', () => {
-            if (!headings || !toc_links) return;
-            for (let i = headings.length - 1; i >= 0; i--) {
-              const heading = headings[i];
-              if (heading.parentElement.tagName == 'D-TITLE' || heading.getAttribute('no-toc')) continue;
-              if (heading.getBoundingClientRect().top - 50 <= 0) {
-                const headingId = heading.getAttribute('id');
-                const activeLink = Array.from(toc_links).find(link => link.getAttribute('href') === '#' + headingId);
-                if (activeLink && !activeLink.classList.contains('active')) {
-                  toc_links.forEach(link => link.classList.remove('active'));
-                  activeLink.classList.add('active');
-                }
-                break;
-              }
+        });
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setExternalTargets, { once: true });
+      } else { setExternalTargets(); }
+    </script>
+
+    <script>
+      // Build TOC from article headings (h2/h3/h4) and render into the sticky aside
+      const buildTOC = () => {
+        const holder = document.getElementById('toc-placeholder');
+        if (!holder || holder.children.length) return;
+        const articleRoot = document.querySelector('section.content-grid main');
+        if (!articleRoot) return;
+        const headings = articleRoot.querySelectorAll('h2, h3, h4');
+        if (!headings.length) return;
+
+        const nav = document.createElement('nav');
+        let ulStack = [document.createElement('ul')];
+        nav.appendChild(ulStack[0]);
+
+        const levelOf = (tag) => tag === 'H2' ? 2 : tag === 'H3' ? 3 : 4;
+        let prev = 2;
+        headings.forEach((h) => {
+          const lvl = levelOf(h.tagName);
+          // ensure id exists
+          if (!h.id) h.id = h.textContent.toLowerCase().replace(/\s+/g, '_');
+          // adjust depth
+          while (lvl > prev) { const ul = document.createElement('ul'); ulStack[ulStack.length-1].lastElementChild?.appendChild(ul); ulStack.push(ul); prev++; }
+          while (lvl < prev) { ulStack.pop(); prev--; }
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = '#' + h.id; a.textContent = h.textContent; a.target = '_self';
+          li.appendChild(a);
+          ulStack[ulStack.length-1].appendChild(li);
+        });
+
+        holder.appendChild(nav);
+
+        // active link on scroll
+        const links = holder.querySelectorAll('a');
+        const onScroll = () => {
+          for (let i = headings.length - 1; i >= 0; i--) {
+            const top = headings[i].getBoundingClientRect().top;
+            if (top - 60 <= 0) {
+              links.forEach(l => l.classList.remove('active'));
+              const id = '#' + headings[i].id;
+              const active = Array.from(links).find(l => l.getAttribute('href') === id);
+              active && active.classList.add('active');
+              break;
             }
-          });
-        }
-      </script>
-    </main>
+          }
+        };
+        window.addEventListener('scroll', onScroll);
+        onScroll();
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildTOC, { once: true });
+      } else { buildTOC(); }
+    </script>
   </body>
 </html>
 

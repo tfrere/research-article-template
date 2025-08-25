@@ -114,9 +114,12 @@ html = pio.to_html(
     },
 )
 
-output_path = os.path.join(os.path.dirname(__file__), "fragments", "heatmap.html")
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-with open(output_path, "w", encoding="utf-8") as f:
-    f.write(html)
-
+fig.write_html("../app/src/fragments/heatmap.html", 
+               include_plotlyjs=False, 
+               full_html=False, 
+               config={
+                   'displayModeBar': False,
+                   'responsive': True, 
+                   'scrollZoom': False,
+               })
 

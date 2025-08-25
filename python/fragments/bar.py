@@ -105,27 +105,12 @@ post_script = """
 })();
 """
 
-html = pio.to_html(
-    fig,
-    include_plotlyjs=False,
-    full_html=False,
-    post_script=post_script,
-    config={
-        "displayModeBar": False,
-        "responsive": True,
-        "scrollZoom": False,
-        "doubleClick": False,
-        "modeBarButtonsToRemove": [
-            "zoom2d", "pan2d", "select2d", "lasso2d",
-            "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d",
-            "toggleSpikelines"
-        ],
-    },
-)
-
-output_path = os.path.join(os.path.dirname(__file__), "fragments", "bar.html")
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-with open(output_path, "w", encoding="utf-8") as f:
-    f.write(html)
-
+fig.write_html("../app/src/fragments/bar.html", 
+               include_plotlyjs=False, 
+               full_html=False, 
+               config={
+                   'displayModeBar': False,
+                   'responsive': True, 
+                   'scrollZoom': False,
+               })
 

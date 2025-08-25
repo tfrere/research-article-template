@@ -1,0 +1,195 @@
+---
+title: "The science Template:\nCraft Beautiful Blogs"
+description: "A modern, MDX-first research article template with math, citations, and interactive figures."
+authors:
+  - "Hynek Kydlíček"
+  - "Guilherme Penedo"
+  - "Clémentine Fourier"
+affiliation: "Hugging Face"
+published: "Feb 19, 2025"
+tags:
+  - research
+  - template
+ogImage: "https://example.com/your-og-image.png"
+---
+
+import HtmlFragment from "../components/HtmlFragment.astro";
+import { Image } from 'astro:assets';
+import placeholder from "../assets/images/placeholder.png";
+import audioDemo from "../assets/audio/audio-example.wav";
+import Aside from "../components/Aside.astro";
+import visualPoster from "../assets/images/visual-vocabulary-poster.png";
+
+
+Welcome to this single-page research article template built with Astro and MDX. It’s designed to help you write clear, modern, and interactive technical articles with minimal setup. Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
+
+Reading time: 10–15 minutes.
+
+In this guide, you’ll learn how to install the template, write content (math, citations, images, code, asides, interactive fragments), customize styles and behavior, and follow a few best practices for publishing.
+
+## Features
+
+- Math via KaTeX (remark-math/rehype-katex)
+- Citations and footnotes
+- Responsive images with `astro:assets`
+- Anchored headings and a generated table of contents
+- Dark/light theme toggle
+- HTML fragments for self-contained visualizations (e.g., Plotly)
+
+## Getting Started
+
+Installation:
+
+```bash
+npm install
+npm run dev
+```
+
+Build for production:
+
+```bash
+npm run build
+```
+
+Deployment: serve the `dist/` directory on any static host. A Docker/Nginx setup is included and works well on Spaces or similar environments.
+
+Large assets: track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. This project is preconfigured to store such files via LFS.
+
+## Writing Your Content
+
+Author content in MDX. Below are minimal examples for the core elements.
+
+### Math
+
+Inline example: $x^2 + y^2 = z^2$.
+
+Block (scaled dot-product attention):
+
+$$
+\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right) V
+$$
+
+```mdx
+Inline: $x^2 + y^2 = z^2$
+
+Block:
+$$
+\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
+$$
+```
+
+### Images
+
+Responsive image using `astro:assets`:
+
+<Image src={placeholder} alt="Responsive example image" />
+
+```mdx
+import { Image } from 'astro:assets'
+import myImage from '../assets/images/placeholder.png'
+
+<Image src={myImage} alt="Responsive example image" />
+```
+
+### Citations and notes
+
+A short citation [@example2023]. A footnote[^note].
+
+[^note]: Example footnote.
+
+```mdx
+As shown in [@example2023]. A footnote[^note].
+
+[^note]: Example footnote.
+```
+
+### Interactive fragments
+
+Plotly example (line):
+
+<div className="plot-card">
+  <HtmlFragment src="line.html" />
+</div>
+
+```mdx
+import HtmlFragment from '../components/HtmlFragment.astro'
+
+<HtmlFragment src="line.html" />
+```
+
+### Asides
+
+<Aside>
+  This paragraph presents a key idea concisely.
+  <Fragment slot="aside">
+    Side note for brief context or a definition.
+  </Fragment>
+  </Aside>
+
+```mdx
+import Aside from '../components/Aside.astro'
+
+<Aside>
+  Main paragraph with the core idea.
+  <Fragment slot="aside">Short side note.</Fragment>
+</Aside>
+```
+
+### Minimal table
+
+| Method | Score |
+|---|---|
+| A | 0.78 |
+| B | 0.86 |
+
+```mdx
+| Method | Score |
+| --- | --- |
+| A | 0.78 |
+| B | 0.86 |
+```
+
+### Audio
+
+<audio controls src={audioDemo}>
+  Your browser does not support the audio element.
+</audio>
+
+```mdx
+import audioDemo from '../assets/audio/audio-example.wav'
+
+<audio controls src={audioDemo}>
+  Your browser does not support the audio element.
+</audio>
+```
+
+## Advanced Customization
+
+- Styling: customize `src/styles/global.scss` for layout, typography, color scheme, and dark mode variables.
+- Headings/TOC: tweak the TOC builder in `src/pages/index.astro` to match your preferred levels and behavior.
+- Components: extend `components/` with bespoke MDX-friendly blocks (callouts, figures, widgets).
+- Fragments: generate self-contained HTML fragments (e.g., Plotly) and include them via `<HtmlFragment src="..." />`.
+
+## Best Practices
+
+- Keep sections short and focused.
+- Prefer vector or optimized images; use `astro:assets` for responsive delivery.
+- Annotate figures and code minimally but clearly.
+- Use math sparingly; explain notation on first use.
+
+### Choosing the right chart
+
+Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from analytical task to chart types.
+
+<figure>
+  <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
+  <figcaption>
+    Visual Vocabulary: a handy reference to select chart types by purpose (comparison, distribution, part-to-whole, correlation, and more).
+  </figcaption>
+  </figure>
+
+
+## Conclusions
+
+This template provides a practical baseline for writing and sharing technical articles with math, citations, and interactive figures. Start simple, iterate on structure and style, and keep content maintainable for future readers and collaborators.
+

@@ -1,0 +1,32 @@
+---
+interface Props {
+  title: string;
+  authors?: string[];
+  affiliation?: string;
+  published?: string;
+}
+const { title, authors = [], affiliation, published } = Astro.props as Props;
+---
+<header class="meta">
+  <div class="meta-container">
+    {authors.length > 0 && (
+      <div class="meta-container-cell">
+        <h3>Authors</h3>
+        <p>{authors.join(', ')}</p>
+      </div>
+    )}
+    {affiliation && (
+      <div class="meta-container-cell">
+        <h3>Affiliation</h3>
+        <p>{affiliation}</p>
+      </div>
+    )}
+    {published && (
+      <div class="meta-container-cell">
+        <h3>Published</h3>
+        <p>{published}</p>
+      </div>
+    )}
+  </div>
+</header>
+

@@ -1,0 +1,32 @@
+---
+interface Props {
+  citationText: string;
+  bibtex: string;
+}
+const { citationText, bibtex } = Astro.props as Props;
+---
+<footer class="distill-footer">
+  <div class="footer-inner">
+    <section class="citation-block">
+      <h3>Citation</h3>
+      <p>For attribution in academic contexts, please cite this work as</p>
+      <textarea readonly class="citation-text">{citationText}</textarea>
+
+      <h4>BibTeX citation</h4>
+      <textarea readonly class="citation-bibtex">{bibtex}</textarea>
+    </section>
+    <section class="references-block">
+      <slot />
+    </section>
+  </div>
+</footer>
+
+<style>
+  .distill-footer { margin-top: 40px; border-top: 1px solid var(--border-color); }
+  .footer-inner { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+  .citation-block h3 { margin: 0 0 8px; }
+  .citation-block h4 { margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: var(--muted-color); }
+  .citation-text, .citation-bibtex { width: 100%; min-height: 44px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-bg); padding: 8px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: var(--text-color); }
+</style>
+
+

@@ -237,7 +237,12 @@ slider_html = (slider_tpl
     .replace('__PLOT__', html_plot)
 )
 
-with open(output_path, 'w', encoding='utf-8') as f:
-    f.write(slider_html)
-
+fig.write_html("../app/src/fragments/line.html", 
+               include_plotlyjs=False, 
+               full_html=False, 
+               config={
+                   'displayModeBar': False,
+                   'responsive': True, 
+                   'scrollZoom': False,
+               })
 
