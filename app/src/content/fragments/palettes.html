@@ -103,10 +103,10 @@
       // Cards data with full descriptions
       const cards = [
         { key: 'categorical', title: 'Categorical', desc: 'Categorical colors help users map non-numeric meaning to objects in a visualization. These are designed to be visually distinct from one another. Maximum of six.', generator: (base) => {
-            // Génération en LCH pour des couleurs perceptuellement distinctes
+            // Generate in LCH for perceptually distinct colors
             const baseH = chroma(base).get('hsl.h');
-            const L = 70;   // luminosité confortable
-            const C = 80;   // chroma modéré pour rester dans le gamut
+            const L = 70;   // comfortable lightness
+            const C = 80;   // moderate chroma to stay within gamut
             return Array.from({ length: 6 }, (_, i) => chroma.lch(L, C, (baseH + i * 60) % 360).hex());
         } },
         { key: 'sequential', title: 'Sequential', desc: 'Sequential colors have numeric meaning. These are a gradation of colors that go from light to dark. They are used in a heatmap context.', generator: (base) => {
@@ -124,7 +124,7 @@
             const left = chroma.hsl(compH, 0.75, 0.55);
             const right = chroma.hsl(baseH, 0.75, 0.55);
             const center = '#ffffff';
-            // Construire deux rampes symétriques qui se rejoignent (sans dupliquer le neutre)
+            // Build two symmetric ramps that meet (without duplicating the neutral)
             const leftRamp = chroma.scale([left, center]).mode('lch').correctLightness(true).colors(4);
             const rightRamp = chroma.scale([center, right]).mode('lch').correctLightness(true).colors(4);
             return [leftRamp[0], leftRamp[1], leftRamp[2], rightRamp[1], rightRamp[2], rightRamp[3]];

@@ -9,7 +9,7 @@ import ogDefault from '../assets/images/visual-vocabulary-poster.png';
 import 'katex/dist/katex.min.css';
 import '../styles/global.scss';
 const docTitle = articleFM?.title ?? 'Untitled article';
-// Autoriser un retour à la ligne dans le titre via "\n" ou sauts de ligne YAML
+// Allow explicit line breaks in the title via "\n" or YAML newlines
 const docTitleHtml = (articleFM?.title ?? 'Untitled article')
   .replace(/\\n/g, '<br/>')
   .replace(/\n/g, '<br/>');
@@ -106,7 +106,7 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
     <!-- Medium-like image zoom (lightbox) -->
     <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
     <script>
-      // Init zoom sur img[data-zoomable] avec attente du script & contenu; close on scroll like Medium
+      // Initialize zoom on img[data-zoomable]; wait for script & content; close on scroll like Medium
       (() => {
         let zoomInstance = null;
 

@@ -55,7 +55,7 @@ const { citationText, bibtex } = Astro.props as Props;
         const hr = element.querySelector('hr');
         if (hr) hr.remove();
       }
-      // Supprimer un éventuel titre déjà inclus dans le bloc (pour éviter doublons)
+      // Remove an eventual heading already included inside the block (avoid duplicates)
       const firstHeading = element.querySelector(':scope > h1, :scope > h2, :scope > h3');
       if (firstHeading) {
         const txt = (firstHeading.textContent || '').trim().toLowerCase();

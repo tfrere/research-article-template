@@ -8,7 +8,7 @@
 section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
 section.content-grid pre code { display: inline-block; min-width: 100%; }
 
-/* Wrap longues lignes en mobile pour éviter l'overflow (URLs, etc.) */
+/* Wrap long lines on mobile to avoid overflow (URLs, etc.) */
 @media (max-width: 700px) {
   .astro-code,
   section.content-grid pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
@@ -24,7 +24,7 @@ html[data-theme='light'] .astro-code span { color: var(--shiki-light) !important
 html[data-theme='dark'] .astro-code span { color: var(--shiki-dark) !important; }
 
 /* Token color remapping using Shiki CSS variables on the wrapper */
-/* Optionnel: booster le contraste light */
+/* Optional: boost contrast for light theme */
 html[data-theme='light'] .astro-code {
   --shiki-foreground: #24292f;
   --shiki-background: #ffffff;

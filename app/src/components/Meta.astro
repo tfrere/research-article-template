@@ -35,7 +35,7 @@ const { title, authors = [], affiliation, published } = Astro.props as Props;
 </header>
 
 <script>
-  // Attache un gestionnaire pour déclencher un téléchargement programmatique
+  // Attach a handler to trigger a programmatic download
   (() => {
     const ready = () => {
       const btn = document.getElementById('download-pdf-btn');

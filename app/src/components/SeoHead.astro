@@ -5,7 +5,7 @@ interface Props {
   authors?: string[];
   published?: string;
   tags?: string[];
-  image?: string; // URL absolue préférée
+  image?: string; // Preferred absolute URL
 }
 
 const { title, description = '', authors = [], published, tags = [], image } = Astro.props as Props;

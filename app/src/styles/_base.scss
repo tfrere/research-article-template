@@ -45,7 +45,7 @@ html { font-size: 14px; line-height: 1.6; }
 .content-grid main a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--link-underline); }
 .content-grid main a:hover { border-bottom: 1px solid var(--link-underline-hover); }
 
-/* Ne pas souligner les liens de titres dans l'article (pas le TOC) */
+/* Do not underline heading links inside the article (not the TOC) */
 .content-grid main h2 a,
 .content-grid main h3 a,
 .content-grid main h4 a { border-bottom: none; text-decoration: none; }
@@ -220,28 +220,28 @@ figcaption { text-align: center; font-size: 0.9rem; color: var(--muted-color); m
 // =========================================================================
 @media print {
   html, body { background: #fff; }
-  /* Marges gérées par Playwright; éviter marges globales supplémentaires */
+  /* Margins handled by Playwright; avoid extra global margins */
   body { margin: 0; }
 
-  /* Conserver bannière (hero), masquer éléments d'UI non nécessaires */
+  /* Keep the banner (hero), hide non-essential UI elements */
   #theme-toggle { display: none !important; }
 
-  /* Liens: enlever soulignement au survol */
+  /* Links: remove underline */
   .content-grid main a { text-decoration: none; border-bottom: 1px solid rgba(0,0,0,.2); }
 
-  /* Eviter coupures dans des blocs complexes */
+  /* Avoid breaks inside complex blocks */
   .content-grid main pre,
   .content-grid main blockquote,
   .content-grid main table,
   .content-grid main figure { break-inside: avoid; page-break-inside: avoid; }
 
-  /* Sauts de page doux autour des titres principaux */
+  /* Soft page breaks around main headings */
   .content-grid main h2 { page-break-before: auto; page-break-after: avoid; break-after: avoid-page; }
 
-  /* Petites tailles d’icônes inutiles à l’impression */
+  /* Small icon labels not needed when printing */
   .code-lang-chip { display: none !important; }
 
-  /* Ajuster couleurs plus contrastées à l’impression */
+  /* Adjust more contrasty colors for print */
   :root {
     --border-color: rgba(0,0,0,.2);
     --link-underline: rgba(0,0,0,.3);

@@ -2,11 +2,11 @@
 interface Props { src: string }
 const { src } = Astro.props as Props;
 
-// Charge tous les fragments .html sous src/fragments/** en tant que string (dev & build)
+// Load all .html fragments under src/content/fragments/** as strings (dev & build)
 const fragments = import.meta.glob('../content/fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function resolveFragment(requested: string): string | null {
-  // Autorise "banner.html" ou "fragments/banner.html"
+  // Allow both "banner.html" and "fragments/banner.html"
   const needle = requested.replace(/^\/*/, '');
   for (const [key, html] of Object.entries(fragments)) {
     if (key.endsWith('/' + needle) || key.endsWith('/' + needle.replace(/^fragments\//, ''))) {
@@ -22,18 +22,18 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
 { html ? (
   <div id={mountId} set:html={html} />
  ) : (
-  <div><!-- Fragment introuvable: {src} --></div>
+  <div><!-- Fragment not found: {src} --></div>
  ) }
 
 <script>
-  // Ré-exécuter les <script> présents dans le fragment injecté (innerHTML n'exécute pas les scripts)
+  // Re-execute <script> tags inside the injected fragment (innerHTML doesn't run scripts)
   const scriptEl = document.currentScript;
   const mount = scriptEl ? scriptEl.previousElementSibling : null;
   const execute = () => {
     if (!mount) return;
     const scripts = mount.querySelectorAll('script');
     scripts.forEach(old => {
-      // ignorer les types non exécutables (ex: application/json)
+      // ignore non-executable types (e.g., application/json)
       if (old.type && old.type !== 'text/javascript' && old.type !== 'module' && old.type !== '') return;
       if (old.dataset.executed === 'true') return;
       old.dataset.executed = 'true';
@@ -43,7 +43,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
         document.body.appendChild(s);
       } else {
         try {
-          // exécuter inline
+          // run inline
           (0, eval)(old.text || '');
         } catch (e) {
           console.error('HtmlFragment inline script error:', e);
@@ -51,7 +51,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
       }
     });
   };
-  // Si Plotly n'est pas encore chargé, attendre l'événement load
+  // If Plotly isn't loaded yet, wait for the window load event
   if (window.Plotly) execute();
   else window.addEventListener('load', execute, { once: true });
   </script>

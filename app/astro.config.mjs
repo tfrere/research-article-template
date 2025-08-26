@@ -7,12 +7,15 @@ import remarkFootnotes from 'remark-footnotes';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeCitation from 'rehype-citation';
-// Shiki intégré (dual themes) — pas de rehype-pretty-code
+// Built-in Shiki (dual themes) — no rehype-pretty-code
 
 export default defineConfig({
   output: 'static',
   integrations: [mdx()]
   ,
+  devToolbar: {
+    enabled: false
+  },
   markdown: {
     shikiConfig: {
       themes: {

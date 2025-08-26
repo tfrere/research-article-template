@@ -26,7 +26,7 @@ async function waitForServer(url, timeoutMs = 60000) {
     } catch {}
     await delay(500);
   }
-  throw new Error(`Le serveur n'a pas démarré à temps: ${url}`);
+  throw new Error(`Server did not start in time: ${url}`);
 }
 
 function parseArgs(argv) {
@@ -113,7 +113,7 @@ async function main() {
   const port = Number(process.env.PREVIEW_PORT || 8080);
   const baseUrl = `http://127.0.0.1:${port}/`;
   const args = parseArgs(process.argv);
-  // Par défaut: light (n'emploie pas de variable d'environnement implicite)
+  // Default: light (do not rely on env vars implicitly)
   const theme = (args.theme === 'dark' || args.theme === 'light') ? args.theme : 'light';
   const format = args.format || 'A4';
   const margin = parseMargin(args.margin);
@@ -122,15 +122,19 @@ async function main() {
   // filename can be provided, else computed from page title later
   let outFileBase = (args.filename && String(args.filename).replace(/\.pdf$/i, '')) || 'article';
 
-  console.log('> Build du site Astro…');
+  console.log('> Building Astro site…');
   await run('npm', ['run', 'build']);
 
-  console.log('> Démarrage du preview Astro…');
-  const preview = spawn('npm', ['run', 'preview'], { cwd, stdio: 'inherit' });
+  console.log('> Starting Astro preview…');
+  // Start preview in its own process group so we can terminate all children reliably
+  const preview = spawn('npm', ['run', 'preview'], { cwd, stdio: 'inherit', detached: true });
+  const previewExit = new Promise((resolvePreview) => {
+    preview.on('close', (code, signal) => resolvePreview({ code, signal }));
+  });
 
   try {
     await waitForServer(baseUrl, 60000);
-    console.log('> Serveur prêt, génération PDF…');
+    console.log('> Server ready, generating PDF…');
 
     const browser = await chromium.launch({ headless: true });
     try {
@@ -138,7 +142,7 @@ async function main() {
       await context.addInitScript((desired) => {
         try {
           localStorage.setItem('theme', desired);
-          // Appliquer immédiatement le thème pour éviter les flashes
+          // Apply theme immediately to avoid flashes
           if (document && document.documentElement) {
             document.documentElement.dataset.theme = desired;
           }
@@ -174,37 +178,54 @@ async function main() {
         printBackground: true,
         margin
       });
-      console.log(`✅ PDF généré: ${outPath}`);
+      console.log(`✅ PDF generated: ${outPath}`);
 
-      // Copie de compatibilité dans dist/article.pdf (pour serveurs Nginx qui ne servent que dist)
+      // Compatibility copy into dist/article.pdf (for servers that only serve dist)
       const distCompatPath = resolve(cwd, 'dist', 'article.pdf');
       try {
         if (basename(outPath) !== 'article.pdf') {
           await fs.copyFile(outPath, distCompatPath);
-          console.log(`✅ PDF copié (compat dist): ${distCompatPath}`);
+          console.log(`✅ PDF copied (dist compat): ${distCompatPath}`);
         }
       } catch (e) {
-        console.warn('Impossible de copier le PDF compat vers dist/article.pdf:', e?.message || e);
+        console.warn('Unable to copy PDF to dist/article.pdf:', e?.message || e);
       }
 
-      // Copie aussi dans public sous 2 noms: slug.pdf et article.pdf (compat)
+      // Also copy into public under 2 names: slug.pdf and article.pdf (compat)
       const publicSlugPath = resolve(cwd, 'public', `${outFileBase}.pdf`);
       const publicCompatPath = resolve(cwd, 'public', 'article.pdf');
       try {
         await fs.mkdir(resolve(cwd, 'public'), { recursive: true });
         await fs.copyFile(outPath, publicSlugPath);
         await fs.copyFile(outPath, publicCompatPath);
-        console.log(`✅ PDF copié dans: ${publicSlugPath}`);
-        console.log(`✅ PDF copié (compat): ${publicCompatPath}`);
+        console.log(`✅ PDF copied to: ${publicSlugPath}`);
+        console.log(`✅ PDF copied (compat): ${publicCompatPath}`);
       } catch (e) {
-        console.warn('Impossible de copier le PDF vers public/:', e?.message || e);
+        console.warn('Unable to copy PDF to public/:', e?.message || e);
       }
     } finally {
       await browser.close();
     }
   } finally {
-    // Tenter un arrêt propre
-    preview.kill('SIGINT');
+    // Try a clean shutdown of preview (entire process group first)
+    try {
+      if (process.platform !== 'win32') {
+        try { process.kill(-preview.pid, 'SIGINT'); } catch {}
+      }
+      try { preview.kill('SIGINT'); } catch {}
+      await Promise.race([previewExit, delay(3000)]);
+      // Force kill if still alive
+      // eslint-disable-next-line no-unsafe-optional-chaining
+      if (!preview.killed) {
+        try {
+          if (process.platform !== 'win32') {
+            try { process.kill(-preview.pid, 'SIGKILL'); } catch {}
+          }
+          try { preview.kill('SIGKILL'); } catch {}
+        } catch {}
+        await Promise.race([previewExit, delay(1000)]);
+      }
+    } catch {}
   }
 }
 
