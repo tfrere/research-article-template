@@ -149,7 +149,9 @@ async function main() {
         } catch {}
       }, theme);
       const page = await context.newPage();
-      await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.goto(baseUrl, { waitUntil: 'load', timeout: 60000 });
+      // Give time for CDN scripts (Plotly/D3) to attach and for our fragment hooks to run
+      try { await page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }); } catch {}
       // Compute slug from title if needed
       if (!args.filename) {
         const title = await page.evaluate(() => {

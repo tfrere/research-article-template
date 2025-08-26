@@ -51,8 +51,8 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
       }
     });
   };
-  // If Plotly isn't loaded yet, wait for the window load event
-  if (window.Plotly) execute();
+  // Ensure execution when ready: run now if Plotly is present or document already loaded; otherwise wait for 'load'
+  if (window.Plotly || document.readyState === 'complete') execute();
   else window.addEventListener('load', execute, { once: true });
   </script>
 
