@@ -64,6 +64,29 @@ function parseMargin(margin) {
   return { top: parts[0] || '12mm', right: parts[1] || '12mm', bottom: parts[2] || '16mm', left: parts[3] || '12mm' };
 }
 
+function cssLengthToMm(val) {
+  if (!val) return 0;
+  const s = String(val).trim();
+  if (/mm$/i.test(s)) return parseFloat(s);
+  if (/cm$/i.test(s)) return parseFloat(s) * 10;
+  if (/in$/i.test(s)) return parseFloat(s) * 25.4;
+  if (/px$/i.test(s)) return (parseFloat(s) / 96) * 25.4; // 96 CSS px per inch
+  const num = parseFloat(s);
+  return Number.isFinite(num) ? num : 0; // assume mm if unitless
+}
+
+function getFormatSizeMm(format) {
+  const f = String(format || 'A4').toLowerCase();
+  switch (f) {
+    case 'letter': return { w: 215.9, h: 279.4 };
+    case 'legal': return { w: 215.9, h: 355.6 };
+    case 'a3': return { w: 297, h: 420 };
+    case 'tabloid': return { w: 279.4, h: 431.8 };
+    case 'a4':
+    default: return { w: 210, h: 297 };
+  }
+}
+
 async function waitForImages(page, timeoutMs = 15000) {
   await page.evaluate(async (timeout) => {
     const deadline = Date.now() + timeout;
@@ -149,9 +172,15 @@ async function main() {
         } catch {}
       }, theme);
       const page = await context.newPage();
+      // Pre-fit viewport width to printable width so charts size correctly
+      const fmt = getFormatSizeMm(format);
+      const mw = fmt.w - cssLengthToMm(margin.left) - cssLengthToMm(margin.right);
+      const printableWidthPx = Math.max(320, Math.round((mw / 25.4) * 96));
+      await page.setViewportSize({ width: printableWidthPx, height: 1200 });
       await page.goto(baseUrl, { waitUntil: 'load', timeout: 60000 });
       // Give time for CDN scripts (Plotly/D3) to attach and for our fragment hooks to run
       try { await page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }); } catch {}
+      try { await page.waitForFunction(() => !!window.d3, { timeout: 8000 }); } catch {}
       // Compute slug from title if needed
       if (!args.filename) {
         const title = await page.evaluate(() => {
