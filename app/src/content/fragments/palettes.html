@@ -77,12 +77,13 @@
           loadScript('chroma-cdn-fallback', 'https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js', next);
         });
       };
-      const ensureNtc = (next) => {
-        if (window.ntc && typeof window.ntc.name === 'function') return next();
-        loadScript('ntc-cdn', 'https://unpkg.com/ntcjs@1.0.0/build/ntc.js', next, () => next());
-      };
-      ensureD3(() => ensureChroma(() => ensureNtc(cb)));
+      // ntc.js removed; rely on embedded color-name list
+      ensureD3(() => ensureChroma(cb));
     };
+
+    // Embedded reduced color-name list (~50 items), minified
+    const COLOR_NAMES=[{"name":"Candy Apple Red","hex":"#ff0800"},{"name":"Boiling Magma","hex":"#ff3300"},{"name":"Aerospace Orange","hex":"#ff4f00"},{"name":"Burtuqali Orange","hex":"#ff6700"},{"name":"American Orange","hex":"#ff8b00"},{"name":"Cheese","hex":"#ffa600"},{"name":"Amber","hex":"#ffbf00"},{"name":"Demonic Yellow","hex":"#ffe700"},{"name":"Bat-Signal","hex":"#feff00"},{"name":"Bitter Lime","hex":"#cfff00"},{"name":"Electric Lime","hex":"#ccff00"},{"name":"Bright Yellow Green","hex":"#9dff00"},{"name":"Lasting Lime","hex":"#88ff00"},{"name":"Bright Green","hex":"#66ff00"},{"name":"Chlorophyll Green","hex":"#4aff00"},{"name":"Green Screen","hex":"#22ff00"},{"name":"Electric Pickle","hex":"#00ff04"},{"name":"Acid","hex":"#00ff22"},{"name":"Lucent Lime","hex":"#00ff33"},{"name":"Cathode Green","hex":"#00ff55"},{"name":"Booger Buster","hex":"#00ff77"},{"name":"Green Gas","hex":"#00ff99"},{"name":"Enthusiasm","hex":"#00ffaa"},{"name":"Ice Ice Baby","hex":"#00ffdd"},{"name":"Master Sword Blue","hex":"#00ffee"},{"name":"Agressive Aqua","hex":"#00fbff"},{"name":"Vivid Sky Blue","hex":"#00ccff"},{"name":"Capri","hex":"#00bfff"},{"name":"Sky of Magritte","hex":"#0099ff"},{"name":"Azure","hex":"#007fff"},{"name":"Blue Ribbon","hex":"#0066ff"},{"name":"Blinking Blue","hex":"#0033ff"},{"name":"Icelandic Water","hex":"#0011ff"},{"name":"Blue","hex":"#0000ff"},{"name":"Blue Pencil","hex":"#2200ff"},{"name":"Electric Ultramarine","hex":"#3f00ff"},{"name":"Aladdin's Feather","hex":"#5500ff"},{"name":"Purple Climax","hex":"#8800ff"},{"name":"Amethyst Ganzstar","hex":"#8f00ff"},{"name":"Electric Purple","hex":"#bf00ff"},{"name":"Phlox","hex":"#df00ff"},{"name":"Brusque Pink","hex":"#ee00ff"},{"name":"Bright Magenta","hex":"#ff08e8"},{"name":"Brutal Pink","hex":"#ff00bb"},{"name":"Mean Girls Lipstick","hex":"#ff00ae"},{"name":"Big Bang Pink","hex":"#ff0099"},{"name":"Flaming Hot Flamingoes","hex":"#ff005d"},{"name":"Blazing Dragonfruit","hex":"#ff0054"},{"name":"Carmine Red","hex":"#ff0038"},{"name":"Bright Red","hex":"#ff000d"}];
+    window.__colorNames = COLOR_NAMES;
 
     const bootstrap = () => {
       console.log('[palettes] bootstrap start');
@@ -173,8 +174,8 @@
         // Update current swatch + name
         if (currentSwatch) currentSwatch.style.background = base.hex();
         const getName = (hex) => {
-          // Prefer large color-name list if available
-          const list = (window.__colorNames && window.__colorNames.length) ? window.__colorNames : null;
+          // Prefer embedded reduced list
+          const list = (window.__colorNames && window.__colorNames.length) ? window.__colorNames : COLOR_NAMES;
           if (list && window.chroma) {
             let bestName = null; let best = Infinity;
             for (let i = 0; i < list.length; i++) {
@@ -184,8 +185,6 @@
             }
             if (bestName) return bestName;
           }
-          // Fallback to ntc.js
-          try { if (window.ntc && window.ntc.name) { const res = window.ntc.name(hex); return res && res[1]; } } catch {}
           // Hue-based coarse fallback
           const hh = chroma(hex).get('hsl.h') || 0;
           const labels = ['Red','Orange','Yellow','Lime','Green','Cyan','Blue','Indigo','Violet','Magenta'];
@@ -290,14 +289,8 @@
       };
       if (simSelect) simSelect.addEventListener('change', () => applySimulation(simSelect.value));
 
-      // Load extended color-name dataset, then initial render
-      const loadColorNames = () => {
-        if (window.__colorNames) return Promise.resolve(window.__colorNames);
-        const url = 'https://unpkg.com/color-name-list@10.2.0/dist/colornames.json';
-        return fetch(url).then(r => r.json()).then(arr => { window.__colorNames = arr; return arr; }).catch(() => []);
-      };
       console.log('[palettes] initial render');
-      loadColorNames().finally(() => setHue(hue));
+      setHue(hue);
       applySimulation('none');
 
       // Fixed 3 columns layout

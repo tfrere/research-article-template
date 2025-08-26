@@ -1,7 +1,7 @@
 ---
-title: "From Idea to Interactive:\n A Modern Template for Scientific Writing
+title: "From Idea to Interaction:\n A Modern Template for Scientific Writing
 "
-subtitle: "It's nice to have a cute interactive banner"
+subtitle: "Markdown-first research article template with math, citations, and interactive figures."
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
   - "John Doe"
@@ -107,7 +107,8 @@ Your article lives in two places:
 - `app/src/content/` — where you can find the article.mdx, bibliography.bib and html fragments.
 - `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
 
-The **initial skeleton** of an article looks like this:
+This is MDX, its basically a markdown file with html and astro components.
+The **initial skeleton** of an article looks like this.
 
 ```mdx
 {/* HEADER */}
@@ -168,7 +169,7 @@ $x^2 + y^2 = z^2$
 **Block**
 
 $$
-x^2 + y^2 = z^2
+\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
 
 ```mdx
