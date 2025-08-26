@@ -1,5 +1,6 @@
 ---
-title: "The science template:\nCraft Beautiful Blogs"
+title: "From Idea to Interactive:\n A Modern Template for Scientific Writing
+"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
   - "John Doe"
@@ -23,11 +24,11 @@ import Aside from "../components/Aside.astro";
 import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
 <Aside>
-  Welcome to this single-page research article template built with **Astro** and **MDX**.
+  Welcome to this single-page research article template built with **Markdown**.
   It’s designed to help you write clear, modern, and **interactive** technical articles with **minimal setup**.
   Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
   <Fragment slot="aside">
-    Reading time: 10–15 minutes.
+    Reading time: 20–25 minutes.
   </Fragment>
   In this guide, you’ll learn how to install the template,
   write content (math, citations, images, code, asides, interactive fragments),
@@ -37,23 +38,27 @@ import visualPoster from "../assets/images/visual-vocabulary-poster.png";
   </Fragment>
 </Aside>
 
-Ce template est heavely inspired by distill.
+This template is inspired by [**Distill**](https://distill.pub); we aim to preserve the best of it while modernizing the stack. Their work is highly inspiring.
 
 ## Features
 
 <div className="tag-list">
   <span className="tag">Markdown based</span>
   <span className="tag">KaTeX math</span>
+  <span className="tag">Syntax highlighting</span>
   <span className="tag">Citations & footnotes</span>
   <span className="tag">Automatic build</span>
   <span className="tag">Table of content</span>
   <span className="tag">Dark theme</span>
   <span className="tag">HTML fragments</span>
   <span className="tag">Plotly ready</span>
+  <span className="tag">D3.js ready</span>
   <span className="tag">SEO Friendly</span>
-  <span className="tag">Lightweight bundle(\<500ko)</span>
+  <span className="tag">Lightweight bundle</span>
   <span className="tag">Aside notes</span>
+  <span className="tag">Responsive images</span>
   <span className="tag">Medium like zoomable images</span>
+  <span className="tag">PDF export</span>
 </div>
 
 ## Getting Started
@@ -93,22 +98,14 @@ Track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. 
 
 ## Writing Your Content
 
-### MDX
+### Introduction
 
-Author your content in MDX for a pleasant, productive writing flow that combines familiar Markdown with reusable components when needed.
-Below are minimal examples of the core elements.
+Your article lives in two places:
 
+- `app/src/content/` — where you can find the article.mdx and bibliography.bib.
+- `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
 
-Don't forget to enable syntax highlighting for MDX to make your editing experience even smoother!
-
-```bash
-# For VS Code but alternatively, use the Extensions marketplace UI and search for "MDX" by unifiedjs.
-code --install-extension unifiedjs.vscode-mdx
-```
-
-
-
-The initial skeleton of this article looks like this:
+The initial skeleton of an article looks like this:
 
 ```mdx
 {/* HEADER */}
@@ -129,35 +126,17 @@ ogImage: "https://example.com/your-og-image.png"
 
 {/* IMPORTS */}
 import { Image } from 'astro:assets';
-import Aside from "../components/Aside.astro";
-import HtmlFragment from "../components/HtmlFragment.astro";
-import placeholder from "../assets/images/placeholder.png";
-import audioDemo from "../assets/audio/audio-example.wav";
+import placeholder from '../assets/images/placeholder.jpg';
 
 {/* CONTENT */}
-<Aside>
-  Welcome to this single-page research article template built with Astro and MDX.
-  It’s designed to help you write clear, modern, and interactive technical articles with minimal setup.
-  Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
-  <Fragment slot="aside">
-    Reading time: 10–15 minutes.
-  </Fragment>
-  In this guide, you’ll learn how to install the template,
-  write content (math, citations, images, code, asides, interactive fragments),
-  customize styles and behavior, and follow a few best practices for publishing.
-  <Fragment slot="aside">
-    If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/lvwerra/distill-blog-template/discussions?status=open&type=discussion">Community tab</a>!
-  </Fragment>
-</Aside>
+# Hello, world
 
+This is a short paragraph written in Markdown. Below is an example image:
 
+<Image src={placeholder} alt="Example image" />
 ```
 
-It is composed of three parts:
 
-- **Header**: which contains the title and the article's metadata.
-- **Imports**: the imports of the different modules / images used in the article
-- **Content**: the content of the article
 
 **Available blocs**:
 
@@ -175,18 +154,21 @@ It is composed of three parts:
 
 ### Math
 
-Inline example: $x^2 + y^2 = z^2$.
+**Inline**
 
-Block example:
+$x^2 + y^2 = z^2$.
+
+```mdx
+$x^2 + y^2 = z^2$
+```
+
+**Block**
 
 $$
 x^2 + y^2 = z^2
 $$
 
 ```mdx
-Inline example: $x^2 + y^2 = z^2$
-
-Block example:
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
@@ -198,7 +180,11 @@ Responsive images automatically generate an optimized `srcset` and `sizes` so th
 
 **Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
 
-**Optional:** Figcaption and credits
+**Optional:** Lazy loading: add `loading="lazy"` to opt-in.
+
+**Optional:** Figcaption and credits: add a `figcaption` element with a `span` containing the credit.
+
+
 
 <figure>
   <Image
@@ -208,7 +194,7 @@ Responsive images automatically generate an optimized `srcset` and `sizes` so th
   />
   <figcaption>
     Optimized image with a descriptive caption.
-    <span className="image-credit">Crédit: Photo by <a href="https://example.com">Author</a></span>
+    <span className="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>
   </figcaption>
 </figure>
 
@@ -297,7 +283,7 @@ import Aside from '../components/Aside.astro'
 
 Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
 
-**Wide example**
+#### Wide example
 
 <Wide>
   <div className="demo-wide">demo wide</div>
@@ -311,7 +297,7 @@ import Wide from '../components/Wide.astro'
 </Wide>
 ```
 
-**Full-bleed example**
+#### Full-bleed example
 
 <FullBleed>
   <div className="demo-full-bleed">demo full-bleed</div>
@@ -359,7 +345,7 @@ import audioDemo from '../assets/audio/audio-example.wav'
 ### Embeds
 
 
-#### HtmlFragments
+#### Html Fragments
 
 The main purpose of the ```HtmlFragment``` component is to embed a plotly or d3 chart in your article. Libraries are already imported in the template.
 
@@ -371,7 +357,6 @@ The main purpose of the ```HtmlFragment``` component is to embed a plotly or d3 
 import HtmlFragment from '../components/HtmlFragment.astro'
 
 <HtmlFragment src="line.html" />
-
 ```
 
 #### Iframes
@@ -402,21 +387,36 @@ Finally, if you want to include code from GitHub you can use emgithub.com and, f
 
 ## Best Practices
 
-- Keep sections short and focused.
-- Prefer vector or optimized images; use `astro:assets` for responsive delivery.
-- Annotate figures and code minimally but clearly.
-- Use math sparingly; explain notation on first use.
+### Short sections
+Break content into **small, purpose‑driven sections**. Each section should answer a **single question** or support one idea. This improves **scanability**, helps readers navigate with the TOC, and makes later edits safer.
 
-### Choosing the right chart
+### Clear, minimal annotations
+Favor **concise captions** and callouts that clarify what to look at and why it matters. In code, **highlight just the lines** that carry the idea; avoid verbose commentary. **Precision beats volume**.
+
+### Explain math notation
+**Introduce symbols and variables** the first time they appear, and prefer **well‑known identities** over custom shorthand. When formulas carry the message, add one sentence of **plain‑language interpretation** right after.
+
+### Use the right color scale
+
+Choosing colors well is critical: a **palette** encodes **meaning** (categories, magnitudes, oppositions), preserves **readability** and **accessibility** (**sufficient contrast**, **color‑vision safety**), and ensures **perceptually smooth transitions**. The three families below illustrate when to use **categorical**, **sequential**, or **diverging** colors and how they evolve from the same **reference hue**.
+
+<div className="">
+  <HtmlFragment src="palettes.html" />
+</div>
+
+### Use the right chart
 
 Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from analytical task to chart types.
 
 <figure>
-  <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" data-zoomable />
+  <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">
+    <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
+  </a>
   <figcaption>
     Visual Vocabulary: a handy reference to select chart types by purpose (comparison, distribution, part-to-whole, correlation, and more).
+    — <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">Website</a>
   </figcaption>
-  </figure>
+</figure>
 
 
 ## Conclusions

@@ -52,19 +52,7 @@ z_raw = np.concatenate([z_spiral, z_bulge])
 # Tailles: conserver l'échelle 5..10 pour cohérence
 sizes = (z_raw + 1) * 5
 
-# Filtrer les petits points proches du centre (esthétique du bulbe)
-# - on calcule le rayon elliptique normalisé
-# - on retire les points de petite taille situés trop près du centre
-central_radius_cut = 0.18
-min_size_center = 7.5
-r_total = np.sqrt(((x - cx) / a) ** 2 + ((y - cy) / b) ** 2)
-mask = ~((r_total <= central_radius_cut) & (sizes < min_size_center))
-
-# Appliquer le masque
-x = x[mask]
-y = y[mask]
-z_raw = z_raw[mask]
-sizes = sizes[mask]
+# Suppression du filtre intermédiaire: on garde tous les points posés, on filtrera à la toute fin
 
 df = pd.DataFrame({
     "x": x,
@@ -84,6 +72,9 @@ def get_label(z):
 
 # Labels basés sur l'intensité centrale
 df["label"] = pd.Series(z_raw).apply(get_label)
+
+# Ordonnancement pour le rendu: petits d'abord, gros ensuite (au-dessus)
+df = df.sort_values(by="z", ascending=True).reset_index(drop=True)
 
 fig = go.Figure()
 

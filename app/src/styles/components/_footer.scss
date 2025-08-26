@@ -1,8 +1,54 @@
-.distill-footer { margin-top: 40px; border-top: 1px solid var(--border-color); }
-.footer-inner { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+.distill-footer { contain: layout style; font-size: 0.8em; line-height: 1.7em; margin-top: 60px; margin-bottom: 0; border-top: 1px solid rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.5); }
+.footer-inner { max-width: 1280px; margin: 0 auto; padding: 60px 16px 48px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
+
+// Utiliser la grille parent (3 colonnes comme .content-grid)
+.citation-block,
+.references-block { display: contents; }
+.citation-block > h3,
+.references-block > h3 { grid-column: 1; font-size: 15px; margin: 0; }
+.citation-block > :not(h3),
+.references-block > :not(h3) { grid-column: 2; }
+.citation-block > h3 + *,
+.references-block > h3 + * { margin-top: 1em; }
+@media (max-width: 1100px) {
+  .footer-inner { grid-template-columns: 1fr; gap: 16px; }
+  .footer-inner > h3 { grid-column: auto; margin-top: 16px; }
+}
 .citation-block h3 { margin: 0 0 8px; }
 .citation-block h4 { margin: 16px 0 8px; font-size: 14px; text-transform: uppercase; color: var(--muted-color); }
-.citation-text, .citation-bibtex { width: 100%; min-height: 44px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--surface-bg); padding: 8px; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 13px; color: var(--text-color); white-space: pre-wrap; overflow-y: hidden; line-height: 1.4; }
-.references-block h3 { margin: 24px 0 8px; }
+
+// Distill-like appendix citation styling
+.citation {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 15px;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  padding-left: 18px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.02);
+  padding: 10px 18px;
+  border-radius: 3px;
+  color: rgba(150, 150, 150, 1);
+  overflow: hidden;
+  margin-top: -12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.citation a { color: rgba(0, 0, 0, 0.6); text-decoration: underline; }
+
+.citation.short { margin-top: -4px; }
+
+.references-block h3 { margin: 0; }
 .references-block .footnotes { margin-top: 8px; }
 .references-block .bibliography { margin-top: 8px; }
+
+// Distill-like list styling for references/footnotes
+.references-block ol { padding: 0 0 0 15px; }
+@media (min-width: 768px) { .references-block ol { padding: 0 0 0 30px; margin-left: -30px; } }
+.references-block li { margin-bottom: 1em; }
+.references-block a { color: rgba(0, 0, 0, 0.6); }
+
+@media (max-width: 1100px) {
+  .footer-inner { display: block; padding: 40px 16px; }
+}

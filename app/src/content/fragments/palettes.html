@@ -1,0 +1,311 @@
+<div class="palettes" style="width:100%; margin: 10px 0;">
+  <style>
+    .palettes .palettes__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 820px) { .palettes .palettes__grid { grid-template-columns: 1fr; } }
+    .palettes .palette-card { position: relative; }
+    .palettes .palette-card__header { position: absolute; top: 0; left: 0; right: 0; height: 6px; border-top-left-radius: 10px; border-top-right-radius: 10px; background: transparent; }
+    .palettes .palette-card__badge { position: relative; width: 44px; height: 44px; border-radius: 50%; margin: 14px auto 6px; background: transparent; border: none; box-shadow: none; }
+    .palettes .palette-card__badge .badge-hole { position:absolute; top:50%; left:50%; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--surface-bg); border: none; box-shadow: none; }
+    .palettes .palette-card__badge .badge-marker { position:absolute; width:6px; height:6px; border-radius:50%; border: none; box-shadow: none; }
+    .palettes .palette-card__swatches { display: flex; gap: 0; margin-top: 8px; }
+    .palettes .palette-card__swatches .sw { flex: 1 1 0; height: 28px; min-width: 0; border: none; }
+    .palettes .palette-card__swatches .sw:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+    .palettes .palette-card__swatches .sw:last-child  { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+    .palettes .palette-card__footer { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+    .palettes .copy-btn { width: 100%; margin: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 12px; cursor: pointer; }
+    .palettes .palettes__meta { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+    .palettes .current-color { display: flex; align-items: center; gap: 10px; }
+    .palettes .current-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-color); }
+    .palettes .current-text { display: flex; flex-direction: column; line-height: 1.1; }
+    .palettes .current-name { font-size: 14px; font-weight: 700; color: var(--text-color); }
+    .palettes .current-hex { font-size: 11px; color: var(--muted-color); letter-spacing: .02em; }
+    .palettes .cvd-select { padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); }
+  </style>
+  <div class="palettes__controls" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div style="font-weight:700;">Pick a hue</div>
+      <div class="hue-value" style="font-variant-numeric: tabular-nums; color: var(--muted-color);">H 220°</div>
+    </div>
+    <div class="hue-slider" style="position:relative; height:18px; border-radius:10px; border:1px solid var(--border-color); background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); cursor: ew-resize; touch-action: none;">
+      <div class="hue-knob" style="position:absolute; top:50%; left:61.1%; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.25); transform:translate(-50%, -50%); background: var(--surface-bg); z-index: 2;"></div>
+    </div>
+    <div class="palettes__meta">
+      <div class="current-color">
+        <div class="current-swatch" aria-label="Current color" title="Current color"></div>
+        <div class="current-text">
+          <div class="current-name">—</div>
+          <div class="current-hex">—</div>
+        </div>
+      </div>
+      <label style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:12px; color: var(--muted-color);">Color blindness preview</span>
+        <select class="cvd-select" title="Choose a color‑blindness simulation">
+          <option value="none">None</option>
+          <option value="protanopia">Protanopia (<2%)</option>
+          <option value="deuteranopia">Deuteranopia (<2%)</option>
+          <option value="tritanopia">Tritanopia (<0.1%)</option>
+          <option value="achromatopsia">Monochromacy (<0.1%)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <div class="palettes__grid"></div>
+</div>
+<script>
+  (() => {
+    const ensureLibs = (cb) => {
+      const loadScript = (id, src, onload, onerror) => {
+        let s = document.getElementById(id);
+        if (s) { return onload && onload(); }
+        s = document.createElement('script');
+        s.id = id;
+        s.src = src;
+        s.async = true;
+        if (onload) s.addEventListener('load', onload, { once: true });
+        if (onerror) s.addEventListener('error', onerror, { once: true });
+        document.head.appendChild(s);
+      };
+      const ensureD3 = (next) => {
+        if (window.d3) return next();
+        loadScript('d3-cdn', 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js', next, () => {
+          loadScript('d3-cdn-fallback', 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', next);
+        });
+      };
+      const ensureChroma = (next) => {
+        if (window.chroma) return next();
+        loadScript('chroma-cdn', 'https://unpkg.com/chroma-js@2.4.2/dist/chroma.min.js', next, () => {
+          loadScript('chroma-cdn-fallback', 'https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js', next);
+        });
+      };
+      const ensureNtc = (next) => {
+        if (window.ntc && typeof window.ntc.name === 'function') return next();
+        loadScript('ntc-cdn', 'https://unpkg.com/ntcjs@1.0.0/build/ntc.js', next, () => next());
+      };
+      ensureD3(() => ensureChroma(() => ensureNtc(cb)));
+    };
+
+    const bootstrap = () => {
+      console.log('[palettes] bootstrap start');
+      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+      const root = mount && mount.closest('.palettes') ? mount.closest('.palettes') : document.querySelector('.palettes');
+      if (!root || root.dataset.mounted) return; root.dataset.mounted = 'true';
+
+      const grid = root.querySelector('.palettes__grid');
+      const slider = root.querySelector('.hue-slider');
+      const knob = root.querySelector('.hue-knob');
+      const hueValue = root.querySelector('.hue-value');
+      const currentSwatch = root.querySelector('.current-swatch');
+      const currentName = root.querySelector('.current-name');
+      const currentHex = root.querySelector('.current-hex');
+      const simSelect = root.querySelector('.cvd-select');
+      console.log('[palettes] elements', { root: !!root, grid: !!grid, slider: !!slider, knob: !!knob, hueValue: !!hueValue });
+
+      // Cards data with full descriptions
+      const cards = [
+        { key: 'categorical', title: 'Categorical', desc: 'Categorical colors help users map non-numeric meaning to objects in a visualization. These are designed to be visually distinct from one another. Maximum of six.', generator: (base) => {
+            // Génération en LCH pour des couleurs perceptuellement distinctes
+            const baseH = chroma(base).get('hsl.h');
+            const L = 70;   // luminosité confortable
+            const C = 80;   // chroma modéré pour rester dans le gamut
+            return Array.from({ length: 6 }, (_, i) => chroma.lch(L, C, (baseH + i * 60) % 360).hex());
+        } },
+        { key: 'sequential', title: 'Sequential', desc: 'Sequential colors have numeric meaning. These are a gradation of colors that go from light to dark. They are used in a heatmap context.', generator: (base) => {
+            const c = chroma(base).saturate(0.3);
+            return chroma
+              .scale([c.brighten(2), c, c.darken(2)])
+              .mode('lab')
+              .correctLightness(true)
+              .colors(6);
+        } },
+        { key: 'diverging', title: 'Diverging', desc: 'Diverging colors also have numeric meaning. They’re useful when dealing with negative values or ranges that have two extremes with a baseline in the middle.', generator: (base) => {
+            const c = chroma(base);
+            const baseH = c.get('hsl.h');
+            const compH = (baseH + 180) % 360;
+            const left = chroma.hsl(compH, 0.75, 0.55);
+            const right = chroma.hsl(baseH, 0.75, 0.55);
+            const center = '#ffffff';
+            // Construire deux rampes symétriques qui se rejoignent (sans dupliquer le neutre)
+            const leftRamp = chroma.scale([left, center]).mode('lch').correctLightness(true).colors(4);
+            const rightRamp = chroma.scale([center, right]).mode('lch').correctLightness(true).colors(4);
+            return [leftRamp[0], leftRamp[1], leftRamp[2], rightRamp[1], rightRamp[2], rightRamp[3]];
+        } }
+      ];
+
+      // Render cards scaffolding
+      const cardSel = d3.select(grid).selectAll('.palette-card').data(cards, d => d.key);
+      const enter = cardSel.enter().append('div').attr('class', 'palette-card')
+        .style('border', '1px solid var(--border-color)')
+        .style('border-radius', '10px')
+        .style('background', 'var(--surface-bg)')
+        .style('padding', '16px 14px 12px')
+        .style('display', 'flex')
+        .style('flex-direction', 'column')
+        .style('gap', '10px')
+        .style('min-height', '240px');
+
+      enter.append('div').attr('class', 'palette-card__header');
+
+      enter.append('div').attr('class', 'palette-card__badge');
+
+      enter.append('div').attr('class', 'palette-card__title')
+        .style('text-align', 'center')
+        .style('font-weight', '800')
+        .style('font-size', '28px')
+        .text(d => d.title);
+
+      enter.append('div').attr('class', 'palette-card__desc')
+        .style('text-align', 'center')
+        .style('color', 'var(--muted-color)')
+        .style('line-height', '1.6')
+        .style('font-size', '15px')
+        .text(d => d.desc);
+
+      const footer = enter.append('div').attr('class', 'palette-card__footer');
+      footer.append('div').attr('class', 'palette-card__swatches');
+      footer.append('button').attr('class', 'copy-btn').text('Copy palette');
+
+      // Rendering
+      const renderPalettes = (h) => {
+        console.log('[palettes] renderPalettes', h);
+        const base = chroma.hsl(h, 0.75, 0.55);
+        const uniformText = (bg) => (chroma(bg).luminance() > 0.45 ? '#111' : '#fff');
+
+        // Update current swatch + name
+        if (currentSwatch) currentSwatch.style.background = base.hex();
+        const getName = (hex) => {
+          // Prefer large color-name list if available
+          const list = (window.__colorNames && window.__colorNames.length) ? window.__colorNames : null;
+          if (list && window.chroma) {
+            let bestName = null; let best = Infinity;
+            for (let i = 0; i < list.length; i++) {
+              const item = list[i];
+              const d = (chroma.deltaE ? chroma.deltaE(hex, item.hex) : chroma.distance(hex, item.hex, 'lab'));
+              if (d < best) { best = d; bestName = item.name; }
+            }
+            if (bestName) return bestName;
+          }
+          // Fallback to ntc.js
+          try { if (window.ntc && window.ntc.name) { const res = window.ntc.name(hex); return res && res[1]; } } catch {}
+          // Hue-based coarse fallback
+          const hh = chroma(hex).get('hsl.h') || 0;
+          const labels = ['Red','Orange','Yellow','Lime','Green','Cyan','Blue','Indigo','Violet','Magenta'];
+          const idx = Math.round(((hh % 360) / 360) * (labels.length - 1));
+          return labels[idx];
+        };
+        const hexStr = base.hex().toUpperCase();
+        if (currentName) currentName.textContent = getName(hexStr);
+        if (currentHex) currentHex.textContent = hexStr;
+        d3.select(root).selectAll('.palette-card').each(function(d) {
+          const palette = d.generator(base);
+          console.log('[palettes] palette', d.key, palette.length, palette);
+          const sw = d3.select(this).select('.palette-card__swatches');
+          const data = palette.slice(0, 6);
+          const s = sw.selectAll('.sw').data(data, (c, i) => i);
+          const sEnter = s.enter().append('div').attr('class', 'sw');
+          sEnter.merge(s)
+            .style('background', c => c)
+            .text('');
+          s.exit().remove();
+
+          // Hook up copy button (keeps palette visible)
+          const btn = d3.select(this).select('.copy-btn');
+          btn.on('click', async () => {
+            const json = JSON.stringify(data, null, 2);
+            try {
+              await navigator.clipboard.writeText(json);
+              const old = btn.text(); btn.text('Copied!'); setTimeout(() => btn.text(old), 900);
+            } catch {
+              window.prompt('Copy palette', json);
+            }
+          });
+
+          // Update header gradient to reflect palette
+          const header = d3.select(this).select('.palette-card__header');
+          const grad = `linear-gradient(90deg, ${data.join(',')})`;
+          header.style('background', grad);
+
+          // Update circular badge
+          const badge = d3.select(this).select('.palette-card__badge');
+          if (d.key === 'categorical') {
+            // Donut full hue circle for categorical
+            const hueCircle = 'conic-gradient(#f00 0%, #ff0 16.6%, #0f0 33.3%, #0ff 50%, #00f 66.6%, #f0f 83.3%, #f00 100%)';
+            badge.style('background', hueCircle);
+            // Clear previous markers
+            badge.selectAll('.badge-marker').remove();
+            // Place markers at palette hues
+            const radius = 21; // outer circle radius
+            const center = 22; // half of badge size (44)
+            data.forEach((hex) => {
+              const h = chroma(hex).get('hsl.h') || 0;
+              const angle = (h * Math.PI) / 180; // radians
+              const r = radius - 3; // adjust for 6px marker size
+              const x = center + r * Math.cos(angle - Math.PI / 2);
+              const y = center + r * Math.sin(angle - Math.PI / 2);
+              const mk = document.createElement('div');
+              mk.className = 'badge-marker';
+              mk.style.left = `${Math.round(x - 3)}px`;
+              mk.style.top = `${Math.round(y - 3)}px`;
+              mk.style.background = "rgba(255,255,255,0.9)";
+              badge.node().appendChild(mk);
+            });
+            // Inner hole to make it a donut
+            if (!badge.select('.badge-hole').node()) badge.append('div').attr('class', 'badge-hole');
+          } else {
+            // Linear gradient left->right for sequential/diverging
+            const linear = `linear-gradient(90deg, ${data.join(',')})`;
+            badge.style('background', linear);
+            badge.selectAll('.badge-marker').remove();
+            badge.selectAll('.badge-hole').remove();
+          }
+        });
+      };
+
+      // Hue slider behavior
+      let hue = 220; // initial
+      const setHue = (h) => { hue = (h + 360) % 360; const pct = hue / 360 * 100; if (knob) knob.style.left = pct + '%'; if (hueValue) hueValue.textContent = `H ${Math.round(hue)}°`; console.log('[palettes] setHue', hue, pct); renderPalettes(hue); };
+      const getHueFromEvent = (ev) => { const rect = slider.getBoundingClientRect(); const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX; const x = clientX - rect.left; const t = Math.max(0, Math.min(1, x / rect.width)); const h = t * 360; console.log('[palettes] getHueFromEvent', { clientX, left: rect.left, width: rect.width, t, h }); return h; };
+      const onDown = (ev) => { console.log('[palettes] onDown', ev.type); ev.preventDefault(); setHue(getHueFromEvent(ev)); const move = (e) => { e.preventDefault && e.preventDefault(); setHue(getHueFromEvent(e)); }; const up = () => { console.log('[palettes] onUp'); window.removeEventListener('mousemove', move); window.removeEventListener('touchmove', move); window.removeEventListener('mouseup', up); window.removeEventListener('touchend', up); }; window.addEventListener('mousemove', move, { passive: false }); window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('mouseup', up, { once: true }); window.addEventListener('touchend', up, { once: true }); };
+      if (slider) { slider.addEventListener('mousedown', onDown); slider.addEventListener('touchstart', onDown, { passive: false }); console.log('[palettes] listeners attached'); } else { console.warn('[palettes] slider not found'); }
+
+      // Color-vision simulation filters (SVG)
+      const injectFilters = () => {
+        if (document.getElementById('cvd-filters')) return;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('id', 'cvd-filters');
+        svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.style.position = 'absolute';
+        svg.innerHTML = `
+          <filter id="cvd-protanopia"><feColorMatrix type="matrix" values="0.567 0.433 0 0 0  0.558 0.442 0 0 0  0 0.242 0.758 0 0  0 0 0 1 0"/></filter>
+          <filter id="cvd-deuteranopia"><feColorMatrix type="matrix" values="0.625 0.375 0 0 0  0.7 0.3 0 0 0  0 0.3 0.7 0 0  0 0 0 1 0"/></filter>
+          <filter id="cvd-tritanopia"><feColorMatrix type="matrix" values="0.95 0.05 0 0 0  0 0.433 0.567 0 0  0 0.475 0.525 0 0  0 0 0 1 0"/></filter>
+          <filter id="cvd-achromatopsia"><feColorMatrix type="matrix" values="0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0 0 0 1 0"/></filter>
+        `;
+        document.body.appendChild(svg);
+      };
+      injectFilters();
+
+      const applySimulation = (mode) => {
+        if (!grid) return;
+        if (!mode || mode === 'none') { grid.style.filter = 'none'; return; }
+        grid.style.filter = `url(#cvd-${mode})`;
+      };
+      if (simSelect) simSelect.addEventListener('change', () => applySimulation(simSelect.value));
+
+      // Load extended color-name dataset, then initial render
+      const loadColorNames = () => {
+        if (window.__colorNames) return Promise.resolve(window.__colorNames);
+        const url = 'https://unpkg.com/color-name-list@10.2.0/dist/colornames.json';
+        return fetch(url).then(r => r.json()).then(arr => { window.__colorNames = arr; return arr; }).catch(() => []);
+      };
+      console.log('[palettes] initial render');
+      loadColorNames().finally(() => setHue(hue));
+      applySimulation('none');
+
+      // Fixed 3 columns layout
+      grid.style.gridTemplateColumns = '1fr 1fr 1fr';
+    };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => ensureLibs(bootstrap), { once: true });
+    else ensureLibs(bootstrap);
+  })();
+</script>
+

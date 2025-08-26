@@ -4,7 +4,7 @@
 html { box-sizing: border-box; }
 *, *::before, *::after { box-sizing: inherit; }
 body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji; color: var(--text-color); }
-
+audio { display: block; }
 /* Avoid constraining <main> inside grid; scope container sizing elsewhere if needed */
 /* main { max-width: 980px; margin: 24px auto; padding: 16px; } */
 
@@ -67,25 +67,6 @@ html { font-size: 14px; line-height: 1.6; }
 }
 
 .content-grid main pre:not(.astro-code) { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; overflow: auto; }
-
-/* Sync Shiki variables with current theme */
-/* Standard wrapper look for code blocks */
-.astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); padding-left: calc(var(--spacing-3) + 6px); font-size: 14px; }
-
-html[data-theme='light'] .astro-code { background-color: var(--code-bg); }
-
-html[data-theme='dark'] .astro-code { background-color: var(--shiki-dark-bg); }
-
-/* Apply token color from per-span vars exposed by Shiki dual themes */
-html[data-theme='light'] .astro-code span { color: var(--shiki-light) !important; }
-html[data-theme='dark'] .astro-code span { color: var(--shiki-dark) !important; }
-
-/* Token color remapping using Shiki CSS variables on the wrapper */
-/* Optionnel: booster le contraste light */
-html[data-theme='light'] .astro-code {
-  --shiki-foreground: #24292f;
-  --shiki-background: #ffffff;
-}
 
 /* Rely on Shiki's own token spans; no class remap */
 .content-grid main code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -157,14 +138,14 @@ html[data-theme='light'] .astro-code {
 .content-grid main hr { border: none; border-bottom: 1px solid var(--border-color); margin: var(--spacing-5) 0; }
 
 
-.code-block {
-  background: var(--code-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: var(--spacing-3);
-  font-size: 14px;
-  overflow: auto;
-}
+// .code-block {
+//   background: rgba(120, 120, 120, 0.5);
+//   border: 1px solid var(--border-color);
+//   border-radius: 6px;
+//   padding: var(--spacing-3);
+//   font-size: 14px;
+//   overflow: auto;
+// }
 
 // ============================================================================
 // Media / Figures
@@ -203,3 +184,67 @@ figure { margin: 12px 0; }
 figcaption { text-align: center; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
 .image-credit { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-color); }
 .image-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+// ============================================================================
+// Buttons (minimal, épuré)
+// ============================================================================
+.meta .meta-container-cell button {
+  appearance: none;
+  background: var(--surface-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .02s ease;
+}
+.meta .meta-container-cell button:hover {
+  background: var(--code-bg);
+}
+.meta .meta-container-cell button:active {
+  transform: translateY(1px);
+}
+.meta .meta-container-cell button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--link-underline);
+}
+.meta .meta-container-cell button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+// ============================================================================
+// Print styles
+// =========================================================================
+@media print {
+  html, body { background: #fff; }
+  /* Marges gérées par Playwright; éviter marges globales supplémentaires */
+  body { margin: 0; }
+
+  /* Conserver bannière (hero), masquer éléments d'UI non nécessaires */
+  #theme-toggle { display: none !important; }
+
+  /* Liens: enlever soulignement au survol */
+  .content-grid main a { text-decoration: none; border-bottom: 1px solid rgba(0,0,0,.2); }
+
+  /* Eviter coupures dans des blocs complexes */
+  .content-grid main pre,
+  .content-grid main blockquote,
+  .content-grid main table,
+  .content-grid main figure { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Sauts de page doux autour des titres principaux */
+  .content-grid main h2 { page-break-before: auto; page-break-after: avoid; break-after: avoid-page; }
+
+  /* Petites tailles d’icônes inutiles à l’impression */
+  .code-lang-chip { display: none !important; }
+
+  /* Ajuster couleurs plus contrastées à l’impression */
+  :root {
+    --border-color: rgba(0,0,0,.2);
+    --link-underline: rgba(0,0,0,.3);
+    --link-underline-hover: rgba(0,0,0,.4);
+  }
+}

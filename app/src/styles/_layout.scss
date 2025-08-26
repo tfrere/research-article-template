@@ -20,6 +20,18 @@ main > nav:first-of-type { display: none; }
 .toc nav a:hover { text-decoration: underline solid var(--muted-color); }
 .toc nav a.active { text-decoration: underline; }
 
+// Mobile TOC accordion
+.toc-mobile { display: none; margin: 8px 0 16px; }
+.toc-mobile > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-bg); color: var(--text-color); font-weight: 600; }
+.toc-mobile[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.toc-mobile nav { border-left: none; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; background: var(--surface-bg); }
+.toc-mobile nav ul { margin: 0 0 6px; padding-left: 1em; }
+.toc-mobile nav li { list-style: none; margin: .25em 0; }
+.toc-mobile nav a { color: var(--text-color); text-decoration: none; border-bottom: none; }
+.toc-mobile nav > ul > li > a { font-weight: 700; }
+.toc-mobile nav a:hover { text-decoration: underline solid var(--muted-color); }
+.toc-mobile nav a.active { text-decoration: underline; }
+
 // Right aside (notes)
 .right-aside { position: sticky; top: 24px; }
 .right-aside .aside-card { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-color); }
@@ -27,7 +39,8 @@ main > nav:first-of-type { display: none; }
 // Responsive – collapse to single column
 @media (max-width: 1100px) {
   .content-grid { grid-template-columns: 1fr; }
-  .toc { position: static; }
+  .toc { position: static; display: none; }
+  .toc-mobile { display: block; }
   .right-aside { display: none; }
   main > nav:first-of-type { display: block; }
 }

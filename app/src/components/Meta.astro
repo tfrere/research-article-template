@@ -27,6 +27,31 @@ const { title, authors = [], affiliation, published } = Astro.props as Props;
         <p>{published}</p>
       </div>
     )}
+    <div class="meta-container-cell">
+      <h3>PDF</h3>
+      <p><button id="download-pdf-btn" type="button">Download PDF</button></p>
+    </div>
   </div>
 </header>
+
+<script>
+  // Attache un gestionnaire pour déclencher un téléchargement programmatique
+  (() => {
+    const ready = () => {
+      const btn = document.getElementById('download-pdf-btn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = '/article.pdf';
+        a.setAttribute('download', 'article.pdf');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ready, { once: true });
+    } else { ready(); }
+  })();
+  </script>
 

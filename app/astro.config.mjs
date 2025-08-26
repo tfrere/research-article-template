@@ -20,7 +20,10 @@ export default defineConfig({
         dark: 'github-dark'
       },
       defaultColor: false,
-      wrap: true
+      wrap: true,
+      langAlias: {
+        mdx: 'js'
+      }
     },
     remarkPlugins: [
       [remarkToc, { heading: 'Table of Contents', maxDepth: 3 }],

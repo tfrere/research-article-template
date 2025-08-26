@@ -19,3 +19,5 @@ node_modules/
 *.env
 *.cache
 
+# PDF export
+app/public/*.pdf

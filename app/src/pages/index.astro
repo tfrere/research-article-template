@@ -1,5 +1,5 @@
 ---
-import Article, { frontmatter as articleFM } from './article.mdx';
+import Article, { frontmatter as articleFM } from '../content/article.mdx';
 import Meta from '../components/Meta.astro';
 import HtmlFragment from '../components/HtmlFragment.astro';
 import Footer from '../components/Footer.astro';
@@ -67,6 +67,7 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
     
     
     <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   </head>
   <body>
     <ThemeToggle />
@@ -87,6 +88,10 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
         <div class="title">Table of Contents</div>
         <div id="toc-placeholder"></div>
       </aside>
+      <details class="toc-mobile">
+        <summary>Table of Contents</summary>
+        <div id="toc-mobile-placeholder"></div>
+      </details>
       <main>
         <Article />
         <style is:inline>
@@ -193,7 +198,8 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
       // Build TOC from article headings (h2/h3/h4) and render into the sticky aside
       const buildTOC = () => {
         const holder = document.getElementById('toc-placeholder');
-        if (!holder || holder.children.length) return;
+        const holderMobile = document.getElementById('toc-mobile-placeholder');
+        if ((holder && holder.children.length) && (holderMobile && holderMobile.children.length)) return;
         const articleRoot = document.querySelector('section.content-grid main');
         if (!articleRoot) return;
         const headings = articleRoot.querySelectorAll('h2, h3, h4');
@@ -219,24 +225,40 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
           ulStack[ulStack.length-1].appendChild(li);
         });
 
-        holder.appendChild(nav);
+        if (holder) holder.appendChild(nav);
+        if (holderMobile) holderMobile.appendChild(nav.cloneNode(true));
 
         // active link on scroll
-        const links = holder.querySelectorAll('a');
+        const links = [
+          ...(holder ? holder.querySelectorAll('a') : []),
+          ...(holderMobile ? holderMobile.querySelectorAll('a') : [])
+        ];
         const onScroll = () => {
           for (let i = headings.length - 1; i >= 0; i--) {
             const top = headings[i].getBoundingClientRect().top;
             if (top - 60 <= 0) {
               links.forEach(l => l.classList.remove('active'));
               const id = '#' + headings[i].id;
-              const active = Array.from(links).find(l => l.getAttribute('href') === id);
-              active && active.classList.add('active');
+              const actives = Array.from(links).filter(l => l.getAttribute('href') === id);
+              actives.forEach(a => a.classList.add('active'));
               break;
             }
           }
         };
         window.addEventListener('scroll', onScroll);
         onScroll();
+
+        // Close mobile accordion when a link inside it is clicked
+        if (holderMobile) {
+          const details = holderMobile.closest('details');
+          holderMobile.addEventListener('click', (ev) => {
+            const target = ev.target as Element | null;
+            const anchor = target && 'closest' in target ? (target as Element).closest('a') : null;
+            if (anchor instanceof HTMLAnchorElement && details && (details as HTMLDetailsElement).open) {
+              (details as HTMLDetailsElement).open = false;
+            }
+          });
+        }
       };
 
       if (document.readyState === 'loading') {

@@ -3,7 +3,7 @@ interface Props { src: string }
 const { src } = Astro.props as Props;
 
 // Charge tous les fragments .html sous src/fragments/** en tant que string (dev & build)
-const fragments = import.meta.glob('../fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const fragments = import.meta.glob('../content/fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function resolveFragment(requested: string): string | null {
   // Autorise "banner.html" ou "fragments/banner.html"

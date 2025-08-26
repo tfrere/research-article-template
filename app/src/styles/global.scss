@@ -2,6 +2,7 @@
 @use "./base" as *;
 @use "./layout" as *;
 @use "./components/footer" as *;
+@use "./components/code" as *;
 
 /* Dark-mode form tweak */
 [data-theme="dark"] .plotly_input_container > select { background-color: #1a1f27; border-color: var(--border-color); color: var(--text-color); }
@@ -10,9 +11,9 @@
 [data-theme="dark"] .right-aside .aside-card { background: #12151b; border-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .content-grid main pre { background: #12151b; border-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .toc nav { border-left-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .distill-footer { border-top-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .citation-text,
-[data-theme="dark"] .citation-bibtex { background: #12151b; border-color: rgba(255,255,255,.15); color: var(--text-color); }
+[data-theme="dark"] .distill-footer { border-top-color: rgba(255,255,255,.15); color: rgba(200,200,200,.8); }
+[data-theme="dark"] .citation { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,.15); color: rgba(200,200,200,1); }
+[data-theme="dark"] .citation a { color: rgba(255,255,255,0.75); }
 
 /* Opt-in zoomable images */
 img[data-zoomable] { cursor: zoom-in; }
@@ -68,6 +69,7 @@ img[data-zoomable] { cursor: zoom-in; }
 // Plotly – fragments & controls
 // ============================================================================
 .plot-card { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; margin: 8px 0; }
+.plot-card svg text { fill: var(--text-color) !important; }
 .plotly-graph-div { width: 100% !important; min-height: 320px; }
 @media (max-width: 768px) { .plotly-graph-div { min-height: 260px; } }
 [id^="plot-"] { display: flex; flex-direction: column; align-items: center; gap: 15px; }

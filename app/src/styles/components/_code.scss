@@ -1,0 +1,31 @@
+
+/* Sync Shiki variables with current theme */
+/* Standard wrapper look for code blocks */
+.astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); padding-left: calc(var(--spacing-3) + 6px); font-size: 14px; }
+
+/* Prevent code blocks from breaking layout on small screens */
+.astro-code { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+section.content-grid pre code { display: inline-block; min-width: 100%; }
+
+/* Wrap longues lignes en mobile pour éviter l'overflow (URLs, etc.) */
+@media (max-width: 700px) {
+  .astro-code,
+  section.content-grid pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  section.content-grid pre code { white-space: pre-wrap; display: block; min-width: 0; }
+}
+
+html[data-theme='light'] .astro-code { background-color: var(--code-bg); }
+
+html[data-theme='dark'] .astro-code { background-color: var(--shiki-dark-bg); }
+
+/* Apply token color from per-span vars exposed by Shiki dual themes */
+html[data-theme='light'] .astro-code span { color: var(--shiki-light) !important; }
+html[data-theme='dark'] .astro-code span { color: var(--shiki-dark) !important; }
+
+/* Token color remapping using Shiki CSS variables on the wrapper */
+/* Optionnel: booster le contraste light */
+html[data-theme='light'] .astro-code {
+  --shiki-foreground: #24292f;
+  --shiki-background: #ffffff;
+}

@@ -1,5 +1,6 @@
 # Use an official Node runtime as the base image for building the application
-FROM node:20 AS build
+# Build avec Playwright (navigateurs et deps prêts)
+FROM mcr.microsoft.com/playwright:v1.55.0-jammy AS build
 
 # Set the working directory in the container
 WORKDIR /app
@@ -15,6 +16,9 @@ COPY app/ .
 
 # Build the application
 RUN npm run build
+
+# Génère le PDF (thème light, attente complète)
+RUN npm run export:pdf -- --theme=light --wait=full
 
 # Use an official Nginx runtime as the base image for serving the application
 FROM nginx:alpine
