@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
-import { resolve, basename } from 'node:path';
+import { resolve } from 'node:path';
 import { promises as fs } from 'node:fs';
 import process from 'node:process';
 
@@ -180,26 +180,12 @@ async function main() {
       });
       console.log(`✅ PDF generated: ${outPath}`);
 
-      // Compatibility copy into dist/article.pdf (for servers that only serve dist)
-      const distCompatPath = resolve(cwd, 'dist', 'article.pdf');
-      try {
-        if (basename(outPath) !== 'article.pdf') {
-          await fs.copyFile(outPath, distCompatPath);
-          console.log(`✅ PDF copied (dist compat): ${distCompatPath}`);
-        }
-      } catch (e) {
-        console.warn('Unable to copy PDF to dist/article.pdf:', e?.message || e);
-      }
-
-      // Also copy into public under 2 names: slug.pdf and article.pdf (compat)
+      // Copy into public only under the slugified name
       const publicSlugPath = resolve(cwd, 'public', `${outFileBase}.pdf`);
-      const publicCompatPath = resolve(cwd, 'public', 'article.pdf');
       try {
         await fs.mkdir(resolve(cwd, 'public'), { recursive: true });
         await fs.copyFile(outPath, publicSlugPath);
-        await fs.copyFile(outPath, publicCompatPath);
         console.log(`✅ PDF copied to: ${publicSlugPath}`);
-        console.log(`✅ PDF copied (compat): ${publicCompatPath}`);
       } catch (e) {
         console.warn('Unable to copy PDF to public/:', e?.message || e);
       }

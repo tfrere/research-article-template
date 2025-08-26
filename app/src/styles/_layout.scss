@@ -22,9 +22,9 @@ main > nav:first-of-type { display: none; }
 
 // Mobile TOC accordion
 .toc-mobile { display: none; margin: 8px 0 16px; }
-.toc-mobile > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-bg); color: var(--text-color); font-weight: 600; }
+.toc-mobile > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-weight: 600; }
 .toc-mobile[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.toc-mobile nav { border-left: none; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; background: var(--surface-bg); }
+.toc-mobile nav { border-left: none; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
 .toc-mobile nav ul { margin: 0 0 6px; padding-left: 1em; }
 .toc-mobile nav li { list-style: none; margin: .25em 0; }
 .toc-mobile nav a { color: var(--text-color); text-decoration: none; border-bottom: none; }

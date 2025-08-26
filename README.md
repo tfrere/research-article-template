@@ -1,5 +1,5 @@
 ---
-title: 'The science article template'
+title: 'Research article template'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo

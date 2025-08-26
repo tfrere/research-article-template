@@ -1,7 +1,7 @@
 .distill-footer { contain: layout style; font-size: 0.8em; line-height: 1.7em; margin-top: 60px; margin-bottom: 0; border-top: 1px solid rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.5); }
 .footer-inner { max-width: 1280px; margin: 0 auto; padding: 60px 16px 48px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
 
-// Utiliser la grille parent (3 colonnes comme .content-grid)
+// Use the parent grid (3 columns like .content-grid)
 .citation-block,
 .references-block { display: contents; }
 .citation-block > h3,

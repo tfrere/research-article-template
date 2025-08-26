@@ -3,6 +3,7 @@ import Article, { frontmatter as articleFM } from '../content/article.mdx';
 import Meta from '../components/Meta.astro';
 import HtmlFragment from '../components/HtmlFragment.astro';
 import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import SeoHead from '../components/SeoHead.astro';
 import ogDefault from '../assets/images/visual-vocabulary-poster.png';
@@ -13,6 +14,7 @@ const docTitle = articleFM?.title ?? 'Untitled article';
 const docTitleHtml = (articleFM?.title ?? 'Untitled article')
   .replace(/\\n/g, '<br/>')
   .replace(/\n/g, '<br/>');
+const subtitle = articleFM?.subtitle ?? '';
 const description = articleFM?.description ?? '';
 const authors = articleFM?.authors ?? [];
 const published = articleFM?.published ?? undefined;
@@ -71,13 +73,8 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
   </head>
   <body>
     <ThemeToggle />
-    <section class="hero">
-      <h1 class="hero-title" set:html={docTitleHtml}></h1>
-      <div class="hero-banner">
-        <HtmlFragment src="banner.html" />
-        <p class="hero-desc">It's nice to have a cute interactive banner!</p>
-      </div>
-    </section>
+    <Header title={docTitleHtml} description={subtitle}>
+    </Header>
 
     <section class="article-header">
       <Meta title={docTitle} authors={articleFM?.authors} affiliation={articleFM?.affiliation} published={articleFM?.published} />

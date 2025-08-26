@@ -2,62 +2,62 @@ import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
 
-# Paramètres de la scène (mêmes ranges que l'intégration Astro)
-cx, cy = 1.5, 0.5                 # centre
-a, b = 1.3, 0.45                  # étendue max en x/y (ellipse pour l'anisotropie)
+# Scene parameters (same ranges as the Astro integration)
+cx, cy = 1.5, 0.5                 # center
+a, b = 1.3, 0.45                  # max extent in x/y (ellipse for anisotropy)
 
-# Paramètres de la galaxie en spirale
-num_points = 3000                 # plus de dots
-num_arms = 3                      # nombre de bras spiraux
-num_turns = 2.1                   # nombre de tours par bras
-angle_jitter = 0.12               # écart angulaire pour évaser les bras
-pos_noise = 0.015                 # bruit de position global
+# Spiral galaxy parameters
+num_points = 3000                 # more dots
+num_arms = 3                      # number of spiral arms
+num_turns = 2.1                   # number of turns per arm
+angle_jitter = 0.12               # angular jitter to fan out the arms
+pos_noise = 0.015                 # global position noise
 
-# Génération des points sur des bras spiraux (spirale d'Archimède)
-t = np.random.rand(num_points) * (2 * np.pi * num_turns)  # progression le long du bras
+# Generate points along spiral arms (Archimedean spiral)
+t = np.random.rand(num_points) * (2 * np.pi * num_turns)  # progression along the arm
 arm_indices = np.random.randint(0, num_arms, size=num_points)
 arm_offsets = arm_indices * (2 * np.pi / num_arms)
 
 theta = t + arm_offsets + np.random.randn(num_points) * angle_jitter
 
-# Rayon normalisé (0->centre, 1->bord). Puissance <1 pour densifier le centre
+# Normalized radius (0->center, 1->edge). Power <1 to densify the core
 r_norm = (t / (2 * np.pi * num_turns)) ** 0.9
 
-# Bruit radial/lateral qui augmente légèrement avec le rayon
+# Radial/lateral noise that slightly increases with radius
 noise_x = pos_noise * (0.8 + 0.6 * r_norm) * np.random.randn(num_points)
 noise_y = pos_noise * (0.8 + 0.6 * r_norm) * np.random.randn(num_points)
 
-# Projection elliptique
+# Elliptic projection
 x_spiral = cx + a * r_norm * np.cos(theta) + noise_x
 y_spiral = cy + b * r_norm * np.sin(theta) + noise_y
 
-# Bulbe central (points supplémentaires très proches du centre)
+# Central bulge (additional points very close to the core)
 bulge_points = int(0.18 * num_points)
 phi_b = 2 * np.pi * np.random.rand(bulge_points)
-r_b = (np.random.rand(bulge_points) ** 2.2) * 0.22  # bulbe compact
+r_b = (np.random.rand(bulge_points) ** 2.2) * 0.22  # compact bulge
 noise_x_b = (pos_noise * 0.6) * np.random.randn(bulge_points)
 noise_y_b = (pos_noise * 0.6) * np.random.randn(bulge_points)
 x_bulge = cx + a * r_b * np.cos(phi_b) + noise_x_b
 y_bulge = cy + b * r_b * np.sin(phi_b) + noise_y_b
 
-# Concaténation
+# Concatenation
 x = np.concatenate([x_spiral, x_bulge])
 y = np.concatenate([y_spiral, y_bulge])
 
-# Intensité centrale (pour tailles/couleurs). 1 au centre, ~0 au bord
+# Central intensity (for sizes/colors). 1 at center, ~0 at edge
 z_spiral = 1 - r_norm
-z_bulge = 1 - (r_b / max(r_b.max(), 1e-6))  # bulbe très lumineux
+z_bulge = 1 - (r_b / max(r_b.max(), 1e-6))  # very bright bulge
 z_raw = np.concatenate([z_spiral, z_bulge])
 
-# Tailles: conserver l'échelle 5..10 pour cohérence
+# Sizes: keep the 5..10 scale for consistency
 sizes = (z_raw + 1) * 5
 
-# Suppression du filtre intermédiaire: on garde tous les points posés, on filtrera à la toute fin
+# Remove intermediate filtering: keep all placed points, filter at the very end
 
 df = pd.DataFrame({
     "x": x,
     "y": y,
-    "z": sizes,  # réutilisé pour size+color comme avant
+    "z": sizes,  # reused for size+color as before
 })
 
 def get_label(z):
@@ -70,10 +70,10 @@ def get_label(z):
     else:
         return "biiig dot"
 
-# Labels basés sur l'intensité centrale
+# Labels based on central intensity
 df["label"] = pd.Series(z_raw).apply(get_label)
 
-# Ordonnancement pour le rendu: petits d'abord, gros ensuite (au-dessus)
+# Rendering order: small points first, big ones after (on top)
 df = df.sort_values(by="z", ascending=True).reset_index(drop=True)
 
 fig = go.Figure()

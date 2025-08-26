@@ -9,7 +9,7 @@ section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-s
 section.content-grid pre code { display: inline-block; min-width: 100%; }
 
 /* Wrap long lines on mobile to avoid overflow (URLs, etc.) */
-@media (max-width: 700px) {
+@media (max-width: 1100px) {
   .astro-code,
   section.content-grid pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
   section.content-grid pre code { white-space: pre-wrap; display: block; min-width: 0; }

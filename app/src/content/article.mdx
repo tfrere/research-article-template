@@ -1,6 +1,7 @@
 ---
 title: "From Idea to Interactive:\n A Modern Template for Scientific Writing
 "
+subtitle: "It's nice to have a cute interactive banner"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
   - "John Doe"
@@ -40,7 +41,7 @@ import visualPoster from "../assets/images/visual-vocabulary-poster.png";
 
 This template is inspired by [**Distill**](https://distill.pub); we aim to preserve the best of it while modernizing the stack. Their work is highly inspiring.
 
-## Features
+#### Features
 
 <div className="tag-list">
   <span className="tag">Markdown based</span>
@@ -94,7 +95,7 @@ The easiest way to get online is to clone [this Hugging Face Space](https://hugg
 
 ### Large files (Git LFS)
 
-Track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. This project is preconfigured to store such files via LFS.
+**Track binaries** (e.g., `.png`, `.wav`) with **Git LFS** to keep the repository lean. This project is preconfigured to store such files via **LFS**.
 
 
 ## Writing Your Content
@@ -103,15 +104,16 @@ Track binaries (e.g., `.png`, `.wav`) with Git LFS to keep the repository lean. 
 
 Your article lives in two places:
 
-- `app/src/content/` — where you can find the article.mdx and bibliography.bib.
+- `app/src/content/` — where you can find the article.mdx, bibliography.bib and html fragments.
 - `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
 
-The initial skeleton of an article looks like this:
+The **initial skeleton** of an article looks like this:
 
 ```mdx
 {/* HEADER */}
 ---
-title: "The science template:\nCraft Beautiful Blogs"
+title: "This is the main title"
+subtitle: "This will be displayed just below the banner"
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
 authors:
   - "John Doe"
@@ -139,7 +141,7 @@ This is a short paragraph written in Markdown. Below is an example image:
 
 
 
-**Available blocs**:
+**Available blocks**:
 
 <div className="tag-list">
   <a className="tag" href="#math">Math</a>
@@ -177,7 +179,7 @@ $$
 
 ### Images
 
-Responsive images automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control lazy loading/decoding for better performance.
+**Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
 
 **Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
 
@@ -209,7 +211,7 @@ import myImage from '../assets/images/placeholder.jpg'
   <Image src={myImage} data-zoomable alt="Example with caption and credit" loading="lazy" />
   <figcaption>
     Optimized image with a descriptive caption.
-    <span className="image-credit">Crédit: Photo by <a href="https://example.com">Author</a></span>
+    <span className="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>
   </figcaption>
 </figure>
 ```
@@ -243,11 +245,11 @@ greet("Astro")
 
 Here are a few variations using the same bibliography:
 
-1) In-text citation with brackets: [@example2023].
+1) **In-text citation** with brackets: [@example2023].
 
-2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
+2) **Narrative citation**: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
 
-3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
+3) **Multiple citations** and a **footnote** together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
 
 [^f1]: Footnote attached to the sentence above.
 
@@ -265,9 +267,9 @@ Here are a few variations using the same bibliography:
 ### Asides
 
 <Aside>
-  This paragraph presents a key idea concisely.
+  This paragraph presents a **key idea** concisely.
   <Fragment slot="aside">
-    Side note for brief context or a definition.
+    **Side note** for brief context or a definition.
   </Fragment>
   </Aside>
 
@@ -348,7 +350,7 @@ import audioDemo from '../assets/audio/audio-example.wav'
 
 #### Html Fragments
 
-The main purpose of the ```HtmlFragment``` component is to embed a plotly or d3 chart in your article. Libraries are already imported in the template.
+The main purpose of the ```HtmlFragment``` component is to embed a **Plotly** or **D3.js** chart in your article. Libraries are already imported in the template.
 
 <div className="plot-card">
   <HtmlFragment src="line.html" />
@@ -362,7 +364,7 @@ import HtmlFragment from '../components/HtmlFragment.astro'
 
 #### Iframes
 
-You can embed external content in your article using **iframes**. For example, TrackIO—a lightweight dashboard to monitor machine learning experiments—can be used this way. The example below opens a demo project and displays a couple of metrics. You can customize the query parameters (`project`, `metrics`, `sidebar`, etc.) to fit your needs.
+You can embed external content in your article using **iframes**. For example, **TrackIO**—a lightweight dashboard to monitor machine learning experiments—can be used this way. The example below opens a demo project and displays a couple of metrics. You can customize the **query parameters** (`project`, `metrics`, `sidebar`, etc.) to fit your needs.
 
 <iframe className="plot-card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
 
@@ -407,14 +409,14 @@ Choosing colors well is critical: a **palette** encodes **meaning** (categories,
 
 ### Use the right chart
 
-Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from analytical task to chart types.
+Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
 
 <figure>
-  <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">
+  <a href={visualPoster.src} target="_blank" rel="noopener noreferrer">
     <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
   </a>
   <figcaption>
-    Visual Vocabulary: a handy reference to select chart types by purpose (comparison, distribution, part-to-whole, correlation, and more).
+    A handy reference to select chart types by purpose. Click to enlarge.
     — <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">Website</a>
   </figcaption>
 </figure>
@@ -422,5 +424,5 @@ Picking the right visualization depends on your goal (compare values, show distr
 
 ## Conclusions
 
-This template provides a practical baseline for writing and sharing technical articles with math, citations, and interactive figures. Start simple, iterate on structure and style, and keep content maintainable for future readers and collaborators.
+This template provides a **practical baseline** for writing and sharing technical articles with **math**, **citations**, and **interactive figures**. **Start simple**, **iterate** on structure and style, and keep content **maintainable** for future readers and collaborators.
 

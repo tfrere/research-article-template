@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "blogpost-fine-tasks-python"
 version = "0.1.0"
-description = "Scripts de génération de fragments Plotly et conversions HTML/Markdown pour le blogpost."
+description = "Plotly fragment generation scripts and HTML/Markdown conversions for the blogpost."
 package-mode = false
 
 [tool.poetry.dependencies]

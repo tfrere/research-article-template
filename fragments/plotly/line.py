@@ -120,11 +120,11 @@ fig.update_layout(
     ),
 )
 
-# Écrit le fragment de manière robuste à côté de ce fichier, dans src/fragments/line.html
+# Write the fragment next to this file into src/fragments/line.html (robust path)
 output_path = os.path.join(os.path.dirname(__file__), "fragments", "line.html")
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-# Injecte un petit script post-rendu pour arrondir les coins de la boîte de hover
+# Inject a small post-render script to round the hover box corners
 post_script = """
 (function(){
   function attach(gd){
