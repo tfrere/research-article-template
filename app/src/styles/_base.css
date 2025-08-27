@@ -42,8 +42,8 @@ html { font-size: 14px; line-height: 1.6; }
   margin: var(--spacing-8) 0 var(--spacing-4);
 }
 
-.content-grid main a { color: var(--primary); text-decoration: none; border-bottom: 1px solid var(--link-underline); }
-.content-grid main a:hover { color: var(--primary-hover); border-bottom: 1px solid var(--link-underline-hover); }
+.content-grid main a { color: var(--primary-color); text-decoration: none; border-bottom: 1px solid var(--link-underline); }
+.content-grid main a:hover { color: var(--primary-color-hover); border-bottom: 1px solid var(--link-underline-hover); }
 
 /* Do not underline heading links inside the article (not the TOC) */
 .content-grid main h2 a,
@@ -178,7 +178,7 @@ figcaption { text-align: left; font-size: 0.9rem; color: var(--muted-color); mar
 /* ============================================================================ */
 button, .button {
   appearance: none;
-  background: linear-gradient(15deg, var(--primary) 0%, var(--primary-hover) 35%);
+  background: linear-gradient(15deg, var(--primary-color) 0%, var(--primary-color-hover) 35%);
   color: white!important;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -239,6 +239,30 @@ button:disabled, .button:disabled {
     --link-underline: rgba(0,0,0,.3);
     --link-underline-hover: rgba(0,0,0,.4);
   }
+
+  /* Force single column to reduce widows/orphans and awkward breaks */
+  .content-grid { grid-template-columns: 1fr !important; }
+  .toc, .right-aside, .toc-mobile { display: none !important; }
+  main > nav:first-of-type { display: none !important; }
+
+  /* Avoid page breaks inside complex visual blocks */
+  .hero,
+  .hero-banner,
+  .d3-galaxy,
+  .d3-galaxy svg,
+  .plot-card,
+  .js-plotly-plot,
+  figure,
+  pre,
+  table,
+  blockquote,
+  .wide,
+  .full-bleed {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Prefer keeping header+lead together */
+  .hero { page-break-after: avoid; }
 }
 
 .muted {

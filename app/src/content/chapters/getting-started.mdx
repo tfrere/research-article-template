@@ -1,0 +1,42 @@
+import Aside from '../../components/Aside.astro';
+
+## Getting Started
+
+### Installation
+
+<Aside>
+```bash
+git lfs install
+git lfs pull
+cd app
+npm install
+```
+<Fragment slot="aside">
+    You can also use yarn.
+  </Fragment>
+</Aside>
+
+
+### Development
+
+```bash
+npm run dev
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+Serving the `dist/` directory on any static host is enough to deliver the site.
+
+A [slug-title].pdf and thumb.jpg are also generated at build time. You can find them in the public folder.
+
+### Deploy
+
+The recommended way is to **clone this [🤗 Hugging Face Space](https://huggingface.co/spaces/tfrere/science-blog-template)**.  
+
+Once you have cloned the Space, **just push your changes** to your repository.  
+
+**Every push automatically triggers a build and deploy** — no extra configuration needed.

@@ -1,5 +1,5 @@
 ---
-title: "From Idea to Interaction:\n A Modern Template for Scientific Writing
+title: "From Idea to Life:\n A Modern Template for Scientific Writing
 "
 subtitle: "Markdown-first research article template with math, citations, and interactive figures."
 description: "A modern, MDX-first research article template with math, citations, and interactive figures."
@@ -23,8 +23,11 @@ import placeholder from "../assets/images/placeholder.png";
 import audioDemo from "../assets/audio/audio-example.wav";
 import Aside from "../components/Aside.astro";
 import visualPoster from "../assets/images/visual-vocabulary-poster.png";
+
 import BestPractices from "./chapters/best-pratices.mdx";
-import WritingYourContent from "./chapters/writing-you-content.mdx";
+import WritingYourContent from "./chapters/writing-your-content.mdx";
+import AvailableBlocks from "./chapters/available-blocks.mdx";  
+import GettingStarted from "./chapters/getting-started.mdx";
 
 <Aside>
   Welcome to this single-page research article template built with **Markdown**.
@@ -86,7 +89,7 @@ Not every contribution fits a PDF. Treat demos, visualizations, and interactive 
 This project is heavely inspired by [**Distill**](https://distill.pub) (2016–2021), which championed clear, web‑native scholarship.
 
 
-### Notable examples of excellent scientific articles
+{/* ### Notable examples of excellent scientific articles
 
 A short, curated list of well‑designed and often interactive work:
 
@@ -96,56 +99,18 @@ A short, curated list of well‑designed and often interactive work:
 - **ConvNetJS — Neural networks in the browser**: [cs.stanford.edu/people/karpathy/convnetjs](http://cs.stanford.edu/people/karpathy/convnetjs/)
 - **Explorable Explanations — Collection**: [explorableexplanations.com](http://explorableexplanations.com/)
 - **Distill — Why Momentum Really Works**: [distill.pub/2017/momentum](https://distill.pub/2017/momentum/)
+ */} 
 
-
-## Getting Started
-
-### Installation
-
-<Aside>
-```bash
-git lfs install
-git lfs pull
-cd app
-npm install
-```
-<Fragment slot="aside">
-    You can use yarn alternatively to npm.
-  </Fragment>
-</Aside>
-
-
-### Development
-
-```bash
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
-Serving the `dist/` directory on any static host is enough to deliver the site.
-
-A [slug-title].pdf and thumb.jpg are also generated at build time. You can find them in the public folder.
-
-### Deploy
-
-The easiest way to get online is to clone [this Hugging Face Space](https://huggingface.co/spaces/tfrere/science-blog-template) and push your changes; every push triggers an automatic build and deploy.
-
-### Large files (Git LFS)
-
-**Track binaries** (e.g., `.png`, `.wav`) with **Git LFS** to keep the repository lean. This project is preconfigured to store such files via **LFS**.
-
+<GettingStarted />
 
 <WritingYourContent />
+
+<AvailableBlocks />
 
 <BestPractices />
 
 
-## Conclusions
+## Conclusion
 
 This template provides a **practical baseline** for writing and sharing technical articles with **math**, **citations**, and **interactive figures**. **Start simple**, **iterate** on structure and style, and keep content **maintainable** for future readers and collaborators.
 

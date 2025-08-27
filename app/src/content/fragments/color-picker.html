@@ -1,33 +1,36 @@
 <div class="color-picker" style="width:100%; margin: 10px 0;">
   <style>
     .color-picker .picker__stack { display:flex; flex-direction:column; gap:12px; }
-    .color-picker .current-card { display:flex; flex-direction: column; align-items:stretch; gap:12px; padding:14px 16px; border:1px solid var(--border-color); background: var(--surface-bg); border-radius: 12px; }
+    .color-picker .current-card { display:grid; grid-template-columns: 30% 70%; align-items: center; gap:14px; padding:14px 32px 14px 16px; border:1px solid var(--border-color); background: var(--surface-bg); border-radius: 12px; }
+    .color-picker .current-left { display:flex; flex-direction: column; gap:8px; min-width: 0; }
+    .color-picker .current-right { display:flex; flex-direction: column; gap:8px; padding-left: 14px; border-left: 1px solid var(--border-color); }
     .color-picker .current-main { display:flex; align-items:center; gap:12px; min-width: 0; }
     .color-picker .current-swatch { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-color); }
     .color-picker .current-text { display:flex; flex-direction: column; line-height: 1.2; min-width: 0; }
     .color-picker .current-name { font-size: 14px; font-weight: 800; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(140px, 28vw, 260px); }
     .color-picker .current-hex, .color-picker .current-extra { font-size: 11px; color: var(--muted-color); letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: clamp(140px, 28vw, 260px); }
     /* theme preview styles removed */
-    .color-picker .picker__bar { display:flex; align-items:center; gap:12px; }
-    .color-picker .picker__label { font-weight:700; font-size: 13px; color: var(--text-color); }
-    .color-picker .hue-slider { position:relative; height:16px; border-radius:10px; border:1px solid var(--border-color); background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); cursor: ew-resize; touch-action: none; flex: 1 1 320px; min-width: 200px; }
+    .color-picker .picker__label { font-weight:700; font-size: 12px; color: var(--muted-color); text-transform: uppercase; letter-spacing: .02em; }
+    .color-picker .hue-slider { position:relative; height:16px; border-radius:10px; border:1px solid var(--border-color); background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); cursor: ew-resize; touch-action: none; flex: 1 1 auto; min-width: 200px; }
     .color-picker .hue-knob { position:absolute; top:50%; left:93.6%; width:14px; height:14px; border-radius:50%; border:2px solid #fff; transform:translate(-50%, -50%); background: var(--surface-bg); z-index: 2; box-shadow: 0 0 0 1px rgba(0,0,0,.05); }
-    .color-picker .hue-slider:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-    .color-picker .hue-value { font-variant-numeric: tabular-nums; color: var(--muted-color); min-width: 54px; text-align: right; }
-    @media (max-width: 560px) { .color-picker .picker__bar { gap:8px; } }
+    .color-picker .hue-slider:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+    .color-picker .hue-value { font-variant-numeric: tabular-nums; color: var(--muted-color); font-size: 12px; }
+    @media (max-width: 720px) { .color-picker .current-card { grid-template-columns: 1fr; } .color-picker .current-right { padding-left: 0; border-left: none; } }
   </style>
   <div class="picker__stack">
     <div class="current-card">
-      <div class="current-main">
-        <div class="current-swatch" aria-label="Current color" title="Current color"></div>
-        <div class="current-text">
-          <div class="current-name">—</div>
-          <div class="current-hex">—</div>
-          <div class="current-extra current-lch">—</div>
-          <div class="current-extra current-rgb">—</div>
+      <div class="current-left">
+        <div class="current-main">
+          <div class="current-swatch" aria-label="Current color" title="Current color"></div>
+          <div class="current-text">
+            <div class="current-name">—</div>
+            <div class="current-hex">—</div>
+            <div class="current-extra current-lch">—</div>
+            <div class="current-extra current-rgb">—</div>
+          </div>
         </div>
       </div>
-      <div class="picker__bar">
+      <div class="current-right">
         <div class="picker__label">Hue</div>
         <div class="hue-slider" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360" aria-valuenow="337" tabindex="0">
           <div class="hue-knob"></div>
@@ -57,7 +60,7 @@
     };
 
     // Minimal embedded color-name list (same as palettes)
-    const COLOR_NAMES = [{"name":"Candy Apple Red","hex":"#ff0800"},{"name":"Boiling Magma","hex":"#ff3300"},{"name":"Aerospace Orange","hex":"#ff4f00"},{"name":"Burtuqali Orange","hex":"#ff6700"},{"name":"American Orange","hex":"#ff8b00"},{"name":"Cheese","hex":"#ffa600"},{"name":"Amber","hex":"#ffbf00"},{"name":"Demonic Yellow","hex":"#ffe700"},{"name":"Bat-Signal","hex":"#feff00"},{"name":"Bitter Lime","hex":"#cfff00"},{"name":"Electric Lime","hex":"#ccff00"},{"name":"Bright Yellow Green","hex":"#9dff00"},{"name":"Lasting Lime","hex":"#88ff00"},{"name":"Bright Green","hex":"#66ff00"},{"name":"Chlorophyll Green","hex":"#4aff00"},{"name":"Green Screen","hex":"#22ff00"},{"name":"Electric Pickle","hex":"#00ff04"},{"name":"Acid","hex":"#00ff22"},{"name":"Lucent Lime","hex":"#00ff33"},{"name":"Cathode Green","hex":"#00ff55"},{"name":"Booger Buster","hex":"#00ff77"},{"name":"Green Gas","hex":"#00ff99"},{"name":"Enthusiasm","hex":"#00ffaa"},{"name":"Ice Ice Baby","hex":"#00ffdd"},{"name":"Master Sword Blue","hex":"#00ffee"},{"name":"Agressive Aqua","hex":"#00fbff"},{"name":"Vivid Sky Blue","hex":"#00ccff"},{"name":"Capri","hex":"#00bfff"},{"name":"Sky of Magritte","hex":"#0099ff"},{"name":"Azure","hex":"#007fff"},{"name":"Blue Ribbon","hex":"#0066ff"},{"name":"Blinking Blue","hex":"#0033ff"},{"name":"Icelandic Water","hex":"#0011ff"},{"name":"Blue","hex":"#0000ff"},{"name":"Blue Pencil","hex":"#2200ff"},{"name":"Electric Ultramarine","hex":"#3f00ff"},{"name":"Aladdin's Feather","hex":"#5500ff"},{"name":"Purple Climax","hex":"#8800ff"},{"name":"Amethyst Ganzstar","hex":"#8f00ff"},{"name":"Electric Purple","hex":"#bf00ff"},{"name":"Phlox","hex":"#df00ff"},{"name":"Brusque Pink","hex":"#ee00ff"},{"name":"Bright Magenta","hex":"#ff08e8"},{"name":"Brutal Pink","hex":"#ff00bb"},{"name":"Mean Girls Lipstick","hex":"#ff00ae"},{"name":"Big Bang Pink","hex":"#ff0099"},{"name":"Flaming Hot Flamingoes","hex":"#ff005d"},{"name":"Blazing Dragonfruit","hex":"#ff0054"},{"name":"Carmine Red","hex":"#ff0038"},{"name":"Bright Red","hex":"#ff000d"}];
+    const COLOR_NAMES = [{"name":"Candy Apple Red","hex":"#ff0800"},{"name":"Boiling Magma","hex":"#ff3300"},{"name":"Aerospace Orange","hex":"#ff4f00"},{"name":"Burtuqali Orange","hex":"#ff6700"},{"name":"American Orange","hex":"#ff8b00"},{"name":"Cheese","hex":"#ffa600"},{"name":"Amber","hex":"#ffbf00"},{"name":"Demonic Yellow","hex":"#ffe700"},{"name":"Bat-Signal","hex":"#feff00"},{"name":"Bitter Lime","hex":"#cfff00"},{"name":"Electric Lime","hex":"#ccff00"},{"name":"Bright Yellow Green","hex":"#9dff00"},{"name":"Lasting Lime","hex":"#88ff00"},{"name":"Bright Green","hex":"#66ff00"},{"name":"Chlorophyll Green","hex":"#4aff00"},{"name":"Green Screen","hex":"#22ff00"},{"name":"Electric Pickle","hex":"#00ff04"},{"name":"Acid","hex":"#00ff22"},{"name":"Lucent Lime","hex":"#00ff33"},{"name":"Cathode Green","hex":"#00ff55"},{"name":"Booger Buster","hex":"#00ff77"},{"name":"Green Gas","hex":"#00ff99"},{"name":"Enthusiasm","hex":"#00ffaa"},{"name":"Ice Ice Baby","hex":"#00ffdd"},{"name":"Master Sword Blue","hex":"#00ffee"},{"name":"Agressive Aqua","hex":"#00fbff"},{"name":"Vivid Sky Blue","hex":"#00ccff"},{"name":"Capri","hex":"#00bfff"},{"name":"Sky of Magritte","hex":"#0099ff"},{"name":"Azure","hex":"#007fff"},{"name":"Blue Ribbon","hex":"#0066ff"},{"name":"Blinking Blue","hex":"#0033ff"},{"name":"Icelandic Water","hex":"#0011ff"},{"name":"Blue","hex":"#0000ff"},{"name":"Blue Pencil","hex":"#2200ff"},{"name":"Electric Ultramarine","hex":"#3f00ff"},{"name":"Aladdin's Feather","hex":"#5500ff"},{"name":"Purple Climax","hex":"#8800ff"},{"name":"Amethyst Ganzstar","hex":"#8f00ff"},{"name":"Electric Purple","hex":"#bf00ff"},{"name":"Phlox","hex":"#df00ff"},{"name":"Brusque Pink","hex":"#ee00ff"},{"name":"Bright Magenta","hex":"#ff08e8"},{"name":"Big bang Pink","hex":"#ff00bb"},{"name":"Mean Girls Lipstick","hex":"#ff00ae"},{"name":"Pink","hex":"#ff0099"},{"name":"Hot Flamingoes","hex":"#ff005d"},{"name":"Blazing Dragonfruit","hex":"#ff0054"},{"name":"Carmine Red","hex":"#ff0038"},{"name":"Bright Red","hex":"#ff000d"}];
     if (!window.__colorNames) window.__colorNames = COLOR_NAMES;
 
     // Shared event bus so multiple instances stay in sync
@@ -95,6 +98,10 @@
       const bus = window.__colorPickerBus;
       const instanceId = Math.random().toString(36).slice(2);
 
+      const getKnobRadius = () => {
+        try { const w = knob ? knob.getBoundingClientRect().width : 0; return w ? w / 2 : 8; } catch { return 8; }
+      };
+
       const getName = (hex) => {
         const list = (window.__colorNames && window.__colorNames.length) ? window.__colorNames : COLOR_NAMES;
         if (list && window.chroma) {
@@ -113,8 +120,11 @@
       };
 
       const updateUI = (h, adjusting) => {
-        const pct = (h / 360) * 100;
-        if (knob) knob.style.left = pct + '%';
+        const rect = slider.getBoundingClientRect();
+        const r = Math.min(getKnobRadius(), Math.max(0, rect.width / 2 - 1));
+        const t = Math.max(0, Math.min(1, (h / 360)));
+        const leftPx = r + t * Math.max(0, (rect.width - 2 * r));
+        if (knob) knob.style.left = (leftPx / rect.width * 100) + '%';
         if (hueValue) hueValue.textContent = `${Math.round(h)}°`;
         if (slider) slider.setAttribute('aria-valuenow', String(Math.round(h)));
         // Use LCH for consistent chroma across hues
@@ -140,15 +150,18 @@
         const hoverL = Math.max(0, Math.min(100, L - 8));
         const hoverHex = chroma.lch(hoverL, C, h).hex();
         const rootEl = document.documentElement;
-        rootEl.style.setProperty('--primary', baseHex);
-        rootEl.style.setProperty('--primary-hover', hoverHex);
+        rootEl.style.setProperty('--primary-color', baseHex);
+        rootEl.style.setProperty('--primary-color-hover', hoverHex);
       };
 
       const getHueFromEvent = (ev) => {
         const rect = slider.getBoundingClientRect();
         const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
         const x = clientX - rect.left;
-        const t = Math.max(0, Math.min(1, x / rect.width));
+        const r = Math.min(getKnobRadius(), Math.max(0, rect.width / 2 - 1));
+        const effX = Math.max(r, Math.min(rect.width - r, x));
+        const denom = Math.max(1, rect.width - 2 * r);
+        const t = (effX - r) / denom;
         return t * 360;
       };
 
@@ -160,7 +173,7 @@
 
       // Init depuis la couleur de thème si disponible
       try {
-        const cssPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        const cssPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
         if (cssPrimary) {
           const initH = chroma(cssPrimary).get('hsl.h') || 0;
           updateUI(initH, false);

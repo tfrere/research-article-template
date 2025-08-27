@@ -1,6 +1,7 @@
 
 import { Image } from 'astro:assets';
 import visualPoster from '../../assets/images/visual-vocabulary-poster.png';
+import Note from '../../components/Note.astro';
 
 
 ## Best Practices
@@ -14,6 +15,26 @@ Favor **concise captions** and callouts that clarify what to look at and why it 
 ### Explain math notation
 **Introduce symbols and variables** the first time they appear, and prefer **well‑known identities** over custom shorthand. When formulas carry the message, add one sentence of **plain‑language interpretation** right after.
 
+
+<div className="note-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start;">
+  <Note>
+    For example, in linear regression with features $x \in \mathbb{R}^d$, weights $w \in \mathbb{R}^d$, and bias $b$, the prediction is:
+
+    $$
+    \hat{y} = w^\top x + b
+    $$
+
+    A common training objective is the mean squared error over $N$ samples:
+
+    $$
+    \mathcal{L}(w,b) = \frac{1}{N} \sum_{i=1}^{N} (w^\top x_i + b - y_i)^2
+    $$
+
+    Interpretation: the model fits a hyperplane that minimizes the average squared prediction error.
+  </Note>
+
+  
+</div>
 
 {/* ### Use the right color
 A palette encodes **meaning** (categories, magnitudes, oppositions), preserves **readability** and **accessibility** (sufficient contrast, color‑vision safety), and ensures **perceptually smooth transitions**. The three families below illustrate when to use **categorical**, **sequential**, or **diverging** colors and how they evolve from the same **reference hue**.
@@ -35,12 +56,11 @@ A palette encodes **meaning** (categories, magnitudes, oppositions), preserves *
 Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
 
 <figure>
-  <a href={visualPoster.src} target="_blank" rel="noopener noreferrer">
+  <a href={"https://raw.githubusercontent.com/Financial-Times/chart-doctor/refs/heads/main/visual-vocabulary/poster.png"} target="_blank" rel="noopener noreferrer">
     <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
   </a>
   <figcaption>
-    A handy reference to select chart types by purpose. Click to enlarge.
-    — <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">Website</a>
-  </figcaption>
+    A handy reference to select chart types by purpose — click to enlarge.
+  </figcaption> 
 </figure>
 

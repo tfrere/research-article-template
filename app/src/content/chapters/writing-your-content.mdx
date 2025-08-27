@@ -1,0 +1,116 @@
+{/* IMPORTS */}
+import { Image } from 'astro:assets';
+import placeholder from '../../assets/images/placeholder.png';
+import Aside from '../../components/Aside.astro';
+import Wide from '../../components/Wide.astro';
+import FullBleed from '../../components/FullBleed.astro';
+import HtmlFragment from '../../components/HtmlFragment.astro';
+import audioDemo from '../../assets/audio/audio-example.wav';
+
+## Writing Your Content
+
+### Introduction
+
+Your article lives in two places
+
+- `app/src/content/` — where you can find the `article.mdx`, `bibliography.bib` and html fragments.
+- `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
+
+The `article.mdx` file is a markdown file with html and astro components. It is the main file that contains your article.
+
+<small className="muted">Example</small>
+```mdx
+{/* HEADER */}
+---
+title: "This is the main title"
+subtitle: "This will be displayed just below the banner"
+description: "A modern, MDX-first research article template with math, citations, and interactive figures."
+authors:
+  - "John Doe"
+  - "Alice Martin"
+  - "Robert Brown"
+affiliation: "Hugging Face"
+published: "Feb 19, 2025"
+tags:
+  - research
+  - template
+ogImage: "https://example.com/your-og-image.png"
+---
+
+{/* IMPORTS */}
+import { Image } from 'astro:assets';
+import placeholder from '../assets/images/placeholder.jpg';
+
+{/* CONTENT */}
+# Hello, world
+
+This is a short paragraph written in Markdown. Below is an example image:
+
+<Image src={placeholder} alt="Example image" />
+```
+
+### Markdown 
+
+You can use **markdown** to write your content. Here is the complete [markdown documentation](https://www.markdownguide.org/basic-syntax/).
+
+<small className="muted">Example</small>
+```mdx
+# This is the main title
+
+This is a short paragraph containing **bold** and *italic* text.
+
+## This is a second level heading
+
+- This is a list item
+- This is a second list item
+- This is a third list item
+```
+
+
+### Chapters
+
+
+**If** your article becomes **too long** for one file, you can **organize** it into **separate chapters**.
+
+Simply **create a new file** in the `app/src/content/chapters` **directory**.  
+Then, **include** your new chapter in the main article.
+
+
+<small className="muted">Example</small>
+```mdx
+import MyChapter from './chapters/my-chapter.mdx';
+
+<MyChapter />
+```
+
+You can see an example of this in the <a target="_blank" href="https://huggingface.co/spaces/tfrere/research-article-template/blob/main/app/src/content/chapters/best-pratices.mdx">app/src/content/chapters/best-pratices.mdx</a> file.
+
+### Table of contents
+ 
+The **Table of contents** is generated **automatically** from your **H2–H4** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**.
+
+### Theme
+
+All **interactive elements** (buttons, inputs, cards, etc.) are themed with the **primary color** you choose.
+
+You can **update this main color** to match your brand by changing the `--primary-color` variable in the `app/src/styles/_variables.css` file.
+
+Use the **color picker** below to see how the primary color affects the theme.
+
+#### Brand color
+
+<Aside>
+  <HtmlFragment src="color-picker.html" />
+  <Fragment slot="aside">
+    You can use the color picker to select the right color.
+    
+    Here is an example of an <a href="#">interactive element</a>.
+  </Fragment>
+</Aside>
+
+
+#### Color palettes
+
+Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
+
+<HtmlFragment src="palettes.html" />

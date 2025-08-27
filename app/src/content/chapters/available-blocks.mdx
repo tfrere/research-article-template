@@ -1,87 +1,12 @@
-{/* IMPORTS */}
 import { Image } from 'astro:assets';
 import placeholder from '../../assets/images/placeholder.png';
+import audioDemo from '../../assets/audio/audio-example.wav';
+import HtmlFragment from '../../components/HtmlFragment.astro';
 import Aside from '../../components/Aside.astro';
 import Wide from '../../components/Wide.astro';
 import FullBleed from '../../components/FullBleed.astro';
-import HtmlFragment from '../../components/HtmlFragment.astro';
-import audioDemo from '../../assets/audio/audio-example.wav';
 
-## Writing Your Content
-
-### Introduction
-
-Your article lives in two places:
-
-- `app/src/content/` — where you can find the article.mdx, bibliography.bib and html fragments.
-- `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
-
-This is MDX, its basically a markdown file with html and astro components.
-The **initial skeleton** of an article looks like this.
-
-```mdx
-{/* HEADER */}
----
-title: "This is the main title"
-subtitle: "This will be displayed just below the banner"
-description: "A modern, MDX-first research article template with math, citations, and interactive figures."
-authors:
-  - "John Doe"
-  - "Alice Martin"
-  - "Robert Brown"
-affiliation: "Hugging Face"
-published: "Feb 19, 2025"
-tags:
-  - research
-  - template
-ogImage: "https://example.com/your-og-image.png"
----
-
-{/* IMPORTS */}
-import { Image } from 'astro:assets';
-import placeholder from '../assets/images/placeholder.jpg';
-
-{/* CONTENT */}
-# Hello, world
-
-This is a short paragraph written in Markdown. Below is an example image:
-
-<Image src={placeholder} alt="Example image" />
-```
-
-### Chapters
-
-
-**If** your article becomes **too long**, you can **organize** it into **separate chapters**.
-
-Simply **create a new file** in the `app/src/content/chapters` **directory**.  
-Then, **include** your new chapter in the main article by adding the following lines:
-
-```mdx
-import MyChapter from './chapters/my-chapter.mdx';
-<MyChapter />
-```
-
-You can see an example of this in the <a href="">`app/src/content/chapters/best-pratices.mdx`</a> file.
-
-### Theme
-
-All **interactive elements** (buttons, inputs, cards, etc.) are themed with the **primary color** you choose. Feel free to update this color to match your **brand**.
-
-You can **override** the theme by changing the main variable in the `app/src/styles/_variables.css` file.
-
-You can use the **color picker** below to choose the right color.
-<Aside>
-<div className="">
-  <HtmlFragment src="color-picker.html" />
-</div>
-<Fragment slot="aside">
-  There is also a color <a href="#use-the-right-color">palette generator</a> that will help you choose the right color for your data visualizations.
-</Fragment>
-</Aside>
-
-
-### Available blocks
+## Available blocks
 
 All the following blocks are available in the article.mdx file. You can also create your own blocks by creating a new component in the components folder.
 
@@ -90,9 +15,10 @@ All the following blocks are available in the article.mdx file. You can also cre
   <a className="button" href="#math">Math</a>
   <a className="button" href="#images">Images</a>
   <a className="button" href="#code-blocks">Code</a>
+  <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#citations-and-notes">Citations & notes</a>
-  <a className="button" href="#asides">Asides</a>
-  <a className="button" href="#minimal-table">Table</a>
+  <a className="button" href="#placement">Placement</a>
+  <a className="button" href="#minimal-table">Minimal table</a>
   <a className="button" href="#audio">Audio</a>
   <a className="button" href="#embeds">Embeds</a>
 </div>
@@ -343,9 +269,6 @@ D3 version
 Plotly version
 <div className="plot-card">
   <HtmlFragment src="line.html" />
-</div>
-<div className="plot-card">
-  <HtmlFragment src="bar.html" />
 </div>
 
 <small className="muted">Example</small>

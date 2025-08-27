@@ -13,8 +13,8 @@
 .plotly_input_container > select { padding: 2px 4px; line-height: 1.5em; text-align: center; border-radius: 4px; font-size: 12px; background-color: var(--neutral-200); outline: none; border: 1px solid var(--neutral-300); }
 .plotly_slider { display: flex; align-items: center; gap: 10px; }
 .plotly_slider > input[type="range"] { -webkit-appearance: none; appearance: none; height: 2px; background: var(--neutral-400); border-radius: 5px; outline: none; }
-.plotly_slider > input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; }
-.plotly_slider > input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; }
+.plotly_slider > input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary-color); cursor: pointer; }
+.plotly_slider > input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--primary-color); cursor: pointer; }
 .plotly_slider > span { font-size: 14px; line-height: 1.6em; min-width: 16px; }
 
 /* ---------------------------------------------------------------------------- */

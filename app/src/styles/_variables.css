@@ -9,8 +9,8 @@
   --neutral-200: rgb(245, 245, 245);
 
   /* Primary brand color */
-  --primary: rgb(232, 137, 171);
-  --primary-hover: rgb(212, 126, 156);
+  --primary-color: rgb(232, 137, 171);
+  --primary-color-hover: rgb(212, 126, 156);
   --on-primary: #ffffff;
 
   --text-color: rgba(0,0,0,.85);
@@ -20,8 +20,8 @@
   /* Light surfaces & links */
   --surface-bg: #fafafa;
   --code-bg: #f6f8fa;
-  --link-underline: var(--primary); /* based on --primary */
-  --link-underline-hover: var(--primary-hover);
+  --link-underline: var(--primary-color); /* based on --primary-color */
+  --link-underline-hover: var(--primary-color-hover);
 
   --spacing-1: 8px;
   --spacing-2: 12px;
@@ -42,8 +42,8 @@
   --surface-bg: #12151b;
   --code-bg: #12151b;
   /* Primary in dark mode */
-  --primary: rgb(232, 137, 171);
-  --primary-hover: rgb(212, 126, 156);
+  --primary-color: rgb(232, 137, 171);
+  --primary-color-hover: rgb(212, 126, 156);
   --on-primary: #0f1115;
 
   color-scheme: dark;

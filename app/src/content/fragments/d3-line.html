@@ -21,16 +21,16 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   }
   .d3-line .d3-line__controls select:hover {
-    border-color: var(--primary);
+    border-color: var(--primary-color);
   }
   .d3-line .d3-line__controls select:focus {
-    border-color: var(--primary);
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(232,137,171,.25);
     outline: none;
   }
   .d3-line .d3-line__controls label { gap: 8px; }
 
-  /* Range slider themed with --primary */
+  /* Range slider themed with --primary-color */
   .d3-line .d3-line__controls input[type="range"] { 
     -webkit-appearance: none; 
     appearance: none; 
@@ -51,7 +51,7 @@
     width: 16px; 
     height: 16px; 
     border-radius: 50%; 
-    background: var(--primary); 
+    background: var(--primary-color); 
     border: 2px solid var(--on-primary);
     margin-top: -5px; 
     cursor: pointer;
@@ -65,12 +65,12 @@
     width: 16px; 
     height: 16px; 
     border-radius: 50%; 
-    background: var(--primary); 
+    background: var(--primary-color); 
     border: 2px solid var(--on-primary);
     cursor: pointer;
   }
   /* Improved line color via CSS */
-  .d3-line .lines path.improved { stroke: var(--primary); }
+  .d3-line .lines path.improved { stroke: var(--primary-color); }
 </style>
 <script>
   (() => {
@@ -181,7 +181,7 @@
 
       // Colors
       const colorBase = '#64748b';     // slate-500
-      const colorImproved = 'var(--primary)';
+      const colorImproved = 'var(--primary-color)';
       const colorTarget = '#4b5563';   // gray-600
       const legendBgLight = 'rgba(255,255,255,0.85)';
       const legendBgDark = 'rgba(17,17,23,0.85)';
@@ -221,13 +221,13 @@
         .y((d) => yScale(d));
 
       const pathBase = gLines.append('path').attr('fill', 'none').attr('stroke', colorBase).attr('stroke-width', 2);
-      const pathImp  = gLines.append('path').attr('class', 'improved').attr('fill', 'none').style('stroke', 'var(--primary)').attr('stroke-width', 2);
+      const pathImp  = gLines.append('path').attr('class', 'improved').attr('fill', 'none').style('stroke', 'var(--primary-color)').attr('stroke-width', 2);
       const pathTgt  = gLines.append('path').attr('fill', 'none').attr('stroke', colorTarget).attr('stroke-width', 2).attr('stroke-dasharray', '6,6');
 
       // Hover elements
       const hoverLine = gHover.append('line').attr('stroke-width', 1);
       const hoverDotB = gHover.append('circle').attr('r', 3.5).attr('fill', colorBase).attr('stroke', '#fff').attr('stroke-width', 1);
-      const hoverDotI = gHover.append('circle').attr('class', 'improved').attr('r', 3.5).style('fill', 'var(--primary)').attr('stroke', '#fff').attr('stroke-width', 1);
+      const hoverDotI = gHover.append('circle').attr('class', 'improved').attr('r', 3.5).style('fill', 'var(--primary-color)').attr('stroke', '#fff').attr('stroke-width', 1);
       const hoverDotT = gHover.append('circle').attr('r', 3.5).attr('fill', colorTarget).attr('stroke', '#fff').attr('stroke-width', 1);
 
       const overlay = gHover.append('rect').attr('fill', 'transparent').style('cursor', 'crosshair');

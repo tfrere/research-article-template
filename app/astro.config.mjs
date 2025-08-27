@@ -3,7 +3,6 @@ import mdx from '@astrojs/mdx';
 import mermaid from 'astro-mermaid';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import remarkToc from 'remark-toc';
 import remarkFootnotes from 'remark-footnotes';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
@@ -30,7 +29,6 @@ export default defineConfig({
       }
     },
     remarkPlugins: [
-      [remarkToc, { heading: 'Table of Contents', maxDepth: 3 }],
       remarkMath,
       [remarkFootnotes, { inlineNotes: true }]
     ],

@@ -106,8 +106,8 @@
         const strokeColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
 
 
-        // Group with blend mode so points softly accumulate light
-        const g = svg.selectAll('g.points').data([0]).join('g').attr('class', 'points').style('mix-blend-mode', 'screen');
+        // Group for points (no blend mode for better print/PDF visibility)
+        const g = svg.selectAll('g.points').data([0]).join('g').attr('class', 'points');
 
         // Ensure container can host an absolute tooltip
         container.style.position = container.style.position || 'relative';

@@ -82,11 +82,11 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
     <section class="content-grid">
       <aside class="toc">
         <div class="title">Table of Contents</div>
-        <div id="toc-placeholder"></div>
+        <div id="article-toc-placeholder"></div>
       </aside>
       <details class="toc-mobile">
         <summary>Table of Contents</summary>
-        <div id="toc-mobile-placeholder"></div>
+        <div id="article-toc-mobile-placeholder"></div>
       </details>
       <main>
         <Article />
@@ -193,13 +193,55 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
     <script>
       // Build TOC from article headings (h2/h3/h4) and render into the sticky aside
       const buildTOC = () => {
-        const holder = document.getElementById('toc-placeholder');
-        const holderMobile = document.getElementById('toc-mobile-placeholder');
-        if ((holder && holder.children.length) && (holderMobile && holderMobile.children.length)) return;
+        const holder = document.getElementById('article-toc-placeholder');
+        const holderMobile = document.getElementById('article-toc-mobile-placeholder');
+        // Always rebuild TOC to avoid stale entries
+        if (holder) holder.innerHTML = '';
+        if (holderMobile) holderMobile.innerHTML = '';
         const articleRoot = document.querySelector('section.content-grid main');
         if (!articleRoot) return;
         const headings = articleRoot.querySelectorAll('h2, h3, h4');
         if (!headings.length) return;
+
+        // Filter out headings that should not appear in TOC
+        const normalize = (s) => String(s || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+        const isTocLabel = (s) => /^(table\s+of\s+contents?)$|^toc$/i.test(String(s || '').replace(/[^a-zA-Z0-9]+/g, ' ').trim());
+        const shouldSkip = (h) => {
+          const t = h.textContent || '';
+          const id = String(h.id || '');
+          const slug = normalize(t).replace(/\s+/g, '_');
+          if (isTocLabel(t)) return true;
+          if (isTocLabel(id.replace(/[_-]+/g, ' '))) return true;
+          if (isTocLabel(slug.replace(/[_-]+/g, ' '))) return true;
+          return false;
+        };
+        const headingsArr = Array.from(headings).filter(h => !shouldSkip(h));
+        if (!headingsArr.length) return;
+
+        // Ensure unique ids for headings (deduplicate duplicates)
+        const usedIds = new Set<string>();
+        const slugify = (s: string) => String(s || '')
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_\-]/g, '');
+        headingsArr.forEach((h) => {
+          let id = (h.id || '').trim();
+          if (!id) {
+            const base = slugify(h.textContent || '');
+            id = base || 'section';
+          }
+          let candidate = id;
+          let n = 2;
+          while (usedIds.has(candidate)) {
+            candidate = `${id}-${n++}`;
+          }
+          if (h.id !== candidate) h.id = candidate;
+          usedIds.add(candidate);
+        });
 
         const nav = document.createElement('nav');
         let ulStack = [document.createElement('ul')];
@@ -207,10 +249,8 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
 
         const levelOf = (tag) => tag === 'H2' ? 2 : tag === 'H3' ? 3 : 4;
         let prev = 2;
-        headings.forEach((h) => {
+        headingsArr.forEach((h) => {
           const lvl = levelOf(h.tagName);
-          // ensure id exists
-          if (!h.id) h.id = h.textContent.toLowerCase().replace(/\s+/g, '_');
           // adjust depth
           while (lvl > prev) { const ul = document.createElement('ul'); ulStack[ulStack.length-1].lastElementChild?.appendChild(ul); ulStack.push(ul); prev++; }
           while (lvl < prev) { ulStack.pop(); prev--; }
@@ -230,11 +270,11 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
           ...(holderMobile ? holderMobile.querySelectorAll('a') : [])
         ];
         const onScroll = () => {
-          for (let i = headings.length - 1; i >= 0; i--) {
-            const top = headings[i].getBoundingClientRect().top;
+          for (let i = headingsArr.length - 1; i >= 0; i--) {
+            const top = headingsArr[i].getBoundingClientRect().top;
             if (top - 60 <= 0) {
               links.forEach(l => l.classList.remove('active'));
-              const id = '#' + headings[i].id;
+              const id = '#' + headingsArr[i].id;
               const actives = Array.from(links).filter(l => l.getAttribute('href') === id);
               actives.forEach(a => a.classList.add('active'));
               break;

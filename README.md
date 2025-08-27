@@ -12,7 +12,6 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 
 TO DO : 
 
-- fix banner pour l'export pdf et la thumb
 - rename le titre ?
 - Vérifier la biliographie comment elle marche
 
