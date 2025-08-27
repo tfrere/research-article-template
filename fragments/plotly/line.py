@@ -57,7 +57,7 @@ y2 = blend(base0, aug0, alpha0)
 y3 = target0
 
 color_base = "#64748b"     # slate-500
-color_improved = "#2563eb" # blue-600
+color_improved = "#F981D4" # pink
 color_target = "#4b5563"   # gray-600 (dash)
 
 fig = go.Figure()
