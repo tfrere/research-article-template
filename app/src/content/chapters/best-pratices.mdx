@@ -1,0 +1,46 @@
+
+import { Image } from 'astro:assets';
+import visualPoster from '../../assets/images/visual-vocabulary-poster.png';
+
+
+## Best Practices
+
+### Short sections
+Break content into **small, purpose‑driven sections**. Each section should answer a **single question** or support one idea. This improves **scanability**, helps readers navigate with the TOC, and makes later edits safer.
+
+### Clear, minimal annotations
+Favor **concise captions** and callouts that clarify what to look at and why it matters. In code, **highlight just the lines** that carry the idea; avoid verbose commentary. **Precision beats volume**.
+
+### Explain math notation
+**Introduce symbols and variables** the first time they appear, and prefer **well‑known identities** over custom shorthand. When formulas carry the message, add one sentence of **plain‑language interpretation** right after.
+
+
+{/* ### Use the right color
+A palette encodes **meaning** (categories, magnitudes, oppositions), preserves **readability** and **accessibility** (sufficient contrast, color‑vision safety), and ensures **perceptually smooth transitions**. The three families below illustrate when to use **categorical**, **sequential**, or **diverging** colors and how they evolve from the same **reference hue**.
+
+<Aside>
+<div className="">
+  <HtmlFragment src="palettes.html" />
+</div>
+<Fragment slot="aside">
+  You can choose a color from the palette to update palettes and copy them to your clipboard.
+</Fragment>
+<Fragment slot="aside">
+  It will be applied to the <a href="/" target="_blank">whole page</a>.
+</Fragment>
+</Aside> */}
+
+### Use the right chart
+
+Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
+
+<figure>
+  <a href={visualPoster.src} target="_blank" rel="noopener noreferrer">
+    <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
+  </a>
+  <figcaption>
+    A handy reference to select chart types by purpose. Click to enlarge.
+    — <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">Website</a>
+  </figcaption>
+</figure>
+

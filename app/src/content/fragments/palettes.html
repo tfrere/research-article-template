@@ -12,7 +12,7 @@
     .palettes .palette-card__swatches .sw:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
     .palettes .palette-card__swatches .sw:last-child  { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
     .palettes .palette-card__footer { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
-    .palettes .copy-btn { width: 100%; margin: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); font-size: 12px; cursor: pointer; }
+    .palettes .copy-btn { width: 100%; margin: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color)!important; font-size: 12px; cursor: pointer; }
     .palettes .palettes__meta { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
     .palettes .current-color { display: flex; align-items: center; gap: 10px; }
     .palettes .current-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border-color); }
@@ -24,10 +24,10 @@
   <div class="palettes__controls" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <div style="font-weight:700;">Pick a hue</div>
-      <div class="hue-value" style="font-variant-numeric: tabular-nums; color: var(--muted-color);">H 220°</div>
+      <div class="hue-value" style="font-variant-numeric: tabular-nums; color: var(--muted-color);">H 337°</div>
     </div>
     <div class="hue-slider" style="position:relative; height:18px; border-radius:10px; border:1px solid var(--border-color); background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); cursor: ew-resize; touch-action: none;">
-      <div class="hue-knob" style="position:absolute; top:50%; left:61.1%; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.2), 0 2px 8px rgba(0,0,0,.25); transform:translate(-50%, -50%); background: var(--surface-bg); z-index: 2;"></div>
+      <div class="hue-knob" style="position:absolute; top:50%; left:93.6%; width:14px; height:14px; border-radius:50%; border:2px solid #fff; transform:translate(-50%, -50%); background: var(--surface-bg); z-index: 2;"></div>
     </div>
     <div class="palettes__meta">
       <div class="current-color">
@@ -101,6 +101,20 @@
       const simSelect = root.querySelector('.cvd-select');
       console.log('[palettes] elements', { root: !!root, grid: !!grid, slider: !!slider, knob: !!knob, hueValue: !!hueValue });
 
+      // Shared bus to sync with color-picker instances
+      if (!window.__colorPickerBus) {
+        window.__colorPickerBus = (() => {
+          let hue = 337; let adjusting = false; const listeners = new Set();
+          return {
+            get: () => ({ hue, adjusting }),
+            publish: (sourceId, nextHue, isAdjusting) => { hue = ((nextHue % 360) + 360) % 360; adjusting = !!isAdjusting; listeners.forEach(fn => { try { fn({ sourceId, hue, adjusting }); } catch {} }); },
+            subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); }
+          };
+        })();
+      }
+      const bus = window.__colorPickerBus;
+      const instanceId = Math.random().toString(36).slice(2);
+
       // Cards data with full descriptions
       const cards = [
         { key: 'categorical', title: 'Categorical', desc: 'Categorical colors help users map non-numeric meaning to objects in a visualization. These are designed to be visually distinct from one another. Maximum of six.', generator: (base) => {
@@ -168,7 +182,19 @@
       // Rendering
       const renderPalettes = (h) => {
         console.log('[palettes] renderPalettes', h);
-        const base = chroma.hsl(h, 0.75, 0.55);
+        const base = chroma.hsl(h, 0.67, 0.72);
+        // Update CSS variables for live theming only during interaction
+        try {
+          if (isAdjusting) {
+            const baseHex = base.hex();
+            const hoverHex = chroma(base).darken(0.6).hex();
+            const rootEl = document.documentElement;
+            rootEl.style.setProperty('--primary', baseHex);
+            rootEl.style.setProperty('--primary-hover', hoverHex);
+          }
+        } catch (e) {
+          console.warn('[palettes] failed updating CSS vars', e);
+        }
         const uniformText = (bg) => (chroma(bg).luminance() > 0.45 ? '#111' : '#fff');
 
         // Update current swatch + name
@@ -260,11 +286,15 @@
       };
 
       // Hue slider behavior
-      let hue = 220; // initial
+      let hue = 337; // initial
+      let isAdjusting = false; // only update theme while interacting
       const setHue = (h) => { hue = (h + 360) % 360; const pct = hue / 360 * 100; if (knob) knob.style.left = pct + '%'; if (hueValue) hueValue.textContent = `H ${Math.round(hue)}°`; console.log('[palettes] setHue', hue, pct); renderPalettes(hue); };
       const getHueFromEvent = (ev) => { const rect = slider.getBoundingClientRect(); const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX; const x = clientX - rect.left; const t = Math.max(0, Math.min(1, x / rect.width)); const h = t * 360; console.log('[palettes] getHueFromEvent', { clientX, left: rect.left, width: rect.width, t, h }); return h; };
-      const onDown = (ev) => { console.log('[palettes] onDown', ev.type); ev.preventDefault(); setHue(getHueFromEvent(ev)); const move = (e) => { e.preventDefault && e.preventDefault(); setHue(getHueFromEvent(e)); }; const up = () => { console.log('[palettes] onUp'); window.removeEventListener('mousemove', move); window.removeEventListener('touchmove', move); window.removeEventListener('mouseup', up); window.removeEventListener('touchend', up); }; window.addEventListener('mousemove', move, { passive: false }); window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('mouseup', up, { once: true }); window.addEventListener('touchend', up, { once: true }); };
+      const onDown = (ev) => { console.log('[palettes] onDown', ev.type); ev.preventDefault(); isAdjusting = true; const h0 = getHueFromEvent(ev); setHue(h0); bus.publish(instanceId, h0, true); const move = (e) => { e.preventDefault && e.preventDefault(); const hh = getHueFromEvent(e); setHue(hh); bus.publish(instanceId, hh, true); }; const up = () => { console.log('[palettes] onUp'); isAdjusting = false; bus.publish(instanceId, hue, false); window.removeEventListener('mousemove', move); window.removeEventListener('touchmove', move); window.removeEventListener('mouseup', up); window.removeEventListener('touchend', up); }; window.addEventListener('mousemove', move, { passive: false }); window.addEventListener('touchmove', move, { passive: false }); window.addEventListener('mouseup', up, { once: true }); window.addEventListener('touchend', up, { once: true }); };
       if (slider) { slider.addEventListener('mousedown', onDown); slider.addEventListener('touchstart', onDown, { passive: false }); console.log('[palettes] listeners attached'); } else { console.warn('[palettes] slider not found'); }
+
+      // Subscribe to bus to receive updates from other pickers
+      const unsubscribe = bus.subscribe(({ sourceId, hue: H, adjusting }) => { if (sourceId === instanceId) return; isAdjusting = adjusting; setHue(H); });
 
       // Color-vision simulation filters (SVG)
       const injectFilters = () => {
@@ -290,7 +320,10 @@
       if (simSelect) simSelect.addEventListener('change', () => applySimulation(simSelect.value));
 
       console.log('[palettes] initial render');
-      setHue(hue);
+      // Initialize from shared hue without updating CSS variables
+      const shared = bus.get();
+      isAdjusting = false;
+      setHue(shared && typeof shared.hue === 'number' ? shared.hue : hue);
       applySimulation('none');
 
       // Fixed 3 columns layout

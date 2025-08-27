@@ -93,17 +93,6 @@
         .attr('width', '100%')
         .style('display', 'block');
 
-      // Subtle background gradient
-      const defs = svg.append('defs');
-      const grad = defs.append('radialGradient')
-        .attr('id', 'spaceBg')
-        .attr('cx', '50%')
-        .attr('cy', '50%')
-        .attr('r', '65%');
-      grad.append('stop').attr('offset', '0%').attr('stop-color', 'rgba(255,255,255,0.06)');
-      grad.append('stop').attr('offset', '60%').attr('stop-color', 'rgba(160,120,200,0.05)');
-      grad.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(0,0,0,0)');
-
       const render = () => {
         const width = container.clientWidth || 800;
         const height = Math.max(260, Math.round(width / 3)); // keep ~3:1, min height
@@ -132,6 +121,7 @@
         // Ensure container can host an absolute tooltip
         container.style.position = container.style.position || 'relative';
         let tip = container.querySelector('.d3-tooltip');
+        let tipInner;
         if (!tip) {
           tip = document.createElement('div');
           tip.className = 'd3-tooltip';
@@ -141,22 +131,28 @@
             left: '0px',
             transform: 'translate(-9999px, -9999px)',
             pointerEvents: 'none',
-            padding: '6px 8px',
-            borderRadius: '6px',
+            padding: '8px 10px',
+            borderRadius: '8px',
             fontSize: '12px',
-            lineHeight: '1.3',
+            lineHeight: '1.35',
             border: '1px solid var(--border-color)',
             background: 'var(--surface-bg)',
             color: 'var(--text-color)',
-            boxShadow: '0 2px 10px rgba(0,0,0,.15)',
+            boxShadow: '0 4px 24px rgba(0,0,0,.18)',
             opacity: '0',
             transition: 'opacity .12s ease'
           });
+          tipInner = document.createElement('div');
+          tipInner.className = 'd3-tooltip__inner';
+          tipInner.style.textAlign = 'left';
+          tip.appendChild(tipInner);
           container.appendChild(tip);
+        } else {
+          tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
         }
 
         // Final filter: remove small dots very close to the galaxy center (after placement)
-        const centerHoleRadius = 0.08; // elliptical radius threshold
+        const centerHoleRadius = 0.48; // elliptical radius threshold
         const smallSizeThreshold = 7.5; // same notion as Python size cut
         const rTotal = idx.map((i) => Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2));
         const idxFiltered = idx.filter((i, k) => !(rTotal[k] <= centerHoleRadius && sizesPx[i] < smallSizeThreshold));
@@ -171,15 +167,18 @@
             .attr('fill-opacity', 0.9)
             .attr('stroke', strokeColor)
             .attr('stroke-width', 0.4)
-            .on('mouseenter', (ev, i) => {
+            .on('mouseenter', function(ev, i) {
+              d3.select(this).raise()
+                .attr('stroke', isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)')
+                .attr('stroke-width', 1.2);
               const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
               const type = i < lenSpiral ? 'spiral' : 'bulge';
               const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-              tip.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
-                `<div>Type: ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
-                `<div>Size: ${sizesPx[i].toFixed(1)} px</div>` +
-                `<div>X: ${X[i].toFixed(2)} · Y: ${Y[i].toFixed(2)}</div>` +
-                `<div>r: ${r.toFixed(3)} · z: ${Zraw[i].toFixed(3)}</div>`;
+              tipInner.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
+                `<div><strong>Type</strong> ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
+                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>` +
+                `<div><strong>X</strong> ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
+                `<div><strong>r</strong> ${r.toFixed(3)} · <strong>z</strong> ${Zraw[i].toFixed(3)}</div>`;
               tip.style.opacity = '1';
             })
             .on('mousemove', (ev, i) => {
@@ -187,9 +186,10 @@
               const offsetX = 10, offsetY = 12;
               tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
             })
-            .on('mouseleave', () => {
+            .on('mouseleave', function() {
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
+              d3.select(this).attr('stroke', strokeColor).attr('stroke-width', 0.4);
             }),
           (update) => update
             .attr('cx', (i) => xScale(X[i]))
@@ -199,15 +199,18 @@
             .attr('fill-opacity', 0.9)
             .attr('stroke', strokeColor)
             .attr('stroke-width', 0.4)
-            .on('mouseenter', (ev, i) => {
+            .on('mouseenter', function(ev, i) {
+              d3.select(this).raise()
+                .attr('stroke', isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)')
+                .attr('stroke-width', 1.2);
               const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
               const type = i < lenSpiral ? 'spiral' : 'bulge';
               const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-              tip.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
-                `<div>Type: ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
-                `<div>Size: ${sizesPx[i].toFixed(1)} px</div>` +
-                `<div>X: ${X[i].toFixed(2)} · Y: ${Y[i].toFixed(2)}</div>` +
-                `<div>r: ${r.toFixed(3)} · z: ${Zraw[i].toFixed(3)}</div>`;
+              tipInner.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
+                `<div><strong>Type</strong> ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
+                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>` +
+                `<div><strong>X</strong> ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
+                `<div><strong>r</strong> ${r.toFixed(3)} · <strong>z</strong> ${Zraw[i].toFixed(3)}</div>`;
               tip.style.opacity = '1';
             })
             .on('mousemove', (ev, i) => {
@@ -215,9 +218,10 @@
               const offsetX = 10, offsetY = 12;
               tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
             })
-            .on('mouseleave', () => {
+            .on('mouseleave', function() {
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
+              d3.select(this).attr('stroke', strokeColor).attr('stroke-width', 0.4);
             })
         );
       };

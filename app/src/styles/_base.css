@@ -1,16 +1,16 @@
-// ============================================================================
-// Base / Reset
-// ============================================================================
+/* ============================================================================ */
+/* Base / Reset */
+/* ============================================================================ */
 html { box-sizing: border-box; }
 *, *::before, *::after { box-sizing: inherit; }
 body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, Apple Color Emoji, Segoe UI Emoji; color: var(--text-color); }
-audio { display: block; }
+audio { display: block; width: 100%; }
 /* Avoid constraining <main> inside grid; scope container sizing elsewhere if needed */
 /* main { max-width: 980px; margin: 24px auto; padding: 16px; } */
 
-// ============================================================================
-// Typography (inspired by Distill)
-// ============================================================================
+/* ============================================================================ */
+/* Typography (inspired by Distill) */
+/* ============================================================================ */
 html { font-size: 14px; line-height: 1.6; }
 @media (min-width: 768px) { html { font-size: 16px; } }
 @media (min-width: 1024px) { html { font-size: 17px; } }
@@ -42,16 +42,16 @@ html { font-size: 14px; line-height: 1.6; }
   margin: var(--spacing-8) 0 var(--spacing-4);
 }
 
-.content-grid main a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--link-underline); }
-.content-grid main a:hover { border-bottom: 1px solid var(--link-underline-hover); }
+.content-grid main a { color: var(--primary); text-decoration: none; border-bottom: 1px solid var(--link-underline); }
+.content-grid main a:hover { color: var(--primary-hover); border-bottom: 1px solid var(--link-underline-hover); }
 
 /* Do not underline heading links inside the article (not the TOC) */
 .content-grid main h2 a,
 .content-grid main h3 a,
-.content-grid main h4 a { border-bottom: none; text-decoration: none; }
+.content-grid main h4 a { color: inherit; border-bottom: none; text-decoration: none; }
 .content-grid main h2 a:hover,
 .content-grid main h3 a:hover,
-.content-grid main h4 a:hover { border-bottom: none; text-decoration: none; }
+.content-grid main h4 a:hover { color: inherit; border-bottom: none; text-decoration: none; }
 
 .content-grid main ul,
 .content-grid main ol { padding-left: 24px; margin: 0 0 var(--spacing-3); }
@@ -119,48 +119,35 @@ html { font-size: 14px; line-height: 1.6; }
   z-index: 1;
 }
 
-/* JS fallback chip */
-.content-grid main pre.has-lang-chip { position: relative; padding-top: 22px; }
-.content-grid main pre .code-lang-chip {
-  position: absolute;
-  top: 0px; right: 0px;
-  font-size: 10px; line-height: 1;
-  color: rgba(255,255,255,.5);
-  background: rgba(255,255,255,.1);
-  border: none;
-  border-radius: 0px; padding: 6px 6px 4px 4px; pointer-events: none; z-index: 1;
-}
-
 .content-grid main table { border-collapse: collapse; width: 100%; margin: 0 0 var(--spacing-4); }
 .content-grid main th, .content-grid main td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; font-size: 15px; }
 .content-grid main thead th { border-bottom: 1px solid var(--border-color); }
 
 .content-grid main hr { border: none; border-bottom: 1px solid var(--border-color); margin: var(--spacing-5) 0; }
 
+/*
+.code-block {
+  background: rgba(120, 120, 120, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: var(--spacing-3);
+  font-size: 14px;
+  overflow: auto;
+}
+*/
 
-// .code-block {
-//   background: rgba(120, 120, 120, 0.5);
-//   border: 1px solid var(--border-color);
-//   border-radius: 6px;
-//   padding: var(--spacing-3);
-//   font-size: 14px;
-//   overflow: auto;
-// }
-
-// ============================================================================
-// Media / Figures
-// ============================================================================
-:where(picture, img) {
-  max-width: 100%;
+/* ============================================================================ */
+/* Media / Figures */
+/* ============================================================================ */
+img,
+picture {
   width: 100%;
+  max-width: 100%;
   height: auto;
   display: block;
 }
 
-figure { margin: 16px 0; }
-figcaption { color: var(--muted-color); font-size: 12px; }
-
-// Inline feature tags
+/* Inline feature tags */
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
 .tag {
   display: inline-flex;
@@ -177,47 +164,52 @@ figcaption { color: var(--muted-color); font-size: 12px; }
 [data-theme="dark"] .tag { background: #1a1f27; border-color: rgba(255,255,255,.15); }
 
 
-// ============================================================================
-// Figures, captions & image credits
-// ============================================================================
+
+/* ============================================================================ */
+/* Figures, captions & image credits */
+/* ============================================================================ */
 figure { margin: 12px 0; }
-figcaption { text-align: center; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
+figcaption { text-align: left; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
 .image-credit { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-color); }
 .image-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
-// ============================================================================
-// Buttons (minimal, clean)
-// ============================================================================
-.meta .meta-container-cell button {
+/* ============================================================================ */
+/* Buttons (minimal, clean) */
+/* ============================================================================ */
+button, .button {
   appearance: none;
-  background: var(--surface-bg);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
+  background: linear-gradient(15deg, var(--primary) 0%, var(--primary-hover) 35%);
+  color: white!important;
+  border: 1px solid transparent;
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+  display: inline-block;
   transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .02s ease;
 }
-.meta .meta-container-cell button:hover {
-  background: var(--code-bg);
+button:hover, .button:hover {
+  filter: brightness(96%);
 }
-.meta .meta-container-cell button:active {
+button:active, .button:active {
   transform: translateY(1px);
 }
-.meta .meta-container-cell button:focus-visible {
+button:focus-visible, .button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--link-underline);
 }
-.meta .meta-container-cell button:disabled {
+button:disabled, .button:disabled {
   opacity: .6;
   cursor: not-allowed;
 }
 
-// ============================================================================
-// Print styles
-// =========================================================================
+.button-group .button {
+  margin: 5px;
+}
+
+/* ============================================================================ */
+/* Print styles */
+/* ========================================================================= */
 @media print {
   html, body { background: #fff; }
   /* Margins handled by Playwright; avoid extra global margins */
@@ -248,3 +240,9 @@ figcaption { text-align: center; font-size: 0.9rem; color: var(--muted-color); m
     --link-underline-hover: rgba(0,0,0,.4);
   }
 }
+
+.muted {
+  color: var(--muted-color);
+}
+
+

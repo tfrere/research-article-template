@@ -120,6 +120,29 @@ async function waitForPlotly(page, timeoutMs = 20000) {
   }, timeoutMs);
 }
 
+async function waitForD3(page, timeoutMs = 20000) {
+  await page.evaluate(async (timeout) => {
+    const start = Date.now();
+    const isReady = () => {
+      // Prioritize hero banner if present
+      const hero = document.querySelector('.hero .d3-galaxy') || document.querySelector('.d3-galaxy');
+      if (hero) {
+        return !!hero.querySelector('svg circle, svg path, svg rect, svg g');
+      }
+      // Else require all D3 containers on page to have shapes
+      const containers = [
+        ...Array.from(document.querySelectorAll('.d3-line')),
+        ...Array.from(document.querySelectorAll('.d3-bar'))
+      ];
+      if (!containers.length) return true;
+      return containers.every(c => c.querySelector('svg circle, svg path, svg rect, svg g'));
+    };
+    while (!isReady() && (Date.now() - start) < timeout) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }, timeoutMs);
+}
+
 async function waitForStableLayout(page, timeoutMs = 5000) {
   const start = Date.now();
   let last = await page.evaluate(() => document.scrollingElement ? document.scrollingElement.scrollHeight : document.body.scrollHeight);
@@ -195,6 +218,9 @@ async function main() {
       if (wait === 'images' || wait === 'full') {
         await waitForImages(page);
       }
+      if (wait === 'd3' || wait === 'full') {
+        await waitForD3(page);
+      }
       if (wait === 'plotly' || wait === 'full') {
         await waitForPlotly(page);
       }
@@ -202,13 +228,65 @@ async function main() {
         await waitForStableLayout(page);
       }
       await page.emulateMedia({ media: 'print' });
+
+      // Generate OG thumbnail (1200x630)
+      try {
+        const ogW = 1200, ogH = 630;
+        await page.setViewportSize({ width: ogW, height: ogH });
+        // Give layout a tick to adjust
+        await page.waitForTimeout(200);
+        // Ensure layout & D3 re-rendered after viewport change
+        await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
+        try { await waitForD3(page, 8000); } catch {}
+
+        // Temporarily improve visibility for light theme thumbnails
+        // - Force normal blend for points
+        // - Ensure an SVG background (CSS background on svg element)
+        const cssHandle = await page.addStyleTag({ content: `
+          .hero .points { mix-blend-mode: normal !important; }
+          .d3-galaxy svg { background: var(--surface-bg); }
+        ` });
+        const thumbPath = resolve(cwd, 'dist', 'thumb.jpg');
+        await page.screenshot({ path: thumbPath, type: 'jpeg', quality: 85, fullPage: false });
+        // Also emit PNG for compatibility if needed
+        const thumbPngPath = resolve(cwd, 'dist', 'thumb.png');
+        await page.screenshot({ path: thumbPngPath, type: 'png', fullPage: false });
+        const publicThumb = resolve(cwd, 'public', 'thumb.jpg');
+        const publicThumbPng = resolve(cwd, 'public', 'thumb.png');
+        try { await fs.copyFile(thumbPath, publicThumb); } catch {}
+        try { await fs.copyFile(thumbPngPath, publicThumbPng); } catch {}
+        // Remove temporary style so PDF is unaffected
+        try { await cssHandle.evaluate((el) => el.remove()); } catch {}
+        console.log(`✅ OG thumbnail generated: ${thumbPath}`);
+      } catch (e) {
+        console.warn('Unable to generate OG thumbnail:', e?.message || e);
+      }
       const outPath = resolve(cwd, 'dist', `${outFileBase}.pdf`);
+      // Restore viewport to printable width before PDF (thumbnail changed it)
+      try {
+        const fmt2 = getFormatSizeMm(format);
+        const mw2 = fmt2.w - cssLengthToMm(margin.left) - cssLengthToMm(margin.right);
+        const printableWidthPx2 = Math.max(320, Math.round((mw2 / 25.4) * 96));
+        await page.setViewportSize({ width: printableWidthPx2, height: 1400 });
+        await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
+        try { await waitForD3(page, 8000); } catch {}
+        await waitForStableLayout(page);
+      } catch {}
+      // Temporarily make D3 banner reliably visible for PDF
+      let pdfCssHandle = null;
+      try {
+        pdfCssHandle = await page.addStyleTag({ content: `
+          .hero .points { mix-blend-mode: normal !important; }
+          .d3-galaxy svg { background: var(--surface-bg); }
+        ` });
+      } catch {}
       await page.pdf({
         path: outPath,
         format,
         printBackground: true,
         margin
       });
+      try { if (pdfCssHandle) await pdfCssHandle.evaluate((el) => el.remove()); } catch {}
       console.log(`✅ PDF generated: ${outPath}`);
 
       // Copy into public only under the slugified name

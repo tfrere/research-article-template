@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
+import mermaid from 'astro-mermaid';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkToc from 'remark-toc';
@@ -11,8 +12,7 @@ import rehypeCitation from 'rehype-citation';
 
 export default defineConfig({
   output: 'static',
-  integrations: [mdx()]
-  ,
+  integrations: [mermaid({ theme: 'forest', autoTheme: true }), mdx()],
   devToolbar: {
     enabled: false
   },
@@ -23,9 +23,10 @@ export default defineConfig({
         dark: 'github-dark'
       },
       defaultColor: false,
-      wrap: true,
+      wrap: false,
       langAlias: {
-        mdx: 'js'
+        // Map MDX fences to TSX for better JSX tokenization
+        mdx: 'tsx'
       }
     },
     remarkPlugins: [

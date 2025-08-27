@@ -1,116 +1,173 @@
 import plotly.graph_objects as go
 import plotly.io as pio
-import os
+import numpy as np
 
 """
-Simple grouped bar chart (Baseline / Improved / Target), minimal Distill-like style.
-Responsive, no zoom/pan, clean hover (rounded tooltip corners via post_script).
+Stacked bar chart: GPU memory breakdown vs sequence length, with menus for Model Size and Recomputation.
+Responsive, no zoom/pan, clean hover; styled to match the minimal theme.
 """
 
-# Data (five categories)
-categories = ["A", "B", "C", "D", "E"]
-baseline = [0.52, 0.61, 0.67, 0.73, 0.78]
-improved = [0.58, 0.66, 0.72, 0.79, 0.86]
-target   = [0.60, 0.68, 0.75, 0.82, 0.90]
+# Axes
+seq_labels = ["1024", "2048", "4096", "8192"]
+seq_scale = np.array([1, 2, 4, 8], dtype=float)
 
-color_base = "#64748b"     # slate-500
-color_improved = "#2563eb" # blue-600
-color_target = "#4b5563"   # gray-600
+# Components and colors (aligned with the provided example)
+components = [
+    ("parameters", "rgb(78, 165, 183)"),
+    ("gradients",  "rgb(227, 138, 66)"),
+    ("optimizer",  "rgb(232, 137, 171)"),
+    ("activations", "rgb(206, 192, 250)"),
+]
 
+# Model sizes and base memory (GB) for params/grad/opt (constant vs seq), by size
+model_sizes = ["1B", "3B", "8B", "70B", "405B"]
+params_mem = {
+    "1B": 4.0,
+    "3B": 13.3,
+    "8B": 26.0,
+    "70B": 244.0,
+    "405B": 1520.0,
+}
+# Optimizer ~= 2x params; gradients ~= params (illustrative)
+
+# Activations base coefficient per size (growth ~ coeff * (seq/1024)^2)
+act_coeff = {
+    "1B": 3.6,
+    "3B": 9.3,
+    "8B": 46.2,
+    "70B": 145.7,
+    "405B": 1519.9,
+}
+
+def activations_curve(size_key: str, recompute: str) -> np.ndarray:
+    base = act_coeff[size_key] * (seq_scale ** 2)
+    if recompute == "selective":
+        return base * 0.25
+    if recompute == "full":
+        return base * (1.0/16.0)
+    return base
+
+def stack_for(size_key: str, recompute: str):
+    p = np.full_like(seq_scale, params_mem[size_key], dtype=float)
+    g = np.full_like(seq_scale, params_mem[size_key], dtype=float)
+    o = np.full_like(seq_scale, 2.0 * params_mem[size_key], dtype=float)
+    a = activations_curve(size_key, recompute)
+    return {
+        "parameters": p,
+        "gradients": g,
+        "optimizer": o,
+        "activations": a,
+    }
+
+# Precompute all combinations
+recomp_modes = ["none", "selective", "full"]
+Y = {mode: {size: stack_for(size, mode) for size in model_sizes} for mode in recomp_modes}
+
+# Build traces: 4 traces per size (20 total). Start with size index 0 visible
 fig = go.Figure()
-fig.add_bar(
-    x=categories,
-    y=baseline,
-    name="Baseline",
-    marker=dict(color=color_base),
-    offsetgroup="grp",
-    hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.3f}<extra></extra>",
-)
+for size in model_sizes:
+    for comp_name, color in components:
+        fig.add_bar(
+            x=seq_labels,
+            y=Y["none"][size][comp_name],
+            name=comp_name,
+            marker=dict(color=color),
+            hovertemplate="Seq len=%{x}<br>Mem=%{y:.1f}GB<br>%{data.name}<extra></extra>",
+            showlegend=True,
+            visible=(size == model_sizes[0]),
+        )
 
-fig.add_bar(
-    x=categories,
-    y=improved,
-    name="Improved",
-    marker=dict(color=color_improved),
-    offsetgroup="grp",
-    hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.3f}<extra></extra>",
-)
+# Compute y-axis ranges per size and recomputation
+def max_total(size: str, mode: str) -> float:
+    stacks = Y[mode][size]
+    totals = stacks["parameters"] + stacks["gradients"] + stacks["optimizer"] + stacks["activations"]
+    return float(np.max(totals))
 
-fig.add_bar(
-    x=categories,
-    y=target,
-    name="Target",
-    marker=dict(color=color_target, opacity=0.65, line=dict(color=color_target, width=1)),
-    offsetgroup="grp",
-    hovertemplate="<b>%{x}</b><br>%{fullData.name}: %{y:.3f}<extra></extra>",
-)
+layout_y_ranges = {mode: {size: 1.05 * max_total(size, mode) for size in model_sizes} for mode in recomp_modes}
 
+# Layout
 fig.update_layout(
-    barmode="group",
+    barmode="stack",
     autosize=True,
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(l=28, r=12, t=8, b=28),
+    margin=dict(l=40, r=28, t=20, b=40),
     hovermode="x unified",
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-    xaxis=dict(
-        showgrid=False,
-        zeroline=False,
-        showline=True,
-        linecolor="rgba(0,0,0,0.25)",
-        linewidth=1,
-        ticks="outside",
-        ticklen=6,
-        tickcolor="rgba(0,0,0,0.25)",
-        tickfont=dict(size=12, color="rgba(0,0,0,0.65)"),
-        title=None,
-        automargin=True,
-        fixedrange=True,
-    ),
-    yaxis=dict(
-        showgrid=False,
-        zeroline=False,
-        showline=True,
-        linecolor="rgba(0,0,0,0.25)",
-        linewidth=1,
-        ticks="outside",
-        ticklen=6,
-        tickcolor="rgba(0,0,0,0.25)",
-        tickfont=dict(size=12, color="rgba(0,0,0,0.65)"),
-        title=None,
-        tickformat=".2f",
-        automargin=True,
-        fixedrange=True,
-    ),
+    xaxis=dict(title=dict(text="Sequence Length"), fixedrange=True),
+    yaxis=dict(title=dict(text="Memory (GB)"), fixedrange=True),
 )
 
-post_script = """
-(function(){
-  var plots = document.querySelectorAll('.js-plotly-plot');
-  plots.forEach(function(gd){
-    function round(){
-      try {
-        var root = gd && gd.parentNode ? gd.parentNode : document;
-        var rects = root.querySelectorAll('.hoverlayer .hovertext rect');
-        rects.forEach(function(r){ r.setAttribute('rx', 8); r.setAttribute('ry', 8); });
-      } catch(e) {}
-    }
-    if (gd && gd.on){
-      gd.on('plotly_hover', round);
-      gd.on('plotly_unhover', round);
-      gd.on('plotly_relayout', round);
-    }
-    setTimeout(round, 0);
-  });
-})();
-"""
+# Updatemenus: Model Size (toggle visibility)
+buttons_sizes = []
+for i, size in enumerate(model_sizes):
+    visible = [False] * (len(model_sizes) * len(components))
+    start = i * len(components)
+    for j in range(len(components)):
+        visible[start + j] = True
+    buttons_sizes.append(dict(
+        label=size,
+        method="update",
+        args=[
+            {"visible": visible},
+            {"yaxis": {"range": [0, layout_y_ranges["none"][size]]}},
+        ],
+    ))
 
-fig.write_html("../app/src/fragments/bar.html", 
-               include_plotlyjs=False, 
-               full_html=False, 
+# Updatemenus: Recomputation (restyle y across all traces)
+def y_for_mode(mode: str):
+    ys = []
+    for size in model_sizes:
+        stacks = Y[mode][size]
+        for comp_name, _ in components:
+            ys.append(stacks[comp_name])
+    return ys
+
+buttons_recomp = []
+for mode, label in [("none", "None"), ("selective", "selective"), ("full", "full")]:
+    ys = y_for_mode(mode)
+    # Flatten into the format expected by Plotly for multiple traces
+    buttons_recomp.append(dict(
+        label=label,
+        method="update",
+        args=[
+            {"y": ys},
+            {"yaxis": {"range": [0, max(layout_y_ranges[mode].values())]}},
+        ],
+    ))
+
+fig.update_layout(
+    updatemenus=[
+        dict(
+            type="dropdown",
+            x=1.03, xanchor="left",
+            y=0.60, yanchor="top",
+            showactive=True,
+            active=0,
+            buttons=buttons_sizes,
+        ),
+        dict(
+            type="dropdown",
+            x=1.03, xanchor="left",
+            y=0.40, yanchor="top",
+            showactive=True,
+            active=0,
+            buttons=buttons_recomp,
+        ),
+    ],
+    annotations=[
+        dict(text="Model Size:", x=1.03, xanchor="left", xref="paper", y=0.60, yanchor="bottom", yref="paper", showarrow=False),
+        dict(text="Recomputation:", x=1.03, xanchor="left", xref="paper", y=0.40, yanchor="bottom", yref="paper", showarrow=False),
+    ],
+)
+
+# Write fragment
+fig.write_html("../../app/src/content/fragments/bar.html",
+               include_plotlyjs=False,
+               full_html=False,
                config={
                    'displayModeBar': False,
-                   'responsive': True, 
+                   'responsive': True,
                    'scrollZoom': False,
                })
 

@@ -114,7 +114,7 @@ html = pio.to_html(
     },
 )
 
-fig.write_html("../app/src/fragments/heatmap.html", 
+fig.write_html("../app/src/content/fragments/heatmap.html", 
                include_plotlyjs=False, 
                full_html=False, 
                config={

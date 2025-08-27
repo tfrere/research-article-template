@@ -1,0 +1,23 @@
+---
+const { title = "Note", emoji = "📝", class: className, ...props } = Astro.props;
+const wrapperClass = ["note", className].filter(Boolean).join(" ");
+---
+<div class={wrapperClass} {...props}>
+  <div class="note__header">
+    <span class="note__emoji">{emoji}</span>
+    {title && <span class="note__title">{title}</span>}
+  </div>
+  <div class="note__content">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .note { background: var(--surface-bg); border-left: 2px solid rgba(0, 0, 0, 0.1); border-radius: 4px; padding: 10px 14px; margin: 12px 0; }
+  .note__header { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-color); margin-bottom: 6px; }
+  .note__emoji { font-size: 24px; line-height: 1; }
+  .note__title { font-size: 13px; letter-spacing: .2px; }
+  .note__content { color: var(--text-color); font-size: 0.95rem; }
+</style>
+
+

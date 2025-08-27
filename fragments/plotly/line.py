@@ -5,36 +5,56 @@ import os
 import uuid
 
 """
-Interactive line chart example (3 curves + live slider)
+Interactive line chart example (Baseline / Improved / Target) with a live slider.
 
-The slider blends each curve from linear to exponential in real time (no mouseup required).
-This fragment is safe to insert multiple times on the page (unique IDs per instance).
+Context: research-style training curves for multiple datasets (CIFAR-10, CIFAR-100, ImageNet-1K).
+The slider "Augmentation α" blends the Improved curve between the Baseline (α=0)
+and an augmented counterpart (α=1) via a simple mixing equation.
+Export remains responsive, with no zoom and no mode bar.
 """
 
 # Grid (x) and parameterization
 N = 240
 x = np.linspace(0, 1, N)
 
-# Linear baselines (increasing)
-lin1 = 0.20 + 0.60 * x
-lin2 = 0.15 + 0.70 * x
-lin3 = 0.10 + 0.80 * x
+# Logistic helper for smooth learning curves
+def logistic(xv: np.ndarray, ymin: float, ymax: float, k: float, x0: float) -> np.ndarray:
+    return ymin + (ymax - ymin) / (1.0 + np.exp(-k * (xv - x0)))
 
-# Helper: normalized exponential on [0,1]
-def exp_norm(xv: np.ndarray, k: float) -> np.ndarray:
-    return (np.exp(k * xv) - 1.0) / (np.exp(k) - 1.0)
+# Plausible dataset params (baseline vs augmented) + a constant target line
+datasets_params = [
+    {
+        "name": "CIFAR-10",
+        "base": {"ymin": 0.10, "ymax": 0.90, "k": 10.0, "x0": 0.55},
+        "aug":  {"ymin": 0.15, "ymax": 0.96, "k": 12.0, "x0": 0.40},
+        "target": 0.97,
+    },
+    {
+        "name": "CIFAR-100",
+        "base": {"ymin": 0.05, "ymax": 0.70, "k": 9.5, "x0": 0.60},
+        "aug":  {"ymin": 0.08, "ymax": 0.80, "k": 11.0, "x0": 0.45},
+        "target": 0.85,
+    },
+    {
+        "name": "ImageNet-1K",
+        "base": {"ymin": 0.02, "ymax": 0.68, "k": 8.5, "x0": 0.65},
+        "aug":  {"ymin": 0.04, "ymax": 0.75, "k": 9.5, "x0": 0.50},
+        "target": 0.82,
+    },
+]
 
-# Exponential counterparts (similar ranges)
-exp1 = 0.20 + 0.60 * exp_norm(x, 3.0)
-exp2 = 0.15 + 0.70 * exp_norm(x, 3.5)
-exp3 = 0.10 + 0.80 * exp_norm(x, 2.8)
+# Initial dataset index and alpha
+alpha0 = 0.7
+ds0 = datasets_params[0]
+base0 = logistic(x, **ds0["base"])
+aug0 = logistic(x, **ds0["aug"])
+target0 = np.full_like(x, ds0["target"], dtype=float)
 
-# Initial blend (alpha=0 ⇒ pure linear)
-alpha0 = 0.0
+# Traces: Baseline (fixed), Improved (blended by α), Target (constant goal)
 blend = lambda l, e, a: (1 - a) * l + a * e
-y1 = blend(lin1, exp1, alpha0)
-y2 = blend(lin2, exp2, alpha0)
-y3 = blend(lin3, exp3, alpha0)
+y1 = base0
+y2 = blend(base0, aug0, alpha0)
+y3 = target0
 
 color_base = "#64748b"     # slate-500
 color_improved = "#2563eb" # blue-600
@@ -79,8 +99,17 @@ fig.update_layout(
     autosize=True,
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(l=28, r=12, t=8, b=28),
+    margin=dict(l=40, r=28, t=20, b=40),
     hovermode="x unified",
+    legend=dict(
+        orientation="v",
+        x=1,
+        y=0,
+        xanchor="right",
+        yanchor="bottom",
+        bgcolor="rgba(255,255,255,0)",
+        borderwidth=0,
+    ),
     hoverlabel=dict(
         bgcolor="white",
         font=dict(color="#111827", size=12),
@@ -173,17 +202,17 @@ container_id = f"line-ex-container-{uid}"
 slider_tpl = '''
 <div id="__CID__">
   __PLOT__
-  <div class="plotly_controls" style="margin-top:10px; display:flex; gap:14px; align-items:center;">
-    <label style="font-size:12px;color:rgba(0,0,0,.65); display:flex; align-items:center; gap:6px; white-space:nowrap;">
+  <div class="plotly_controls" style="margin-top:12px; display:flex; gap:16px; align-items:center;">
+    <label style="font-size:12px;color:rgba(0,0,0,.65); display:flex; align-items:center; gap:6px; white-space:nowrap; padding:6px 10px;">
       Dataset
       <select id="__DSID__" style="font-size:12px; padding:2px 6px;">
-        <option value="0">Dataset A</option>
-        <option value="1">Dataset B</option>
-        <option value="2">Dataset C</option>
+        <option value="0">CIFAR-10</option>
+        <option value="1">CIFAR-100</option>
+        <option value="2">ImageNet-1K</option>
       </select>
     </label>
-    <label style="font-size:12px;color:rgba(0,0,0,.65);display:flex;align-items:center;gap:8px; flex:1;">
-      Nonlinearity
+    <label style="font-size:12px;color:rgba(0,0,0,.65);display:flex;align-items:center;gap:10px; flex:1; padding:6px 10px;">
+      Augmentation α
       <input id="__SID__" type="range" min="0" max="1" step="0.01" value="__A0__" style="flex:1;">
       <span class="alpha-value">__A0__</span>
     </label>
@@ -199,32 +228,37 @@ slider_tpl = '''
   var valueEl = container.querySelector('.alpha-value');
   var N = __N__;
   var xs = Array.from({length: N}, function(_,i){ return i/(N-1); });
-  function expNorm(x,k){ return (Math.exp(k*x)-1)/(Math.exp(k)-1); }
+  function logistic(x, ymin, ymax, k, x0){ return ymin + (ymax - ymin) / (1 + Math.exp(-k*(x - x0))); }
   function blend(l,e,a){ return (1-a)*l + a*e; }
   var datasets = [
-    { curves: [ {o:0.20,s:0.60,k:3.0}, {o:0.15,s:0.70,k:3.5}, {o:0.10,s:0.80,k:2.8} ] },
-    { curves: [ {o:0.30,s:0.55,k:2.2}, {o:0.18,s:0.65,k:2.8}, {o:0.12,s:0.70,k:2.0} ] },
-    { curves: [ {o:0.10,s:0.85,k:3.8}, {o:0.12,s:0.80,k:3.2}, {o:0.08,s:0.90,k:3.0} ] }
+    { name:'CIFAR-10',  base:{ymin:0.10,ymax:0.90,k:10.0,x0:0.55}, aug:{ymin:0.15,ymax:0.96,k:12.0,x0:0.40}, target:0.97 },
+    { name:'CIFAR-100', base:{ymin:0.05,ymax:0.70,k:9.5,x0:0.60},  aug:{ymin:0.08,ymax:0.80,k:11.0,x0:0.45},  target:0.85 },
+    { name:'ImageNet-1K', base:{ymin:0.02,ymax:0.68,k:8.5,x0:0.65}, aug:{ymin:0.04,ymax:0.75,k:9.5,x0:0.50},  target:0.82 }
   ];
   var dsi = 0;
-  function makeY(a){
-    var cs = datasets[dsi].curves;
-    var y1 = xs.map(function(x){ return blend(cs[0].o + cs[0].s*x, cs[0].o + cs[0].s*expNorm(x,cs[0].k), a); });
-    var y2 = xs.map(function(x){ return blend(cs[1].o + cs[1].s*x, cs[1].o + cs[1].s*expNorm(x,cs[1].k), a); });
-    var y3 = xs.map(function(x){ return blend(cs[2].o + cs[2].s*x, cs[2].o + cs[2].s*expNorm(x,cs[2].k), a); });
-    return [y1,y2,y3];
-  }
-  function apply(a){
-    var ys = makeY(a);
-    Plotly.restyle(gd, {y:[ys[0]]}, [0]);
-    Plotly.restyle(gd, {y:[ys[1]]}, [1]);
-    Plotly.restyle(gd, {y:[ys[2]]}, [2]);
+  var yb = xs.map(function(x){ return logistic(x, datasets[dsi].base.ymin, datasets[dsi].base.ymax, datasets[dsi].base.k, datasets[dsi].base.x0); });
+  var ya = xs.map(function(x){ return logistic(x, datasets[dsi].aug.ymin, datasets[dsi].aug.ymax, datasets[dsi].aug.k, datasets[dsi].aug.x0); });
+  var yt = xs.map(function(){ return datasets[dsi].target; });
+  function applyAlpha(a){
+    var yi = yb.map(function(v,i){ return blend(v, ya[i], a); });
+    Plotly.restyle(gd, {y:[yi]}, [1]); // only Improved changes with α
     if(valueEl) valueEl.textContent = a.toFixed(2);
   }
+  function applyDataset(){
+    var d = datasets[dsi];
+    yb = xs.map(function(x){ return logistic(x, d.base.ymin, d.base.ymax, d.base.k, d.base.x0); });
+    ya = xs.map(function(x){ return logistic(x, d.aug.ymin, d.aug.ymax, d.aug.k, d.aug.x0); });
+    yt = xs.map(function(){ return d.target; });
+    var a = parseFloat(slider.value)||0;
+    var yi = yb.map(function(v,i){ return blend(v, ya[i], a); });
+    Plotly.restyle(gd, {y:[yb]}, [0]); // Baseline
+    Plotly.restyle(gd, {y:[yi]}, [1]); // Improved (blended)
+    Plotly.restyle(gd, {y:[yt]}, [2]); // Target
+  }
   var initA = parseFloat(slider.value)||0;
-  slider.addEventListener('input', function(e){ apply(parseFloat(e.target.value)||0); });
-  dsSelect.addEventListener('change', function(e){ dsi = parseInt(e.target.value)||0; apply(parseFloat(slider.value)||0); });
-  setTimeout(function(){ apply(initA); }, 0);
+  slider.addEventListener('input', function(e){ applyAlpha(parseFloat(e.target.value)||0); });
+  dsSelect.addEventListener('change', function(e){ dsi = parseInt(e.target.value)||0; applyDataset(); });
+  setTimeout(function(){ applyDataset(); applyAlpha(initA); }, 0);
 })();
 </script>
 '''
@@ -237,12 +271,6 @@ slider_html = (slider_tpl
     .replace('__PLOT__', html_plot)
 )
 
-fig.write_html("../app/src/fragments/line.html", 
-               include_plotlyjs=False, 
-               full_html=False, 
-               config={
-                   'displayModeBar': False,
-                   'responsive': True, 
-                   'scrollZoom': False,
-               })
+with open("../../app/src/content/fragments/line.html", "w", encoding="utf-8") as f:
+    f.write(slider_html)
 

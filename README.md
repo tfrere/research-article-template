@@ -7,5 +7,13 @@ sdk: docker
 pinned: false
 header: mini
 app_port: 8080
-thumbnail: https://huggingface.co/spaces/HuggingFaceFW/blogpost-fine-tasks/resolve/main/app/assets/images/banner.png
+thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jpg
 ---
+
+TO DO : 
+
+- fix banner pour l'export pdf et la thumb
+- rename le titre ?
+- Vérifier la biliographie comment elle marche
+
+- deploy

@@ -21,3 +21,5 @@ node_modules/
 
 # PDF export
 app/public/*.pdf
+app/public/*.png
+app/public/*.jpg

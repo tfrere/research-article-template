@@ -123,7 +123,7 @@ fig.update_layout(
 # fig.show()
 
 fig.write_html(
-    "../app/src/fragments/banner.html",
+    "../app/src/content/fragments/banner.html",
     include_plotlyjs=False,
     full_html=False,
     config={

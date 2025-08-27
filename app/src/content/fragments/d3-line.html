@@ -1,0 +1,429 @@
+<div class="d3-line" style="width:100%;margin:10px 0;"></div>
+<style>
+  .d3-line .d3-line__controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-theme="dark"] .d3-line .d3-line__controls select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .d3-line .d3-line__controls select:hover {
+    border-color: var(--primary);
+  }
+  .d3-line .d3-line__controls select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(232,137,171,.25);
+    outline: none;
+  }
+  .d3-line .d3-line__controls label { gap: 8px; }
+
+  /* Range slider themed with --primary */
+  .d3-line .d3-line__controls input[type="range"] { 
+    -webkit-appearance: none; 
+    appearance: none; 
+    width: 100%; 
+    height: 6px; 
+    border-radius: 999px; 
+    background: var(--border-color);
+    outline: none;
+  }
+  .d3-line .d3-line__controls input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; 
+    background: transparent; 
+    border-radius: 999px;
+  }
+  .d3-line .d3-line__controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; 
+    appearance: none; 
+    width: 16px; 
+    height: 16px; 
+    border-radius: 50%; 
+    background: var(--primary); 
+    border: 2px solid var(--on-primary);
+    margin-top: -5px; 
+    cursor: pointer;
+  }
+  .d3-line .d3-line__controls input[type="range"]::-moz-range-track {
+    height: 6px; 
+    background: transparent; 
+    border-radius: 999px;
+  }
+  .d3-line .d3-line__controls input[type="range"]::-moz-range-thumb {
+    width: 16px; 
+    height: 16px; 
+    border-radius: 50%; 
+    background: var(--primary); 
+    border: 2px solid var(--on-primary);
+    cursor: pointer;
+  }
+  /* Improved line color via CSS */
+  .d3-line .lines path.improved { stroke: var(--primary); }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+      const container = (mount && mount.querySelector && mount.querySelector('.d3-line')) || document.querySelector('.d3-line');
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Dataset params matching the Plotly version
+      const datasets = [
+        { name: 'CIFAR-10',    base: { ymin:0.10, ymax:0.90, k:10.0, x0:0.55 }, aug: { ymin:0.15, ymax:0.96, k:12.0, x0:0.40 }, target: 0.97 },
+        { name: 'CIFAR-100',   base: { ymin:0.05, ymax:0.70, k: 9.5, x0:0.60 }, aug: { ymin:0.08, ymax:0.80, k:11.0, x0:0.45 }, target: 0.85 },
+        { name: 'ImageNet-1K', base: { ymin:0.02, ymax:0.68, k: 8.5, x0:0.65 }, aug: { ymin:0.04, ymax:0.75, k: 9.5, x0:0.50 }, target: 0.82 },
+      ];
+
+      // Controls UI
+      const controls = document.createElement('div');
+      controls.className = 'd3-line__controls';
+      Object.assign(controls.style, {
+        marginTop: '12px',
+        display: 'flex',
+        gap: '16px',
+        alignItems: 'center'
+      });
+
+      const labelDs = document.createElement('label');
+      Object.assign(labelDs.style, {
+        fontSize: '12px', color: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '6px 10px'
+      });
+      labelDs.textContent = 'Dataset';
+      const selectDs = document.createElement('select');
+      Object.assign(selectDs.style, { fontSize: '12px' });
+      datasets.forEach((d, i) => {
+        const o = document.createElement('option');
+        o.value = String(i);
+        o.textContent = d.name;
+        selectDs.appendChild(o);
+      });
+      labelDs.appendChild(selectDs);
+
+      const labelAlpha = document.createElement('label');
+      Object.assign(labelAlpha.style, {
+        fontSize: '12px', color: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', gap: '10px', flex: '1', padding: '6px 10px'
+      });
+      labelAlpha.appendChild(document.createTextNode('Augmentation α'));
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.min = '0'; slider.max = '1'; slider.step = '0.01'; slider.value = '0.70';
+      Object.assign(slider.style, { flex: '1' });
+      const alphaVal = document.createElement('span'); alphaVal.className = 'alpha-value'; alphaVal.textContent = slider.value;
+      labelAlpha.appendChild(slider);
+      labelAlpha.appendChild(alphaVal);
+
+      controls.appendChild(labelDs);
+      controls.appendChild(labelAlpha);
+
+      // Create SVG
+      const svg = d3.select(container).append('svg')
+        .attr('width', '100%')
+        .style('display', 'block');
+
+      // Groups
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class', 'grid');
+      const gAxes = gRoot.append('g').attr('class', 'axes');
+      const gLines = gRoot.append('g').attr('class', 'lines');
+      const gHover = gRoot.append('g').attr('class', 'hover');
+      const gLegend = gRoot.append('foreignObject').attr('class', 'legend');
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+          padding: '8px 10px', borderRadius: '8px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 4px 24px rgba(0,0,0,.18)', opacity: '0',
+          transition: 'opacity .12s ease'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // Colors
+      const colorBase = '#64748b';     // slate-500
+      const colorImproved = 'var(--primary)';
+      const colorTarget = '#4b5563';   // gray-600
+      const legendBgLight = 'rgba(255,255,255,0.85)';
+      const legendBgDark = 'rgba(17,17,23,0.85)';
+
+      // Data and helpers
+      const N = 240;
+      const xs = Array.from({ length: N }, (_, i) => i / (N - 1));
+      const logistic = (x, { ymin, ymax, k, x0 }) => ymin + (ymax - ymin) / (1 + Math.exp(-k * (x - x0)));
+      const blend = (l, e, a) => (1 - a) * l + a * e;
+
+      let datasetIndex = 0;
+      let alpha = parseFloat(slider.value) || 0.7;
+
+      let yBase = [];
+      let yAug = [];
+      let yImp = [];
+      let yTgt = [];
+
+      function computeCurves() {
+        const d = datasets[datasetIndex];
+        yBase = xs.map((x) => logistic(x, d.base));
+        yAug  = xs.map((x) => logistic(x, d.aug));
+        yTgt  = xs.map(() => d.target);
+        yImp  = yBase.map((v, i) => blend(v, yAug[i], alpha));
+      }
+
+      // Scales and layout
+      let width = 800, height = 360;
+      let margin = { top: 16, right: 28, bottom: 56, left: 64 };
+      let xScale = d3.scaleLinear();
+      let yScale = d3.scaleLinear();
+
+      // Paths
+      const lineGen = d3.line()
+        .curve(d3.curveCatmullRom.alpha(0.6))
+        .x((d, i) => xScale(xs[i]))
+        .y((d) => yScale(d));
+
+      const pathBase = gLines.append('path').attr('fill', 'none').attr('stroke', colorBase).attr('stroke-width', 2);
+      const pathImp  = gLines.append('path').attr('class', 'improved').attr('fill', 'none').style('stroke', 'var(--primary)').attr('stroke-width', 2);
+      const pathTgt  = gLines.append('path').attr('fill', 'none').attr('stroke', colorTarget).attr('stroke-width', 2).attr('stroke-dasharray', '6,6');
+
+      // Hover elements
+      const hoverLine = gHover.append('line').attr('stroke-width', 1);
+      const hoverDotB = gHover.append('circle').attr('r', 3.5).attr('fill', colorBase).attr('stroke', '#fff').attr('stroke-width', 1);
+      const hoverDotI = gHover.append('circle').attr('class', 'improved').attr('r', 3.5).style('fill', 'var(--primary)').attr('stroke', '#fff').attr('stroke-width', 1);
+      const hoverDotT = gHover.append('circle').attr('r', 3.5).attr('fill', colorTarget).attr('stroke', '#fff').attr('stroke-width', 1);
+
+      const overlay = gHover.append('rect').attr('fill', 'transparent').style('cursor', 'crosshair');
+
+      function updateScales() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
+        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+
+        width = container.clientWidth || 800;
+        height = Math.max(260, Math.round(width / 3));
+        svg.attr('width', width).attr('height', height);
+
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        xScale.domain([0, 1]).range([0, innerWidth]);
+        yScale.domain([0, 1]).range([innerHeight, 0]);
+
+        // Grid (horizontal)
+        gGrid.selectAll('*').remove();
+        const yTicks = yScale.ticks(6);
+        gGrid.selectAll('line')
+          .data(yTicks)
+          .join('line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', (d) => yScale(d))
+          .attr('y2', (d) => yScale(d))
+          .attr('stroke', gridColor)
+          .attr('stroke-width', 1)
+          .attr('shape-rendering', 'crispEdges');
+
+        // Axes
+        gAxes.selectAll('*').remove();
+        const xAxis = d3.axisBottom(xScale).ticks(8).tickSizeOuter(0);
+        const yAxis = d3.axisLeft(yScale).ticks(6).tickSizeOuter(0).tickFormat(d3.format('.2f'));
+        gAxes.append('g')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(xAxis)
+          .call((g) => {
+            g.selectAll('path, line').attr('stroke', axisColor);
+            g.selectAll('text').attr('fill', tickColor).style('font-size', '12px');
+          });
+        gAxes.append('g')
+          .call(yAxis)
+          .call((g) => {
+            g.selectAll('path, line').attr('stroke', axisColor);
+            g.selectAll('text').attr('fill', tickColor).style('font-size', '12px');
+          });
+
+        // Axis labels (X and Y)
+        gAxes.append('text')
+          .attr('class', 'axis-label axis-label--x')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + 44)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('fill', tickColor)
+          .text('Epoch');
+        gAxes.append('text')
+          .attr('class', 'axis-label axis-label--y')
+          .attr('text-anchor', 'middle')
+          .attr('transform', `translate(${-52},${innerHeight/2}) rotate(-90)`) 
+          .style('font-size', '12px')
+          .style('fill', tickColor)
+          .text('Accuracy');
+
+        overlay.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+        hoverLine.attr('y1', 0).attr('y2', innerHeight).attr('stroke', axisColor);
+
+        // Legend inside plot (bottom-right), no background/border/shadow
+        const legendWidth = Math.min(180, Math.max(120, Math.round(innerWidth * 0.22)));
+        const legendHeight = 64;
+        gLegend
+          .attr('x', innerWidth - legendWidth + 42)
+          .attr('y', innerHeight - legendHeight - 12)
+          .attr('width', legendWidth)
+          .attr('height', legendHeight);
+        const legendRoot = gLegend.selectAll('div').data([0]).join('xhtml:div');
+        Object.assign(legendRoot.node().style, {
+          background: 'transparent',
+          border: 'none',
+          borderRadius: '0',
+          padding: '0',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          color: 'var(--text-color)'
+        });
+        legendRoot.html(`
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:18px;height:3px;background:${colorBase};border-radius:2px;display:inline-block"></span>
+              <span>Baseline</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:18px;height:3px;background:${colorImproved};border-radius:2px;display:inline-block"></span>
+              <span>Improved</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:18px;height:0;border-top:2px dashed ${colorTarget};display:inline-block"></span>
+              <span>Target</span>
+            </div>
+          </div>
+        `);
+      }
+
+      function updatePaths() {
+        pathBase.transition().duration(200).attr('d', lineGen(yBase));
+        pathImp.transition().duration(200).attr('d', lineGen(yImp));
+        pathTgt.transition().duration(200).attr('d', lineGen(yTgt));
+      }
+
+      function updateAlpha(a) {
+        alpha = a;
+        alphaVal.textContent = a.toFixed(2);
+        yImp = yBase.map((v, i) => blend(v, yAug[i], alpha));
+        pathImp.transition().duration(80).attr('d', lineGen(yImp));
+      }
+
+      function applyDataset() {
+        computeCurves();
+        updatePaths();
+      }
+
+      // Hover interactions
+      function onMove(event) {
+        const [mx, my] = d3.pointer(event, overlay.node());
+        const xi = Math.max(0, Math.min(N - 1, Math.round(xScale.invert(mx) * (N - 1))));
+        const xpx = xScale(xs[xi]);
+        const yb = yBase[xi], yi = yImp[xi], yt = yTgt[xi];
+        hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
+        hoverDotB.attr('cx', xpx).attr('cy', yScale(yb)).style('display', null);
+        hoverDotI.attr('cx', xpx).attr('cy', yScale(yi)).style('display', null);
+        hoverDotT.attr('cx', xpx).attr('cy', yScale(yt)).style('display', null);
+
+        // Tooltip content
+        const ds = datasets[datasetIndex].name;
+        tipInner.innerHTML = `<div><strong>${ds}</strong></div>` +
+          `<div><strong>x</strong> ${xs[xi].toFixed(2)}</div>` +
+          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorBase};border-radius:50%;margin-right:6px;"></span><strong>Baseline</strong> ${yb.toFixed(3)}</div>` +
+          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorImproved};border-radius:50%;margin-right:6px;"></span><strong>Improved</strong> ${yi.toFixed(3)}</div>` +
+          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorTarget};border-radius:50%;margin-right:6px;"></span><strong>Target</strong> ${yt.toFixed(3)}</div>`;
+        const offsetX = 12, offsetY = 12;
+        tip.style.opacity = '1';
+        tip.style.transform = `translate(${Math.round(mx + offsetX + margin.left)}px, ${Math.round(my + offsetY + margin.top)}px)`;
+      }
+
+      function onLeave() {
+        tip.style.opacity = '0';
+        tip.style.transform = 'translate(-9999px, -9999px)';
+        hoverLine.style('display', 'none');
+        hoverDotB.style('display', 'none');
+        hoverDotI.style('display', 'none');
+        hoverDotT.style('display', 'none');
+      }
+
+      overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+
+      // Init + controls wiring
+      computeCurves();
+      updateScales();
+      updatePaths();
+
+      // Attach controls after SVG for consistency with Plotly fragment
+      container.appendChild(controls);
+
+      selectDs.addEventListener('change', (e) => {
+        datasetIndex = parseInt(e.target.value) || 0;
+        applyDataset();
+      });
+      slider.addEventListener('input', (e) => {
+        const a = parseFloat(e.target.value) || 0;
+        updateAlpha(a);
+      });
+
+      // Resize handling
+      const render = () => {
+        updateScales();
+        updatePaths();
+      };
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => render());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', render);
+      }
+      render();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+

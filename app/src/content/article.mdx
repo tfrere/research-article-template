@@ -12,17 +12,19 @@ published: "Feb 19, 2025"
 tags:
   - research
   - template
-ogImage: "https://example.com/your-og-image.png"
+ogImage: "/thumb.jpg"
 ---
 
 import HtmlFragment from "../components/HtmlFragment.astro";
 import Wide from "../components/Wide.astro";
 import FullBleed from "../components/FullBleed.astro";
 import { Image } from 'astro:assets';
-import placeholder from "../assets/images/placeholder.jpg";
+import placeholder from "../assets/images/placeholder.png";
 import audioDemo from "../assets/audio/audio-example.wav";
 import Aside from "../components/Aside.astro";
 import visualPoster from "../assets/images/visual-vocabulary-poster.png";
+import BestPractices from "./chapters/best-pratices.mdx";
+import WritingYourContent from "./chapters/writing-you-content.mdx";
 
 <Aside>
   Welcome to this single-page research article template built with **Markdown**.
@@ -34,15 +36,13 @@ import visualPoster from "../assets/images/visual-vocabulary-poster.png";
   In this guide, you’ll learn how to install the template,
   write content (math, citations, images, code, asides, interactive fragments),
   customize styles and behavior, and follow a few **best practices** for publishing.
-  <Fragment slot="aside">
-    If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/tfrere/science-blog-template/discussions?status=open&type=discussion">Community tab</a>!
-  </Fragment>
+  
 </Aside>
 
-This template is inspired by [**Distill**](https://distill.pub); we aim to preserve the best of it while modernizing the stack. Their work is highly inspiring.
 
 #### Features
 
+<Aside>
 <div className="tag-list">
   <span className="tag">Markdown based</span>
   <span className="tag">KaTeX math</span>
@@ -55,24 +55,64 @@ This template is inspired by [**Distill**](https://distill.pub); we aim to prese
   <span className="tag">Plotly ready</span>
   <span className="tag">D3.js ready</span>
   <span className="tag">SEO Friendly</span>
+  <span className="tag">Mermaid diagrams</span>
   <span className="tag">Lightweight bundle</span>
   <span className="tag">Aside notes</span>
   <span className="tag">Mobile friendly</span>
   <span className="tag">Optimized images</span>
   <span className="tag">Medium like zoomable images</span>
   <span className="tag">PDF export</span>
+  <span className="tag">To do: Accordion</span>
+  <span className="tag">To do: dataviz color palette generator</span>
 </div>
+<Fragment slot="aside">
+    If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/tfrere/research-blog-template/discussions?status=open&type=discussion">Community tab</a>!
+  </Fragment>
+</Aside>
+
+## Introduction
+A modern medium for presenting research
+The web enables forms of explanation that static PDFs cannot: **reactive diagrams**, progressive notation, and **exploratory views** that reveal how ideas behave. Use **interactive fragments** to let readers hover, scrub, and inspect—building **intuition**, not just reading results.
+
+New ways of thinking enable new discoveries
+Careful notation, **well‑chosen visual encodings**, and **small interactive experiments** deepen understanding. By making these artifacts **first‑class**—alongside text, math, and code—this template helps your audience grasp mechanisms, limits, and trade‑offs.
+
+Machine learning needs more transparency
+Clear, **inspectable examples** make methods safer and more comprehensible. Embed live widgets, reveal **intermediate states**, and link to sources so readers can verify claims and **reproduce results**.
+
+Legitimacy for non‑traditional research artifacts
+Not every contribution fits a PDF. Treat demos, visualizations, and interactive write‑ups as **real scholarship**: cite them, version them, and ship them together.
+
+This project is heavely inspired by [**Distill**](https://distill.pub) (2016–2021), which championed clear, web‑native scholarship.
+
+
+### Notable examples of excellent scientific articles
+
+A short, curated list of well‑designed and often interactive work:
+
+- **Distill — The Building Blocks of Interpretability**: [distill.pub/2018/building-blocks](https://distill.pub/2018/building-blocks/)
+- **R2D3 — A Visual Introduction to Machine Learning (Part 1)**: [r2d3.us/visual-intro-to-machine-learning-part-1](http://www.r2d3.us/visual-intro-to-machine-learning-part-1/)
+- **Seeing Theory — An interactive introduction to probability and statistics**: [seeing-theory.brown.edu](https://seeing-theory.brown.edu/)
+- **ConvNetJS — Neural networks in the browser**: [cs.stanford.edu/people/karpathy/convnetjs](http://cs.stanford.edu/people/karpathy/convnetjs/)
+- **Explorable Explanations — Collection**: [explorableexplanations.com](http://explorableexplanations.com/)
+- **Distill — Why Momentum Really Works**: [distill.pub/2017/momentum](https://distill.pub/2017/momentum/)
+
 
 ## Getting Started
 
 ### Installation
 
+<Aside>
 ```bash
 git lfs install
 git lfs pull
 cd app
 npm install
 ```
+<Fragment slot="aside">
+    You can use yarn alternatively to npm.
+  </Fragment>
+</Aside>
 
 
 ### Development
@@ -89,6 +129,8 @@ npm run build
 
 Serving the `dist/` directory on any static host is enough to deliver the site.
 
+A [slug-title].pdf and thumb.jpg are also generated at build time. You can find them in the public folder.
+
 ### Deploy
 
 The easiest way to get online is to clone [this Hugging Face Space](https://huggingface.co/spaces/tfrere/science-blog-template) and push your changes; every push triggers an automatic build and deploy.
@@ -98,331 +140,9 @@ The easiest way to get online is to clone [this Hugging Face Space](https://hugg
 **Track binaries** (e.g., `.png`, `.wav`) with **Git LFS** to keep the repository lean. This project is preconfigured to store such files via **LFS**.
 
 
-## Writing Your Content
+<WritingYourContent />
 
-### Introduction
-
-Your article lives in two places:
-
-- `app/src/content/` — where you can find the article.mdx, bibliography.bib and html fragments.
-- `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
-
-This is MDX, its basically a markdown file with html and astro components.
-The **initial skeleton** of an article looks like this.
-
-```mdx
-{/* HEADER */}
----
-title: "This is the main title"
-subtitle: "This will be displayed just below the banner"
-description: "A modern, MDX-first research article template with math, citations, and interactive figures."
-authors:
-  - "John Doe"
-  - "Alice Martin"
-  - "Robert Brown"
-affiliation: "Hugging Face"
-published: "Feb 19, 2025"
-tags:
-  - research
-  - template
-ogImage: "https://example.com/your-og-image.png"
----
-
-{/* IMPORTS */}
-import { Image } from 'astro:assets';
-import placeholder from '../assets/images/placeholder.jpg';
-
-{/* CONTENT */}
-# Hello, world
-
-This is a short paragraph written in Markdown. Below is an example image:
-
-<Image src={placeholder} alt="Example image" />
-```
-
-
-
-**Available blocks**:
-
-<div className="tag-list">
-  <a className="tag" href="#math">Math</a>
-  <a className="tag" href="#images">Images</a>
-  <a className="tag" href="#code-blocks">Code</a>
-  <a className="tag" href="#citations-and-notes">Citations & notes</a>
-  <a className="tag" href="#asides">Asides</a>
-  <a className="tag" href="#minimal-table">Array</a>
-  <a className="tag" href="#audio">Audio</a>
-  <a className="tag" href="#interactive-fragments">Interactive fragments</a>
-  <a className="tag" href="#tracking-training-metrics-with-trackio">TrackIO</a>
-</div>
-
-### Math
-
-**Inline**
-
-$x^2 + y^2 = z^2$.
-
-```mdx
-$x^2 + y^2 = z^2$
-```
-
-**Block**
-
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
-
-```mdx
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
-```
-
-### Images
-
-**Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
-
-**Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
-
-**Optional:** Lazy loading: add `loading="lazy"` to opt-in.
-
-**Optional:** Figcaption and credits: add a `figcaption` element with a `span` containing the credit.
-
-
-
-<figure>
-  <Image
-    src={placeholder}
-    data-zoomable
-    alt="Example with caption and credit"
-  />
-  <figcaption>
-    Optimized image with a descriptive caption.
-    <span className="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>
-  </figcaption>
-</figure>
-
-```mdx
-import { Image } from 'astro:assets'
-import myImage from '../assets/images/placeholder.jpg'
-
-<Image src={myImage} alt="Responsive, optimized example image" />
-
-<figure>
-  <Image src={myImage} data-zoomable alt="Example with caption and credit" loading="lazy" />
-  <figcaption>
-    Optimized image with a descriptive caption.
-    <span className="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>
-  </figcaption>
-</figure>
-```
-
-
-### Code blocks
-
-Use fenced code blocks with a language for syntax highlighting.
-
-Python block example:
-
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-
-How to write it in MDX:
-
-````mdx
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-````
-
-### Citations and notes
-
-Here are a few variations using the same bibliography:
-
-1) **In-text citation** with brackets: [@example2023].
-
-2) **Narrative citation**: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) **Multiple citations** and a **footnote** together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-
-```mdx
-1) In-text citation with brackets: [@example2023].
-
-2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-```
-
-
-### Asides
-
-<Aside>
-  This paragraph presents a **key idea** concisely.
-  <Fragment slot="aside">
-    **Side note** for brief context or a definition.
-  </Fragment>
-  </Aside>
-
-```mdx
-import Aside from '../components/Aside.astro'
-
-<Aside>
-  Main paragraph with the core idea.
-  <Fragment slot="aside">Short side note.</Fragment>
-</Aside>
-```
-
-### Width helpers
-
-Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
-
-#### Wide example
-
-<Wide>
-  <div className="demo-wide">demo wide</div>
-</Wide>
-
-```mdx
-import Wide from '../components/Wide.astro'
-
-<Wide>
-  Your content here...
-</Wide>
-```
-
-#### Full-bleed example
-
-<FullBleed>
-  <div className="demo-full-bleed">demo full-bleed</div>
-</FullBleed>
-
-```mdx
-import FullBleed from '../components/FullBleed.astro'
-
-<FullBleed>
-  Your content here...
-</FullBleed>
-```
-
-
-### Minimal table
-
-| Method | Score |
-|---|---|
-| A | 0.78 |
-| B | 0.86 |
-
-```mdx
-| Method | Score |
-| --- | --- |
-| A | 0.78 |
-| B | 0.86 |
-```
-
-### Audio
-
-<audio controls src={audioDemo}>
-  Your browser does not support the audio element.
-</audio>
-
-```mdx
-import audioDemo from '../assets/audio/audio-example.wav'
-
-<audio controls src={audioDemo}>
-  Your browser does not support the audio element.
-</audio>
-```
-
-
-
-### Embeds
-
-
-#### Html Fragments
-
-The main purpose of the ```HtmlFragment``` component is to embed a **Plotly** or **D3.js** chart in your article. Libraries are already imported in the template.
-
-<div className="plot-card">
-  <HtmlFragment src="line.html" />
-</div>
-
-```mdx
-import HtmlFragment from '../components/HtmlFragment.astro'
-
-<HtmlFragment src="line.html" />
-```
-
-#### Iframes
-
-You can embed external content in your article using **iframes**. For example, **TrackIO**—a lightweight dashboard to monitor machine learning experiments—can be used this way. The example below opens a demo project and displays a couple of metrics. You can customize the **query parameters** (`project`, `metrics`, `sidebar`, etc.) to fit your needs.
-
-<iframe className="plot-card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
-
-To embed TrackIO in your own page, copy the following HTML and adjust the `src` parameters:
-
-#### GitHub code embeds
-
-Finally, if you want to include code from GitHub you can use emgithub.com and, for example, create a collapsible widget like this:
-
-
-  <div class="code-embed-container"></div>
-  <script 
-    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
-  </script>
-
-```html
-  <div class="code-embed-container"></div>
-  <script 
-    src="https://emgithub.com/embed-v2.js?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F0035cce0e04afd6192763b11efe50010d8ad0f71%2Fpicotron%2Fdata_parallel%2Fdata_parallel.py%23L10-L60&style=github&type=code&showBorder=off&showLineNumbers=on&showFileMeta=on&showCopy=on&showFullPath=on">
-  </script>
-```
-
-
-## Best Practices
-
-### Short sections
-Break content into **small, purpose‑driven sections**. Each section should answer a **single question** or support one idea. This improves **scanability**, helps readers navigate with the TOC, and makes later edits safer.
-
-### Clear, minimal annotations
-Favor **concise captions** and callouts that clarify what to look at and why it matters. In code, **highlight just the lines** that carry the idea; avoid verbose commentary. **Precision beats volume**.
-
-### Explain math notation
-**Introduce symbols and variables** the first time they appear, and prefer **well‑known identities** over custom shorthand. When formulas carry the message, add one sentence of **plain‑language interpretation** right after.
-
-### Use the right color scale
-
-A **palette** encodes **meaning** (categories, magnitudes, oppositions), preserves **readability** and **accessibility** (**sufficient contrast**, **color‑vision safety**), and ensures **perceptually smooth transitions**.
-
-The three families below illustrate when to use **categorical**, **sequential**, or **diverging** colors and how they evolve from the same **reference hue**.
-
-<div className="">
-  <HtmlFragment src="palettes.html" />
-</div>
-
-### Use the right chart
-
-Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
-
-<figure>
-  <a href={visualPoster.src} target="_blank" rel="noopener noreferrer">
-    <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
-  </a>
-  <figcaption>
-    A handy reference to select chart types by purpose. Click to enlarge.
-    — <a href="https://ft-interactive.github.io/visual-vocabulary/" target="_blank" rel="noopener noreferrer">Website</a>
-  </figcaption>
-</figure>
+<BestPractices />
 
 
 ## Conclusions

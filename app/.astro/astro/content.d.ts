@@ -151,7 +151,23 @@ declare module 'astro:content' {
 	>;
 
 	type ContentEntryMap = {
-		
+		"chapters": {
+"best-pratices.mdx": {
+	id: "best-pratices.mdx";
+  slug: "best-pratices";
+  body: string;
+  collection: "chapters";
+  data: any
+} & { render(): Render[".mdx"] };
+"writing-you-content.mdx": {
+	id: "writing-you-content.mdx";
+  slug: "writing-you-content";
+  body: string;
+  collection: "chapters";
+  data: any
+} & { render(): Render[".mdx"] };
+};
+
 	};
 
 	type DataEntryMap = {

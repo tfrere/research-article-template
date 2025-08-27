@@ -1,0 +1,11 @@
+---
+export interface Props {
+  code?: string;
+}
+const { code = `graph TD\n    A[Start] --> B{Is it working?}\n    B -- Yes --> C[Great!]\n    B -- No --> D[Fix it]\n    D --> B` } = Astro.props;
+---
+
+<pre class="mermaid">{code}</pre>
+
+
+<style>.mermaid { max-width: 100%; }</style>

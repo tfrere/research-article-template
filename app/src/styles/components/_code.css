@@ -1,0 +1,65 @@
+code {
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background-color: var(--code-bg);
+  padding: 0.2em 0.4em;
+  border-radius: 0.3em;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Sync Shiki variables with current theme */
+/* Standard wrapper look for code blocks */
+.astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; --code-gutter-width: 2.5em; }
+
+/* Prevent code blocks from breaking layout on small screens */
+.astro-code { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; padding: var(--spacing-3); }
+section.content-grid pre code { display: inline-block; min-width: 100%; }
+
+/* Wrap long lines on mobile to avoid overflow (URLs, etc.) */
+/* Wrap long lines only on small screens to prevent layout overflow */
+@media (max-width: 1100px) {
+  .astro-code,
+  section.content-grid pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+  section.content-grid pre code { white-space: pre-wrap; display: block; min-width: 0; }
+}
+
+html[data-theme='light'] .astro-code { background-color: var(--code-bg); }
+
+html[data-theme='dark'] .astro-code { background-color: var(--shiki-dark-bg); }
+
+/* Apply token color from per-span vars exposed by Shiki dual themes */
+html[data-theme='light'] .astro-code span { color: var(--shiki-light) !important; }
+html[data-theme='dark'] .astro-code span { color: var(--shiki-dark) !important; }
+
+/* Token color remapping using Shiki CSS variables on the wrapper */
+/* Optional: boost contrast for light theme */
+html[data-theme='light'] .astro-code {
+  --shiki-foreground: #24292f;
+  --shiki-background: #ffffff;
+}
+
+/* Line numbers for Shiki-rendered code blocks */
+.astro-code code { counter-reset: astro-code-line; display: block; background: none; border: none; }
+.astro-code .line { display: inline-block; position: relative; padding-left: calc(var(--code-gutter-width) + var(--spacing-3)); min-height: 1.25em; }
+.astro-code .line::before { counter-increment: astro-code-line; content: counter(astro-code-line); position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--code-gutter-width)); text-align: right; color: var(--muted-color); opacity: .75; user-select: none; padding-right: var(--spacing-3); border-right: 1px solid var(--border-color); }
+.astro-code .line:empty::after { content: "\00a0"; }
+/* Hide trailing empty line added by parsers */
+.astro-code code > .line:last-child:empty { display: none; }
+
+/* JS fallback chip */
+.astro-code.has-lang-chip { position: relative; padding-top: 22px; }
+.astro-code .code-lang-chip {
+  position: absolute;
+  top: 0px; right: 0px;
+  font-size: 10px; line-height: 1;
+  color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.1);
+  border: none;
+  border-radius: 0px; padding: 6px 6px 4px 4px; pointer-events: none; z-index: 1;
+}
+
+

@@ -6,6 +6,16 @@ interface Props {
   published?: string;
 }
 const { title, authors = [], affiliation, published } = Astro.props as Props;
+function slugify(text: string): string {
+  return String(text || '')
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}+/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'article';
+}
+const pdfFilename = `${slugify(title)}.pdf`;
 ---
 <header class="meta">
   <div class="meta-container">
@@ -29,7 +39,7 @@ const { title, authors = [], affiliation, published } = Astro.props as Props;
     )}
     <div class="meta-container-cell">
       <h3>PDF</h3>
-      <p><button id="download-pdf-btn" type="button">Download PDF</button></p>
+      <p><button id="download-pdf-btn" data-pdf-filename={pdfFilename}>Download PDF</button></p>
     </div>
   </div>
 </header>
@@ -42,8 +52,9 @@ const { title, authors = [], affiliation, published } = Astro.props as Props;
       if (!btn) return;
       btn.addEventListener('click', () => {
         const a = document.createElement('a');
-        a.href = '/article.pdf';
-        a.setAttribute('download', 'article.pdf');
+        const pdf = btn.getAttribute('data-pdf-filename') || 'article.pdf';
+        a.href = `/${pdf}`;
+        a.setAttribute('download', pdf);
         document.body.appendChild(a);
         a.click();
         a.remove();
