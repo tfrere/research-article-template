@@ -5,6 +5,7 @@ import HtmlFragment from '../../components/HtmlFragment.astro';
 import Aside from '../../components/Aside.astro';
 import Wide from '../../components/Wide.astro';
 import FullBleed from '../../components/FullBleed.astro';
+import Accordion from '../../components/Accordion.astro';
 
 ## Available blocks
 
@@ -18,6 +19,7 @@ All the following blocks are available in the article.mdx file. You can also cre
   <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#citations-and-notes">Citations & notes</a>
   <a className="button" href="#placement">Placement</a>
+  <a className="button" href="#accordion">Accordion</a>
   <a className="button" href="#minimal-table">Minimal table</a>
   <a className="button" href="#audio">Audio</a>
   <a className="button" href="#embeds">Embeds</a>
@@ -39,9 +41,7 @@ $x^2 + y^2 = z^2$
 
 **Block**
 
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
+Affichage en bloc, voir l'exemple ci-dessous.
 
 <small className="muted">Example</small>
 ```mdx
@@ -213,6 +213,39 @@ import FullBleed from '../components/FullBleed.astro'
 ```
 
 
+### Accordion
+
+Accessible accordion based on `details/summary`. You can pass any children content.
+
+<Accordion title="What can this accordion hold?" open>
+  <p>Text, lists, images, code blocks, etc.</p>
+  <ul>
+    <li>Item one</li>
+    <li>Item two</li>
+  </ul>
+</Accordion>
+
+<Accordion title="Closed by default">
+  <p>This one stays collapsed until the user clicks the summary.</p>
+</Accordion>
+
+<small className="muted">Example</small>
+```mdx
+import Accordion from '../components/Accordion.astro'
+
+<Accordion title="Accordion title" open>
+  <p>Free content with <strong>markdown</strong> and MDX components.</p>
+</Accordion>
+
+<Accordion title="Another accordion">
+  <ul>
+    <li>Item A</li>
+    <li>Item B</li>
+  </ul>
+</Accordion>
+```
+
+
 ### Minimal table
 
 | Method | Score |
@@ -230,17 +263,13 @@ import FullBleed from '../components/FullBleed.astro'
 
 ### Audio
 
-<audio controls src={audioDemo}>
-  Your browser does not support the audio element.
-</audio>
-
+<audio controls src={audioDemo}/>
+<br/>
 <small className="muted">Example</small>
 ```mdx
 import audioDemo from '../assets/audio/audio-example.wav'
 
-<audio controls src={audioDemo}>
-  Your browser does not support the audio element.
-</audio>
+<audio controls src={audioDemo}/>
 ```
 
 

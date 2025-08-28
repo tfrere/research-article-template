@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import mermaid from 'astro-mermaid';
+import compressor from 'astro-compressor';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkFootnotes from 'remark-footnotes';
@@ -11,7 +12,12 @@ import rehypeCitation from 'rehype-citation';
 
 export default defineConfig({
   output: 'static',
-  integrations: [mermaid({ theme: 'forest', autoTheme: true }), mdx()],
+  integrations: [
+    mermaid({ theme: 'forest', autoTheme: true }),
+    mdx(),
+    // Precompress output with Brotli (preferred) and Gzip as fallback
+    compressor({ brotli: true, gzip: true })
+  ],
   devToolbar: {
     enabled: false
   },

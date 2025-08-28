@@ -23,6 +23,9 @@ RUN npm run export:pdf -- --theme=light --wait=full
 # Use an official Nginx runtime as the base image for serving the application
 FROM nginx:alpine
 
+# Install Brotli dynamic module for Nginx
+RUN apk add --no-cache nginx-mod-http-brotli
+
 # Copy the built application from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
