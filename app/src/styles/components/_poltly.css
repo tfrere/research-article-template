@@ -1,9 +1,8 @@
 /* ============================================================================ */
 /* Plotly – fragments & controls */
 /* ============================================================================ */
-.plot-card { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; margin: 8px 0; }
-.plot-card svg text { fill: var(--text-color) !important; }
-.plot-card label { color: var(--text-color) !important; }
+.html-embed__card svg text { fill: var(--text-color) !important; }
+.html-embed__card label { color: var(--text-color) !important; }
 .plotly-graph-div { width: 100% !important; min-height: 320px; }
 @media (max-width: 768px) { .plotly-graph-div { min-height: 260px; } }
 [id^="plot-"] { display: flex; flex-direction: column; align-items: center; gap: 15px; }
@@ -20,26 +19,26 @@
 /* ---------------------------------------------------------------------------- */
 /* Dark mode overrides for Plotly readability */
 /* ---------------------------------------------------------------------------- */
-[data-theme="dark"] .plot-card .xaxislayer-above text,
-[data-theme="dark"] .plot-card .yaxislayer-above text,
-[data-theme="dark"] .plot-card .infolayer text,
-[data-theme="dark"] .plot-card .legend text,
-[data-theme="dark"] .plot-card .annotation text,
-[data-theme="dark"] .plot-card .colorbar text,
-[data-theme="dark"] .plot-card .hoverlayer text { fill: #fff !important; }
+[data-theme="dark"] .html-embed__card .xaxislayer-above text,
+[data-theme="dark"] .html-embed__card .yaxislayer-above text,
+[data-theme="dark"] .html-embed__card .infolayer text,
+[data-theme="dark"] .html-embed__card .legend text,
+[data-theme="dark"] .html-embed__card .annotation text,
+[data-theme="dark"] .html-embed__card .colorbar text,
+[data-theme="dark"] .html-embed__card .hoverlayer text { fill: #fff !important; }
 
-[data-theme="dark"] .plot-card .xaxislayer-above path,
-[data-theme="dark"] .plot-card .yaxislayer-above path,
-[data-theme="dark"] .plot-card .xlines-above,
-[data-theme="dark"] .plot-card .ylines-above { stroke: rgba(255,255,255,.35) !important; }
+[data-theme="dark"] .html-embed__card .xaxislayer-above path,
+[data-theme="dark"] .html-embed__card .yaxislayer-above path,
+[data-theme="dark"] .html-embed__card .xlines-above,
+[data-theme="dark"] .html-embed__card .ylines-above { stroke: rgba(255,255,255,.35) !important; }
 
-[data-theme="dark"] .plot-card .gridlayer path { stroke: rgba(255,255,255,.15) !important; }
+[data-theme="dark"] .html-embed__card .gridlayer path { stroke: rgba(255,255,255,.15) !important; }
 
 /* Legend and hover backgrounds */
-[data-theme="dark"] .plot-card .legend rect.bg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
-[data-theme="dark"] .plot-card .hoverlayer .bg { fill: rgba(0,0,0,.8) !important; stroke: rgba(255,255,255,.2) !important; }
+[data-theme="dark"] .html-embed__card .legend rect.bg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
+[data-theme="dark"] .html-embed__card .hoverlayer .bg { fill: rgba(0,0,0,.8) !important; stroke: rgba(255,255,255,.2) !important; }
 
 /* Colorbar background (keep gradient intact) */
-[data-theme="dark"] .plot-card .colorbar .cbbg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
+[data-theme="dark"] .html-embed__card .colorbar .cbbg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
 
 

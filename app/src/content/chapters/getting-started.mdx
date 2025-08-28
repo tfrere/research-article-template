@@ -39,12 +39,10 @@ The recommended way is to **duplicate this Space on Hugging Face** rather than c
 
 1. Open the template Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)** and click "Duplicate this Space".
 2. Give it a name, choose visibility, and keep the SDK as **Docker** (this project includes a `Dockerfile`).
-3. A new Space repository will be created under your account.
-
-Then push your changes to your new Space repo:
+3. Then push your changes to your new Space repo. **Every push automatically triggers a build and deploy** on Spaces.
 
 ```bash
-git clone https://huggingface.co/spaces/<your-username>/<your-space>
+git clone git@hf.co:spaces/<your-username>/<your-space>.git
 cd <your-space>
 # Make edits locally, then:
 git add .
@@ -52,8 +50,3 @@ git commit -m "Update content"
 git push
 ```
 
-**Every push automatically triggers a build and deploy** on Spaces.
-
-Notes for Docker Spaces:
-- This project exposes port `8080` via Nginx; the Space front matter includes `app_port: 8080` so the service can be probed correctly.
-- No extra configuration is required; the `Dockerfile` builds the Astro site and serves it.

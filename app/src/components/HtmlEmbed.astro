@@ -1,9 +1,9 @@
 ---
-interface Props { src: string }
-const { src } = Astro.props as Props;
+interface Props { src: string; title?: string; desc?: string; frameless?: boolean }
+const { src, title, desc, frameless = false } = Astro.props as Props;
 
 // Load all .html fragments under src/content/fragments/** as strings (dev & build)
-const fragments = import.meta.glob('../content/fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const fragments = (import.meta as any).glob('../content/fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function resolveFragment(requested: string): string | null {
   // Allow both "banner.html" and "fragments/banner.html"
@@ -20,7 +20,13 @@ const html = resolveFragment(src);
 const mountId = `frag-${Math.random().toString(36).slice(2)}`;
 ---
 { html ? (
-  <div id={mountId} set:html={html} />
+  <figure class="html-embed">
+    {title && <figcaption class="html-embed__title">{title}</figcaption>}
+    <div class={`html-embed__card${frameless ? ' is-frameless' : ''}`}>
+      <div id={mountId} set:html={html} />
+    </div>
+    {desc && <figcaption class="html-embed__desc" set:html={desc}></figcaption>}
+  </figure>
  ) : (
   <div><!-- Fragment not found: {src} --></div>
  ) }
@@ -46,14 +52,48 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
           // run inline
           (0, eval)(old.text || '');
         } catch (e) {
-          console.error('HtmlFragment inline script error:', e);
+          console.error('HtmlEmbed inline script error:', e);
         }
       }
     });
   };
   // Ensure execution when ready: run now if Plotly or D3 is present, or when document is ready; otherwise wait for 'load'
+  // @ts-expect-error: Plotly/d3 are attached globally at runtime via fragments
   if (window.Plotly || window.d3 || document.readyState === 'complete') execute();
   else window.addEventListener('load', execute, { once: true });
   </script>
+
+<style>
+  .html-embed { margin: 12px 0; }
+  .html-embed__title { 
+    text-align: left; 
+    font-weight: 600; 
+    font-size: 0.95rem; 
+    color: var(--text-color);
+    margin: 0 0 6px 0;
+  }
+  .html-embed__card {
+    background: var(--code-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .html-embed__card.is-frameless {
+    background: transparent;
+    border-color: transparent;
+  }
+  .html-embed__desc { 
+    text-align: left; 
+    font-size: 0.9rem; 
+    color: var(--muted-color); 
+    margin: 6px 0 0 0; 
+  }
+  @media (prefers-color-scheme: dark) {
+    [data-theme="dark"] .html-embed__card:not(.is-frameless) { background: #12151b; border-color: rgba(255,255,255,.15); }
+  }
+  @media print {
+    .html-embed, .html-embed__card { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
 
 

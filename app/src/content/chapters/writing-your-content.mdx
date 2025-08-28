@@ -4,7 +4,7 @@ import placeholder from '../../assets/images/placeholder.png';
 import Aside from '../../components/Aside.astro';
 import Wide from '../../components/Wide.astro';
 import FullBleed from '../../components/FullBleed.astro';
-import HtmlFragment from '../../components/HtmlFragment.astro';
+import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import audioDemo from '../../assets/audio/audio-example.wav';
 
 ## Writing Your Content
@@ -62,7 +62,7 @@ import Aside from '../components/Aside.astro'
 
 # Mixing Markdown and components
 
-This paragraph is written in Markdown.
+This paragraph is written in Markdown. 
 
 <Aside>A short callout inserted via a component.</Aside>
 
@@ -106,7 +106,7 @@ Use the **color picker** below to see how the primary color affects the theme.
 #### Brand color
 
 <Aside>
-  <HtmlFragment src="color-picker.html" />
+  <HtmlEmbed frameless src="color-picker.html" />
   <Fragment slot="aside">
     You can use the color picker to select the right color.
     
@@ -119,7 +119,7 @@ Use the **color picker** below to see how the primary color affects the theme.
 
 Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
 
-<HtmlFragment src="palettes.html" />
+<HtmlEmbed frameless src="palettes.html" />
 
 
 ### Placement

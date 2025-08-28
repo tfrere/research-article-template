@@ -8,7 +8,7 @@
 /* Dark-mode form tweak */
 [data-theme="dark"] .plotly_input_container > select { background-color: #1a1f27; border-color: var(--border-color); color: var(--text-color); }
 
-[data-theme="dark"] .plot-card { background: #12151b; border-color: rgba(255,255,255,.15); }
+[data-theme="dark"] .html-embed__card:not(.is-frameless) { background: #12151b; border-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .right-aside .aside-card { background: #12151b; border-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .content-grid main pre { background: #12151b; border-color: rgba(255,255,255,.15); }
 [data-theme="dark"] .toc nav { border-left-color: rgba(255,255,255,.15); }
@@ -19,51 +19,6 @@
 /* Opt-in zoomable images */
 img[data-zoomable] { cursor: zoom-in; }
 .medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
-
-/* ============================================================================ */
-/* Hero (full-bleed) */
-/* ============================================================================ */
-.hero { width: 100%; padding: 48px 16px 16px; text-align: center; }
-.hero-title { font-size: clamp(28px, 4vw, 48px); font-weight: 800; line-height: 1.1; margin: 0 0 8px; 
-
-    max-width: 60%;
-    margin: auto;}
-.hero-banner { max-width: 980px; margin: 0 auto; }
-.hero-desc { color: var(--muted-color); font-style: italic; margin: 0 0 16px 0; }
-
-/* ============================================================================ */
-/* Meta (byline-like header) */
-/* ============================================================================ */
-  
-.meta {
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
-    font-size: 0.9rem;
-    line-height: 1.8em;
-  }
-  .meta-container {
-    max-width: 720px;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    margin: 0 auto;
-    gap: 8px;
-  }
-  .meta-container-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .meta-container-cell h3 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--muted-color);
-    text-transform: uppercase;
-    letter-spacing: .02em;
-  }
-  .meta-container-cell p { margin: 0; }
 
 /* ============================================================================ */
 /* Theme Toggle button (moved from component) */

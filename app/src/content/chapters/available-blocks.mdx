@@ -1,7 +1,7 @@
 import { Image } from 'astro:assets';
 import placeholder from '../../assets/images/placeholder.png';
 import audioDemo from '../../assets/audio/audio-example.wav';
-import HtmlFragment from '../../components/HtmlFragment.astro';
+import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import Aside from '../../components/Aside.astro';
 import Wide from '../../components/Wide.astro';
 import FullBleed from '../../components/FullBleed.astro';
@@ -50,9 +50,14 @@ $$
 $$
 ```
 
-### Images
+### Image
 
 **Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
+
+Props (optional)
+- `data-zoomable`: adds a zoomable lightbox.
+- `loading="lazy"`: lazy loads the image.
+- `figcaption`: adds a caption and credit.
 
 **Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
 
@@ -91,7 +96,7 @@ import myImage from '../assets/images/placeholder.jpg'
 ```
 
 
-### Code blocks
+### Code
 
 Use fenced code blocks with a language for syntax highlighting.
 
@@ -112,30 +117,85 @@ greet("Astro")
 ```
 ````
 
-### Mermaid diagrams
+### Mermaid diagram
 
 Native mermaid diagrams are supported. You can use the <a target="_blank" href="https://mermaid.live/edit#pako:eNpVjUFPg0AQhf_KZk6a0AYsCywHE0u1lyZ66EnoYQMDSyy7ZFlSK_DfXWiMOqd58773ZoBcFQgxlGd1yQXXhhx3mSR2ntJE6LozDe9OZLV6HPdoSKMkXkeyvdsr0gnVtrWs7m_8doZIMhxmDIkRtfyYblay5F8ljmSXHnhrVHv66xwvaiTPaf0mbP1_R2i0qZe05HHJVznXJOF6QcCBStcFxEb36ECDuuGzhGF2MzACG8wgtmuBJe_PJoNMTjbWcvmuVPOT1KqvBNj6c2dV3xbc4K7mlea_CMoCdaJ6aSCm3lIB8QCfED94dM2o77ssjFzK3MiBq2WCNWUeiza-H26YvU8OfC0_3XVII9eLQuYFIaVBGEzfyTJ22g"> live editor</a> to create your diagram and copy the code to your article.
 
+
 ```mermaid
-graph TD
-  A[Start] --> B{Is it working?}
-  B -- Yes --> C[Great!]
-  B -- No --> D[Fix it]
-  D --> B
+erDiagram
+  DATASET ||--o{ SAMPLE : contains
+  RUN }o--o{ SAMPLE : uses
+  RUN ||--|| MODEL : trains
+  RUN ||--o{ METRIC : logs
+
+  DATASET {
+    string id
+    string name
+  }
+
+  SAMPLE {
+    string id
+    string uri
+  }
+
+  MODEL {
+    string id
+    string framework
+  }
+
+  RUN {
+    string id
+    date startedAt
+  }
+
+  METRIC {
+    string name
+    float value
+  }
 ```
 
 <small className="muted">Example</small>
 ````mdx
 ```mermaid
-graph TD
-  A[Start] --> B{Is it working?}
-  B -- Yes --> C[Great!]
-  B -- No --> D[Fix it]
-  D --> B
+erDiagram
+  DATASET ||--o{ SAMPLE : contains
+  RUN }o--o{ SAMPLE : uses
+  RUN ||--|| MODEL : trains
+  RUN ||--o{ METRIC : logs
+
+  DATASET {
+    string id
+    string name
+  }
+
+  SAMPLE {
+    string id
+    string uri
+  }
+
+  MODEL {
+    string id
+    string framework
+  }
+
+  RUN {
+    string id
+    date startedAt
+  }
+
+  METRIC {
+    string name
+    float value
+  }
 ```
 ````
 
-### Citations and notes
+### Citation and footnote
+
+**Citations** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article. The citation keys come from `app/src/content/bibliography.bib`.
+
+**Footnotes** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
 
 Here are a few variations using the same bibliography:
 
@@ -186,10 +246,6 @@ Accessible accordion based on `details/summary`. You can pass any children conte
   </ul>
 </Accordion>
 
-<Accordion title="Closed by default">
-  <p>This one stays collapsed until the user clicks the summary.</p>
-</Accordion>
-
 <Accordion title="Accordion with code example">
 ```ts
 function greet(name: string) {
@@ -206,23 +262,6 @@ import Accordion from '../components/Accordion.astro'
 
 <Accordion title="Accordion title" open>
   <p>Free content with <strong>markdown</strong> and MDX components.</p>
-</Accordion>
-
-<Accordion title="Another accordion">
-  <ul>
-    <li>Item A</li>
-    <li>Item B</li>
-  </ul>
-</Accordion>
-
-<Accordion title="Accordion with code example">
-```ts
-function greet(name: string) {
-  console.log(`Hello, ${name}`);
-}
-
-greet("Astro");
-```
 </Accordion>
 
 <Accordion title="Accordion with code example">
@@ -265,53 +304,46 @@ import audioDemo from '../assets/audio/audio-example.wav'
 
 
 
-### Embeds
 
+### HtmlEmbed
 
-#### Html Fragments
-
-The main purpose of the ```HtmlFragment``` component is to **embed** a **Plotly** or **D3.js** chart in your article. **Libraries** are already imported in the template.
+The main purpose of the ```HtmlEmbed``` component is to **embed** a **Plotly** or **D3.js** chart in your article. **Libraries** are already imported in the template.
 
 They exist in the `app/src/content/fragments` folder.
 
-Plotly and D3 are already supported by the template. For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
+For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
 
-Here are some examples of the two **libraries** in the template:
+Here are some examples of the two **libraries** in the template
 
-<small class="muted">D3 version</small>
-  <div className="plot-card">
-    <HtmlFragment src="d3-line.html" />
-</div>
-<caption className="caption">D3 Line chart — simple time series example.</caption>
+Props (optional)
+- `title`: short title displayed above the card.
+- `desc`: short description displayed below the card. Supports inline HTML (e.g., links).
+- `frameless`: removes the card background and border for seamless embeds.
 
-  <div className="plot-card">
-    <HtmlFragment src="d3-bar.html" />
-</div>
-<caption className="caption">D3 Bar chart — categorical distribution example.</caption>
-
---- 
-
-<small class="muted">Plotly version</small>
-
-<div className="plot-card">
-  <HtmlFragment src="line.html" />
-</div>
-<caption className="caption">Plotly Line chart — interactive time series with hover and zoom.</caption>
+<HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
+---
+<HtmlEmbed
+src="d3-bar.html"
+title="Memory usage with recomputation"
+desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}
+/>
+---
+<HtmlEmbed src="line.html" title="Plotly Line" desc="Interactive time series" />
 
 <small className="muted">Example</small>
 ```mdx
-import HtmlFragment from '../components/HtmlFragment.astro'
+import HtmlEmbed from '../components/HtmlEmbed.astro'
 
-<HtmlFragment src="line.html" />
+<HtmlEmbed src="line.html" title="Plotly Line" desc="Interactive time series" />
 ```
 
-#### Iframes
+### Iframes
 
 You can embed external content in your article using **iframes**. For example, **TrackIO or github code embeds** can be used this way.
 
 <iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
 
-<iframe className="plot-card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="660" frameborder="0"></iframe>
+<iframe className="html-embed__card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="660" frameborder="0"></iframe>
 
 
 <small className="muted">Example</small>
@@ -320,15 +352,15 @@ You can embed external content in your article using **iframes**. For example, *
 <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
 ```
 
-#### Gradio
+### Gradio
 
 You can also embed **gradio** apps.
 
-<gradio-app theme_mode="light" space="hebrew-llm-leaderboard/leaderboard"></gradio-app>
+<gradio-app theme_mode="light" space="gradio/hello_world"></gradio-app>
 
 
 
 <small className="muted">Example</small>
 ```mdx
-<gradio-app theme_mode="light" space="hebrew-llm-leaderboard/leaderboard"></gradio-app>
+<gradio-app theme_mode="light" space="gradio/hello_world"></gradio-app>
 ```

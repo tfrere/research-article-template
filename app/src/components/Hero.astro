@@ -1,0 +1,104 @@
+---
+import HtmlEmbed from "./HtmlEmbed.astro";
+
+interface Props {
+  title: string; // may contain HTML (e.g., <br/>)
+  titleRaw?: string; // plain title for slug/PDF (optional)
+  description?: string;
+  authors?: string[];
+  affiliation?: string;
+  published?: string;
+}
+
+const { title, titleRaw, description, authors = [], affiliation, published } = Astro.props as Props;
+
+function stripHtml(text: string): string {
+  return String(text || '').replace(/<[^>]*>/g, '');
+}
+
+function slugify(text: string): string {
+  return String(text || '')
+    .normalize('NFKD')
+    .replace(/\p{Diacritic}+/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'article';
+}
+
+const pdfBase = titleRaw ? titleRaw : stripHtml(title);
+const pdfFilename = `${slugify(pdfBase)}.pdf`;
+---
+<section class="hero">
+  <h1 class="hero-title" set:html={title}></h1>
+  <div class="hero-banner">
+    <HtmlEmbed src="banner.html" frameless />
+    {description && <p class="hero-desc">{description}</p>}
+  </div>
+</section>
+
+<header class="meta">
+  <div class="meta-container">
+    {authors.length > 0 && (
+      <div class="meta-container-cell">
+        <h3>Authors</h3>
+        <p>{authors.join(', ')}</p>
+      </div>
+    )}
+    {affiliation && (
+      <div class="meta-container-cell">
+        <h3>Affiliation</h3>
+        <p>{affiliation}</p>
+      </div>
+    )}
+    {published && (
+      <div class="meta-container-cell">
+        <h3>Published</h3>
+        <p>{published}</p>
+      </div>
+    )}
+    <div class="meta-container-cell">
+      <h3>PDF</h3>
+      <p><button id="download-pdf-btn" data-pdf-filename={pdfFilename}>Download PDF</button></p>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Attach a handler to trigger a programmatic download
+  (() => {
+    const ready = () => {
+      const btn = document.getElementById('download-pdf-btn');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        const pdf = btn.getAttribute('data-pdf-filename') || 'article.pdf';
+        a.href = `/${pdf}`;
+        a.setAttribute('download', pdf);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ready, { once: true });
+    } else { ready(); }
+  })();
+</script>
+
+<style>
+  /* Hero (full-bleed) */
+  .hero { width: 100%; padding: 48px 16px 16px; text-align: center; }
+  .hero-title { font-size: clamp(28px, 4vw, 48px); font-weight: 800; line-height: 1.1; margin: 0 0 8px; max-width: 60%; margin: auto; }
+  .hero-banner { max-width: 980px; margin: 0 auto; }
+  .hero-desc { color: var(--muted-color); font-style: italic; margin: 0 0 16px 0; }
+
+  /* Meta (byline-like header) */
+  .meta { border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 1rem 0; font-size: 0.9rem; line-height: 1.8em; }
+  .meta-container { max-width: 720px; display: flex; flex-direction: row; justify-content: space-between; margin: 0 auto; gap: 8px; }
+  .meta-container-cell { display: flex; flex-direction: column; gap: 8px; }
+  .meta-container-cell h3 { margin: 0; font-size: 12px; font-weight: 400; color: var(--muted-color); text-transform: uppercase; letter-spacing: .02em; }
+  .meta-container-cell p { margin: 0; }
+</style>
+
+

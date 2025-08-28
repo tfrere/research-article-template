@@ -12,11 +12,11 @@ code {
 
 /* Sync Shiki variables with current theme */
 /* Standard wrapper look for code blocks */
-.astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; --code-gutter-width: 2.5em; }
+.astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: 0; font-size: 14px; --code-gutter-width: 2.5em; }
 
 /* Prevent code blocks from breaking layout on small screens */
 .astro-code { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
-section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; padding: var(--spacing-3); }
+section.content-grid pre { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; padding: 0; }
 section.content-grid pre code { display: inline-block; min-width: 100%; }
 
 /* Wrap long lines on mobile to avoid overflow (URLs, etc.) */
@@ -43,24 +43,39 @@ html[data-theme='light'] .astro-code {
 }
 
 /* Line numbers for Shiki-rendered code blocks */
-.astro-code code { counter-reset: astro-code-line; display: block; background: none; border: none; }
-.astro-code .line { display: inline-block; position: relative; padding-left: calc(var(--code-gutter-width) + var(--spacing-3)); min-height: 1.25em; }
-.astro-code .line::before { counter-increment: astro-code-line; content: counter(astro-code-line); position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--code-gutter-width)); text-align: right; color: var(--muted-color); opacity: .75; user-select: none; padding-right: var(--spacing-3); border-right: 1px solid var(--border-color); }
+.astro-code code { counter-reset: astro-code-line; display: block; background: none; border: none;  }
+.astro-code .line { display: inline-block; position: relative; padding-left: calc(var(--code-gutter-width) + var(--spacing-1)); min-height: 1.25em; }
+.astro-code .line::before { counter-increment: astro-code-line; content: counter(astro-code-line); position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--code-gutter-width)); text-align: right; color: var(--muted-color); opacity: .30; user-select: none; padding-right: var(--spacing-2); border-right: 1px solid var(--border-color); }
 .astro-code .line:empty::after { content: "\00a0"; }
 /* Hide trailing empty line added by parsers */
 .astro-code code > .line:last-child:empty { display: none; }
 
-/* JS fallback chip */
-.astro-code.has-lang-chip { position: relative; padding-top: 22px; }
-.astro-code .code-lang-chip {
-  position: absolute;
-  top: 0px; right: 0px;
-  font-size: 10px; line-height: 1;
-  color: rgba(255,255,255,.5);
-  background: rgba(255,255,255,.1);
-  border: none;
-  border-radius: 0px; padding: 6px 6px 4px 4px; pointer-events: none; z-index: 1;
+/* (Removed JS fallback chip: label handled via CSS in _base.css) */
+
+/* Rehype-injected wrapper for non-Shiki pre blocks */
+.code-card { position: relative; }
+.code-card .code-copy {
+  position: absolute; top: 6px; right: 6px; z-index: 3; padding: 6px 12px;
 }
+.code-card .code-copy svg { width: 16px; height: 16px; display: block; fill: currentColor; }
+.code-card pre { margin: 0; margin-bottom: var(--spacing-1);}
+
+/* Discreet filetype/language label shown under the Copy button */
+.code-card::after {
+  content: attr(data-language);
+  position: absolute;
+  top: 8px; /* default, aligns with copy button */
+  right: 8px;
+  font-size: 10px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* When no copy button (single-line), keep the label in the top-right corner */
+.code-card.no-copy::after { top: 8px; right: 8px; }
 
 
 

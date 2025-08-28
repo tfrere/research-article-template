@@ -66,10 +66,7 @@ html { font-size: 14px; line-height: 1.6; }
   margin: var(--spacing-4) 0;
 }
 
-.content-grid main pre:not(.astro-code) { background: var(--code-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: var(--spacing-3); font-size: 14px; overflow: auto; }
-
 /* Rely on Shiki's own token spans; no class remap */
-.content-grid main code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 /* Placeholder block (discreet centered text) */
 .placeholder-block {
   display: grid;
@@ -95,29 +92,6 @@ html { font-size: 14px; line-height: 1.6; }
   background: var(--surface-bg);
 }
 
-/* Pretty-code language label (visible chip at top-right) */
-.content-grid main pre:has(code[data-language]),
-.content-grid main pre:has(code[class*="language-"]) {
-  position: relative;
-  padding-top: 28px; /* space for the label */
-}
-.content-grid main pre > code[data-language]::after,
-.content-grid main pre > code[class*="language-"]::after {
-  content: attr(data-language);
-  position: absolute;
-  top: 4px;
-  right: 6px;
-  font-size: 11px;
-  line-height: 1;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 4px;
-  pointer-events: none;
-  z-index: 1;
-}
 
 .content-grid main table { border-collapse: collapse; width: 100%; margin: 0 0 var(--spacing-4); }
 .content-grid main th, .content-grid main td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; font-size: 15px; }
@@ -141,7 +115,6 @@ html { font-size: 14px; line-height: 1.6; }
 /* ============================================================================ */
 img,
 picture {
-  width: 100%;
   max-width: 100%;
   height: auto;
   display: block;
@@ -189,6 +162,11 @@ button, .button {
   display: inline-block;
   transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .02s ease;
 }
+/* Icon-only buttons: equal X/Y padding */
+button:has(> svg:only-child),
+.button:has(> svg:only-child) {
+  padding: 8px !important;
+}
 button:hover, .button:hover {
   filter: brightness(96%);
 }
@@ -201,6 +179,18 @@ button:focus-visible, .button:focus-visible {
 button:disabled, .button:disabled {
   opacity: .6;
   cursor: not-allowed;
+}
+
+/* Ghost/Muted button: subtle outline, primary color text/border */
+.button--ghost {
+  background: transparent !important;
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+.button--ghost:hover {
+  color: var(--primary-color-hover) !important;
+  border-color: var(--primary-color-hover) !important;
+  filter: none;
 }
 
 .button-group .button {
@@ -250,7 +240,8 @@ button:disabled, .button:disabled {
   .hero-banner,
   .d3-galaxy,
   .d3-galaxy svg,
-  .plot-card,
+  .html-embed__card,
+  .html-embed__card,
   .js-plotly-plot,
   figure,
   pre,

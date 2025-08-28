@@ -1,18 +1,20 @@
 <div class="palettes" style="width:100%; margin: 10px 0;">
   <style>
     .palettes .palettes__grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .palettes .palette-card { position: relative; display: grid; grid-template-columns: 260px 1fr auto; align-items: center; gap: 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-bg); padding: 12px; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
+    .palettes .palette-card { position: relative; display: grid; grid-template-columns: 260px 1fr auto; align-items: stretch; gap: 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-bg); padding: 12px; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
     /* removed circular badge */
-    .palettes .palette-card__swatches { display: flex; gap: 0; margin: 0; height: 40px; overflow: hidden; border-radius: 8px; }
-    .palettes .palette-card__swatches .sw { flex: 1 1 0; height: 100%; min-width: 0; border: none; }
+    .palettes .palette-card__swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; margin: 0;  }
+    .palettes .palette-card__swatches .sw { width: 100%; min-width: 0; min-height: 0; border-radius: 8px; border: 1px solid var(--border-color); }
     .palettes .palette-card__content { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; justify-content: center; min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-color); }
     .palettes .palette-card__actions { display: flex; align-items: center; justify-content: flex-end; justify-self: end; }
-    .palettes .copy-btn { margin: 0; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color)!important; font-size: 12px; cursor: pointer; transition: background .18s ease, color .18s ease, border-color .18s ease; }
-    .palettes .copy-btn:hover { background: var(--primary-color); color: var(--on-primary)!important; border-color: transparent; }
-    .palettes .copy-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+    .palettes .palette-card__actions { align-self: stretch; }
+    /* .palettes .copy-btn { margin: 0; padding: 0 10px; height: 100%; border-radius: 8px; } */
+    /* .palettes .copy-btn:hover { background: var(--primary-color); color: var(--on-primary)!important; border-color: transparent; }
+    .palettes .copy-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; } */
+    .palettes .copy-btn svg { width: 18px; height: 18px; fill: currentColor; display: block; }
     @media (max-width: 640px) {
       .palettes .palette-card { grid-template-columns: 1fr; align-items: stretch; gap: 10px; }
-      .palettes .palette-card__swatches { height: 36px; border-radius: 8px; }
+      .palettes .palette-card__swatches { grid-template-columns: repeat(6, minmax(0, 1fr));  }
       .palettes .palette-card__content { border-left: none; padding-left: 0; }
       .palettes .palette-card__actions { justify-self: start; }
     }
@@ -162,10 +164,18 @@
         const title = document.createElement('div'); title.className = 'palette-card__title'; title.style.textAlign = 'left'; title.style.fontWeight = '800'; title.style.fontSize = '15px'; title.textContent = c.title;
         const desc = document.createElement('div'); desc.className = 'palette-card__desc'; desc.style.textAlign = 'left'; desc.style.color = 'var(--muted-color)'; desc.style.lineHeight = '1.5'; desc.style.fontSize = '12px'; desc.innerHTML = c.desc;
         const actions = document.createElement('div'); actions.className = 'palette-card__actions';
-        const btn = document.createElement('button'); btn.className = 'copy-btn'; btn.textContent = 'Copy';
+        const btn = document.createElement('button'); btn.className = 'copy-btn button--ghost';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
         btn.addEventListener('click', async () => {
           const json = JSON.stringify(colors, null, 2);
-          try { await navigator.clipboard.writeText(json); const old = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = old, 900); } catch { window.prompt('Copy palette', json); }
+          try {
+            await navigator.clipboard.writeText(json);
+            const old = btn.innerHTML;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 20.3 7.7l-1.4-1.4z"/></svg>';
+            setTimeout(() => btn.innerHTML = old, 900);
+          } catch {
+            window.prompt('Copy palette', json);
+          }
         });
 
         content.appendChild(title); content.appendChild(desc);
