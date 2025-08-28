@@ -63,3 +63,6 @@ html[data-theme='light'] .astro-code {
 }
 
 
+
+/* Overrides inside Accordion: remove padding and border on code containers */
+.accordion .astro-code { padding: 0; border: none; }

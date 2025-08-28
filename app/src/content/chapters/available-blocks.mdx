@@ -229,8 +229,18 @@ Accessible accordion based on `details/summary`. You can pass any children conte
   <p>This one stays collapsed until the user clicks the summary.</p>
 </Accordion>
 
+<Accordion title="Accordion with code example">
+```ts
+function greet(name: string) {
+  console.log(`Hello, ${name}`);
+}
+
+greet("Astro");
+```
+</Accordion>
+
 <small className="muted">Example</small>
-```mdx
+````mdx
 import Accordion from '../components/Accordion.astro'
 
 <Accordion title="Accordion title" open>
@@ -243,7 +253,27 @@ import Accordion from '../components/Accordion.astro'
     <li>Item B</li>
   </ul>
 </Accordion>
+
+<Accordion title="Accordion with code example">
+```ts
+function greet(name: string) {
+  console.log(`Hello, ${name}`);
+}
+
+greet("Astro");
 ```
+</Accordion>
+
+<Accordion title="Accordion with code example">
+```ts
+function greet(name: string) {
+  console.log(`Hello, ${name}`);
+}
+
+greet("Astro");
+```
+</Accordion>
+````
 
 
 ### Minimal table
@@ -283,22 +313,29 @@ The main purpose of the ```HtmlFragment``` component is to **embed** a **Plotly*
 
 They exist in the `app/src/content/fragments` folder.
 
+Plotly and D3 are already supported by the template. For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
+
 Here are some examples of the two **libraries** in the template:
 
-D3 version
+<small class="muted">D3 version</small>
   <div className="plot-card">
     <HtmlFragment src="d3-line.html" />
 </div>
+<caption className="caption">D3 Line chart — simple time series example.</caption>
 
   <div className="plot-card">
     <HtmlFragment src="d3-bar.html" />
 </div>
+<caption className="caption">D3 Bar chart — categorical distribution example.</caption>
 
+--- 
 
-Plotly version
+<small class="muted">Plotly version</small>
+
 <div className="plot-card">
   <HtmlFragment src="line.html" />
 </div>
+<caption className="caption">Plotly Line chart — interactive time series with hover and zoom.</caption>
 
 <small className="muted">Example</small>
 ```mdx
@@ -315,8 +352,22 @@ You can embed external content in your article using **iframes**. For example, *
 
 <iframe className="plot-card" src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="660" frameborder="0"></iframe>
 
+
 <small className="muted">Example</small>
 ```mdx
 <iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
 <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
+```
+
+#### gradio
+
+You can also embed **gradio** apps.
+
+<gradio-app theme_mode="light" space="hebrew-llm-leaderboard/leaderboard"></gradio-app>
+
+
+
+<small className="muted">Example</small>
+```mdx
+<gradio-app theme_mode="light" space="hebrew-llm-leaderboard/leaderboard"></gradio-app>
 ```

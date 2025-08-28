@@ -48,7 +48,7 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
       };
 
       const close = () => {
-        const start = content.scrollHeight;
+        const start = wrapper.offsetHeight || content.scrollHeight;
         wrapper.style.height = `${start}px`;
         void wrapper.offsetHeight; // reflow
         wrapper.style.transition = `height ${duration}ms ease`;
@@ -83,7 +83,6 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
   }
 
   .accordion[open] {
-    box-shadow: 0 6px 22px rgba(0,0,0,0.08);
     border-color: color-mix(in oklab, var(--border-color), var(--primary-color) 20%);
   }
 
@@ -92,12 +91,14 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--spacing-1);
-    padding: var(--spacing-1);
+    gap: 4px;
+    padding: 4px;
     cursor: pointer;
     color: var(--text-color);
     user-select: none;
   }
+
+  /* Remove conditional padding to avoid jump on close */
 
   /* Remove native marker */
   .accordion__summary::-webkit-details-marker {
@@ -126,10 +127,23 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     overflow: hidden;
     height: 0px;
     will-change: height;
+    position: relative;
   }
 
   .accordion__content {
-    padding: var(--spacing-1);
+    padding: 12px 4px 4px;
+  }
+
+  /* Separator between header and content when open (edge-to-edge) */
+  .accordion[open] .accordion__content-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 6px; /* space below header */
+    height: 1px;
+    background: var(--neutral-300);
+    pointer-events: none;
   }
 
   /* Focus styles for accessibility */

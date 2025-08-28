@@ -44,21 +44,93 @@
           const base = chroma(baseHex);
           const lc = base.lch();
           const baseH = base.get('hsl.h') || 0;
-          const L = Math.max(40, Math.min(85, lc[0] || 70));
-          const C = Math.max(40, Math.min(90, lc[1] || 80));
-          const offsets = [180, 120, -120, 60, -60];
-          const rest = offsets.map(off => chroma.lch(L, C, (baseH + off + 360) % 360).hex());
-          return [base.hex(), ...rest];
+          const L0 = Math.max(40, Math.min(85, lc[0] || 70));
+          const C0 = Math.max(45, Math.min(75, lc[1] || 70));
+          const MIN_DELTA = 18; // distance minimale en Lab
+
+          const seen = new Set();
+          const results = [];
+
+          const makeSafe = (h, L, C) => {
+            let c = C;
+            let col = chroma.lch(L, c, h);
+            let guard = 0;
+            while (col.clipped && typeof col.clipped === 'function' && col.clipped() && c > 30 && guard < 8) {
+              c -= 5;
+              col = chroma.lch(L, c, h);
+              guard++;
+            }
+            return col;
+          };
+
+          const isFarEnough = (hex) => results.every(prev => chroma.distance(hex, prev, 'lab') >= MIN_DELTA);
+          const pushHex = (col) => {
+            const hex = col.hex();
+            if (!seen.has(hex.toLowerCase())) { results.push(hex); seen.add(hex.toLowerCase()); }
+          };
+
+          // Base en premier
+          pushHex(base);
+
+          // Cinq couleurs supplémentaires, espacées de 60°
+          const angles = [60, 120, 180, 240, 300];
+          const hueOffsets = [0, 20, -20, 40, -40, 60, -60, 80, -80];
+          const lVariants = [L0, Math.max(40, L0 - 6), Math.min(85, L0 + 6)];
+
+          angles.forEach(step => {
+            let accepted = false;
+            for (let li = 0; li < lVariants.length && !accepted; li++) {
+              for (let oi = 0; oi < hueOffsets.length && !accepted; oi++) {
+                let h = (baseH + step + hueOffsets[oi] + 360) % 360;
+                let col = makeSafe(h, lVariants[li], C0);
+                const hex = col.hex();
+                if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
+                  pushHex(col);
+                  accepted = true;
+                }
+              }
+            }
+            if (!accepted) {
+              // Réduction de C si nécessaire
+              let cTry = C0 - 10;
+              let h = (baseH + step + 360) % 360;
+              let trials = 0;
+              while (!accepted && cTry >= 30 && trials < 6) {
+                const col = makeSafe(h, L0, cTry);
+                const hex = col.hex();
+                if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
+                  pushHex(col);
+                  accepted = true;
+                  break;
+                }
+                cTry -= 5;
+                trials++;
+              }
+              // Dernier recours: choisir la teinte la plus éloignée possible même si < seuil
+              if (!accepted) {
+                let bestHex = null; let bestMin = -1;
+                hueOffsets.forEach(off => {
+                  const hh = (baseH + step + off + 360) % 360;
+                  const cand = makeSafe(hh, L0, C0).hex();
+                  const minD = results.reduce((m, prev) => Math.min(m, chroma.distance(cand, prev, 'lab')), Infinity);
+                  if (minD > bestMin && !seen.has(cand.toLowerCase())) { bestMin = minD; bestHex = cand; }
+                });
+                if (bestHex) { seen.add(bestHex.toLowerCase()); results.push(bestHex); }
+              }
+            }
+          });
+
+          return results.slice(0, 6);
       }},
       { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>light to dark</strong>; ideal for <strong>heatmaps</strong>.', generator: (baseHex) => {
           const c = chroma(baseHex).saturate(0.3);
-          return chroma.scale([c.brighten(2), c, c.darken(2)]).mode('lab').correctLightness(true).colors(6);
+          return chroma.scale([c.darken(2), c, c.brighten(2)]).mode('lab').correctLightness(true).colors(6);
       }},
       { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> (e.g., negatives/positives) around a <strong>baseline</strong>.', generator: (baseHex) => {
           const baseH = chroma(baseHex).get('hsl.h');
           const compH = (baseH + 180) % 360;
-          const left = chroma.hsl(compH, 0.75, 0.55);
-          const right = chroma.hsl(baseH, 0.75, 0.55);
+          const left = chroma.hsl(baseH, 0.75, 0.55);
+          const right = chroma.hsl(compH, 0.75, 0.55);
           const center = '#ffffff';
           const leftRamp = chroma.scale([left, center]).mode('lch').correctLightness(true).colors(4);
           const rightRamp = chroma.scale([center, right]).mode('lch').correctLightness(true).colors(4);

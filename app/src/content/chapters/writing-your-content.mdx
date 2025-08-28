@@ -16,7 +16,7 @@ Your article lives in two places
 - `app/src/content/` — where you can find the `article.mdx`, `bibliography.bib` and html fragments.
 - `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
 
-The `article.mdx` file is a markdown file with html. It is the main file that contains your article.
+The `article.mdx` file is the main file that contains your article.
 
 <small className="muted">Example</small>
 ```mdx
@@ -49,21 +49,38 @@ This is a short paragraph written in Markdown. Below is an example image:
 <Image src={placeholder} alt="Example image" />
 ```
 
-### Markdown 
+### MDX 
 
-You can use **markdown** to write your content. Here is the complete [markdown documentation](https://www.markdownguide.org/basic-syntax/).
+MDX is a mix of Markdown and HTML/JSX: write regular Markdown, and embed interactive components inline when needed. We’ll describe the available components you can use later in this guide. For Markdown syntax, see the complete [Markdown documentation](https://www.markdownguide.org/basic-syntax/).
 
 <small className="muted">Example</small>
 ```mdx
-# This is the main title
+{/* IMPORTS */}
+import { Image } from 'astro:assets'
+import placeholder from '../assets/images/placeholder.png'
+import Aside from '../components/Aside.astro'
 
-This is a short paragraph containing **bold** and *italic* text.
+# Mixing Markdown and components
 
-## This is a second level heading
+This paragraph is written in Markdown.
 
-- This is a list item
-- This is a second list item
-- This is a third list item
+<Aside>A short callout inserted via a component.</Aside>
+
+Below is an image imported via Astro and optimized at build time:
+
+<Image src={placeholder} alt="Sample image with Astro optimization" />
+```
+
+
+Use `---` on its own line to insert a horizontal separator between sections. This is a standard Markdown “thematic break”. Don’t confuse it with the `---` used at the very top of the file to delimit the frontmatter.
+
+<small className="muted">Example</small>
+```mdx
+Intro paragraph.
+
+---
+
+Next section begins here.
 ```
 
 
