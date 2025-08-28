@@ -158,58 +158,19 @@ Here are a few variations using the same bibliography:
 [^f1]: Footnote attached to the sentence above.
 ```
 
+### Separator
 
-### Placement
+Use `---` on its own line to insert a horizontal separator between sections. This is a standard Markdown “thematic break”. Don’t confuse it with the `---` used at the very top of the file to delimit the frontmatter.
 
-#### Asides
-
-<Aside>
-  This paragraph presents a **key idea** concisely.
-  <Fragment slot="aside">
-    **Side note** for brief context or a definition.
-  </Fragment>
-  </Aside>
+---
 
 <small className="muted">Example</small>
 ```mdx
-import Aside from '../components/Aside.astro'
+Intro paragraph.
 
-<Aside>
-  Main paragraph with the core idea.
-  <Fragment slot="aside">Short side note.</Fragment>
-</Aside>
-```
+---
 
-Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
-
-#### Wide example
-
-<Wide>
-  <div className="demo-wide">demo wide</div>
-</Wide>
-
-<small className="muted">Example</small>
-```mdx
-import Wide from '../components/Wide.astro'
-
-<Wide>
-  Your content here...
-</Wide>
-```
-
-#### Full-bleed example
-
-<FullBleed>
-  <div className="demo-full-bleed">demo full-bleed</div>
-</FullBleed>
-
-<small className="muted">Example</small>
-```mdx
-import FullBleed from '../components/FullBleed.astro'
-
-<FullBleed>
-  Your content here...
-</FullBleed>
+Next section begins here.
 ```
 
 
@@ -359,7 +320,7 @@ You can embed external content in your article using **iframes**. For example, *
 <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
 ```
 
-#### gradio
+#### Gradio
 
 You can also embed **gradio** apps.
 

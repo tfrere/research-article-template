@@ -72,17 +72,6 @@ Below is an image imported via Astro and optimized at build time:
 ```
 
 
-Use `---` on its own line to insert a horizontal separator between sections. This is a standard Markdown “thematic break”. Don’t confuse it with the `---` used at the very top of the file to delimit the frontmatter.
-
-<small className="muted">Example</small>
-```mdx
-Intro paragraph.
-
----
-
-Next section begins here.
-```
-
 
 ### Chapters
 
@@ -131,3 +120,59 @@ Use the **color picker** below to see how the primary color affects the theme.
 Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
 
 <HtmlFragment src="palettes.html" />
+
+
+### Placement
+
+Use these helpers when you need to step outside the main content flow: **Asides** for contextual side notes, **Wide** to extend beyond the main column, and **Full-bleed** for full-width, immersive sections.
+
+#### Asides
+
+<Aside>
+  This paragraph presents a **key idea** concisely.
+  <Fragment slot="aside">
+    **Side note** for brief context or a definition.
+  </Fragment>
+  </Aside>
+
+<small className="muted">Example</small>
+```mdx
+import Aside from '../components/Aside.astro'
+
+<Aside>
+  Main paragraph with the core idea.
+  <Fragment slot="aside">Short side note.</Fragment>
+</Aside>
+```
+
+Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
+
+#### Wide example
+
+<Wide>
+  <div className="demo-wide">demo wide</div>
+</Wide>
+
+<small className="muted">Example</small>
+```mdx
+import Wide from '../components/Wide.astro'
+
+<Wide>
+  Your content here...
+</Wide>
+```
+
+#### Full-bleed example
+
+<FullBleed>
+  <div className="demo-full-bleed">demo full-bleed</div>
+</FullBleed>
+
+<small className="muted">Example</small>
+```mdx
+import FullBleed from '../components/FullBleed.astro'
+
+<FullBleed>
+  Your content here...
+</FullBleed>
+```

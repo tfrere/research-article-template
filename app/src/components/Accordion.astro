@@ -134,6 +134,12 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     padding: 12px 4px 4px;
   }
 
+  /* Ensure the very last slotted element has no bottom spacing */
+  .accordion .accordion__content > :global(*:last-child) {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
   /* Separator between header and content when open (edge-to-edge) */
   .accordion[open] .accordion__content-wrapper::before {
     content: "";
