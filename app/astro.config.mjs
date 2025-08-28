@@ -15,8 +15,8 @@ export default defineConfig({
   integrations: [
     mermaid({ theme: 'forest', autoTheme: true }),
     mdx(),
-    // Precompress output with Brotli (preferred) and Gzip as fallback
-    compressor({ brotli: true, gzip: true })
+    // Precompress output with Gzip only (Brotli disabled due to server module mismatch)
+    compressor({ brotli: false, gzip: true })
   ],
   devToolbar: {
     enabled: false
