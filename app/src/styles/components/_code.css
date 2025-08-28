@@ -55,7 +55,7 @@ html[data-theme='light'] .astro-code {
 /* Rehype-injected wrapper for non-Shiki pre blocks */
 .code-card { position: relative; }
 .code-card .code-copy {
-  position: absolute; top: 6px; right: 6px; z-index: 3; padding: 6px 12px;
+  position: absolute; top: 6px; right: 6px; z-index: 3; padding: 6px 12px; border: none;
 }
 .code-card .code-copy svg { width: 16px; height: 16px; display: block; fill: currentColor; }
 .code-card pre { margin: 0; margin-bottom: var(--spacing-1);}
@@ -64,8 +64,8 @@ html[data-theme='light'] .astro-code {
 .code-card::after {
   content: attr(data-language);
   position: absolute;
-  top: 8px; /* default, aligns with copy button */
-  right: 8px;
+  top: 8px;
+  right: 56px; /* leave room for copy button */
   font-size: 10px;
   line-height: 1;
   text-transform: uppercase;
