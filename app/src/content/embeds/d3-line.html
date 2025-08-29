@@ -97,12 +97,19 @@
         container.dataset.mounted = 'true';
       }
 
-      // Dataset params matching the Plotly version
-      const datasets = [
-        { name: 'CIFAR-10',    base: { ymin:0.10, ymax:0.90, k:10.0, x0:0.55 }, aug: { ymin:0.15, ymax:0.96, k:12.0, x0:0.40 }, target: 0.97 },
-        { name: 'CIFAR-100',   base: { ymin:0.05, ymax:0.70, k: 9.5, x0:0.60 }, aug: { ymin:0.08, ymax:0.80, k:11.0, x0:0.45 }, target: 0.85 },
-        { name: 'ImageNet-1K', base: { ymin:0.02, ymax:0.68, k: 8.5, x0:0.65 }, aug: { ymin:0.04, ymax:0.75, k: 9.5, x0:0.50 }, target: 0.82 },
+      // CSV: prefer public path, fallback to relative
+      const CSV_PATHS = [
+        '/data/against_baselines.csv',
+        './assets/data/against_baselines.csv',
+        '../assets/data/against_baselines.csv',
+        '../../assets/data/against_baselines.csv'
       ];
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try { const r = await fetch(p, { cache: 'no-cache' }); if (r.ok) return await r.text(); } catch(e) {}
+        }
+        throw new Error('CSV not found: against_baselines.csv');
+      };
 
       // Controls UI
       const controls = document.createElement('div');
@@ -111,38 +118,32 @@
         marginTop: '12px',
         display: 'flex',
         gap: '16px',
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        width: '100%'
       });
 
-      const labelDs = document.createElement('label');
-      Object.assign(labelDs.style, {
-        fontSize: '12px', color: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '6px 10px'
+      const labelMetric = document.createElement('label');
+      Object.assign(labelMetric.style, {
+        fontSize: '12px', color: 'var(--muted-color)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '6px 10px'
       });
-      labelDs.textContent = 'Dataset';
-      const selectDs = document.createElement('select');
-      Object.assign(selectDs.style, { fontSize: '12px' });
-      datasets.forEach((d, i) => {
-        const o = document.createElement('option');
-        o.value = String(i);
-        o.textContent = d.name;
-        selectDs.appendChild(o);
-      });
-      labelDs.appendChild(selectDs);
+      labelMetric.textContent = 'Metric';
+      const selectMetric = document.createElement('select');
+      Object.assign(selectMetric.style, { fontSize: '12px' });
+      labelMetric.appendChild(selectMetric);
+      controls.appendChild(labelMetric);
 
-      const labelAlpha = document.createElement('label');
-      Object.assign(labelAlpha.style, {
-        fontSize: '12px', color: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', gap: '10px', flex: '1', padding: '6px 10px'
+      // Inline legend on the right of the select
+      const legendInline = document.createElement('div');
+      legendInline.className = 'controls__legend';
+      Object.assign(legendInline.style, {
+        display: 'flex',
+        gap: '8px',
+        alignItems: 'center',
+        flexWrap: 'nowrap',
+        fontSize: '11px'
       });
-      labelAlpha.appendChild(document.createTextNode('Augmentation α'));
-      const slider = document.createElement('input');
-      slider.type = 'range'; slider.min = '0'; slider.max = '1'; slider.step = '0.01'; slider.value = '0.70';
-      Object.assign(slider.style, { flex: '1' });
-      const alphaVal = document.createElement('span'); alphaVal.className = 'alpha-value'; alphaVal.textContent = slider.value;
-      labelAlpha.appendChild(slider);
-      labelAlpha.appendChild(alphaVal);
-
-      controls.appendChild(labelDs);
-      controls.appendChild(labelAlpha);
+      controls.appendChild(legendInline);
 
       // Create SVG
       const svg = d3.select(container).append('svg')
@@ -179,34 +180,15 @@
         tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
       }
 
-      // Colors
-      const colorBase = '#64748b';     // slate-500
-      const colorImproved = 'var(--primary-color)';
-      const colorTarget = '#4b5563';   // gray-600
-      const legendBgLight = 'rgba(255,255,255,0.85)';
-      const legendBgDark = 'rgba(17,17,23,0.85)';
+      // Colors per run
+      const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+      const pool = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])];
 
-      // Data and helpers
-      const N = 240;
-      const xs = Array.from({ length: N }, (_, i) => i / (N - 1));
-      const logistic = (x, { ymin, ymax, k, x0 }) => ymin + (ymax - ymin) / (1 + Math.exp(-k * (x - x0)));
-      const blend = (l, e, a) => (1 - a) * l + a * e;
-
-      let datasetIndex = 0;
-      let alpha = parseFloat(slider.value) || 0.7;
-
-      let yBase = [];
-      let yAug = [];
-      let yImp = [];
-      let yTgt = [];
-
-      function computeCurves() {
-        const d = datasets[datasetIndex];
-        yBase = xs.map((x) => logistic(x, d.base));
-        yAug  = xs.map((x) => logistic(x, d.aug));
-        yTgt  = xs.map(() => d.target);
-        yImp  = yBase.map((v, i) => blend(v, yAug[i], alpha));
-      }
+      // State and data
+      let metricList = [];
+      let runList = [];
+      let runOrder = [];
+      const dataByMetric = new Map(); // metric => { run => [{step,value}] }
 
       // Scales and layout
       let width = 800, height = 360;
@@ -214,21 +196,14 @@
       let xScale = d3.scaleLinear();
       let yScale = d3.scaleLinear();
 
-      // Paths
+      // Line generator
       const lineGen = d3.line()
-        .curve(d3.curveCatmullRom.alpha(0.6))
-        .x((d, i) => xScale(xs[i]))
-        .y((d) => yScale(d));
-
-      const pathBase = gLines.append('path').attr('fill', 'none').attr('stroke', colorBase).attr('stroke-width', 2);
-      const pathImp  = gLines.append('path').attr('class', 'improved').attr('fill', 'none').style('stroke', 'var(--primary-color)').attr('stroke-width', 2);
-      const pathTgt  = gLines.append('path').attr('fill', 'none').attr('stroke', colorTarget).attr('stroke-width', 2).attr('stroke-dasharray', '6,6');
+        .curve(d3.curveCatmullRom.alpha(0.05))
+        .x((d) => xScale(d.step))
+        .y((d) => yScale(d.value));
 
       // Hover elements
       const hoverLine = gHover.append('line').attr('stroke-width', 1);
-      const hoverDotB = gHover.append('circle').attr('r', 3.5).attr('fill', colorBase).attr('stroke', '#fff').attr('stroke-width', 1);
-      const hoverDotI = gHover.append('circle').attr('class', 'improved').attr('r', 3.5).style('fill', 'var(--primary-color)').attr('stroke', '#fff').attr('stroke-width', 1);
-      const hoverDotT = gHover.append('circle').attr('r', 3.5).attr('fill', colorTarget).attr('stroke', '#fff').attr('stroke-width', 1);
 
       const overlay = gHover.append('rect').attr('fill', 'transparent').style('cursor', 'crosshair');
 
@@ -246,8 +221,8 @@
         const innerHeight = height - margin.top - margin.bottom;
         gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
 
-        xScale.domain([0, 1]).range([0, innerWidth]);
-        yScale.domain([0, 1]).range([innerHeight, 0]);
+        xScale.range([0, innerWidth]);
+        yScale.range([innerHeight, 0]);
 
         // Grid (horizontal)
         gGrid.selectAll('*').remove();
@@ -289,19 +264,19 @@
           .attr('text-anchor', 'middle')
           .style('font-size', '12px')
           .style('fill', tickColor)
-          .text('Epoch');
+          .text('Step');
         gAxes.append('text')
           .attr('class', 'axis-label axis-label--y')
           .attr('text-anchor', 'middle')
           .attr('transform', `translate(${-52},${innerHeight/2}) rotate(-90)`) 
           .style('font-size', '12px')
           .style('fill', tickColor)
-          .text('Accuracy');
+          .text('Value');
 
         overlay.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
         hoverLine.attr('y1', 0).attr('y2', innerHeight).attr('stroke', axisColor);
 
-        // Legend inside plot (bottom-right), no background/border/shadow
+        // Legend placeholder; actual content set in renderMetric
         const legendWidth = Math.min(180, Math.max(120, Math.round(innerWidth * 0.22)));
         const legendHeight = 64;
         gLegend
@@ -319,105 +294,102 @@
           lineHeight: '1.35',
           color: 'var(--text-color)'
         });
-        legendRoot.html(`
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="width:18px;height:3px;background:${colorBase};border-radius:2px;display:inline-block"></span>
-              <span>Baseline</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="width:18px;height:3px;background:${colorImproved};border-radius:2px;display:inline-block"></span>
-              <span>Improved</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="width:18px;height:0;border-top:2px dashed ${colorTarget};display:inline-block"></span>
-              <span>Target</span>
-            </div>
-          </div>
-        `);
+
+        return { innerWidth, innerHeight };
       }
 
-      function updatePaths() {
-        pathBase.transition().duration(200).attr('d', lineGen(yBase));
-        pathImp.transition().duration(200).attr('d', lineGen(yImp));
-        pathTgt.transition().duration(200).attr('d', lineGen(yTgt));
+      function renderMetric(metricKey){
+        const map = dataByMetric.get(metricKey) || {};
+        const runs = runOrder;
+        // Domain
+        let minStep = Infinity, maxStep = -Infinity, maxVal = 0, minVal = Infinity;
+        runs.forEach(r => {
+          const arr = map[r] || [];
+          arr.forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); maxVal = Math.max(maxVal, pt.value); minVal = Math.min(minVal, pt.value); });
+        });
+        if (!isFinite(minStep) || !isFinite(maxStep)) { return; }
+        xScale.domain([minStep, maxStep]);
+        const isRank = /rank/i.test(metricKey);
+        yScale.domain(isRank ? [Math.max(maxVal, 1), Math.min(minVal, 0)] : [0, Math.max(1, maxVal)]).nice();
+
+        const { innerWidth, innerHeight } = updateScales();
+
+        // Bind lines
+        const series = runs.map((r, i) => ({ run: r, color: pool[i % pool.length], values: (map[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
+        const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
+        paths.enter().append('path').attr('class','run-line').attr('fill','none').attr('stroke-width',2)
+          .attr('stroke', d=>d.color).attr('opacity',0.9)
+          .attr('d', d=>lineGen(d.values))
+          .merge(paths)
+          .transition().duration(200)
+          .attr('stroke', d=>d.color)
+          .attr('d', d=>lineGen(d.values));
+        paths.exit().remove();
+
+        // Inline legend content (row, right side) compact
+        legendInline.innerHTML = series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:18px;height:10px;background:${s.color};border-radius:3px;display:inline-block"></span><span>${s.run}</span></span>`).join('');
+
+        // Hover
+        const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step)));
+        const steps = Array.from(stepSet).sort((a,b)=>a-b);
+        function onMove(event){
+          const [mx, my] = d3.pointer(event, overlay.node());
+          const sx = Math.max(steps[0], Math.min(steps[steps.length-1], Math.round(xScale.invert(mx)/1)*1));
+          const nearest = steps.reduce((best, s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]);
+          const xpx = xScale(nearest);
+          hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null).attr('stroke', 'rgba(0,0,0,0.25)');
+          // Tooltip content
+          let html = `<div><strong>${metricKey}</strong></div><div><strong>step</strong> ${nearest}</div>`;
+          series.forEach(s=>{
+            const m = new Map(s.values.map(v=>[v.step, v.value]));
+            const val = m.has(nearest) ? m.get(nearest) : null;
+            if (val != null) html += `<div><span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:50%;margin-right:6px;"></span><strong>${s.run}</strong> ${(+val).toFixed(4)}</div>`;
+          });
+          tipInner.innerHTML = html;
+          const offsetX = 12, offsetY = 12;
+          tip.style.opacity = '1'; tip.style.transform = `translate(${Math.round(mx + offsetX + margin.left)}px, ${Math.round(my + offsetY + margin.top)}px)`;
+        }
+        function onLeave(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
 
-      function updateAlpha(a) {
-        alpha = a;
-        alphaVal.textContent = a.toFixed(2);
-        yImp = yBase.map((v, i) => blend(v, yAug[i], alpha));
-        pathImp.transition().duration(80).attr('d', lineGen(yImp));
-      }
+      // (old hover removed; hover is attached in renderMetric)
 
-      function applyDataset() {
-        computeCurves();
-        updatePaths();
-      }
+      // Load CSV and wire controls
+      (async () => {
+        try {
+          const text = await fetchFirstAvailable(CSV_PATHS);
+          const rows = d3.csvParse(text, d => ({ run: (d.run||'').trim(), step: +d.step, metric: (d.metric||'').trim(), value: +d.value }));
+          metricList = Array.from(new Set(rows.map(r=>r.metric))).sort();
+          runList = Array.from(new Set(rows.map(r=>r.run))).sort();
+          runOrder = ['FineVision', ...runList.filter(r=>r!=='FineVision')];
+          // Build dataByMetric
+          metricList.forEach(m => {
+            const map = {};
+            runList.forEach(r => { map[r] = []; });
+            rows.filter(r=>r.metric===m).forEach(r => { if (!isNaN(r.step) && !isNaN(r.value)) map[r.run].push({ step:r.step, value:r.value }); });
+            dataByMetric.set(m, map);
+          });
 
-      // Hover interactions
-      function onMove(event) {
-        const [mx, my] = d3.pointer(event, overlay.node());
-        const xi = Math.max(0, Math.min(N - 1, Math.round(xScale.invert(mx) * (N - 1))));
-        const xpx = xScale(xs[xi]);
-        const yb = yBase[xi], yi = yImp[xi], yt = yTgt[xi];
-        hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
-        hoverDotB.attr('cx', xpx).attr('cy', yScale(yb)).style('display', null);
-        hoverDotI.attr('cx', xpx).attr('cy', yScale(yi)).style('display', null);
-        hoverDotT.attr('cx', xpx).attr('cy', yScale(yt)).style('display', null);
+          // Populate metric select (default to average_rank if present)
+          metricList.forEach((m)=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; selectMetric.appendChild(o); });
+          const def = metricList.find(m => /average_rank/i.test(m)) || metricList[0];
+          if (def) selectMetric.value = def;
 
-        // Tooltip content
-        const ds = datasets[datasetIndex].name;
-        tipInner.innerHTML = `<div><strong>${ds}</strong></div>` +
-          `<div><strong>x</strong> ${xs[xi].toFixed(2)}</div>` +
-          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorBase};border-radius:50%;margin-right:6px;"></span><strong>Baseline</strong> ${yb.toFixed(3)}</div>` +
-          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorImproved};border-radius:50%;margin-right:6px;"></span><strong>Improved</strong> ${yi.toFixed(3)}</div>` +
-          `<div><span style="display:inline-block;width:10px;height:10px;background:${colorTarget};border-radius:50%;margin-right:6px;"></span><strong>Target</strong> ${yt.toFixed(3)}</div>`;
-        const offsetX = 12, offsetY = 12;
-        tip.style.opacity = '1';
-        tip.style.transform = `translate(${Math.round(mx + offsetX + margin.left)}px, ${Math.round(my + offsetY + margin.top)}px)`;
-      }
+          container.appendChild(controls);
+          updateScales();
+          renderMetric(selectMetric.value);
 
-      function onLeave() {
-        tip.style.opacity = '0';
-        tip.style.transform = 'translate(-9999px, -9999px)';
-        hoverLine.style('display', 'none');
-        hoverDotB.style('display', 'none');
-        hoverDotI.style('display', 'none');
-        hoverDotT.style('display', 'none');
-      }
+          selectMetric.addEventListener('change', ()=>{ renderMetric(selectMetric.value); });
 
-      overlay.on('mousemove', onMove).on('mouseleave', onLeave);
-
-      // Init + controls wiring
-      computeCurves();
-      updateScales();
-      updatePaths();
-
-      // Attach controls after SVG for consistency with Plotly fragment
-      container.appendChild(controls);
-
-      selectDs.addEventListener('change', (e) => {
-        datasetIndex = parseInt(e.target.value) || 0;
-        applyDataset();
-      });
-      slider.addEventListener('input', (e) => {
-        const a = parseFloat(e.target.value) || 0;
-        updateAlpha(a);
-      });
-
-      // Resize handling
-      const render = () => {
-        updateScales();
-        updatePaths();
-      };
-      if (window.ResizeObserver) {
-        const ro = new ResizeObserver(() => render());
-        ro.observe(container);
-      } else {
-        window.addEventListener('resize', render);
-      }
-      render();
+          const rerender = () => { renderMetric(selectMetric.value); };
+          if (window.ResizeObserver) { const ro = new ResizeObserver(()=>rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap';
+          container.appendChild(pre);
+        }
+      })();
     };
 
     if (document.readyState === 'loading') {

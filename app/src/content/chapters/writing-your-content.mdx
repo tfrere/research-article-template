@@ -11,12 +11,14 @@ import audioDemo from '../assets/audio/audio-example.wav';
 
 ### Introduction
 
-Your article lives in two places
+Your article lives in one place
 
-- `app/src/content/` — where you can find the `article.mdx`, `bibliography.bib` and html fragments.
-- `app/src/content/assets/` — images, audio, and other static assets. (handled by git lfs)
+Everything is self-contained under `app/src/content/`:
+- MDX: `article.mdx` and [optional chapters](#chapters) in `chapters/`
+- Assets: `assets/` (images, audio; tracked via Git LFS)
+- Embeds: `embed/` (HTMLEmbed for Plotly/D3, etc.) — see [HtmlEmbed](#htmlembed)
 
-The `article.mdx` file is the main file that contains your article.
+The `article.mdx` file is the main entry point of your article.
 
 <small className="muted">Example</small>
 ```mdx
@@ -79,7 +81,7 @@ Below is an image imported via Astro and optimized at build time:
 **If** your article becomes **too long** for one file, you can **organize** it into **separate chapters**.
 
 Simply **create a new file** in the `app/src/content/chapters` **directory**.  
-Then, **include** your new chapter in the main article.
+Then, **include** your new chapter in the main `article.mdx` like below.
 
 
 <small className="muted">Example</small>
@@ -88,8 +90,7 @@ import MyChapter from './chapters/my-chapter.mdx';
 
 <MyChapter />
 ```
-
-You can see an example of this in the <a target="_blank" href="https://huggingface.co/spaces/tfrere/research-article-template/blob/main/app/src/content/chapters/best-pratices.mdx">app/src/content/chapters/best-pratices.mdx</a> file.
+<small className="muted">You can see a living example here <a target="_blank" href="https://huggingface.co/spaces/tfrere/research-article-template/blob/main/app/src/content/chapters/best-pratices.mdx">app/src/content/chapters/best-pratices.mdx</a>.</small>
 
 ### Table of contents
  
@@ -120,6 +121,18 @@ Use the **color picker** below to see how the primary color affects the theme.
 Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
 
 <HtmlEmbed frameless src="palettes.html" />
+
+
+### Embeds
+
+Use HTML fragments to embed interactive charts and widgets. Place your fragments under `app/src/content/embeds/` and reference them via the `HtmlEmbed` component.
+
+<small className="muted">Example</small>
+```mdx
+import HtmlEmbed from '../components/HtmlEmbed.astro'
+
+<HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
+```
 
 
 ### Placement

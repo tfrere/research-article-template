@@ -148,7 +148,11 @@
         // Stack values
         const stacked = seqLabels.map((label, i) => {
           let acc = 0; const items = [];
-          series.forEach((s) => { const y0 = acc; const y1 = acc + s.values[i]; items.push({ key: s.key, color: s.color, i, y0, y1, xLabel: label, value: s.values[i] }); acc = y1; });
+          series.forEach((s, idx) => {
+            const y0 = acc; const y1 = acc + s.values[i];
+            items.push({ key: s.key, color: s.color, i, y0, y1, xLabel: label, value: s.values[i], isBottom: idx === 0, isTop: idx === series.length - 1 });
+            acc = y1;
+          });
           return { label, items };
         });
 
@@ -160,9 +164,27 @@
         groupsEnter.merge(groups).attr('transform', (d)=>`translate(${x0(d.label)},0)`);
         groups.exit().remove();
 
-        const rects = groupsEnter.merge(groups).selectAll('rect.bar').data(d=>d.items, d=>d.key);
-        rects.enter().append('rect').attr('class','bar').attr('x', 0).attr('width', bandWidth)
-          .attr('y', (d)=>y(d.y1)).attr('height', (d)=>Math.max(0.5, y(d.y0) - y(d.y1)))
+        // Helper to draw per-corner rounded rectangle path
+        const rCorner = 4;
+        const roundedPath = (x, yTop, w, h, isTop, isBottom) => {
+          const r = Math.min(rCorner, Math.max(0, Math.min(w, h) / 2));
+          const rTL = isTop ? r : 0, rTR = isTop ? r : 0, rBR = isBottom ? r : 0, rBL = isBottom ? r : 0;
+          const x0 = x, y0 = yTop, x1 = x + w, y1 = yTop + h;
+          return `M${x0 + rTL},${y0}`
+            + `H${x1 - rTR}`
+            + (rTR ? `Q${x1},${y0} ${x1},${y0 + rTR}` : `V${y0}`)
+            + `V${y1 - rBR}`
+            + (rBR ? `Q${x1},${y1} ${x1 - rBR},${y1}` : `H${x1}`)
+            + `H${x0 + rBL}`
+            + (rBL ? `Q${x0},${y1} ${x0},${y1 - rBL}` : `V${y1}`)
+            + `V${y0 + rTL}`
+            + (rTL ? `Q${x0},${y0} ${x0 + rTL},${y0}` : `H${x0}`)
+            + 'Z';
+        };
+
+        const bars = groupsEnter.merge(groups).selectAll('path.bar').data(d=>d.items, d=>d.key);
+        bars.enter().append('path').attr('class','bar')
+          .attr('d', (d)=> roundedPath(0, y(d.y1), bandWidth, Math.max(0.5, y(d.y0) - y(d.y1)), d.isTop, d.isBottom))
           .attr('fill', (d)=>d.color)
           .on('mouseenter', function(ev, d){
             d3.select(this).attr('stroke', 'rgba(0,0,0,0.85)').attr('stroke-width', 1);
@@ -173,12 +195,11 @@
             const [mx, my] = d3.pointer(ev, container); const offsetX = 12, offsetY = 12; tip.style.transform = `translate(${Math.round(mx+offsetX)}px, ${Math.round(my+offsetY)}px)`;
           })
           .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','none'); })
-          .merge(rects)
+          .merge(bars)
           .transition().duration(200)
-          .attr('width', bandWidth)
-          .attr('y', (d)=>y(d.y1)).attr('height', (d)=>Math.max(0.5, y(d.y0) - y(d.y1)))
+          .attr('d', (d)=> roundedPath(0, y(d.y1), bandWidth, Math.max(0.5, y(d.y0) - y(d.y1)), d.isTop, d.isBottom))
           .attr('fill', (d)=>d.color);
-        rects.exit().remove();
+        bars.exit().remove();
       }
 
       function update(){ drawBars(); }

@@ -1,12 +1,12 @@
 <div class="palettes" style="width:100%; margin: 10px 0;">
   <style>
     .palettes .palettes__grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .palettes .palette-card { position: relative; display: grid; grid-template-columns: 260px 1fr auto; align-items: stretch; gap: 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-bg); padding: 12px; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
+    .palettes .palette-card { position: relative; display: grid; grid-template-columns: auto 1fr 260px; align-items: stretch; gap: 14px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-bg); padding: 12px; transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease; }
     /* removed circular badge */
     .palettes .palette-card__swatches { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; margin: 0;  }
     .palettes .palette-card__swatches .sw { width: 100%; min-width: 0; min-height: 0; border-radius: 8px; border: 1px solid var(--border-color); }
-    .palettes .palette-card__content { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; justify-content: center; min-width: 0; padding-left: 12px; border-left: 1px solid var(--border-color); }
-    .palettes .palette-card__actions { display: flex; align-items: center; justify-content: flex-end; justify-self: end; }
+    .palettes .palette-card__content { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; justify-content: center; min-width: 0; padding-right: 12px; border-right: 1px solid var(--border-color); }
+    .palettes .palette-card__actions { display: flex; align-items: center; justify-content: flex-start; justify-self: start; }
     .palettes .palette-card__actions { align-self: stretch; }
     /* .palettes .copy-btn { margin: 0; padding: 0 10px; height: 100%; border-radius: 8px; } */
     /* .palettes .copy-btn:hover { background: var(--primary-color); color: var(--on-primary)!important; border-color: transparent; }
@@ -15,7 +15,7 @@
     @media (max-width: 640px) {
       .palettes .palette-card { grid-template-columns: 1fr; align-items: stretch; gap: 10px; }
       .palettes .palette-card__swatches { grid-template-columns: repeat(6, minmax(0, 1fr));  }
-      .palettes .palette-card__content { border-left: none; padding-left: 0; }
+      .palettes .palette-card__content { border-right: none; padding-right: 0; }
       .palettes .palette-card__actions { justify-self: start; }
     }
   </style>
@@ -124,11 +124,11 @@
 
           return results.slice(0, 6);
       }},
-      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>light to dark</strong>; ideal for <strong>heatmaps</strong>.', generator: (baseHex) => {
+      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.', generator: (baseHex) => {
           const c = chroma(baseHex).saturate(0.3);
           return chroma.scale([c.darken(2), c, c.brighten(2)]).mode('lab').correctLightness(true).colors(6);
       }},
-      { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> (e.g., negatives/positives) around a <strong>baseline</strong>.', generator: (baseHex) => {
+      { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> around a <strong>baseline</strong>. (e.g., negatives/positives)', generator: (baseHex) => {
           const baseH = chroma(baseHex).get('hsl.h');
           const compH = (baseH + 180) % 360;
           const left = chroma.hsl(baseH, 0.75, 0.55);
@@ -180,7 +180,7 @@
 
         content.appendChild(title); content.appendChild(desc);
         actions.appendChild(btn);
-        card.appendChild(sw); card.appendChild(content); card.appendChild(actions);
+        card.appendChild(actions); card.appendChild(content); card.appendChild(sw);
         grid.appendChild(card);
         });
       };

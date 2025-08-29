@@ -1,0 +1,227 @@
+<div class="d3-pie" style="width:100%;margin:10px 0;"></div>
+<style>
+  .d3-pie .legend { font-size: 12px; line-height: 1.35; color: var(--text-color); }
+  .d3-pie .legend .items { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; }
+  .d3-pie .legend .item { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+  .d3-pie .legend .swatch { width:14px; height:14px; border-radius:3px; display:inline-block; border: 1px solid var(--border-color); }
+  .d3-pie .caption { font-size: 14px; font-weight: 800; fill: var(--text-color); }
+  .d3-pie .nodata { font-size: 12px; fill: var(--muted-color); }
+  .d3-pie .slice-label { font-size: 11px; font-weight: 700; fill: var(--text-color); paint-order: stroke; stroke: rgba(255,255,255,0.6); stroke-width: 3px; }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+      const container = (mount && mount.querySelector && mount.querySelector('.d3-pie')) || document.querySelector('.d3-pie');
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
+          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // SVG scaffolding
+      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gLegend = gRoot.append('foreignObject').attr('class','legend');
+      const gPlots = gRoot.append('g').attr('class','plots');
+
+      // Metrics (order and labels as in the Python script)
+      const METRICS = [
+        { key:'answer_total_tokens', name:'Answer Tokens', title:'Weighted by Answer Tokens', letter:'a' },
+        { key:'total_samples',       name:'Number of Samples', title:'Weighted by Number of Samples', letter:'b' },
+        { key:'total_turns',         name:'Number of Turns', title:'Weighted by Number of Turns', letter:'c' },
+        { key:'total_images',        name:'Number of Images', title:'Weighted by Number of Images', letter:'d' }
+      ];
+
+      // CSV: prefer inline <script type="text/csv" class="d3-pie__csv">, otherwise fallback to fetch
+      const CSV_PATHS = [
+        '/data/finevision.csv', // public path priority
+        '/assets/data/finevision.csv',
+        './assets/data/finevision.csv',
+        '../assets/data/finevision.csv',
+        '../../assets/data/finevision.csv'
+      ];
+
+      const getInlineCsv = () => {
+        const el = container.querySelector('script.d3-pie__csv[type="text/csv"]');
+        return el ? el.textContent.trim() : '';
+      };
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const res = await fetch(p, { cache: 'no-cache' });
+            if (res.ok) { return await res.text(); }
+          } catch (_) { /* try next */ }
+        }
+        throw new Error('CSV introuvable: finevision.csv');
+      };
+
+      const parseCsv = (text) => d3.csvParse(text, (d) => ({
+        subset_name: (d['subset_name']||'').trim(),
+        eagle_cathegory: (d['eagle_cathegory']||'').trim(),
+        answer_total_tokens: +((d['answer_total_tokens']||'0').toString().trim()) || 0,
+        total_samples: +((d['total_samples']||'0').toString().trim()) || 0,
+        total_turns: +((d['total_turns']||'0').toString().trim()) || 0,
+        total_images: +((d['total_images']||'0').toString().trim()) || 0
+      }));
+
+      // Layout
+      let width=800, height=460; const margin = { top: 8, right: 24, bottom: 60, left: 24 };
+      const CAPTION_GAP = 28;   // espace entre titre et donut (augmenté)
+      const LEGEND_GAP = 8;     // espace entre donut et légende (réduit)
+      const updateSize = () => {
+        width = container.clientWidth || 800;
+        height = Math.max(320, Math.round(width/2.5));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+      };
+
+      function renderLegend(categories, colorOf, innerWidth, innerHeight){
+        const legendHeight = 60;
+        gLegend.attr('x', 0).attr('y', innerHeight + LEGEND_GAP).attr('width', innerWidth).attr('height', legendHeight);
+        const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
+        root.html(`<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:800">${c}</span></div>`).join('')}</div>`);
+      }
+
+      function drawPies(rows){
+        const { innerWidth, innerHeight } = updateSize();
+
+        // Categories
+        const categories = Array.from(new Set(rows.map(r => r.eagle_cathegory))).sort();
+
+        // Build a categorical palette anchored on bar chart vibes + theme primary
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        const base = [primary, '#4EA5B7', '#E38A42', '#CEC0FA'];
+        const pool = Array.from(new Set([
+          ...base,
+          ...(d3.schemeTableau10 || []),
+          ...(d3.schemeSet3 || []),
+          ...(d3.schemePastel1 || []),
+        ].flat().filter(Boolean)));
+
+        const colorOf = (cat) => {
+          const idx = categories.indexOf(cat);
+          return pool[idx % pool.length] || primary;
+        };
+
+        renderLegend(categories, colorOf, innerWidth, innerHeight);
+
+        // Clear plots
+        gPlots.selectAll('*').remove();
+
+        const gapX = 20;
+        const cols = 4;
+        const pieAreaWidth = innerWidth;
+        const cellWidth = (pieAreaWidth - gapX * (cols - 1)) / cols;
+        const cellHeight = innerHeight - 6; // room for captions
+        const radius = Math.max(30, Math.min(cellWidth, cellHeight) * 0.42);
+        const innerR = Math.round(radius * 0.58); // donut, trou modéré
+
+        const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
+        const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
+        const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
+
+        const captions = new Map(METRICS.map(m => [m.key, `${m.title}`]));
+
+        METRICS.forEach((metric, idx) => {
+          // Aggregate by category
+          const totals = new Map(); categories.forEach(c => totals.set(c, 0));
+          rows.forEach(r => { totals.set(r.eagle_cathegory, totals.get(r.eagle_cathegory) + (r[metric.key] || 0)); });
+          const values = categories.map(c => ({ category: c, value: totals.get(c) || 0 }));
+          const totalSum = d3.sum(values, d => d.value);
+
+          const col = idx; // 0..3
+          const cx = col * (cellWidth + gapX) + cellWidth / 2;
+          const cy = innerHeight / 2;
+
+          const gCell = gPlots.append('g').attr('transform', `translate(${cx},${cy})`);
+
+          if (!totalSum || totalSum <= 0) {
+            gCell.append('text').attr('class','nodata').attr('text-anchor','middle').attr('dy','0').text('No data for this metric');
+          } else {
+            const data = pie(values);
+            const percent = (v) => (v / totalSum) * 100;
+
+            // Slices
+            const slices = gCell.selectAll('path.slice').data(data).enter().append('path').attr('class','slice')
+              .attr('d', arc)
+              .attr('fill', d => colorOf(d.data.category))
+              .attr('stroke', 'var(--surface-bg)')
+              .attr('stroke-width', 1.2)
+              .on('mouseenter', function(ev, d){
+                d3.select(this).attr('stroke', 'rgba(0,0,0,0.85)').attr('stroke-width', 1);
+                const p = percent(d.data.value);
+                tipInner.innerHTML = `<div><strong>${d.data.category}</strong></div><div><strong>${metric.name}</strong> ${d.data.value.toLocaleString()}</div><div><strong>Share</strong> ${p.toFixed(1)}%</div>`;
+                tip.style.opacity = '1';
+              })
+              .on('mousemove', function(ev){
+                const [mx, my] = d3.pointer(ev, container); const offsetX = 12, offsetY = 12; tip.style.transform = `translate(${Math.round(mx+offsetX)}px, ${Math.round(my+offsetY)}px)`;
+              })
+              .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','var(--surface-bg)'); });
+
+            // Percentage labels (>= 3%)
+            gCell.selectAll('text.slice-label').data(data.filter(d => percent(d.data.value) >= 3)).enter()
+              .append('text').attr('class','slice-label').style('pointer-events','none')
+              .attr('transform', d => `translate(${arcLabel.centroid(d)})`)
+              .attr('text-anchor','middle')
+              .text(d => `${percent(d.data.value).toFixed(1)}%`);
+          }
+
+          // Caption above donut
+          gCell.append('text')
+            .attr('class','caption')
+            .attr('text-anchor','middle')
+            .attr('y', -(radius + CAPTION_GAP))
+            .text(captions.get(metric.key));
+        });
+      }
+
+      async function init(){
+        try {
+          let text = getInlineCsv();
+          if (!text) { text = await fetchFirstAvailable(CSV_PATHS); }
+          const rows = parseCsv(text);
+          drawPies(rows);
+
+          // Resize handling
+          const rerender = () => drawPies(rows);
+          if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); }
+          else { window.addEventListener('resize', rerender); }
+        } catch (err) {
+          const pre = document.createElement('pre'); pre.textContent = (err && err.message) ? err.message : String(err);
+          pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap';
+          container.appendChild(pre);
+        }
+      }
+
+      init();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+
+
+
