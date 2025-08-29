@@ -127,7 +127,7 @@
         const cellWidth = (pieAreaWidth - gapX * (cols - 1)) / cols;
         const cellHeight = innerHeight - 6; // room for captions
         const radius = Math.max(30, Math.min(cellWidth, cellHeight) * 0.42);
-        const innerR = Math.round(radius * 0.58); // donut, trou modéré
+        const innerR = Math.round(radius * 0.28); // donut, trou modéré
 
         const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);

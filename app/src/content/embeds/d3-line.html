@@ -342,22 +342,8 @@
           .attr('d', d=>gen(d.values));
         paths.exit().remove();
 
-        // Points for rank metrics (discrete steps)
-        if (isRank) {
-          const pointData = series.flatMap(s => s.values.map(v => ({ run: s.run, color: s.color, step: v.step, value: v.value })));
-          const circles = gPoints.selectAll('circle.point').data(pointData, d => d.run + '-' + d.step);
-          circles.enter().append('circle').attr('class', 'point')
-            .attr('r', 2.5)
-            .attr('fill', d => d.color)
-            .attr('cx', d => xScale(d.step))
-            .attr('cy', d => yScale(d.value))
-            .merge(circles)
-            .attr('cx', d => xScale(d.step))
-            .attr('cy', d => yScale(d.value));
-          circles.exit().remove();
-        } else {
-          gPoints.selectAll('*').remove();
-        }
+        // No point markers for rank metrics (and none for others)
+        gPoints.selectAll('*').remove();
 
         // Inline legend content (row, right side) compact
         legendInline.innerHTML = series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:18px;height:10px;background:${s.color};border-radius:3px;display:inline-block"></span><span>${s.run}</span></span>`).join('');
@@ -398,7 +384,7 @@
           const rows = d3.csvParse(text, d => ({ run: (d.run||'').trim(), step: +d.step, metric: (d.metric||'').trim(), value: +d.value }));
           metricList = Array.from(new Set(rows.map(r=>r.metric))).sort();
           runList = Array.from(new Set(rows.map(r=>r.run))).sort();
-          runOrder = ['FineVision', ...runList.filter(r=>r!=='FineVision')];
+          runOrder = runList;
           // Build dataByMetric
           metricList.forEach(m => {
             const map = {};
