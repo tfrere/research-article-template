@@ -318,19 +318,34 @@
         const runs = runOrder;
         // Domain
         let minStep = Infinity, maxStep = -Infinity, maxVal = 0, minVal = Infinity;
+        const isRank = /rank/i.test(metricKey);
+        const isAverage = /average/i.test(metricKey);
+        const isRankStrict = isRank && !isAverage;
         runs.forEach(r => {
           const arr = map[r] || [];
-          arr.forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); maxVal = Math.max(maxVal, pt.value); minVal = Math.min(minVal, pt.value); });
+          arr.forEach(pt => {
+            const val = isRankStrict ? Math.round(pt.value) : pt.value;
+            minStep = Math.min(minStep, pt.step);
+            maxStep = Math.max(maxStep, pt.step);
+            maxVal = Math.max(maxVal, val);
+            minVal = Math.min(minVal, val);
+          });
         });
         if (!isFinite(minStep) || !isFinite(maxStep)) { return; }
         xScale.domain([minStep, maxStep]);
-        const isRank = /rank/i.test(metricKey);
         yScale.domain(isRank ? [Math.max(maxVal, 1), Math.min(minVal, 0)] : [0, Math.max(1, maxVal)]).nice();
 
         const { innerWidth, innerHeight } = updateScales();
 
         // Bind lines
-        const series = runs.map((r, i) => ({ run: r, color: pool[i % pool.length], values: (map[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
+        const series = runs.map((r, i) => ({
+          run: r,
+          color: pool[i % pool.length],
+          values: (map[r]||[])
+            .slice()
+            .sort((a,b)=>a.step-b.step)
+            .map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value) } : pt)
+        }));
         const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
         const gen = isRank ? lineGenStep : lineGenSmooth;
         paths.enter().append('path').attr('class','run-line').attr('fill','none').attr('stroke-width',2)
@@ -363,7 +378,7 @@
             const m = new Map(s.values.map(v=>[v.step, v.value]));
             const val = m.has(nearest) ? m.get(nearest) : null;
             if (val != null) {
-              const formatVal = (vv) => (isRank ? d3.format('d')(vv) : (+vv).toFixed(4));
+              const formatVal = (vv) => (isRankStrict ? d3.format('d')(vv) : (+vv).toFixed(4));
               html += `<div><span style=\"display:inline-block;width:10px;height:10px;background:${s.color};border-radius:50%;margin-right:6px;\"></span><strong>${s.run}</strong> ${formatVal(val)}</div>`;
             }
           });
