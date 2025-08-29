@@ -119,19 +119,18 @@
         display: 'flex',
         gap: '16px',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         width: '100%'
       });
 
       const labelMetric = document.createElement('label');
       Object.assign(labelMetric.style, {
-        fontSize: '12px', color: 'var(--muted-color)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '6px 10px'
+        fontSize: '12px', color: 'var(--muted-color)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '6px 10px', marginLeft: 'auto'
       });
       labelMetric.textContent = 'Metric';
       const selectMetric = document.createElement('select');
       Object.assign(selectMetric.style, { fontSize: '12px' });
       labelMetric.appendChild(selectMetric);
-      controls.appendChild(labelMetric);
 
       // Inline legend on the right of the select
       const legendInline = document.createElement('div');
@@ -141,9 +140,11 @@
         gap: '8px',
         alignItems: 'center',
         flexWrap: 'nowrap',
-        fontSize: '11px'
+        fontSize: '11px',
+        marginLeft: '8px'
       });
       controls.appendChild(legendInline);
+      controls.appendChild(labelMetric);
 
       // Create SVG
       const svg = d3.select(container).append('svg')
@@ -224,11 +225,20 @@
         xScale.range([0, innerWidth]);
         yScale.range([innerHeight, 0]);
 
+        // Compute integer ticks for Y
+        const yDomain = yScale.domain();
+        const yMin = Math.min(yDomain[0], yDomain[1]);
+        const yMax = Math.max(yDomain[0], yDomain[1]);
+        let yStep = Math.max(1, Math.round((yMax - yMin) / 6));
+        if (!isFinite(yStep) || yStep <= 0) yStep = 1;
+        let yIntTicks = [];
+        for (let v = Math.ceil(yMin); v <= Math.floor(yMax); v += yStep) { yIntTicks.push(v); }
+        if (yIntTicks.length === 0) { yIntTicks = [Math.round(yMin), Math.round(yMax)]; }
+
         // Grid (horizontal)
         gGrid.selectAll('*').remove();
-        const yTicks = yScale.ticks(6);
         gGrid.selectAll('line')
-          .data(yTicks)
+          .data(yIntTicks)
           .join('line')
           .attr('x1', 0)
           .attr('x2', innerWidth)
@@ -241,7 +251,7 @@
         // Axes
         gAxes.selectAll('*').remove();
         const xAxis = d3.axisBottom(xScale).ticks(8).tickSizeOuter(0);
-        const yAxis = d3.axisLeft(yScale).ticks(6).tickSizeOuter(0).tickFormat(d3.format('.2f'));
+        const yAxis = d3.axisLeft(yScale).tickValues(yIntTicks).tickSizeOuter(0).tickFormat(d3.format('d'));
         gAxes.append('g')
           .attr('transform', `translate(0,${innerHeight})`)
           .call(xAxis)
@@ -268,7 +278,7 @@
         gAxes.append('text')
           .attr('class', 'axis-label axis-label--y')
           .attr('text-anchor', 'middle')
-          .attr('transform', `translate(${-52},${innerHeight/2}) rotate(-90)`) 
+          .attr('transform', `translate(${-44},${innerHeight/2}) rotate(-90)`) 
           .style('font-size', '12px')
           .style('fill', tickColor)
           .text('Value');
