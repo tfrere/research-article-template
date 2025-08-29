@@ -156,6 +156,7 @@
       const gGrid = gRoot.append('g').attr('class', 'grid');
       const gAxes = gRoot.append('g').attr('class', 'axes');
       const gLines = gRoot.append('g').attr('class', 'lines');
+      const gPoints = gRoot.append('g').attr('class', 'points');
       const gHover = gRoot.append('g').attr('class', 'hover');
       const gLegend = gRoot.append('foreignObject').attr('class', 'legend');
 
@@ -197,9 +198,13 @@
       let xScale = d3.scaleLinear();
       let yScale = d3.scaleLinear();
 
-      // Line generator
-      const lineGen = d3.line()
+      // Line generators
+      const lineGenSmooth = d3.line()
         .curve(d3.curveCatmullRom.alpha(0.05))
+        .x((d) => xScale(d.step))
+        .y((d) => yScale(d.value));
+      const lineGenStep = d3.line()
+        .curve(d3.curveStepAfter)
         .x((d) => xScale(d.step))
         .y((d) => yScale(d.value));
 
@@ -327,14 +332,32 @@
         // Bind lines
         const series = runs.map((r, i) => ({ run: r, color: pool[i % pool.length], values: (map[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
         const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
+        const gen = isRank ? lineGenStep : lineGenSmooth;
         paths.enter().append('path').attr('class','run-line').attr('fill','none').attr('stroke-width',2)
           .attr('stroke', d=>d.color).attr('opacity',0.9)
-          .attr('d', d=>lineGen(d.values))
+          .attr('d', d=>gen(d.values))
           .merge(paths)
           .transition().duration(200)
           .attr('stroke', d=>d.color)
-          .attr('d', d=>lineGen(d.values));
+          .attr('d', d=>gen(d.values));
         paths.exit().remove();
+
+        // Points for rank metrics (discrete steps)
+        if (isRank) {
+          const pointData = series.flatMap(s => s.values.map(v => ({ run: s.run, color: s.color, step: v.step, value: v.value })));
+          const circles = gPoints.selectAll('circle.point').data(pointData, d => d.run + '-' + d.step);
+          circles.enter().append('circle').attr('class', 'point')
+            .attr('r', 2.5)
+            .attr('fill', d => d.color)
+            .attr('cx', d => xScale(d.step))
+            .attr('cy', d => yScale(d.value))
+            .merge(circles)
+            .attr('cx', d => xScale(d.step))
+            .attr('cy', d => yScale(d.value));
+          circles.exit().remove();
+        } else {
+          gPoints.selectAll('*').remove();
+        }
 
         // Inline legend content (row, right side) compact
         legendInline.innerHTML = series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><span style="width:18px;height:10px;background:${s.color};border-radius:3px;display:inline-block"></span><span>${s.run}</span></span>`).join('');
@@ -353,7 +376,10 @@
           series.forEach(s=>{
             const m = new Map(s.values.map(v=>[v.step, v.value]));
             const val = m.has(nearest) ? m.get(nearest) : null;
-            if (val != null) html += `<div><span style="display:inline-block;width:10px;height:10px;background:${s.color};border-radius:50%;margin-right:6px;"></span><strong>${s.run}</strong> ${(+val).toFixed(4)}</div>`;
+            if (val != null) {
+              const formatVal = (vv) => (isRank ? d3.format('d')(vv) : (+vv).toFixed(4));
+              html += `<div><span style=\"display:inline-block;width:10px;height:10px;background:${s.color};border-radius:50%;margin-right:6px;\"></span><strong>${s.run}</strong> ${formatVal(val)}</div>`;
+            }
           });
           tipInner.innerHTML = html;
           const offsetX = 12, offsetY = 12;
