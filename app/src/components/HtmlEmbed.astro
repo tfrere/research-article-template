@@ -2,14 +2,14 @@
 interface Props { src: string; title?: string; desc?: string; frameless?: boolean }
 const { src, title, desc, frameless = false } = Astro.props as Props;
 
-// Load all .html fragments under src/content/fragments/** as strings (dev & build)
-const fragments = (import.meta as any).glob('../content/fragments/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+// Load all .html embeds under src/content/embeds/** as strings (dev & build)
+const embeds = (import.meta as any).glob('../content/embeds/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 function resolveFragment(requested: string): string | null {
-  // Allow both "banner.html" and "fragments/banner.html"
+  // Allow both "banner.html" and "embeds/banner.html"
   const needle = requested.replace(/^\/*/, '');
-  for (const [key, html] of Object.entries(fragments)) {
-    if (key.endsWith('/' + needle) || key.endsWith('/' + needle.replace(/^fragments\//, ''))) {
+  for (const [key, html] of Object.entries(embeds)) {
+    if (key.endsWith('/' + needle) || key.endsWith('/' + needle.replace(/^embeds\//, ''))) {
       return html;
     }
   }
@@ -58,7 +58,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     });
   };
   // Ensure execution when ready: run now if Plotly or D3 is present, or when document is ready; otherwise wait for 'load'
-  // @ts-expect-error: Plotly/d3 are attached globally at runtime via fragments
+  // @ts-expect-error: Plotly/d3 are attached globally at runtime via embeds
   if (window.Plotly || window.d3 || document.readyState === 'complete') execute();
   else window.addEventListener('load', execute, { once: true });
   </script>

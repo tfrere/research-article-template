@@ -17,35 +17,35 @@ ogImage: "/thumb.jpg"
 
 import HtmlEmbed from "../components/HtmlEmbed.astro";
 import Wide from "../components/Wide.astro";
-import FullBleed from "../components/FullBleed.astro";
+import FullWidth from "../components/FullWidth.astro";
 import { Image } from 'astro:assets';
-import placeholder from "../assets/images/placeholder.png";
-import audioDemo from "../assets/audio/audio-example.wav";
-import Aside from "../components/Aside.astro";
-import visualPoster from "../assets/images/visual-vocabulary-poster.png";
+import placeholder from "./assets/images/placeholder.png";
+import audioDemo from "./assets/audio/audio-example.wav";
+import Sidenote from "../components/Sidenote.astro";
+import visualPoster from "./assets/images/visual-vocabulary-poster.png";
 
 import BestPractices from "./chapters/best-pratices.mdx";
 import WritingYourContent from "./chapters/writing-your-content.mdx";
 import AvailableBlocks from "./chapters/available-blocks.mdx";  
 import GettingStarted from "./chapters/getting-started.mdx";
 
-<Aside>
-  Welcome to this single-page research article template built with **Markdown**.
+<Sidenote>
+  Welcome to this single-page research article template.
   It’s designed to help you write clear, modern, and **interactive** technical articles with **minimal setup**.
   Whether you cover machine learning, data science, physics, or software topics, this template keeps the authoring flow simple while offering robust features out of the box.
   <Fragment slot="aside">
     Reading time: 20–25 minutes.
   </Fragment>
   In this guide, you’ll learn how to install the template,
-  write content (math, citations, images, code, asides, interactive fragments),
+  write content (math, citations, images, code, sidenotes, interactive fragments),
   customize styles and behavior, and follow a few **best practices** for publishing.
   
-</Aside>
+</Sidenote>
 
 
 #### Features
 
-<Aside>
+<Sidenote>
 <div className="tag-list">
   <span className="tag">Markdown based</span>
   <span className="tag">KaTeX math</span>
@@ -69,7 +69,7 @@ import GettingStarted from "./chapters/getting-started.mdx";
 <Fragment slot="aside">
     If you have questions or remarks open a discussion on the <a href="https://huggingface.co/spaces/tfrere/research-blog-template/discussions?status=open&type=discussion">Community tab</a>!
   </Fragment>
-</Aside>
+</Sidenote>
 
 ## Introduction
 The web enables forms of explanation that static PDFs cannot: **reactive diagrams**, progressive notation, and **exploratory views** that reveal how ideas behave. Use **interactive fragments** to let readers hover, scrub, and inspect—building **intuition**, not just reading results.

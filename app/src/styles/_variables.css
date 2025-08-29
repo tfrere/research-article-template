@@ -33,6 +33,14 @@
   --spacing-8: 56px;
   --spacing-9: 64px;
   --spacing-10: 72px;
+
+  /* Z-index scale */
+  --z-base: 0;           /* background/base */
+  --z-content: 1;        /* regular content */
+  --z-elevated: 10;      /* wide/full-width blocks, images */
+  --z-overlay: 1000;     /* overlays/lightboxes */
+  --z-modal: 1100;       /* modals/dialogs */
+  --z-tooltip: 1200;     /* tooltips/popovers */
 }
 /* Theme tokens for dark mode */
 [data-theme="dark"] {

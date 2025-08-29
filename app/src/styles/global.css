@@ -20,6 +20,30 @@
 img[data-zoomable] { cursor: zoom-in; }
 .medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
 
+/* Download button for img[data-downloadable] */
+figure.has-dl-btn { position: relative; }
+.dl-host { position: relative; }
+.img-dl-wrap { position: relative; display: inline-block; }
+.img-dl-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: white;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.25);
+  z-index: var(--z-elevated);
+  display: none;
+}
+.img-dl-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.img-dl-wrap:hover .img-dl-btn { display: inline-flex; }
+[data-theme="dark"] .img-dl-btn { background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25); }
+[data-theme="dark"] .img-dl-btn:hover { background: rgba(255,255,255,0.25); }
+
 /* ============================================================================ */
 /* Theme Toggle button (moved from component) */
 /* ============================================================================ */

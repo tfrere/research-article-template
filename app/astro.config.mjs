@@ -34,7 +34,25 @@ function rehypeCodeCopyAndLabel() {
           fromClass(preClasses),
         ];
         let lang = candidates.find(Boolean) || '';
-        const displayLang = lang ? String(lang).toUpperCase() : '';
+        const lower = String(lang).toLowerCase();
+        const toExt = (s) => {
+          switch (String(s).toLowerCase()) {
+            case 'typescript': case 'ts': return 'ts';
+            case 'tsx': return 'tsx';
+            case 'javascript': case 'js': case 'node': return 'js';
+            case 'jsx': return 'jsx';
+            case 'python': case 'py': return 'py';
+            case 'bash': case 'shell': case 'sh': return 'sh';
+            case 'markdown': case 'md': return 'md';
+            case 'yaml': case 'yml': return 'yml';
+            case 'html': return 'html';
+            case 'css': return 'css';
+            case 'json': return 'json';
+            default: return lower || '';
+          }
+        };
+        const ext = toExt(lower);
+        const displayLang = ext ? String(ext).toUpperCase() : '';
         // Determine if single-line block: prefer Shiki lines, then text content
         const countLinesFromShiki = () => {
           const isLineEl = (el) => el && el.type === 'element' && el.tagName === 'span' && Array.isArray(el.properties?.className) && el.properties.className.includes('line');
@@ -81,14 +99,16 @@ function rehypeCodeCopyAndLabel() {
             node.__forceSingle = true;
           }
         }
-        // Ensure CSS-only label works: set data-language on the <code> element
+        // Ensure CSS-only label works: set data-language on <code> and <pre>, and wrapper
         code.properties = code.properties || {};
-        if (displayLang) code.properties['data-language'] = displayLang;
+        if (ext) code.properties['data-language'] = ext;
+        node.properties = node.properties || {};
+        if (ext) node.properties['data-language'] = ext;
         // Replace <pre> with wrapper div.code-card containing button + pre
         const wrapper = {
           type: 'element',
           tagName: 'div',
-          properties: { className: ['code-card'].concat((isSingleLine || node.__forceSingle) ? ['no-copy'] : []), 'data-language': displayLang },
+          properties: { className: ['code-card'].concat((isSingleLine || node.__forceSingle) ? ['no-copy'] : []), 'data-language': ext },
           children: (isSingleLine || node.__forceSingle) ? [ node ] : [
             {
               type: 'element',

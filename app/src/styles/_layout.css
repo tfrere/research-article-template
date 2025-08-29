@@ -1,7 +1,11 @@
 /* ============================================================================ */
 /* Layout – 3-column grid (TOC / Article / Aside) */
 /* ============================================================================ */
-.content-grid { max-width: 1280px; margin: 0 auto; padding: 0 16px; margin-top: 40px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
+:root {
+  --content-padding-x: 16px;
+}
+
+.content-grid { max-width: 1280px; margin: 0 auto; padding: 0 var(--content-padding-x); margin-top: 40px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
 .content-grid > main { max-width: 100%; margin: 0; padding: 0; }
 
 /* TOC (left column) */
@@ -69,11 +73,11 @@ main > nav:first-of-type { display: none; }
 
 
 /* ============================================================================ */
-/* Width helpers – slightly wider than main column, and full-bleed to viewport */
+/* Width helpers – slightly wider than main column, and full-width to viewport */
 /* ---------------------------------------------------------------------------- */
 /* Usage in MDX: */
 /* <div className="wide"> ... </div> */
-/* <div className="full-bleed"> ... </div> */
+/* <div className="full-width"> ... </div> */
 /* These center the content relative to the viewport while keeping it responsive. */
 /* */
 /* Notes: */
@@ -81,7 +85,7 @@ main > nav:first-of-type { display: none; }
 /*   to be wider or fully span the viewport. On small screens, they fall back to 100%. */
 /* - Adjust the target width in .wide if desired. */
 .wide,
-.full-bleed { box-sizing: border-box; }
+.full-width { box-sizing: border-box; position: relative; z-index: var(--z-elevated); }
 
 .wide {
   /* Target up to ~1100px while staying within viewport minus page gutters */
@@ -90,18 +94,19 @@ main > nav:first-of-type { display: none; }
   transform: translateX(-50%);
 }
 
-.full-bleed {
-  /* Span the full viewport width */
+.full-width {
+  /* Span the full viewport width and center relative to viewport */
   width: 100vw;
-  margin-left: 50%;
-  transform: translateX(-50%);
+  margin-left: calc(50% - 50vw + var(--content-padding-x) * 2);
+  margin-right: calc(50% - 50vw);
 }
 
 @media (max-width: 1100px) {
   .wide,
-  .full-bleed {
+  .full-width {
     width: 100%;
     margin-left: 0;
+    margin-right: 0;
     transform: none;
   }
 }

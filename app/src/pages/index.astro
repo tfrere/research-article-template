@@ -5,7 +5,7 @@ import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Seo from '../components/Seo.astro';
 // @ts-ignore Astro asset import typed via env.d.ts
-import ogDefaultUrl from '../assets/images/visual-vocabulary-poster.png?url';
+import ogDefaultUrl from '../content/assets/images/visual-vocabulary-poster.png?url';
 import 'katex/dist/katex.min.css';
 import '../styles/global.css';
 const articleFM = (ArticleMod as any).frontmatter ?? {};
@@ -177,6 +177,105 @@ const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBi
       })();
     </script>
     
+
+    <script>
+      // Add a small download button to img[data-downloadable]
+      (() => {
+        const SELECTOR = 'section.content-grid main img[data-downloadable]';
+
+        /**
+         * @param {HTMLImageElement} img
+         */
+        const injectDownloadButton = (img) => {
+          if (!img || img.dataset.__dlInjected) return;
+          const parentFigure = img.closest('figure');
+          const parent = img.parentElement;
+          if (!parent) return;
+          img.dataset.__dlInjected = '1';
+
+          // Wrap the image in a positioned inline-block so the button is on the image
+          const wrapper = document.createElement('span');
+          wrapper.className = 'img-dl-wrap';
+          parent.insertBefore(wrapper, img);
+          wrapper.appendChild(img);
+          if (parentFigure && !parentFigure.classList.contains('has-dl-btn')) {
+            parentFigure.classList.add('has-dl-btn');
+          }
+
+          // Determine download href and filename
+          const pickHrefAndName = () => {
+            const current = img.currentSrc || img.src || '';
+            let href = img.getAttribute('data-download-src') || current;
+            // Derive filename from the original source when possible
+            const deriveName = () => {
+              try {
+                const u = new URL(current, location.href);
+                // Prefer original href param if provided by Astro image service
+                const rawHref = u.searchParams.get('href');
+                const candidate = rawHref ? decodeURIComponent(rawHref) : u.pathname;
+                const last = String(candidate).split('/').pop() || '';
+                // Strip query/hash and any appended transform suffixes after extension
+                const base = last.split('?')[0].split('#')[0];
+                const m = base.match(/^(.+?\.(?:png|jpe?g|webp|avif|gif|svg))(?:[._-].*)?$/i);
+                if (m && m[1]) return m[1];
+                // If extension missing, fallback to base as-is
+                return base || 'image';
+              } catch {
+                return 'image';
+              }
+            };
+            const name = img.getAttribute('data-download-name') || deriveName();
+            return { href, name };
+          };
+
+          const { href, name } = pickHrefAndName();
+          const a = document.createElement('a');
+          a.className = 'button button--ghost img-dl-btn';
+          a.href = href;
+          if (name) a.download = name;
+          a.setAttribute('aria-label', 'Download image');
+          a.setAttribute('title', name ? `Download ${name}` : 'Download image');
+          a.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z"/></svg>';
+
+          // Ensure href/name match currentSrc right before navigation
+          a.addEventListener('click', async (ev) => {
+            try {
+              ev.preventDefault();
+              const picked = pickHrefAndName();
+              const res = await fetch(picked.href, { credentials: 'same-origin' });
+              const blob = await res.blob();
+              const objectUrl = URL.createObjectURL(blob);
+              const tmp = document.createElement('a');
+              tmp.href = objectUrl;
+              tmp.download = picked.name || 'image';
+              document.body.appendChild(tmp);
+              tmp.click();
+              setTimeout(() => { URL.revokeObjectURL(objectUrl); tmp.remove(); }, 1000);
+            } catch {
+              // Fallback to native behavior if fetch fails
+            }
+          });
+
+          // Append inside wrapper so positioning is relative to the image box
+          wrapper.appendChild(a);
+        };
+
+        const scan = () => {
+          document.querySelectorAll(SELECTOR).forEach((el) => injectDownloadButton(el));
+        };
+
+        const bootstrap = () => {
+          scan();
+          const main = document.querySelector('section.content-grid main');
+          if (!main) return;
+          const mo = new MutationObserver(() => scan());
+          mo.observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+        };
+
+        if (document.readyState === 'complete') bootstrap();
+        else window.addEventListener('load', bootstrap, { once: true });
+      })();
+    </script>
 
     <script>
       // Open external links in a new tab; keep internal anchors in-page

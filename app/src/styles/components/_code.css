@@ -13,6 +13,7 @@ code {
 /* Sync Shiki variables with current theme */
 /* Standard wrapper look for code blocks */
 .astro-code { border: 1px solid var(--border-color); border-radius: 6px; padding: 0; font-size: 14px; --code-gutter-width: 2.5em; }
+.astro-code { position: relative; }
 
 /* Prevent code blocks from breaking layout on small screens */
 .astro-code { overflow-x: auto; width: 100%; max-width: 100%; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
@@ -81,3 +82,45 @@ html[data-theme='light'] .astro-code {
 
 /* Overrides inside Accordion: remove padding and border on code containers */
 .accordion .astro-code { padding: 0; border: none; }
+
+/* Language/extension vignette for Shiki blocks (bottom-right, discreet) */
+.astro-code::after {
+  content: attr(data-language);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  font-size: 10px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--muted-color);
+  background: var(--surface-bg);
+  border-top: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+  opacity: 0.5;
+  border-radius: 8px 0 0 0; /* round only top-left */
+  padding: 4px 6px;
+  pointer-events: none;
+}
+
+/* Fallback if Shiki uses data-lang instead of data-language */
+.astro-code[data-lang]::after { content: attr(data-lang); }
+
+/* Normalize to extensions for common languages */
+.astro-code[data-language="typescript"]::after { content: "ts"; }
+.astro-code[data-language="tsx"]::after { content: "tsx"; }
+.astro-code[data-language="javascript"]::after,
+.astro-code[data-language="node"]::after,
+.astro-code[data-language="jsx"]::after { content: "js"; }
+.astro-code[data-language="python"]::after { content: "py"; }
+.astro-code[data-language="bash"]::after,
+.astro-code[data-language="shell"]::after,
+.astro-code[data-language="sh"]::after { content: "sh"; }
+.astro-code[data-language="markdown"]::after { content: "md"; }
+.astro-code[data-language="yaml"]::after,
+.astro-code[data-language="yml"]::after { content: "yml"; }
+.astro-code[data-language="html"]::after { content: "html"; }
+.astro-code[data-language="css"]::after { content: "css"; }
+.astro-code[data-language="json"]::after { content: "json"; }
+
+/* In Accordions, keep same bottom-right placement */
+.accordion .astro-code::after { right: 0; bottom: 0; }

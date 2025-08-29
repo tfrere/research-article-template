@@ -81,7 +81,7 @@ html { font-size: 14px; line-height: 1.6; }
 
 /* Demo blocks for width helpers */
 .demo-wide,
-.demo-full-bleed {
+.demo-full-width {
   display: grid;
   place-items: center;
   min-height: 150px;
@@ -118,6 +118,8 @@ picture {
   max-width: 100%;
   height: auto;
   display: block;
+  position: relative;
+  z-index: var(--z-elevated);
 }
 
 /* Inline feature tags */
@@ -145,6 +147,17 @@ figure { margin: 12px 0; }
 figcaption { text-align: left; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
 .image-credit { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-color); }
 .image-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Zoomable overlay container (if used by any lightbox implementation) */
+[data-zoom-overlay],
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+}
+
+/* Download link inside figures */
+figure .download-link { position: relative; z-index: var(--z-elevated); }
 
 /* ============================================================================ */
 /* Buttons (minimal, clean) */
@@ -248,7 +261,7 @@ button:disabled, .button:disabled {
   table,
   blockquote,
   .wide,
-  .full-bleed {
+  .full-width {
     break-inside: avoid;
     page-break-inside: avoid;
   }

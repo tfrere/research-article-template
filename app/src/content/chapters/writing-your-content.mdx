@@ -1,11 +1,11 @@
 {/* IMPORTS */}
 import { Image } from 'astro:assets';
-import placeholder from '../../assets/images/placeholder.png';
-import Aside from '../../components/Aside.astro';
+import placeholder from '../assets/images/placeholder.png';
+import Sidenote from '../../components/Sidenote.astro';
 import Wide from '../../components/Wide.astro';
-import FullBleed from '../../components/FullBleed.astro';
+import FullWidth from '../../components/FullWidth.astro';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
-import audioDemo from '../../assets/audio/audio-example.wav';
+import audioDemo from '../assets/audio/audio-example.wav';
 
 ## Writing Your Content
 
@@ -14,7 +14,7 @@ import audioDemo from '../../assets/audio/audio-example.wav';
 Your article lives in two places
 
 - `app/src/content/` — where you can find the `article.mdx`, `bibliography.bib` and html fragments.
-- `app/src/assets/` — images, audio, and other static assets. (handled by git lfs)
+- `app/src/content/assets/` — images, audio, and other static assets. (handled by git lfs)
 
 The `article.mdx` file is the main file that contains your article.
 
@@ -39,7 +39,7 @@ ogImage: "https://example.com/your-og-image.png"
 
 {/* IMPORTS */}
 import { Image } from 'astro:assets';
-import placeholder from '../assets/images/placeholder.jpg';
+import placeholder from './assets/images/placeholder.jpg';
 
 {/* CONTENT */}
 # Hello, world
@@ -57,14 +57,14 @@ MDX is a mix of Markdown and HTML/JSX: write regular Markdown, and embed interac
 ```mdx
 {/* IMPORTS */}
 import { Image } from 'astro:assets'
-import placeholder from '../assets/images/placeholder.png'
-import Aside from '../components/Aside.astro'
+import placeholder from './assets/images/placeholder.png'
+import Sidenote from '../components/Sidenote.astro'
 
 # Mixing Markdown and components
 
 This paragraph is written in Markdown. 
 
-<Aside>A short callout inserted via a component.</Aside>
+<Sidenote>A short callout inserted via a component.</Sidenote>
 
 Below is an image imported via Astro and optimized at build time:
 
@@ -105,14 +105,14 @@ Use the **color picker** below to see how the primary color affects the theme.
 
 #### Brand color
 
-<Aside>
+<Sidenote>
   <HtmlEmbed frameless src="color-picker.html" />
   <Fragment slot="aside">
     You can use the color picker to select the right color.
     
     Here is an example of an <a href="#">interactive element</a>.
   </Fragment>
-</Aside>
+</Sidenote>
 
 
 #### Color palettes
@@ -124,25 +124,25 @@ Here is a suggestion of **color palettes** for your **data visualizations** that
 
 ### Placement
 
-Use these helpers when you need to step outside the main content flow: **Asides** for contextual side notes, **Wide** to extend beyond the main column, and **Full-bleed** for full-width, immersive sections.
+Use these helpers when you need to step outside the main content flow: **Sidenotes** for contextual side notes, **Wide** to extend beyond the main column, and **Full-width** for full-width, immersive sections.
 
-#### Asides
+#### Sidenotes
 
-<Aside>
+<Sidenote>
   This paragraph presents a **key idea** concisely.
   <Fragment slot="aside">
     **Side note** for brief context or a definition.
   </Fragment>
-  </Aside>
+  </Sidenote>
 
 <small className="muted">Example</small>
 ```mdx
-import Aside from '../components/Aside.astro'
+import Sidenote from '../components/Sidenote.astro'
 
-<Aside>
+<Sidenote>
   Main paragraph with the core idea.
   <Fragment slot="aside">Short side note.</Fragment>
-</Aside>
+</Sidenote>
 ```
 
 Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
@@ -162,17 +162,17 @@ import Wide from '../components/Wide.astro'
 </Wide>
 ```
 
-#### Full-bleed example
+#### Full-width example
 
-<FullBleed>
-  <div className="demo-full-bleed">demo full-bleed</div>
-</FullBleed>
+<FullWidth>
+  <div className="demo-full-width">demo full-width</div>
+</FullWidth>
 
 <small className="muted">Example</small>
 ```mdx
-import FullBleed from '../components/FullBleed.astro'
+import FullWidth from '../components/FullWidth.astro'
 
-<FullBleed>
+<FullWidth>
   Your content here...
-</FullBleed>
+</FullWidth>
 ```

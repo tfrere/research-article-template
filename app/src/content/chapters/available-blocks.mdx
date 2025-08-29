@@ -1,10 +1,10 @@
 import { Image } from 'astro:assets';
-import placeholder from '../../assets/images/placeholder.png';
-import audioDemo from '../../assets/audio/audio-example.wav';
+import placeholder from '../assets/images/placeholder.png';
+import audioDemo from '../assets/audio/audio-example.wav';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
-import Aside from '../../components/Aside.astro';
+import Sidenote from '../../components/Sidenote.astro';
 import Wide from '../../components/Wide.astro';
-import FullBleed from '../../components/FullBleed.astro';
+import FullWidth from '../../components/FullWidth.astro';
 import Accordion from '../../components/Accordion.astro';
 
 ## Available blocks
@@ -58,10 +58,13 @@ $$
 
 Props (optional)
 - `data-zoomable`: adds a zoomable lightbox.
+- `data-downloadable`: adds a small download button to fetch the image file.
 - `loading="lazy"`: lazy loads the image.
 - `figcaption`: adds a caption and credit.
 
 **Optional:** Zoomable (Medium-like lightbox): add `data-zoomable` to opt-in. Only images with this attribute will open full-screen on click.
+
+**Optional:** Download button: add `data-downloadable` to render a small button in the bottom-right corner that downloads the image. By default it tries to use the original filename; you can override via `data-download-name="myfile.png"` and `data-download-src="/path/to/original.png"`.
 
 **Optional:** Lazy loading: add `loading="lazy"` to opt-in.
 
@@ -73,6 +76,8 @@ Props (optional)
   <Image
     src={placeholder}
     data-zoomable
+    data-downloadable
+    layout="fixed"
     alt="Tensor parallelism in a transformer block"
   />
   <figcaption>
@@ -84,12 +89,12 @@ Props (optional)
 <small className="muted">Example</small>
 ```mdx
 import { Image } from 'astro:assets'
-import myImage from '../assets/images/placeholder.jpg'
+import myImage from './assets/images/placeholder.jpg'
 
 <Image src={myImage} alt="Responsive, optimized example image" />
 
 <figure>
-  <Image src={myImage} data-zoomable alt="Example with caption and credit" loading="lazy" />
+  <Image src={myImage} layout="fixed" data-zoomable data-downloadable alt="Example with caption and credit" loading="lazy" />
   <figcaption>
     Optimized image with a descriptive caption.
     <span className="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>
@@ -299,7 +304,7 @@ greet("Astro");
 <br/>
 <small className="muted">Example</small>
 ```mdx
-import audioDemo from '../assets/audio/audio-example.wav'
+import audioDemo from './assets/audio/audio-example.wav'
 
 <audio controls src={audioDemo}/>
 ```
