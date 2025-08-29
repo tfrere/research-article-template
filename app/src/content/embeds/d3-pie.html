@@ -52,19 +52,10 @@
         { key:'total_images',        name:'Number of Images', title:'Weighted by Number of Images', letter:'d' }
       ];
 
-      // CSV: prefer inline <script type="text/csv" class="d3-pie__csv">, otherwise fallback to fetch
+      // CSV: load from public path
       const CSV_PATHS = [
-        '/data/finevision.csv', // public path priority
-        '/assets/data/finevision.csv',
-        './assets/data/finevision.csv',
-        '../assets/data/finevision.csv',
-        '../../assets/data/finevision.csv'
+        '/data/finevision.csv'
       ];
-
-      const getInlineCsv = () => {
-        const el = container.querySelector('script.d3-pie__csv[type="text/csv"]');
-        return el ? el.textContent.trim() : '';
-      };
 
       const fetchFirstAvailable = async (paths) => {
         for (const p of paths) {
@@ -73,7 +64,7 @@
             if (res.ok) { return await res.text(); }
           } catch (_) { /* try next */ }
         }
-        throw new Error('CSV introuvable: finevision.csv');
+        throw new Error('CSV not found: finevision.csv');
       };
 
       const parseCsv = (text) => d3.csvParse(text, (d) => ({
@@ -101,7 +92,7 @@
         const legendHeight = 60;
         gLegend.attr('x', 0).attr('y', innerHeight + LEGEND_GAP).attr('width', innerWidth).attr('height', legendHeight);
         const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
-        root.html(`<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:800">${c}</span></div>`).join('')}</div>`);
+        root.html(`<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`);
       }
 
       function drawPies(rows){
@@ -199,8 +190,7 @@
 
       async function init(){
         try {
-          let text = getInlineCsv();
-          if (!text) { text = await fetchFirstAvailable(CSV_PATHS); }
+          const text = await fetchFirstAvailable(CSV_PATHS);
           const rows = parseCsv(text);
           drawPies(rows);
 
