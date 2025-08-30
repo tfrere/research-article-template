@@ -191,6 +191,8 @@
       let runList = [];
       let runOrder = [];
       const dataByMetric = new Map(); // metric => { run => [{step,value}] }
+      let isRankStrictFlag = false;
+      let rankTickMax = 1;
 
       // Scales and layout
       let width = 800, height = 360;
@@ -231,14 +233,19 @@
         yScale.range([innerHeight, 0]);
 
         // Compute integer ticks for Y
-        const yDomain = yScale.domain();
-        const yMin = Math.min(yDomain[0], yDomain[1]);
-        const yMax = Math.max(yDomain[0], yDomain[1]);
-        let yStep = Math.max(1, Math.round((yMax - yMin) / 6));
-        if (!isFinite(yStep) || yStep <= 0) yStep = 1;
         let yIntTicks = [];
-        for (let v = Math.ceil(yMin); v <= Math.floor(yMax); v += yStep) { yIntTicks.push(v); }
-        if (yIntTicks.length === 0) { yIntTicks = [Math.round(yMin), Math.round(yMax)]; }
+        if (isRankStrictFlag) {
+          const maxR = Math.max(1, Math.round(rankTickMax));
+          for (let v = 1; v <= maxR; v += 1) yIntTicks.push(v);
+        } else {
+          const yDomain = yScale.domain();
+          const yMin = Math.min(yDomain[0], yDomain[1]);
+          const yMax = Math.max(yDomain[0], yDomain[1]);
+          let yStep = Math.max(1, Math.round((yMax - yMin) / 6));
+          if (!isFinite(yStep) || yStep <= 0) yStep = 1;
+          for (let v = Math.ceil(yMin); v <= Math.floor(yMax); v += yStep) { yIntTicks.push(v); }
+          if (yIntTicks.length === 0) { yIntTicks = [Math.round(yMin), Math.round(yMax)]; }
+        }
 
         // Grid (horizontal)
         gGrid.selectAll('*').remove();
@@ -255,7 +262,18 @@
 
         // Axes
         gAxes.selectAll('*').remove();
-        const xAxis = d3.axisBottom(xScale).ticks(8).tickSizeOuter(0);
+        let xAxis = d3.axisBottom(xScale).tickSizeOuter(0);
+        if (isRankStrictFlag) {
+          const [dx0, dx1] = xScale.domain();
+          const start = Math.ceil(dx0 / 1000) * 1000;
+          const end = Math.floor(dx1 / 1000) * 1000;
+          const xTicks = [];
+          for (let v = start; v <= end; v += 1000) xTicks.push(v);
+          if (xTicks.length === 0) xTicks.push(Math.round(dx0));
+          xAxis = xAxis.tickValues(xTicks).tickFormat(d3.format('d'));
+        } else {
+          xAxis = xAxis.ticks(8);
+        }
         const yAxis = d3.axisLeft(yScale).tickValues(yIntTicks).tickSizeOuter(0).tickFormat(d3.format('d'));
         gAxes.append('g')
           .attr('transform', `translate(0,${innerHeight})`)
@@ -333,7 +351,13 @@
         });
         if (!isFinite(minStep) || !isFinite(maxStep)) { return; }
         xScale.domain([minStep, maxStep]);
-        yScale.domain(isRank ? [Math.max(maxVal, 1), Math.min(minVal, 0)] : [0, Math.max(1, maxVal)]).nice();
+        if (isRank) {
+          rankTickMax = Math.max(1, Math.round(maxVal));
+          yScale.domain([rankTickMax, 1]);
+        } else {
+          yScale.domain([0, Math.max(1, maxVal)]).nice();
+        }
+        isRankStrictFlag = isRankStrict;
 
         const { innerWidth, innerHeight } = updateScales();
 
@@ -345,6 +369,7 @@
             .slice()
             .sort((a,b)=>a.step-b.step)
             .map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value) } : pt)
+            .filter(pt => !isRankStrict || (pt.step % 1000 === 0))
         }));
         const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
         const gen = isRank ? lineGenStep : lineGenSmooth;
