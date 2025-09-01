@@ -4,8 +4,8 @@ import Hero from '../components/Hero.astro';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Seo from '../components/Seo.astro';
-// @ts-ignore Astro asset import typed via env.d.ts
-import ogDefaultUrl from '../content/assets/images/visual-vocabulary-poster.png?url';
+// Default OG image served from public/
+const ogDefaultUrl = '/thumb.jpg';
 import 'katex/dist/katex.min.css';
 import '../styles/global.css';
 const articleFM = (ArticleMod as any).frontmatter ?? {};

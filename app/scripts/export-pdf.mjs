@@ -165,7 +165,7 @@ async function main() {
   const margin = parseMargin(args.margin);
   const wait = (args.wait || 'full'); // 'networkidle' | 'images' | 'plotly' | 'full'
 
-  // filename can be provided, else computed from page title later
+  // filename can be provided, else computed from DOM (button) or page title later
   let outFileBase = (args.filename && String(args.filename).replace(/\.pdf$/i, '')) || 'article';
 
   console.log('> Building Astro site…');
@@ -204,14 +204,24 @@ async function main() {
       // Give time for CDN scripts (Plotly/D3) to attach and for our fragment hooks to run
       try { await page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }); } catch {}
       try { await page.waitForFunction(() => !!window.d3, { timeout: 8000 }); } catch {}
-      // Compute slug from title if needed
+      // Prefer explicit filename from the download button if present
       if (!args.filename) {
-        const title = await page.evaluate(() => {
-          const h1 = document.querySelector('h1.hero-title');
-          const t = h1 ? h1.textContent : document.title;
-          return (t || '').replace(/\s+/g, ' ').trim();
+        const fromBtn = await page.evaluate(() => {
+          const btn = document.getElementById('download-pdf-btn');
+          const f = btn ? btn.getAttribute('data-pdf-filename') : null;
+          return f || '';
         });
-        outFileBase = slugify(title);
+        if (fromBtn) {
+          outFileBase = String(fromBtn).replace(/\.pdf$/i, '');
+        } else {
+          // Fallback: compute slug from hero title or document.title
+          const title = await page.evaluate(() => {
+            const h1 = document.querySelector('h1.hero-title');
+            const t = h1 ? h1.textContent : document.title;
+            return (t || '').replace(/\s+/g, ' ').trim();
+          });
+          outFileBase = slugify(title);
+        }
       }
 
       // Wait for render readiness

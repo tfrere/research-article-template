@@ -54,7 +54,7 @@
 
       // CSV: load from public path
       const CSV_PATHS = [
-        '/data/finevision.csv'
+        '/data/vision.csv'
       ];
 
       const fetchFirstAvailable = async (paths) => {
@@ -64,7 +64,7 @@
             if (res.ok) { return await res.text(); }
           } catch (_) { /* try next */ }
         }
-        throw new Error('CSV not found: finevision.csv');
+        throw new Error('CSV not found: vision.csv');
       };
 
       const parseCsv = (text) => d3.csvParse(text, (d) => ({

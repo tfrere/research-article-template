@@ -93,6 +93,15 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     [data-theme="dark"] .html-embed__card:not(.is-frameless) { background: #12151b; border-color: rgba(255,255,255,.15); }
   }
   @media print {
+    .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
+    .html-embed__card { padding: 6px; }
+    .html-embed__card.is-frameless { padding: 0; }
+    .html-embed__card svg,
+    .html-embed__card canvas,
+    .html-embed__card img { max-width: 100% !important; height: auto !important; }
+    .html-embed__card > div[id^="frag-"] { width: 100% !important; }
+  }
+  @media print {
     .html-embed, .html-embed__card { break-inside: avoid; page-break-inside: avoid; }
   }
 </style>

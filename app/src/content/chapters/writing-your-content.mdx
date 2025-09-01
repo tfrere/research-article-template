@@ -36,7 +36,8 @@ published: "Feb 19, 2025"
 tags:
   - research
   - template
-ogImage: "https://example.com/your-og-image.png"
+{/* Optional override of the default Open Graph image */}
+ogImage: "https://override-example.com/your-og-image.png"
 ---
 
 {/* IMPORTS */}
@@ -121,19 +122,10 @@ Use the **color picker** below to see how the primary color affects the theme.
 Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
 
 <HtmlEmbed frameless src="palettes.html" />
-
-
-### Embeds
-
-Use HTML fragments to embed interactive charts and widgets. Place your fragments under `app/src/content/embeds/` and reference them via the `HtmlEmbed` component.
-
-<small className="muted">Example</small>
-```mdx
-import HtmlEmbed from '../components/HtmlEmbed.astro'
-
-<HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
-```
-
+<br/>
+**Use color with care.**
+Color should rarely be the only channel of meaning.
+Always pair it with text, icons, shape or position. The simulation helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies.
 
 ### Placement
 
