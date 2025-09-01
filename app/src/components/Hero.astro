@@ -41,7 +41,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   <div class="meta-container">
     {authors.length > 0 && (
       <div class="meta-container-cell">
-        <h3>Authors</h3>
+        <h3>Author {authors.length > 1 ? 's' : ''}</h3>
         <p>{authors.join(', ')}</p>
       </div>
     )}

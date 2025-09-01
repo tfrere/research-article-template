@@ -1,4 +1,5 @@
 import Sidenote from '../../components/Sidenote.astro';
+import Note from '../../components/Note.astro';
 
 ## Getting Started
 
@@ -35,14 +36,15 @@ npm run build
 
 ### Deploy
 
-The recommended way is to **duplicate this Space on Hugging Face** rather than cloning it directly:
+The recommended way is to **duplicate this Space** on **Hugging Face** rather than cloning it directly:
 
-1. Open the template Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)** and click "Duplicate this Space".
-2. Give it a name, choose visibility, and keep the SDK as **Docker** (this project includes a `Dockerfile`).
-3. Then push your changes to your new Space repo. **Every push automatically triggers a build and deploy** on Spaces.
+1. Open the template Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)** and click **"Duplicate this Space"**.
+<Note>💡 It runs on a **free** CPU basic instance.</Note>
+2. Give it a name, choose visibility, and **keep the SDK as Docker**.
+3. Then push your changes to your new Space repo.<br/>**Every push automatically triggers a build and deploy** on Spaces.
 
 ```bash
-git clone git@hf.co:spaces/<your-username>/<your-space>.git
+git clone git@hf.co:spaces/<your-username>/<your-space>
 cd <your-space>
 # Make edits locally, then:
 git add .

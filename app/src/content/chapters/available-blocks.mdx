@@ -4,6 +4,7 @@ import audioDemo from '../assets/audio/audio-example.wav';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import Sidenote from '../../components/Sidenote.astro';
 import Wide from '../../components/Wide.astro';
+import Note from '../../components/Note.astro';
 import FullWidth from '../../components/FullWidth.astro';
 import Accordion from '../../components/Accordion.astro';
 
@@ -20,9 +21,10 @@ All the following blocks are available in the article.mdx file. You can also cre
   <a className="button" href="#citations-and-notes">Citations & notes</a>
   <a className="button" href="#placement">Placement</a>
   <a className="button" href="#accordion">Accordion</a>
+  <a className="button" href="#note">Note</a>
   <a className="button" href="#minimal-table">Minimal table</a>
   <a className="button" href="#audio">Audio</a>
-  <a className="button" href="#embeds">Embeds</a>
+  <a className="button" href="#htmlembeds">HtmlEmbeds</a>
 </div>
 
 ### Math
@@ -281,6 +283,37 @@ greet("Astro");
 ```
 </Accordion>
 ````
+
+
+### Note
+
+Small contextual callout for tips, caveats, or emphasis.
+
+Props (optional)
+- `title`: short title displayed in the header.
+- `emoji`: emoji displayed before the title.
+- `class`: extra classes for custom styling.
+
+<Note title="Heads‑up" emoji="💡">
+  Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note>
+  Plain note without header. Useful for short clarifications.
+</Note>
+
+<small className="muted">Example</small>
+```mdx
+import Note from '../../components/Note.astro'
+
+<Note title="Heads‑up" emoji="💡">
+  Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note>
+  Plain note without header. Useful for short clarifications.
+</Note>
+```
 
 
 ### Minimal table

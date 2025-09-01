@@ -19,6 +19,7 @@ const hasHeader = (emoji && String(emoji).length > 0) || (title && String(title)
   .note__emoji { font-size: 24px; line-height: 1; }
   .note__title { font-size: 13px; letter-spacing: .2px; }
   .note__content { color: var(--text-color); font-size: 0.95rem; }
-  .note__content > p:last-of-type { margin-bottom: 0 !important; }
+  /* Ensure the very last slotted element has no bottom margin */
+  .note .note__content > :global(*:last-child) { margin-bottom: 0 !important; }
 </style>
 
