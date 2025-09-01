@@ -14,8 +14,15 @@ RUN npm install
 # Copy the rest of the application code
 COPY app/ .
 
-# Note: assets in `src/content/assets/data` are already duplicated under `public/data` in the repo,
-# so no extra copy step is required here.
+# Ensure `public/data` is a real directory with real files (not a symlink)
+# This handles the case where `public/data` is a symlink in the repo, which
+# would be broken inside the container after COPY.
+RUN set -e; \
+    if [ -e public ] && [ ! -d public ]; then rm -f public; fi; \
+    mkdir -p public; \
+    if [ -L public/data ] || { [ -e public/data ] && [ ! -d public/data ]; }; then rm -f public/data; fi; \
+    mkdir -p public/data; \
+    cp -a src/content/assets/data/. public/data/
 
 # Build the application
 RUN npm run build
