@@ -355,18 +355,17 @@ For researchers who want to stay in **Python** while targeting **D3**, the [d3bl
 | `frameless` | No       | Removes the card background and border for seamless embeds.                                      
 | `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
 
-<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Interactive time series" />
+<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
 ---
-
-<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Interactive time series" />
+<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
 
 <br/>
 <small className="muted">Examples</small>
 ```mdx
 import HtmlEmbed from '../components/HtmlEmbed.astro'
 
-<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Interactive time series" />
-<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Interactive time series" />
+<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
+<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
 ```
 
 #### Data
@@ -381,9 +380,7 @@ You can fetch them with this address: **`[domain]/data/your-data.ext`**
 
 Here are some real world examples to inspire you.
 
-<HtmlEmbed src="d3-comparison.html" title="Image comparison" desc="" />
----
-<HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
+<HtmlEmbed src="d3-line.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
 ---
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
 ---
@@ -394,7 +391,8 @@ Here are some real world examples to inspire you.
 <FullWidth>
   <HtmlEmbed src="d3-pie.html" desc="D3 Pie charts by category" align="center" />
 </FullWidth>
-
+---
+<HtmlEmbed src="d3-comparison.html" title="Image similarity: query vs top-k" desc="Compare a query image to top-k matches. Shows rank and similarity." />
 
 ### Iframes
 
