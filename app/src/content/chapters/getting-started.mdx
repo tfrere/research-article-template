@@ -29,9 +29,13 @@ npm run dev
 ```bash
 npm run build
 ```
-<small className="muted">- Serving the `dist/` directory on any static host is enough to deliver the site.</small>
-<br/>
-<small className="muted">- A [slug-title].pdf and thumb.jpg are also generated at build time. You can find them in the public folder.</small>
+
+<Note title="Note">
+Serving the `dist/` directory on any static host is enough to deliver the site.
+</Note>
+<Note title="Note">
+A [slug-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder.
+</Note>
 
 
 ### Deploy
@@ -39,13 +43,14 @@ npm run build
 The recommended way is to **duplicate this Space** on **Hugging Face** rather than cloning it directly:
 
 1. Open the template Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)** and click **"Duplicate this Space"**.
-<Note>💡 It runs on a **free** CPU basic instance.</Note>
-2. Give it a name, choose visibility, and **keep the SDK as Docker**.
-3. Then push your changes to your new Space repo.<br/>**Every push automatically triggers a build and deploy** on Spaces.
-
+2. Give it a name, choose visibility, and **keep the free CPU instance**.
+3. Clone your new Space repo.
 ```bash
 git clone git@hf.co:spaces/<your-username>/<your-space>
 cd <your-space>
+```
+3. Then push your changes to your new Space repo.<br/>**Every push automatically triggers a build and deploy** on Spaces.
+```bash
 # Make edits locally, then:
 git add .
 git commit -m "Update content"
