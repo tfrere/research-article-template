@@ -521,7 +521,9 @@
       const tryLoadModel = async () => {
         await new Promise((res)=> ensureTF(res));
         const candidates = [
-          // Prefer local variant in assets (weights shards must be colocated)
+          // Prefer public path via symlink to assets/data
+          '/data/mnist-variant-model.json',
+          // Fallbacks to relative copies under content assets (shards must be colocated)
           './assets/data/mnist-variant-model.json',
           '../assets/data/mnist-variant-model.json',
           '/assets/data/mnist-variant-model.json',

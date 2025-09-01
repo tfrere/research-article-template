@@ -199,11 +199,13 @@
       }},
       { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> around a <strong>baseline</strong>. (e.g., negatives/positives)', generator: (baseHex, count) => {
           const total = Math.max(6, Math.min(10, count || 6));
-          const baseH = chroma(baseHex).get('hsl.h');
+          const h = chroma(baseHex).get('hsl.h');
+          const baseH = Number.isFinite(h) ? h : 0;
           const compH = (baseH + 180) % 360;
           const left = chroma.hsl(baseH, 0.75, 0.55);
           const right = chroma.hsl(compH, 0.75, 0.55);
-          return chroma.scale([left, '#ffffff', right]).mode('lch').correctLightness(true).colors(total);
+          const mid = chroma.mix(left, right, 0.5, 'lch');
+          return chroma.scale([left, mid, right]).mode('lch').correctLightness(true).colors(total);
       }}
     ];
 
