@@ -14,9 +14,8 @@ RUN npm install
 # Copy the rest of the application code
 COPY app/ .
 
-# Ensure public/data exists inside the container (symlinks won't resolve at build time)
-RUN mkdir -p public/data && \
-    cp -a src/content/assets/data/. public/data/
+# Note: assets in `src/content/assets/data` are already duplicated under `public/data` in the repo,
+# so no extra copy step is required here.
 
 # Build the application
 RUN npm run build
