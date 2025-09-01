@@ -1,7 +1,7 @@
 
-import { Image } from 'astro:assets';
 import visualPoster from '../assets/images/visual-vocabulary-poster.png';
 import Note from '../../components/Note.astro';
+import ResponsiveImage from '../../components/ResponsiveImage.astro';
 
 
 ## Best Practices
@@ -55,12 +55,11 @@ A palette encodes **meaning** (categories, magnitudes, oppositions), preserves *
 
 Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
 
-<figure>
-  <a href={"https://raw.githubusercontent.com/Financial-Times/chart-doctor/refs/heads/main/visual-vocabulary/poster.png"} target="_blank" rel="noopener noreferrer">
-    <Image src={visualPoster} alt="Visual Vocabulary: choosing the right chart by task" />
-  </a>
-  <figcaption>
-    A handy reference to select chart types by purpose — click to enlarge.
-  </figcaption> 
-</figure>
 
+  <a href={"https://raw.githubusercontent.com/Financial-Times/chart-doctor/refs/heads/main/visual-vocabulary/poster.png"} target="_blank" rel="noopener noreferrer">
+<ResponsiveImage
+  src={visualPoster}
+  alt="Visual Vocabulary: choosing the right chart by task"
+  caption={'A handy reference to select chart types by purpose — click to enlarge.'}
+/>
+</a>

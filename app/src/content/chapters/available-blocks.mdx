@@ -109,12 +109,12 @@ Here are a few variations using the same bibliography:
 
 **Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
 
-| Prop                   | Required | Description                                                                                                         | Option/Note                                                                                                 |
-|------------------------|----------|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| `data-zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             | Only images with this attribute will open full-screen on click.                                             |
-| `data-downloadable`    | No       | Adds a small download button to fetch the image file.                                                               | By default uses the original filename. Can be customized with `data-download-name` and `data-download-src`. |
-| `loading="lazy"`       | No       | Lazy loads the image.                                                                                               | Defers image loading until it is visible on screen.                                                         |
-| `caption`              | No       | Adds a caption and credit.                                                                                          | Pass HTML as the `caption` prop, or use `<slot name="caption">`. Keep `<span className="image-credit">` for credits. |
+| Prop                   | Required | Description                                                                                                         
+|------------------------|----------|-------------------------------------------------------
+| `data-zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
+| `data-downloadable`    | No       | Adds a small download button to fetch the image file.                                                               
+| `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
+| `caption`              | No       | Adds a caption and credit.                                                                                          
 
 
 <ResponsiveImage
@@ -278,7 +278,6 @@ greet("Astro");
 </Accordion>
 ````
 
-
 ### Note
 
 Small contextual callout for tips, caveats, or emphasis.
@@ -348,7 +347,7 @@ They exist in the `app/src/content/embeds` folder.
 For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
 
 | Prop        | Required | Description                                                                                      
-|-------------|----------|--------------------------------------------------------------------------------------------------
+|-------------|----------|----------------------------------------------------------------------------------
 | `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
 | `title`     | No       | Short title displayed above the card.                                                            
 | `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  

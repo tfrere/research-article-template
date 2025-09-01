@@ -97,8 +97,23 @@ html { font-size: 14px; line-height: 1.6; }
 }
 
 
-.content-grid main table { border-collapse: collapse; width: 100%; margin: 0 0 var(--spacing-4); }
-.content-grid main th, .content-grid main td { border-bottom: 1px solid var(--border-color); padding: 6px 8px; text-align: left; font-size: 15px; }
+.content-grid main table {
+  border-collapse: collapse;
+  /* Make markdown tables scroll horizontally when they overflow on small screens */
+  display: block;
+  width: 100%;
+  max-width: none;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 0 var(--spacing-4);
+}
+.content-grid main th, .content-grid main td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 15px;
+  white-space: nowrap; /* prevent squashing; allow horizontal scroll instead */
+}
 .content-grid main thead th { border-bottom: 1px solid var(--border-color); }
 
 .content-grid main hr { border: none; border-bottom: 1px solid var(--border-color); margin: var(--spacing-5) 0; }
