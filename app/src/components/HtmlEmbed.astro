@@ -102,7 +102,20 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     .html-embed__card > div[id^="frag-"] { width: 100% !important; }
   }
   @media print {
+    /* Avoid breaks inside embeds */
     .html-embed, .html-embed__card { break-inside: avoid; page-break-inside: avoid; }
+    /* Constrain width and scale inner content */
+    .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; }
+    .html-embed__card { padding: 6px; }
+    .html-embed__card.is-frameless { padding: 0; }
+    .html-embed__card svg,
+    .html-embed__card canvas,
+    .html-embed__card img,
+    .html-embed__card video,
+    .html-embed__card iframe { max-width: 100% !important; height: auto !important; }
+    .html-embed__card > div[id^="frag-"] { width: 100% !important; max-width: 100% !important; }
+    /* Center and constrain the banner (galaxy) when printing */
+    .html-embed .d3-galaxy { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
   }
 </style>
 

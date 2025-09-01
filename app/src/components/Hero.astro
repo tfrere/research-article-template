@@ -57,7 +57,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
         <p>{published}</p>
       </div>
     )}
-    <div class="meta-container-cell">
+    <div class="meta-container-cell meta-container-cell--pdf">
       <h3>PDF</h3>
       <p><button id="download-pdf-btn" data-pdf-filename={pdfFilename}>Download PDF</button></p>
     </div>
@@ -99,6 +99,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   .meta-container-cell { display: flex; flex-direction: column; gap: 8px; }
   .meta-container-cell h3 { margin: 0; font-size: 12px; font-weight: 400; color: var(--muted-color); text-transform: uppercase; letter-spacing: .02em; }
   .meta-container-cell p { margin: 0; }
+  @media print { .meta-container-cell--pdf { display: none !important; } }
 </style>
 
 

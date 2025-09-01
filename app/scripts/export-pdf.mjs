@@ -239,6 +239,61 @@ async function main() {
       }
       await page.emulateMedia({ media: 'print' });
 
+      // Enforce responsive sizing for SVG/iframes by removing hard attrs and injecting CSS (top-level and inside same-origin iframes)
+      try {
+        await page.evaluate(() => {
+          function isSmallSvg(svg){
+            try {
+              const vb = svg && svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
+              if (vb && vb.width && vb.height && vb.width <= 50 && vb.height <= 50) return true;
+              const r = svg.getBoundingClientRect && svg.getBoundingClientRect();
+              if (r && r.width && r.height && r.width <= 50 && r.height <= 50) return true;
+            } catch {}
+            return false;
+          }
+          function lockSmallSvgSize(svg){
+            try {
+              const r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+              const w = (r && r.width) ? Math.round(r.width) : null;
+              const h = (r && r.height) ? Math.round(r.height) : null;
+              if (w) svg.style.setProperty('width', w + 'px', 'important');
+              if (h) svg.style.setProperty('height', h + 'px', 'important');
+              svg.style.setProperty('max-width', 'none', 'important');
+            } catch {}
+          }
+          function fixSvg(svg){
+            if (!svg) return;
+            if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
+            try { svg.removeAttribute('width'); } catch {}
+            try { svg.removeAttribute('height'); } catch {}
+            svg.style.maxWidth = '100%';
+            svg.style.width = '100%';
+            svg.style.height = 'auto';
+            if (!svg.getAttribute('preserveAspectRatio')) svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+          }
+          document.querySelectorAll('svg').forEach(fixSvg);
+          document.querySelectorAll('.mermaid, .mermaid svg').forEach((el)=>{
+            if (el.tagName && el.tagName.toLowerCase() === 'svg') fixSvg(el);
+            else { el.style.display='block'; el.style.width='100%'; el.style.maxWidth='100%'; }
+          });
+          document.querySelectorAll('iframe, embed, object').forEach((el) => {
+            el.style.width = '100%';
+            el.style.maxWidth = '100%';
+            try { el.removeAttribute('width'); } catch {}
+            // Best-effort inject into same-origin frames
+            try {
+              const doc = (el.tagName.toLowerCase()==='object' ? el.contentDocument : el.contentDocument);
+              if (doc && doc.head) {
+                const s = doc.createElement('style');
+                s.textContent = 'html,body{overflow-x:hidden;} svg,canvas,img,video{max-width:100%!important;height:auto!important;} svg[width]{width:100%!important}';
+                doc.head.appendChild(s);
+                doc.querySelectorAll('svg').forEach((svg)=>{ if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
+              }
+            } catch (_) { /* cross-origin; ignore */ }
+          });
+        });
+      } catch {}
+
       // Generate OG thumbnail (1200x630)
       try {
         const ogW = 1200, ogH = 630;
@@ -281,13 +336,84 @@ async function main() {
         await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
         try { await waitForD3(page, 8000); } catch {}
         await waitForStableLayout(page);
+        // Re-apply responsive fixes after viewport change
+        try {
+          await page.evaluate(() => {
+            function isSmallSvg(svg){
+              try {
+                const vb = svg && svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
+                if (vb && vb.width && vb.height && vb.width <= 50 && vb.height <= 50) return true;
+                const r = svg.getBoundingClientRect && svg.getBoundingClientRect();
+                if (r && r.width && r.height && r.width <= 50 && r.height <= 50) return true;
+              } catch {}
+              return false;
+            }
+            function lockSmallSvgSize(svg){
+              try {
+                const r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+                const w = (r && r.width) ? Math.round(r.width) : null;
+                const h = (r && r.height) ? Math.round(r.height) : null;
+                if (w) svg.style.setProperty('width', w + 'px', 'important');
+                if (h) svg.style.setProperty('height', h + 'px', 'important');
+                svg.style.setProperty('max-width', 'none', 'important');
+              } catch {}
+            }
+            function fixSvg(svg){
+              if (!svg) return;
+              if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
+              try { svg.removeAttribute('width'); } catch {}
+              try { svg.removeAttribute('height'); } catch {}
+              svg.style.maxWidth = '100%';
+              svg.style.width = '100%';
+              svg.style.height = 'auto';
+              if (!svg.getAttribute('preserveAspectRatio')) svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+            }
+            document.querySelectorAll('svg').forEach((svg)=>{ if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
+            document.querySelectorAll('.mermaid, .mermaid svg').forEach((el)=>{
+              if (el.tagName && el.tagName.toLowerCase() === 'svg') fixSvg(el);
+              else { el.style.display='block'; el.style.width='100%'; el.style.maxWidth='100%'; }
+            });
+            document.querySelectorAll('iframe, embed, object').forEach((el) => {
+              el.style.width = '100%';
+              el.style.maxWidth = '100%';
+              try { el.removeAttribute('width'); } catch {}
+              try {
+                const doc = (el.tagName.toLowerCase()==='object' ? el.contentDocument : el.contentDocument);
+                if (doc && doc.head) {
+                  const s = doc.createElement('style');
+                  s.textContent = 'html,body{overflow-x:hidden;} svg,canvas,img,video{max-width:100%!important;height:auto!important;} svg[width]{width:100%!important}';
+                  doc.head.appendChild(s);
+                  doc.querySelectorAll('svg').forEach((svg)=>{ if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
+                }
+              } catch (_) {}
+            });
+          });
+        } catch {}
       } catch {}
-      // Temporarily make D3 banner reliably visible for PDF
+      // Temporarily enforce print-safe responsive sizing (SVG/iframes) and improve banner visibility
       let pdfCssHandle = null;
       try {
         pdfCssHandle = await page.addStyleTag({ content: `
+          /* General container safety */
+          html, body { overflow-x: hidden !important; }
+
+          /* Make all vector/bitmap media responsive for print */
+          svg, canvas, img, video { max-width: 100% !important; height: auto !important; }
+          /* Mermaid diagrams */
+          .mermaid, .mermaid svg { display: block; width: 100% !important; max-width: 100% !important; height: auto !important; }
+          /* Any explicit width attributes */
+          svg[width] { width: 100% !important; }
+          /* Iframes and similar embeds */
+          iframe, embed, object { width: 100% !important; max-width: 100% !important; height: auto; }
+
+          /* HtmlEmbed wrappers (defensive) */
+          .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; }
+          .html-embed__card > div[id^="frag-"] { width: 100% !important; max-width: 100% !important; }
+
+          /* Banner centering & visibility */
           .hero .points { mix-blend-mode: normal !important; }
-          .d3-galaxy svg { background: var(--surface-bg); }
+          .d3-galaxy { width: 100% !important; height: 300px; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
+          .d3-galaxy svg { background: var(--surface-bg); width: 100% !important; height: auto !important; }
         ` });
       } catch {}
       await page.pdf({
