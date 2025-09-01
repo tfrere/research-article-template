@@ -5,11 +5,24 @@
   --content-padding-x: 16px;
 }
 
-.content-grid { max-width: 1280px; margin: 0 auto; padding: 0 var(--content-padding-x); margin-top: 40px; display: grid; grid-template-columns: 220px minmax(0, 680px) 260px; gap: 32px; align-items: start; }
-.content-grid > main { max-width: 100%; margin: 0; padding: 0; }
+.content-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--content-padding-x);
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 680px) 260px;
+  gap: 32px;
+  align-items: start;
+}
+
+.content-grid > main { max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
 
 @media (max-width: 1100px) {
-  .content-grid > main { overflow: hidden; }
+  .content-grid { overflow: hidden; }
 }
 
 /* TOC (left column) */

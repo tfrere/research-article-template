@@ -89,13 +89,29 @@
     };
 
     const bootstrap = () => {
-      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-      const container = (mount && mount.querySelector && mount.querySelector('.d3-line')) || document.querySelector('.d3-line');
-      if (!container) return;
-      if (container.dataset) {
-        if (container.dataset.mounted === 'true') return;
-        container.dataset.mounted = 'true';
-      }
+      const scriptEl = document.currentScript;
+
+      const getLocalPrev = () => {
+        if (!scriptEl) return null;
+        let el = scriptEl.previousElementSibling;
+        while (el && !(el.classList && el.classList.contains('d3-line'))) {
+          el = el.previousElementSibling;
+        }
+        return el || null;
+      };
+
+      const localTarget = getLocalPrev();
+      const targets = localTarget
+        ? [localTarget]
+        : Array.from(document.querySelectorAll('.d3-line'))
+            .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+
+      targets.forEach((container) => {
+        if (!container) return;
+        if (container.dataset) {
+          if (container.dataset.mounted === 'true') return;
+          container.dataset.mounted = 'true';
+        }
 
       // Dataset params matching the Plotly version
       const datasets = [
@@ -418,6 +434,7 @@
         window.addEventListener('resize', render);
       }
       render();
+      });
     };
 
     if (document.readyState === 'loading') {
