@@ -78,8 +78,8 @@
 
       // Layout
       let width=800, height=450; const margin = { top: 0, right: 24, bottom: 32, left: 24 };
-      const CAPTION_GAP = 28;   // espace entre titre et donut (augmenté)
-      const LEGEND_GAP = 8;     // espace entre donut et légende (réduit)
+      const CAPTION_GAP = 28;   // gap between title and donut (larger)
+      const LEGEND_GAP = 8;     // gap between donut and legend (smaller)
       const updateSize = () => {
         width = container.clientWidth || 800;
         height = Math.max(260, Math.round(width/3.4));
@@ -127,7 +127,7 @@
         const cellWidth = (pieAreaWidth - gapX * (cols - 1)) / cols;
         const cellHeight = innerHeight - 6; // room for captions
         const radius = Math.max(30, Math.min(cellWidth, cellHeight) * 0.42);
-        const innerR = Math.round(radius * 0.28); // donut, trou modéré
+        const innerR = Math.round(radius * 0.28); // donut, moderate hole
 
         const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);

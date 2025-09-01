@@ -115,7 +115,7 @@
           const baseH = base.get('hsl.h') || 0;
           const L0 = Math.max(40, Math.min(85, lc[0] || 70));
           const C0 = Math.max(45, Math.min(75, lc[1] || 70));
-          const MIN_DELTA = 18; // distance minimale en Lab
+          const MIN_DELTA = 18; // minimal distance in Lab
 
           const seen = new Set();
           const results = [];
@@ -138,7 +138,7 @@
             if (!seen.has(hex.toLowerCase())) { results.push(hex); seen.add(hex.toLowerCase()); }
           };
 
-          // Base en premier
+          // Base first
           pushHex(base);
 
           const total = Math.max(6, Math.min(10, count || 6));
@@ -161,7 +161,7 @@
               }
             }
             if (!accepted) {
-              // Réduction de chroma si nécessaire
+              // Reduce chroma if necessary
               let cTry = C0 - 10;
               let trials = 0;
               while (!accepted && cTry >= 30 && trials < 6) {

@@ -146,7 +146,7 @@
           const rgb = base.rgb().map(v => Math.round(v));
           currentRgb.textContent = `RGB ${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
         }
-        // Appliquer au thème (toujours, pour refléter la sélection)
+        // Apply to theme (always, to reflect the selection)
         const hoverL = Math.max(0, Math.min(100, L - 8));
         const hoverHex = chroma.lch(hoverL, C, h).hex();
         const rootEl = document.documentElement;
@@ -171,7 +171,7 @@
         updateUI(hue, adjusting);
       });
 
-      // Init depuis la couleur de thème si disponible
+      // Init from theme color if available
       try {
         const cssPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
         if (cssPrimary) {
@@ -203,7 +203,7 @@
       if (slider) {
         slider.addEventListener('mousedown', onDown);
         slider.addEventListener('touchstart', onDown, { passive: false });
-        // Minimal support clavier (←/→, ⇧ pour pas trop saccader)
+        // Minimal keyboard support (←/→, Shift for larger steps)
         slider.addEventListener('keydown', (e) => {
           const step = e.shiftKey ? 10 : 2;
           if (e.key === 'ArrowLeft') { e.preventDefault(); const { hue } = bus.get(); const h = hue - step; updateUI(h, true); bus.publish(instanceId, h, true); bus.publish(instanceId, h, false); }

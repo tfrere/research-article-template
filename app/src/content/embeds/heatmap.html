@@ -1,5 +1,5 @@
 <div class="d3-train-diagram" style="width:100%;margin:10px 0;"></div>
-<div class="caption">Survolez les blocs pour afficher une explication.</div>
+<div class="caption">Hover blocks to show an explanation.</div>
 <style>
   .d3-train-diagram + .caption { margin-top: 8px; font-size: 14px; color: var(--muted-color); }
 </style>
@@ -31,12 +31,12 @@
         { key: 'updated', label: 'Updated', color: '#7c3aed' },
       ];
       const hoverText = {
-        model: 'Chaque bloc représente un sous-module du modèle.',
-        forward: 'Propagation avant: calcul des activations couche par couche.',
-        backward: 'Rétropropagation: calcul des gradients via la chaîne.',
-        gradients: 'Accumulateurs de gradients pour chaque couche.',
-        optimization: 'Étape d’optimisation: mise à jour des poids.',
-        updated: 'Paramètres mis à jour, prêts pour l’itération suivante.'
+        model: 'Each block represents a submodule of the model.',
+        forward: 'Forward pass: compute activations layer by layer.',
+        backward: 'Backpropagation: compute gradients through the chain.',
+        gradients: 'Gradient accumulators for each layer.',
+        optimization: 'Optimization step: update the weights.',
+        updated: 'Parameters updated, ready for the next iteration.'
       };
 
       // SVG
