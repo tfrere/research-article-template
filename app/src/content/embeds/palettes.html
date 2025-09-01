@@ -15,8 +15,24 @@
     .palettes .copy-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; } */
     .palettes .copy-btn svg { width: 18px; height: 18px; fill: currentColor; display: block; }
     /* Simulation UI */
-    .palettes .palettes__select { width: 100%; max-width: 260px; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); padding: 8px 10px; border-radius: 8px; }
+    .palettes .palettes__select { width: 100%; max-width: 100%; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color); padding: 8px 10px; border-radius: 8px; }
     .palettes .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 1px, 1px); white-space: nowrap; border: 0; }
+    .palettes .palettes__controls { display: flex; flex-wrap: nowrap; gap: 16px; align-items: center; margin: 8px 0 14px; }
+    .palettes .palettes__field { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 0 0 50%; max-width: 50%; }
+    .palettes .palettes__label { font-size: 12px; color: var(--muted-color); font-weight: 800; }
+    .palettes .palettes__count { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+    .palettes .palettes__count input[type="range"] { width: 100%; }
+    .palettes .palettes__count output { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted-color); }
+    /* Slider styling */
+    .palettes input[type="range"] { -webkit-appearance: none; appearance: none; height: 24px; background: transparent; cursor: pointer; accent-color: var(--primary-color); }
+    .palettes input[type="range"]:focus { outline: none; }
+    /* WebKit */
+    .palettes input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--border-color); border-radius: 999px; }
+    .palettes input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; margin-top: -6px; width: 18px; height: 18px; background: var(--primary-color); border: 2px solid var(--surface-bg); border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+    /* Firefox */
+    .palettes input[type="range"]::-moz-range-track { height: 6px; background: var(--border-color); border: none; border-radius: 999px; }
+    .palettes input[type="range"]::-moz-range-progress { height: 6px; background: var(--primary-color); border-radius: 999px; }
+    .palettes input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; background: var(--primary-color); border: 2px solid var(--surface-bg); border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
     /* Page-wide color vision simulation classes */
     html.cb-grayscale, body.cb-grayscale { filter: grayscale(1) !important; }
     html.cb-protanopia, body.cb-protanopia { filter: url(#cb-protanopia) !important; }
@@ -28,21 +44,32 @@
       .palettes .palette-card__swatches { grid-template-columns: repeat(6, minmax(0, 1fr));  }
       .palettes .palette-card__content { border-right: none; padding-right: 0; }
       .palettes .palette-card__actions { justify-self: start; }
+      
     }
   </style>
+  <div class="palettes__controls">
+    <div class="palettes__field">
+      <label class="palettes__label" for="cb-select">Color vision simulation</label>
+      <select id="cb-select" class="palettes__select">
+        <option value="none">Normal color vision — typical for most people</option>
+        <option value="achromatopsia">Achromatopsia — no color at all</option>
+        <option value="protanopia">Protanopia — reduced/absent reds</option>
+        <option value="deuteranopia">Deuteranopia — reduced/absent greens</option>
+        <option value="tritanopia">Tritanopia — reduced/absent blues</option>
+      </select>
+    </div>
+    <div class="palettes__field">
+      <label class="palettes__label" for="color-count">Number of colors</label>
+      <div class="palettes__count">
+        <input id="color-count" type="range" min="6" max="10" step="1" value="6" aria-label="Number of colors" />
+        <output id="color-count-out" for="color-count">6</output>
+      </div>
+    </div>
+  </div>
   <div class="palettes__grid"></div>
   <div class="palettes__simu" role="group" aria-labelledby="cb-sim-title">
     <br/>
     <p ><strong>Use color with care.</strong> Color should rarely be the only channel of meaning. Always pair it with text, icons, shape or position. The simulation below helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies. Toggle modes while checking charts, legends and interactions to ensure sufficient contrast and redundant cues.</p>
-    <label for="cb-select">Color vision simulation</label>
-    <select id="cb-select" class="palettes__select">
-      <option value="none">None — full color</option>
-      <option value="grayscale">Grayscale — no hue (luminance only)</option>
-      <option value="protanopia">Protanopia — reduced/absent reds</option>
-      <option value="deuteranopia">Deuteranopia — reduced/absent greens</option>
-      <option value="tritanopia">Tritanopia — reduced/absent blues</option>
-      <option value="achromatopsia">Achromatopsia — no color at all</option>
-    </select>
     <!-- Hidden SVG filters used by the page-wide simulation classes -->
     <svg aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute; left:-9999px; overflow:hidden;">
       <defs>
@@ -84,7 +111,7 @@
       };
 
     const cards = [
-      { key: 'categorical', title: 'Categorical', desc: 'For <strong>non‑numeric categories</strong>; <strong>visually distinct</strong> colors. <strong>Up to 6</strong>.', generator: (baseHex) => {
+      { key: 'categorical', title: 'Categorical', desc: 'For <strong>non‑numeric categories</strong>; <strong>visually distinct</strong> colors.', generator: (baseHex, count) => {
           const base = chroma(baseHex);
           const lc = base.lch();
           const baseH = base.get('hsl.h') || 0;
@@ -116,17 +143,18 @@
           // Base en premier
           pushHex(base);
 
-          // Cinq couleurs supplémentaires, espacées de 60°
-          const angles = [60, 120, 180, 240, 300];
-          const hueOffsets = [0, 20, -20, 40, -40, 60, -60, 80, -80];
+          const total = Math.max(6, Math.min(10, count || 6));
+          const hueStep = 360 / total;
+          const hueOffsets = [0, 18, -18, 36, -36, 54, -54, 72, -72];
           const lVariants = [L0, Math.max(40, L0 - 6), Math.min(85, L0 + 6)];
 
-          angles.forEach(step => {
+          for (let idx = 1; results.length < total && idx < total + 12; idx++) {
+            let stepHue = (baseH + idx * hueStep) % 360;
             let accepted = false;
             for (let li = 0; li < lVariants.length && !accepted; li++) {
               for (let oi = 0; oi < hueOffsets.length && !accepted; oi++) {
-                let h = (baseH + step + hueOffsets[oi] + 360) % 360;
-                let col = makeSafe(h, lVariants[li], C0);
+                const h = (stepHue + hueOffsets[oi] + 360) % 360;
+                const col = makeSafe(h, lVariants[li], C0);
                 const hex = col.hex();
                 if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
                   pushHex(col);
@@ -135,12 +163,11 @@
               }
             }
             if (!accepted) {
-              // Réduction de C si nécessaire
+              // Réduction de chroma si nécessaire
               let cTry = C0 - 10;
-              let h = (baseH + step + 360) % 360;
               let trials = 0;
               while (!accepted && cTry >= 30 && trials < 6) {
-                const col = makeSafe(h, L0, cTry);
+                const col = makeSafe(stepHue, L0, cTry);
                 const hex = col.hex();
                 if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
                   pushHex(col);
@@ -150,11 +177,10 @@
                 cTry -= 5;
                 trials++;
               }
-              // Dernier recours: choisir la teinte la plus éloignée possible même si < seuil
               if (!accepted) {
                 let bestHex = null; let bestMin = -1;
                 hueOffsets.forEach(off => {
-                  const hh = (baseH + step + off + 360) % 360;
+                  const hh = (stepHue + off + 360) % 360;
                   const cand = makeSafe(hh, L0, C0).hex();
                   const minD = results.reduce((m, prev) => Math.min(m, chroma.distance(cand, prev, 'lab')), Infinity);
                   if (minD > bestMin && !seen.has(cand.toLowerCase())) { bestMin = minD; bestHex = cand; }
@@ -162,28 +188,34 @@
                 if (bestHex) { seen.add(bestHex.toLowerCase()); results.push(bestHex); }
               }
             }
-          });
+          }
 
-          return results.slice(0, 6);
+          return results.slice(0, total);
       }},
-      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.', generator: (baseHex) => {
+      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.', generator: (baseHex, count) => {
+          const total = Math.max(6, Math.min(10, count || 6));
           const c = chroma(baseHex).saturate(0.3);
-          return chroma.scale([c.darken(2), c, c.brighten(2)]).mode('lab').correctLightness(true).colors(6);
+          return chroma.scale([c.darken(2), c, c.brighten(2)]).mode('lab').correctLightness(true).colors(total);
       }},
-      { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> around a <strong>baseline</strong>. (e.g., negatives/positives)', generator: (baseHex) => {
+      { key: 'diverging', title: 'Diverging', desc: 'For <strong>centered ranges</strong> with <strong>two extremes</strong> around a <strong>baseline</strong>. (e.g., negatives/positives)', generator: (baseHex, count) => {
+          const total = Math.max(6, Math.min(10, count || 6));
           const baseH = chroma(baseHex).get('hsl.h');
           const compH = (baseH + 180) % 360;
           const left = chroma.hsl(baseH, 0.75, 0.55);
           const right = chroma.hsl(compH, 0.75, 0.55);
-          const center = '#ffffff';
-          const leftRamp = chroma.scale([left, center]).mode('lch').correctLightness(true).colors(4);
-          const rightRamp = chroma.scale([center, right]).mode('lch').correctLightness(true).colors(4);
-          return [leftRamp[0], leftRamp[1], leftRamp[2], rightRamp[1], rightRamp[2], rightRamp[3]];
+          return chroma.scale([left, '#ffffff', right]).mode('lch').correctLightness(true).colors(total);
       }}
     ];
 
     const getCssPrimary = () => {
       try { return getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim(); } catch { return ''; }
+    };
+
+    const getDesiredCount = () => {
+      const input = document.getElementById('color-count');
+      let v = input ? parseInt(input.value, 10) : 6;
+      if (Number.isNaN(v)) v = 6;
+      return Math.max(6, Math.min(10, v));
     };
 
     const render = () => {
@@ -195,9 +227,10 @@
       grid.innerHTML = '';
       const css = getCssPrimary();
       const baseHex = css && /^#|rgb|hsl/i.test(css) ? chroma(css).hex() : '#E889AB';
+      const count = getDesiredCount();
 
       const html = cards.map((c) => {
-        const colors = c.generator(baseHex).slice(0, 6);
+        const colors = c.generator(baseHex, count).slice(0, count);
         const swatches = colors.map(col => `<div class="sw" style="background:${col}"></div>`).join('');
         return `
           <div class="palette-card" data-colors="${colors.join(',')}">
@@ -211,14 +244,14 @@
               </button>
             </div>
             <div class="palette-card__actions"></div>
-            <div class="palette-card__swatches">${swatches}</div>
+            <div class="palette-card__swatches" style="grid-template-columns: repeat(${colors.length}, minmax(0, 1fr));">${swatches}</div>
           </div>
         `;
       }).join('');
       grid.innerHTML = html;
       };
 
-    const MODE_TO_CLASS = { grayscale: 'cb-grayscale', protanopia: 'cb-protanopia', deuteranopia: 'cb-deuteranopia', tritanopia: 'cb-tritanopia', achromatopsia: 'cb-achromatopsia' };
+    const MODE_TO_CLASS = { protanopia: 'cb-protanopia', deuteranopia: 'cb-deuteranopia', tritanopia: 'cb-tritanopia', achromatopsia: 'cb-achromatopsia' };
     const CLEAR_CLASSES = Object.values(MODE_TO_CLASS);
     const clearCbClasses = () => {
       const rootEl = document.documentElement;
@@ -239,6 +272,15 @@
       if (!select) return;
       try { select.value = currentCbMode(); } catch {}
       select.addEventListener('change', () => applyCbClass(select.value));
+    };
+
+    const setupCountControl = () => {
+      const input = document.getElementById('color-count');
+      const out = document.getElementById('color-count-out');
+      if (!input) return;
+      const sync = () => { if (out) out.textContent = String(getDesiredCount()); render(); };
+      input.addEventListener('input', sync);
+      try { if (out) out.textContent = String(getDesiredCount()); } catch {}
     };
 
     let copyDelegationSetup = false;
@@ -268,8 +310,9 @@
     };
 
     const bootstrap = () => {
-      render();
       setupCbSim();
+      setupCountControl();
+      render();
       setupCopyDelegation();
       const mo = new MutationObserver(() => render());
       mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });

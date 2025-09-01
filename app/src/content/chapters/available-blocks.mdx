@@ -328,35 +328,45 @@ Props (optional)
 - `frameless`: removes the card background and border for seamless embeds.
 - `align`: aligns the title/description text. One of `left` (default), `center`, `right`.
 
+{/* <HtmlEmbed src="d3-scatter.html" frameless title="" desc="" /> */}
 <HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
 ---
-<HtmlEmbed
-src="d3-bar.html"
-title="Memory usage with recomputation"
-desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}
-/>
+<HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
+---
+<Wide>
+  <HtmlEmbed src="d3-neural.html" title="D3 Interactive neural network (MNIST-like)" desc="Draw a digit and visualize activations and class probabilities (0–9)." align="center" />
+</Wide>
 ---
 <FullWidth>
-<HtmlEmbed
-src="d3-pie.html"
-title="Category distribution (4 metrics)"
-desc="Pie charts by category"
-align="center"
-/>
+  <HtmlEmbed src="d3-pie.html" desc="D3 Pie charts by category" align="center" />
 </FullWidth>
 ---
 <HtmlEmbed src="line.html" title="Plotly Line" desc="Interactive time series" />
 
+<br/><br/>
+Here are some examples of the two **libraries** in the template
+
 <small className="muted">Example</small>
 ```mdx
 import HtmlEmbed from '../components/HtmlEmbed.astro'
+
+<HtmlEmbed src="d3-line.html" title="D3 Line" desc="Simple time series" />
+<HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
+
+<Wide>
+  <HtmlEmbed src="d3-neural.html" title="D3 Interactive neural network (MNIST-like)" desc="Draw a digit and visualize activations and class probabilities (0–9)." align="center" />
+</Wide>
+
+<FullWidth>
+  <HtmlEmbed src="d3-pie.html" desc="D3 Pie charts by category" align="center" />
+</FullWidth>
 
 <HtmlEmbed src="line.html" title="Plotly Line" desc="Interactive time series" />
 ```
 
 ### Iframes
 
-You can embed external content in your article using **iframes**. For example, **TrackIO or github code embeds** can be used this way.
+You can embed external content in your article using **iframes**. For example, **TrackIO**, **Gradio** or even **Github code embeds** can be used this way.
 
 <small className="muted">Github code embed</small>
 <iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>

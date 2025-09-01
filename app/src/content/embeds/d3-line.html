@@ -232,25 +232,20 @@
         xScale.range([0, innerWidth]);
         yScale.range([innerHeight, 0]);
 
-        // Compute integer ticks for Y
-        let yIntTicks = [];
+        // Compute Y ticks
+        let yTicks = [];
         if (isRankStrictFlag) {
           const maxR = Math.max(1, Math.round(rankTickMax));
-          for (let v = 1; v <= maxR; v += 1) yIntTicks.push(v);
+          for (let v = 1; v <= maxR; v += 1) yTicks.push(v);
         } else {
-          const yDomain = yScale.domain();
-          const yMin = Math.min(yDomain[0], yDomain[1]);
-          const yMax = Math.max(yDomain[0], yDomain[1]);
-          let yStep = Math.max(1, Math.round((yMax - yMin) / 6));
-          if (!isFinite(yStep) || yStep <= 0) yStep = 1;
-          for (let v = Math.ceil(yMin); v <= Math.floor(yMax); v += yStep) { yIntTicks.push(v); }
-          if (yIntTicks.length === 0) { yIntTicks = [Math.round(yMin), Math.round(yMax)]; }
+          // Use D3's tick generator to produce nice floating-point ticks
+          yTicks = yScale.ticks(6);
         }
 
         // Grid (horizontal)
         gGrid.selectAll('*').remove();
         gGrid.selectAll('line')
-          .data(yIntTicks)
+          .data(yTicks)
           .join('line')
           .attr('x1', 0)
           .attr('x2', innerWidth)
@@ -274,7 +269,10 @@
         } else {
           xAxis = xAxis.ticks(8);
         }
-        const yAxis = d3.axisLeft(yScale).tickValues(yIntTicks).tickSizeOuter(0).tickFormat(d3.format('d'));
+        const yAxis = d3.axisLeft(yScale)
+          .tickValues(yTicks)
+          .tickSizeOuter(0)
+          .tickFormat(isRankStrictFlag ? d3.format('d') : d3.format('.2f'));
         gAxes.append('g')
           .attr('transform', `translate(0,${innerHeight})`)
           .call(xAxis)
