@@ -89,8 +89,25 @@
     };
 
     const bootstrap = () => {
-      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-      const container = (mount && mount.querySelector && mount.querySelector('.d3-line')) || document.querySelector('.d3-line');
+      const scriptEl = document.currentScript;
+      let container = null;
+
+      // Prefer the closest previous sibling with class .d3-line (local instance)
+      if (scriptEl) {
+        let el = scriptEl.previousElementSibling;
+        while (el && !(el.classList && el.classList.contains('d3-line'))) {
+          el = el.previousElementSibling;
+        }
+        if (el) container = el;
+      }
+
+      // Fallback: pick the last unmounted .d3-line in the document
+      if (!container) {
+        const candidates = Array.from(document.querySelectorAll('.d3-line'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+
       if (!container) return;
       if (container.dataset) {
         if (container.dataset.mounted === 'true') return;

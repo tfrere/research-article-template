@@ -1,0 +1,38 @@
+---
+// @ts-ignore - types provided by Astro at runtime
+import { Image } from 'astro:assets';
+
+interface Props {
+  /** Source image imported via astro:assets */
+  src: any;
+  /** Alt text for accessibility */
+  alt: string;
+  /** Optional HTML string caption (use slot caption for rich content) */
+  caption?: string;
+  /** Optional class to apply on the <figure> wrapper when caption is used */
+  figureClass?: string;
+  /** Any additional attributes should be forwarded to the underlying <Image> */
+  [key: string]: any;
+}
+
+const { caption, figureClass, ...imgProps } = Astro.props as Props;
+const hasCaptionSlot = Astro.slots.has('caption');
+const hasCaption = hasCaptionSlot || (typeof caption === 'string' && caption.length > 0);
+---
+
+{hasCaption ? (
+  <figure class={figureClass}>
+    <Image {...imgProps} />
+    <figcaption>
+      {hasCaptionSlot ? (
+        <slot name="caption" />
+      ) : (
+        caption && <span set:html={caption} />
+      )}
+    </figcaption>
+  </figure>
+) : (
+  <Image {...imgProps} />
+)}
+
+

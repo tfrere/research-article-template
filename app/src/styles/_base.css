@@ -48,10 +48,14 @@ html { font-size: 14px; line-height: 1.6; }
 /* Do not underline heading links inside the article (not the TOC) */
 .content-grid main h2 a,
 .content-grid main h3 a,
-.content-grid main h4 a { color: inherit; border-bottom: none; text-decoration: none; }
+.content-grid main h4 a,
+.content-grid main h5 a,
+.content-grid main h6 a { color: inherit; border-bottom: none; text-decoration: none; }
 .content-grid main h2 a:hover,
 .content-grid main h3 a:hover,
-.content-grid main h4 a:hover { color: inherit; border-bottom: none; text-decoration: none; }
+.content-grid main h4 a:hover,
+.content-grid main h5 a:hover,
+.content-grid main h6 a:hover { color: inherit; border-bottom: none; text-decoration: none; }
 
 .content-grid main ul,
 .content-grid main ol { padding-left: 24px; margin: 0 0 var(--spacing-3); }
