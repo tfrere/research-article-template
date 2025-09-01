@@ -16,10 +16,10 @@ import ResponsiveImage from '../../components/ResponsiveImage.astro';
 <br/>
 <div className="button-group">
   <a className="button" href="#math">Math</a>
-  <a className="button" href="#responsiveimage">ResponsiveImage</a>
   <a className="button" href="#code-blocks">Code</a>
-  <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#citations-and-notes">Citations & notes</a>
+  <a className="button" href="#responsiveimage">ResponsiveImage</a>
+  <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#placement">Placement</a>
   <a className="button" href="#accordion">Accordion</a>
   <a className="button" href="#note">Note</a>
@@ -54,6 +54,56 @@ $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
 ```
+
+### Code
+
+Use fenced code blocks with a language for syntax highlighting.
+
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+
+greet("Astro")
+```
+
+<small className="muted">Example</small>
+````mdx
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+
+greet("Astro")
+```
+````
+
+
+### Citation and footnote
+
+**Citations** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article. The citation keys come from `app/src/content/bibliography.bib`.
+
+**Footnotes** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
+
+Here are a few variations using the same bibliography:
+
+1) **In-text citation** with brackets: [@example2023].
+
+2) **Narrative citation**: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
+
+3) **Multiple citations** and a **footnote** together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
+
+[^f1]: Footnote attached to the sentence above.
+
+<small className="muted">Example</small>
+```mdx
+1) In-text citation with brackets: [@example2023].
+
+2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
+
+3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
+
+[^f1]: Footnote attached to the sentence above.
+```
+
 
 ### ResponsiveImage
 
@@ -95,26 +145,6 @@ import myImage from './assets/images/placeholder.jpg'
 ```
 
 
-### Code
-
-Use fenced code blocks with a language for syntax highlighting.
-
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-
-<small className="muted">Example</small>
-````mdx
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-````
 
 ### Mermaid diagram
 
@@ -190,32 +220,6 @@ erDiagram
 ```
 ````
 
-### Citation and footnote
-
-**Citations** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article. The citation keys come from `app/src/content/bibliography.bib`.
-
-**Footnotes** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
-
-Here are a few variations using the same bibliography:
-
-1) **In-text citation** with brackets: [@example2023].
-
-2) **Narrative citation**: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) **Multiple citations** and a **footnote** together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-
-<small className="muted">Example</small>
-```mdx
-1) In-text citation with brackets: [@example2023].
-
-2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-```
 
 ### Separator
 
