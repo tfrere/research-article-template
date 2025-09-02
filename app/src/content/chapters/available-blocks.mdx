@@ -111,19 +111,19 @@ Here are a few variations using the same bibliography:
 
 | Prop                   | Required | Description                                                                                                         
 |------------------------|----------|-------------------------------------------------------
-| `data-zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
-| `data-downloadable`    | No       | Adds a download button to fetch the image file.                                                               
+| `zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
+| `downloadable`    | No       | Adds a download button to fetch the image file.                                                               
 | `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
 | `caption`              | No       | Adds a caption and credit.                                                                                          
 
 
 <ResponsiveImage
   src={placeholder}
-  data-zoomable
-  data-downloadable
+  zoomable
+  downloadable
   layout="fixed"
-  alt="Tensor parallelism in a transformer block"
-  caption={'Tensor parallelism in a transformer block <span class="image-credit">Original work on <a target="_blank" href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=tensor_parallelism_in_a_transformer_block">Ultrascale Playbook</a></span>'}
+  alt="A placeholder image alt text"
+  caption={'A placeholder image description <span class="image-credit">From the <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a></span>'}
 />
 
 <small className="muted">Example</small>
@@ -136,8 +136,8 @@ import myImage from './assets/images/placeholder.jpg'
 <ResponsiveImage
   src={myImage}
   layout="fixed"
-  data-zoomable
-  data-downloadable
+  zoomable
+  downloadable
   loading="lazy"
   alt="Example with caption and credit"
   caption={'Optimized image with a descriptive caption. <span class="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>'}
@@ -282,13 +282,23 @@ greet("Astro");
 
 Small contextual callout for tips, caveats, or emphasis.
 
-Props (optional)
-- `title`: short title displayed in the header.
-- `emoji`: emoji displayed before the title.
-- `class`: extra classes for custom styling.
+| Prop     | Required | Type                         | Description                         |
+|----------|----------|------------------------------|-------------------------------------|
+| `title`  | No       | string                       | Short title displayed in header     |
+| `emoji`  | No       | string                       | Emoji displayed before the title    |
+| `class`  | No       | string                       | Extra classes for custom styling    |
+| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note            |
 
-<Note title="Heads‑up" emoji="💡">
+<Note title="Heads‑up" emoji="💡" variant="info">
   Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note variant="success">
+  Operation completed successfully.
+</Note>
+
+<Note variant="danger">
+  Be careful: this action cannot be undone.
 </Note>
 
 <Note>
@@ -299,8 +309,16 @@ Props (optional)
 ```mdx
 import Note from '../../components/Note.astro'
 
-<Note title="Heads‑up" emoji="💡">
+<Note title="Heads‑up" emoji="💡" variant="info">
   Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note variant="success">
+  Operation completed successfully.
+</Note>
+
+<Note variant="danger">
+  Be careful: this action cannot be undone.
 </Note>
 
 <Note>
@@ -369,18 +387,22 @@ import HtmlEmbed from '../components/HtmlEmbed.astro'
 
 #### Data
 
-If you need to link your HTML embeds to data files, there is an **`assets/data`** folder for this.
+If you need to link your **HTML embeds** to **data files**, there is an **`assets/data`** folder for this.
 As long as your files are there, they will be served from the **`public/data`** folder.
 You can fetch them with this address: **`[domain]/data/your-data.ext`**
 
 <Note>⚠️ <b>Be careful</b>, unlike images, <b>data files are not optimized</b> by Astro. You need to optimize them manually.</Note>
 
-#### Real world examples
+#### Vibe coding charts
 
-Here are some real world examples to inspire you.
+If you are from the research field, it can be difficult to use **D3.js** charts instead of **Plotly**.
+Happily, **LLM's** are here to help you! In the `app/src/content/embeds` folder, there is a `vibe-code-d3-embeds-directives.md` file that you can use to vibe code **D3.js** charts.
+
+Inside this file, you will find every directives you need to code your own **HtmlEmbed** proof **D3.js** chart.
+
+Here are some **real world examples** that were vibe coded to inspire you.
 
 <HtmlEmbed src="d3-line.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
-<HtmlEmbed src="d3-line-example.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
 ---
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
 ---

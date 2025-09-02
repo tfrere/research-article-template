@@ -8,7 +8,7 @@
     .palettes .palette-card__swatches .sw { width: 100%; min-width: 0; min-height: 0; border-radius: 0; border: 1px solid var(--border-color); }
     .palettes .palette-card__swatches .sw:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     .palettes .palette-card__swatches .sw:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
-    .palettes .palette-card__content { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; min-width: 0; padding-right: 16px; border-right: 1px solid var(--border-color); }
+    .palettes .palette-card__content { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; min-width: 0; padding-right: 0; }
     .palettes .palette-card__content__info { display: flex; flex-direction: column;  }
     .palettes .palette-card__title { text-align: left; font-weight: 800; font-size: 15px; }
     .palettes .palette-card__desc { text-align: left; color: var(--muted-color); line-height: 1.5; font-size: 12px; }
@@ -97,128 +97,24 @@
 </div>
 <script>
   (() => {
-      const loadScript = (id, src, onload, onerror) => {
-        let s = document.getElementById(id);
-        if (s) { return onload && onload(); }
-      s = document.createElement('script'); s.id = id; s.src = src; s.async = true;
-        if (onload) s.addEventListener('load', onload, { once: true });
-        if (onerror) s.addEventListener('error', onerror, { once: true });
-        document.head.appendChild(s);
-      };
-      const ensureChroma = (next) => {
-        if (window.chroma) return next();
-        const tryReady = () => { if (window.chroma) next(); else setTimeout(tryReady, 25); };
-        const existing = document.getElementById('chroma-cdn') || document.getElementById('chroma-cdn-fallback');
-        if (existing) { tryReady(); return; }
-        loadScript('chroma-cdn', 'https://unpkg.com/chroma-js@2.4.2/dist/chroma.min.js', tryReady, () => {
-          loadScript('chroma-cdn-fallback', 'https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js', tryReady);
-        });
-      };
-
     const cards = [
-      { key: 'categorical', title: 'Categorical', desc: 'For <strong>non‑numeric categories</strong>; <strong>visually distinct</strong> colors. The more you have the more likely they are to look similar.', generator: (baseHex, count) => {
-          const base = chroma(baseHex);
-          const lc = base.lch();
-          const baseH = base.get('hsl.h') || 0;
-          const L0 = Math.max(40, Math.min(85, lc[0] || 70));
-          const C0 = Math.max(45, Math.min(75, lc[1] || 70));
-          const MIN_DELTA = 18; // minimal distance in Lab
-
-          const seen = new Set();
-          const results = [];
-
-          const makeSafe = (h, L, C) => {
-            let c = C;
-            let col = chroma.lch(L, c, h);
-            let guard = 0;
-            while (col.clipped && typeof col.clipped === 'function' && col.clipped() && c > 30 && guard < 8) {
-              c -= 5;
-              col = chroma.lch(L, c, h);
-              guard++;
-            }
-            return col;
-          };
-
-          const isFarEnough = (hex) => results.every(prev => chroma.distance(hex, prev, 'lab') >= MIN_DELTA);
-          const pushHex = (col) => {
-            const hex = col.hex();
-            if (!seen.has(hex.toLowerCase())) { results.push(hex); seen.add(hex.toLowerCase()); }
-          };
-
-          // Base first
-          pushHex(base);
-
-          const total = Math.max(6, Math.min(10, count || 6));
-          const hueStep = 360 / total;
-          const hueOffsets = [0, 18, -18, 36, -36, 54, -54, 72, -72];
-          const lVariants = [L0, Math.max(40, L0 - 6), Math.min(85, L0 + 6)];
-
-          for (let idx = 1; results.length < total && idx < total + 12; idx++) {
-            let stepHue = (baseH + idx * hueStep) % 360;
-            let accepted = false;
-            for (let li = 0; li < lVariants.length && !accepted; li++) {
-              for (let oi = 0; oi < hueOffsets.length && !accepted; oi++) {
-                const h = (stepHue + hueOffsets[oi] + 360) % 360;
-                const col = makeSafe(h, lVariants[li], C0);
-                const hex = col.hex();
-                if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
-                  pushHex(col);
-                  accepted = true;
-                }
-              }
-            }
-            if (!accepted) {
-              // Reduce chroma if necessary
-              let cTry = C0 - 10;
-              let trials = 0;
-              while (!accepted && cTry >= 30 && trials < 6) {
-                const col = makeSafe(stepHue, L0, cTry);
-                const hex = col.hex();
-                if (!seen.has(hex.toLowerCase()) && isFarEnough(hex)) {
-                  pushHex(col);
-                  accepted = true;
-                  break;
-                }
-                cTry -= 5;
-                trials++;
-              }
-              if (!accepted) {
-                let bestHex = null; let bestMin = -1;
-                hueOffsets.forEach(off => {
-                  const hh = (stepHue + off + 360) % 360;
-                  const cand = makeSafe(hh, L0, C0).hex();
-                  const minD = results.reduce((m, prev) => Math.min(m, chroma.distance(cand, prev, 'lab')), Infinity);
-                  if (minD > bestMin && !seen.has(cand.toLowerCase())) { bestMin = minD; bestHex = cand; }
-                });
-                if (bestHex) { seen.add(bestHex.toLowerCase()); results.push(bestHex); }
-              }
-            }
-          }
-
-          return results.slice(0, total);
-      }},
-      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.', generator: (baseHex, count) => {
-          const total = Math.max(6, Math.min(10, count || 6));
-          const c = chroma(baseHex).saturate(0.3);
-          return chroma.scale([c.darken(2), c, c.brighten(2)]).mode('lab').correctLightness(true).colors(total);
-      }},
-      { key: 'diverging', title: 'Diverging', desc: 'Opposing extremes via <strong>base → white → complement</strong>; smooth contrast around a neutral midpoint.', generator: (baseHex, count) => {
-          const total = Math.max(6, Math.min(10, count || 6));
-          const comp = chroma(baseHex).set('hsl.h', '+180');
-          const bez = chroma.bezier([baseHex, '#ffffff', comp]);
-          return bez.scale().padding(-0.15).colors(total);
-      }}
+      { key: 'categorical', title: 'Categorical', desc: 'For <strong>non‑numeric categories</strong>; <strong>visually distinct</strong> colors. The more you have the more likely they are to look similar.' },
+      { key: 'sequential', title: 'Sequential', desc: 'For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.' },
+      { key: 'diverging', title: 'Diverging', desc: 'Opposing extremes via <strong>base → white → complement</strong>; smooth contrast around a neutral midpoint.' }
     ];
 
-    const getCssPrimary = () => {
-      try { return getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim(); } catch { return ''; }
+    const getCssVar = (name) => {
+      try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch { return ''; }
     };
 
-    const getDesiredCount = () => {
-      const input = document.getElementById('color-count');
-      let v = input ? parseInt(input.value, 10) : 6;
-      if (Number.isNaN(v)) v = 6;
-      return Math.max(6, Math.min(10, v));
+    const getPaletteColors = (key) => {
+      const count = Number(getCssVar(`--palette-${key}-count-current`)) || Number(getCssVar('--palette-count')) || 6;
+      const colors = [];
+      for (let i = 1; i <= count; i++) {
+        const v = getCssVar(`--palette-${key}-${i}`);
+        if (v) colors.push(v);
+      }
+      return colors;
     };
 
     const render = () => {
@@ -227,13 +123,8 @@
       if (!root) return;
       const grid = root.querySelector('.palettes__grid');
       if (!grid) return;
-      grid.innerHTML = '';
-      const css = getCssPrimary();
-      const baseHex = css && /^#|rgb|hsl/i.test(css) ? chroma(css).hex() : '#E889AB';
-      const count = getDesiredCount();
-
       const html = cards.map((c) => {
-        const colors = c.generator(baseHex, count).slice(0, count);
+        const colors = getPaletteColors(c.key);
         const swatches = colors.map(col => `<div class="sw" style="background:${col}"></div>`).join('');
         return `
           <div class="palette-card" data-colors="${colors.join(',')}">
@@ -252,7 +143,7 @@
         `;
       }).join('');
       grid.innerHTML = html;
-      };
+    };
 
     const MODE_TO_CLASS = { protanopia: 'cb-protanopia', deuteranopia: 'cb-deuteranopia', tritanopia: 'cb-tritanopia', achromatopsia: 'cb-achromatopsia' };
     const CLEAR_CLASSES = Object.values(MODE_TO_CLASS);
@@ -281,9 +172,19 @@
       const input = document.getElementById('color-count');
       const out = document.getElementById('color-count-out');
       if (!input) return;
-      const sync = () => { if (out) out.textContent = String(getDesiredCount()); render(); };
-      input.addEventListener('input', sync);
-      try { if (out) out.textContent = String(getDesiredCount()); } catch {}
+      const read = () => {
+        const v = Number(getCssVar('--palette-count')) || 6;
+        return Math.max(6, Math.min(10, v));
+      };
+      const write = (v) => {
+        document.documentElement.style.setProperty('--palette-count', String(v));
+        if (window.ColorPalettes && typeof window.ColorPalettes.refresh === 'function') window.ColorPalettes.refresh();
+      };
+      const syncOut = () => { if (out) out.textContent = String(read()); };
+      const syncInput = () => { try { input.value = String(read()); } catch {} };
+      syncInput(); syncOut();
+      input.addEventListener('input', () => { write(input.value); syncOut(); });
+      document.addEventListener('palettes:updated', () => { syncInput(); syncOut(); render(); });
     };
 
     let copyDelegationSetup = false;
@@ -317,12 +218,21 @@
       setupCountControl();
       render();
       setupCopyDelegation();
+      // Re-render when global palettes update and when :root style changes
+      document.addEventListener('palettes:updated', render);
       const mo = new MutationObserver(() => render());
       mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+      // Fallback: if global script loads after this fragment and we missed the event
+      const waitForPalettes = () => {
+        if (getCssVar('--palette-categorical-1')) { render(); return; }
+        setTimeout(waitForPalettes, 50);
+      };
+      waitForPalettes();
     };
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => ensureChroma(bootstrap), { once: true });
-    else ensureChroma(bootstrap);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    else bootstrap();
   })();
 </script>
 

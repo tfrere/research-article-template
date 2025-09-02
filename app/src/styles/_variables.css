@@ -34,6 +34,9 @@
   --spacing-9: 64px;
   --spacing-10: 72px;
 
+  /* Palettes config */
+  --palette-count: 6; /* default number of colors per palette */
+
   /* Z-index scale */
   --z-base: 0;           /* background/base */
   --z-content: 1;        /* regular content */

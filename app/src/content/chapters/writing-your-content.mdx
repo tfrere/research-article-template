@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import placeholder from '../assets/images/placeholder.png';
 import Sidenote from '../../components/Sidenote.astro';
 import Wide from '../../components/Wide.astro';
+import Note from '../../components/Note.astro';
 import FullWidth from '../../components/FullWidth.astro';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import audioDemo from '../assets/audio/audio-example.wav';
@@ -15,12 +16,12 @@ Your **article** lives in **one place**
 
 Everything is **self-contained** under `app/src/content/`:
 - **MDX**: `article.mdx` and [**optional chapters**](#chapters) in `chapters/`
-- **Assets**: `assets/` **images**, **audios**, **datas**, etc. (tracked via **Git LFS**)
-- **Embeds**: `embed/` [**HtmlEmbed**](#htmlembed) for **Plotly/D3**, etc.
+- **Assets**: `assets/` images, audios, datas, etc. (tracked via **Git LFS**)
+- **Embeds**: `embed/` [**HtmlEmbed**](#htmlembed) for Plotly/D3, etc.
 
 The `article.mdx` file is the **main entry point** of your article.
 
-<small className="muted">Example</small>
+<small className="muted">app/src/content/article.mdx</small>
 ```mdx
 {/* HEADER */}
 ---
@@ -38,6 +39,8 @@ tags:
   - template
 {/* Optional override of the default Open Graph image */}
 ogImage: "https://override-example.com/your-og-image.png"
+{/* By default the table of contents is not collapsing */}
+tocAutoCollapse: true
 ---
 
 {/* IMPORTS */}
@@ -129,6 +132,42 @@ Here is a suggestion of **color palettes** for your **data visualizations** that
 Color should rarely be the only channel of meaning.
 Always pair it with text, icons, shape or position. The simulation helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies.
 
+#### Using the palettes
+
+##### CSS
+Use the generated **CSS variables** to style elements.
+
+```css
+/* Usage */
+.series-a { color: var(--palette-categorical-1); }
+.series-b { color: var(--palette-categorical-2); }
+.heatmap-low  { background: var(--palette-sequential-1); }
+.heatmap-high { background: var(--palette-sequential-6); }
+.neg { color: var(--palette-diverging-1); }  /* left = primary */
+.pos { color: var(--palette-diverging-6); }  /* right = complement */
+
+/* Override size */
+:root { --palette-count: 8; }                    /* global */
+:root { --palette-diverging-count: 7; }          /* per palette */
+```
+
+<Note variant="info">⚠️ **CSS overrides** automatically trigger a **palette regeneration** via JS observers; no manual call is needed.</Note>
+
+##### JS
+Fetch arrays of colors via **`window.ColorPalettes.getColors(type)`**. To change sizes **at runtime**, set CSS vars and call **`window.ColorPalettes.refresh()`**.
+
+```js
+// Usage
+const cat = window.ColorPalettes.getColors('categorical');
+const seq = window.ColorPalettes.getColors('sequential');
+const div = window.ColorPalettes.getColors('diverging');
+
+// Override size (runtime)
+document.documentElement.style.setProperty('--palette-count', '8');
+document.documentElement.style.setProperty('--palette-diverging-count', '7');
+window.ColorPalettes.refresh();
+```
+
 ### Placement
 
 Use these helpers when you need to step outside the main content flow: **Sidenotes** for contextual side notes, **Wide** to extend beyond the main column, and **Full-width** for full-width, immersive sections.
@@ -152,7 +191,6 @@ import Sidenote from '../components/Sidenote.astro'
 </Sidenote>
 ```
 
-Use these helpers to expand content beyond the main column when needed. They will always be centered and displayed above every other content.
 
 #### Wide example
 

@@ -1,6 +1,12 @@
 ---
-const { title, emoji, class: className, ...props } = Astro.props;
-const wrapperClass = ["note", className].filter(Boolean).join(" ");
+interface Props {
+  title?: string;
+  emoji?: string;
+  class?: string;
+  variant?: 'neutral' | 'info' | 'success' | 'danger';
+}
+const { title, emoji, class: className, variant = 'neutral', ...props } = Astro.props as Props;
+const wrapperClass = ["note", `note--${variant}`, className].filter(Boolean).join(" ");
 const hasHeader = (emoji && String(emoji).length > 0) || (title && String(title).length > 0);
 ---
 <div class={wrapperClass} {...props}>
@@ -21,5 +27,11 @@ const hasHeader = (emoji && String(emoji).length > 0) || (title && String(title)
   .note__content { color: var(--text-color); font-size: 0.95rem; }
   /* Ensure the very last slotted element has no bottom margin */
   .note .note__content > :global(*:last-child) { margin-bottom: 0 !important; }
+
+  /* Variants */
+  .note.note--neutral { border-left-color: var(--border-color); background: var(--surface-bg); }
+  .note.note--info { border-left-color: #f39c12; background: color-mix(in oklab, #f39c12 10%, var(--surface-bg)); }
+  .note.note--success { border-left-color: #2ecc71; background: color-mix(in oklab, #2ecc71 8%, var(--surface-bg)); }
+  .note.note--danger { border-left-color: #e74c3c; background: color-mix(in oklab, #e74c3c 8%, var(--surface-bg)); }
 </style>
 

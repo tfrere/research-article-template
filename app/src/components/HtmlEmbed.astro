@@ -31,6 +31,12 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
   <div><!-- Fragment not found: {src} --></div>
  ) }
 
+<script type="module" is:inline>
+  // Ensure global color palettes generator is loaded once per page
+  import '../scripts/color-palettes.js';
+  export {};
+</script>
+
 <script>
   // Re-execute <script> tags inside the injected fragment (innerHTML doesn't run scripts)
   const scriptEl = document.currentScript;
@@ -45,7 +51,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
       old.dataset.executed = 'true';
       if (old.src) {
         const s = document.createElement('script');
-        Array.from(old.attributes).forEach(({ name, value }) => s.setAttribute(name, value));
+        Array.from(old.attributes).forEach(attr => s.setAttribute(attr.name, attr.value));
         document.body.appendChild(s);
       } else {
         try {
@@ -57,10 +63,9 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
       }
     });
   };
-  // Ensure execution when ready: run now if Plotly or D3 is present, or when document is ready; otherwise wait for 'load'
-  // @ts-expect-error: Plotly/d3 are attached globally at runtime via embeds
-  if (window.Plotly || window.d3 || document.readyState === 'complete') execute();
-  else window.addEventListener('load', execute, { once: true });
+  // Execute after DOM is parsed (ensures deferred module scripts are executed first)
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', execute, { once: true });
+  else execute();
   </script>
 
 <style>

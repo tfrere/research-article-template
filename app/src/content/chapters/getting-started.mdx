@@ -14,11 +14,26 @@ The recommended way is to **duplicate this Space** on **Hugging Face** rather th
 git clone git@hf.co:spaces/<your-username>/<your-space>
 cd <your-space>
 ```
+<br/>
+4. Use **Node.js 20 or newer**. <br/>To manage versions, consider using **nvm**
+  - macOS/Linux: see [nvm-sh](https://github.com/nvm-sh/nvm)
+  - Windows: see [nvm-windows](https://github.com/coreybutler/nvm-windows)
 
-<Sidenote>
+```bash
+nvm install 20
+nvm use 20
+node -v
+```
+
+5. Install lfs and pull files from the repository.
 ```bash
 git lfs install
 git lfs pull
+```
+
+6. Install dependencies.
+<Sidenote>
+```bash
 cd app
 npm install
 ```
@@ -28,11 +43,15 @@ npm install
 </Sidenote>
 
 
+<br/>And that's it!
+
 ### Development
 
 ```bash
 npm run dev
 ```
+
+Once started, the dev server is available at `http://localhost:4321`.
 
 ### Build
 
@@ -43,7 +62,7 @@ npm run build
 
 ### Deploy
 
-Push your changes to your new Space repo.<br/>**Every push automatically triggers a build and deploy** on Spaces.
+**Every push** automatically triggers a **build** and **deploy** on Spaces.
 ```bash
 # Make edits locally, then:
 git add .
@@ -55,5 +74,5 @@ git push
 Serving the `dist/` directory on any static host is enough to deliver the site.
 </Note>
 <Note title="Note">
-A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder.
+A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder and point to them at `[domain]/public/thumb.jpg`.
 </Note>

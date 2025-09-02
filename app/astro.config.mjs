@@ -151,6 +151,15 @@ export default defineConfig({
   devToolbar: {
     enabled: false
   },
+  // Expose a public flag to control TOC auto-collapse behavior at runtime
+  // This can be overridden via environment variable PUBLIC_TOC_AUTO_COLLAPSE
+  // (Vite define provides a default fallback when env is not set.)
+  vite: {
+    define: {
+      'import.meta.env.PUBLIC_TOC_AUTO_COLLAPSE': JSON.stringify(false),
+      'import.meta.env.PUBLIC_TABLE_OF_CONTENT_AUTO_COLLAPSE': JSON.stringify(false)
+    }
+  },
   markdown: {
     shikiConfig: {
       themes: {
