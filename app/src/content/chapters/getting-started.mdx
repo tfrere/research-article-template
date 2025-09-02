@@ -30,6 +30,8 @@ node -v
 git lfs install
 git lfs pull
 ```
+<Note>⚠️ Be careful, if you try to push binary files without lfs installed, you will get an error.</Note>
+
 
 6. Install dependencies.
 <Sidenote>
@@ -70,9 +72,9 @@ git commit -m "Update content"
 git push
 ```
 
-<Note title="Note">
+<Note>
 Serving the `dist/` directory on any static host is enough to deliver the site.
 </Note>
-<Note title="Note">
+<Note>
 A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder and point to them at `[domain]/public/thumb.jpg`.
 </Note>

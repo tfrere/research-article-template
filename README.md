@@ -1,5 +1,5 @@
 ---
-title: 'Research article template'
+title: 'FineVision: Open Data is all you need'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo
