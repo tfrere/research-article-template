@@ -1,5 +1,5 @@
 ---
-title: 'FineVision: Open Data is all you need'
+title: 'Bringing paper to life: A modern template for scientific writing'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo
