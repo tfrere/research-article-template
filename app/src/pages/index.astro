@@ -157,10 +157,6 @@ const licence = (articleFM as any)?.licence ?? (articleFM as any)?.license ?? (a
       <TableOfContents tableOfContentAutoCollapse={tableOfContentAutoCollapse} />
       <main>
         <Article />
-        <style is:inline>
-          /* Inline tweak for details blocks used in MDX */
-          details { background: var(--code-bg) !important; border: 1px solid var(--border-color) !important; border-radius: 6px; margin: 1em 0; padding: .5em .75em; }
-        </style>
       </main>
     </section>
 

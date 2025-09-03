@@ -1,8 +1,6 @@
 @import "https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,200..900;1,200..900&display=swap";
 
-html { font-size: 14px; line-height: 1.6; }
-@media (min-width: 768px) { html { font-size: 16px; } }
-@media (min-width: 1024px) { html { font-size: 17px; } }
+html { font-size: 16px; line-height: 1.6; }
 
 .content-grid main { color: var(--text-color); }
 .content-grid main p { margin: 0 0 var(--spacing-3); }

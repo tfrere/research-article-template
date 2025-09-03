@@ -93,7 +93,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
       </div>
     )}
     {published && (
-      <div class="meta-container-cell">
+      <div class="meta-container-cell meta-container-cell--published">
         <h3>Published</h3>
         <p>{published}</p>
       </div>
@@ -201,6 +201,12 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   .affiliations li {
     margin: 0;
   }
+
+  header.meta .meta-container {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  
   @media print {
     .meta-container-cell--pdf {
       display: none !important;

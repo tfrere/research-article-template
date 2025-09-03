@@ -57,10 +57,12 @@
     /* Prefer keeping header+lead together */
     .hero { page-break-after: avoid; }
   }
-  
-  .muted {
-    color: var(--muted-color);
+
+    
+  @media print {
+    .meta-container-cell--pdf {
+      display: none !important;
+    }
   }
-  
   
   

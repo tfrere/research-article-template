@@ -151,17 +151,6 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     grid-column: 2;
   }
 
-  @media (max-width: var(--bp-content-collapse)) {
-    .footer-inner {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-
-    .footer-inner > h3 {
-      grid-column: auto;
-      margin-top: 16px;
-    }
-  }
 
   .citation-block h3 {
     margin: 0 0 8px;
@@ -238,13 +227,6 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
   [data-theme="dark"] .citation { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,.15); color: rgba(200,200,200,1); }
 [data-theme="dark"] .citation a { color: rgba(255,255,255,0.75); }
 
-
-  @media (max-width: var(--bp-content-collapse)) {
-    .footer-inner {
-      display: block;
-      padding: 40px 16px;
-    }
-  }
 
   /* Footer links: use primary color consistently */
   .footer a {

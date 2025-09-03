@@ -2,10 +2,10 @@
 export interface Props { tableOfContentAutoCollapse?: boolean }
 const { tableOfContentAutoCollapse = false } = Astro.props as Props;
 ---
-<aside class="table-of-contents" data-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
+<nav class="table-of-contents" aria-label="Table of Contents" data-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
   <div class="title">Table of Contents</div>
   <div id="article-toc-placeholder"></div>
-</aside>
+</nav>
 <details class="table-of-contents-mobile">
   <summary>Table of Contents</summary>
   <div id="article-toc-mobile-placeholder"></div>
@@ -97,7 +97,15 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       ...(holder ? holder.querySelectorAll('a') : []),
       ...(holderMobile ? holderMobile.querySelectorAll('a') : [])
     ];
-    const autoCollapse = (document.querySelector('aside.table-of-contents')?.getAttribute('data-auto-collapse') === '1');
+    // Read breakpoint from CSS var and set autoCollapse only on desktop (disabled on mobile)
+    const getCollapsePx = () => {
+      const root = document.documentElement;
+      const raw = getComputedStyle(root).getPropertyValue('--bp-content-collapse').trim();
+      return raw || '1100px';
+    };
+    const mq = window.matchMedia(`(max-width: ${getCollapsePx()})`);
+    const attrEnabled = (document.querySelector('.table-of-contents')?.getAttribute('data-auto-collapse') === '1');
+    let autoCollapse = attrEnabled && !mq.matches;
 
     // Inject styles for collapsible & animation
     const ensureStyles = () => {
@@ -105,9 +113,9 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       const style = document.createElement('style');
       style.id = 'toc-collapse-style';
       style.textContent = `
-        aside.table-of-contents nav.table-of-contents-collapsible > ul > li > ul,
+        .table-of-contents nav.table-of-contents-collapsible > ul > li > ul,
         details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li > ul { overflow: hidden; transition: height 200ms ease; }
-        aside.table-of-contents nav.table-of-contents-collapsible > ul > li.collapsed > ul,
+        .table-of-contents nav.table-of-contents-collapsible > ul > li.collapsed > ul,
         details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li.collapsed > ul { display: block; }
       `;
       document.head.appendChild(style);
@@ -180,6 +188,29 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       setNavCollapsible();
       prevActiveIdx = activeIdx;
     };
+
+    // When switching between desktop/mobile, refresh autoCollapse and expand all on mobile
+    const expandAll = () => {
+      const { sideTop, mobileTop } = getTopLevelItems();
+      const expand = (items) => items.forEach((li) => {
+        li.classList.remove('collapsed');
+        const sub = li.querySelector(':scope > ul');
+        if (sub) sub.style.height = 'auto';
+      });
+      expand(sideTop);
+      expand(mobileTop);
+    };
+
+    const onMqChange = () => {
+      autoCollapse = attrEnabled && !mq.matches;
+      if (!autoCollapse) {
+        expandAll();
+      } else {
+        setCollapsedState(prevActiveIdx);
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onMqChange);
+    else if (mq.addListener) mq.addListener(onMqChange);
 
     const onScroll = () => {
       // active link highlight
@@ -288,16 +319,36 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
   .table-of-contents-mobile > summary {
     cursor: pointer;
     list-style: none;
-    padding: 8px 12px;
+    padding: var(--spacing-3) var(--spacing-4);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     color: var(--text-color);
     font-weight: 600;
+    position: relative;
   }
 
   .table-of-contents-mobile[open] > summary {
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+  }
+
+  /* Disclosure arrow for mobile summary */
+  .table-of-contents-mobile > summary::after {
+    content: '';
+    position: absolute;
+    right: var(--spacing-4);
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform 150ms ease;
+    opacity: .7;
+  }
+
+  .table-of-contents-mobile[open] > summary::after {
+    transform: translateY(-30%) rotate(-135deg);
   }
 
   .table-of-contents-mobile nav {
@@ -340,17 +391,6 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     text-decoration: underline;
   }
 
-  [data-theme="dark"] .table-of-contents nav { border-left-color: rgba(255,255,255,.15); }
 
-  /* Responsive: hide sticky TOC, show mobile */
-  @media (max-width: var(--bp-content-collapse)) {
-    .table-of-contents {
-      position: static;
-      display: none;
-    }
 
-    .table-of-contents-mobile {
-      display: block;
-    }
-  }
 </style>

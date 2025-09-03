@@ -19,23 +19,42 @@
   padding: 0;
 }
 
-@media (max-width: var(--bp-content-collapse)) {
+@media (--bp-content-collapse) {
   .content-grid {
     overflow: hidden;
+    display: block;
+    margin-top: var(--spacing-2);
   }
-}
 
-
-/* Responsive – collapse to single column */
-@media (max-width: var(--bp-content-collapse)) {
   .content-grid {
     grid-template-columns: 1fr;
   }
 
-  main > nav:first-of-type {
+  .table-of-contents {
+    position: static;
+    display: none;
+  }
+
+  .table-of-contents-mobile {
     display: block;
   }
+
+  .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .footer-inner > h3 {
+    grid-column: auto;
+    margin-top: 16px;
+  }
+
+  .footer-inner {
+    display: block;
+    padding: 40px 16px;
+  }
 }
+
 
 
 /* ============================================================================ */
@@ -63,13 +82,48 @@
   margin-right: calc(50% - 50vw);
 }
 
-@media (max-width: var(--bp-content-collapse)) {
+@media (--bp-content-collapse) {
   .wide,
   .full-width {
     width: 100%;
     margin-left: 0;
     margin-right: 0;
     transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Hero meta bar responsiveness                                               */
+/* Two columns at collapse breakpoint, then one column below small screens    */
+/* ------------------------------------------------------------------------- */
+@media (--bp-sm) {
+  header.meta .meta-container {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 12px;
+    column-gap: 8px;
+    max-width: 100%;
+    padding: 0 var(--spacing-4);
+  }
+  header.meta .meta-container .meta-container-cell {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+}
+
+@media (--bp-xxs) {
+  header.meta .meta-container .meta-container-cell {
+    flex-basis: 100%;
+    text-align: center;
+  }
+  /* Center ordered list numbers within meta (e.g., affiliations) */
+  header.meta .affiliations {
+    list-style-position: inside;
+    padding-left: 0;
+    margin-left: 0;
+  }
+  header.meta .affiliations li {
+    text-align: center;
   }
 }
 

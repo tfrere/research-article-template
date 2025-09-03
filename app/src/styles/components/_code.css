@@ -49,7 +49,7 @@ section.content-grid pre code {
 }
 
 /* Wrap long lines only on small screens to prevent layout overflow */
-@media (max-width: var(--bp-content-collapse)) {
+@media (--bp-content-collapse) {
   .astro-code,
   section.content-grid pre {
     white-space: pre-wrap;
