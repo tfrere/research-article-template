@@ -93,7 +93,7 @@
       const CAPTION_GAP = 24;   // espace entre titre et donut
       const GAP_X = 20;         // espace entre colonnes
       const GAP_Y = 12;         // espace entre lignes
-      const LEGEND_HEIGHT = 44; // hauteur de la légende
+      const LEGEND_HEIGHT = 62; // hauteur de la légende
       const TOP_OFFSET = 4;     // décalage vertical supplémentaire pour aérer le haut
       const updateSize = () => {
         width = container.clientWidth || 800;
@@ -102,9 +102,9 @@
         return { innerWidth: width - margin.left - margin.right };
       };
 
-      function renderLegend(categories, colorOf, innerWidth, legendY){
+      function renderLegend(categories, colorOf, width, x, legendY){
         const legendHeight = LEGEND_HEIGHT;
-        gLegend.attr('x', 0).attr('y', legendY).attr('width', innerWidth).attr('height', legendHeight);
+        gLegend.attr('x', x).attr('y', legendY).attr('width', width).attr('height', legendHeight);
         const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
         root
           .style('height', legendHeight + 'px')
@@ -170,11 +170,9 @@
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
         const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
 
-        // Positionner la légende sous les graphiques
+        // Positionner la légende sous les graphiques, calée sur la grille centrée
         const legendY = TOP_OFFSET + plotsHeight + 4;
-        // Légende centrée globalement (pleine largeur du conteneur)
-        gLegend.attr('x', 0).attr('width', innerWidth);
-        renderLegend(categories, colorOf, innerWidth, legendY);
+        renderLegend(categories, colorOf, gridWidth, xOffset, legendY);
 
         const captions = new Map(METRICS.map(m => [m.key, `${m.title}`]));
 
