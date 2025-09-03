@@ -1,6 +1,6 @@
 {/* IMPORTS */}
 import { Image } from 'astro:assets';
-import placeholder from '../assets/images/placeholder.png';
+import placeholder from '../assets/image/placeholder.png';
 import Sidenote from '../../components/Sidenote.astro';
 import Wide from '../../components/Wide.astro';
 import Note from '../../components/Note.astro';
@@ -9,23 +9,26 @@ import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import audioDemo from '../assets/audio/audio-example.wav';
 import Accordion from '../../components/Accordion.astro';
 
-
 ## Writing your content
 
-### **Introduction**
+Once you have set up your project and started the development server, you can start writing your article.
 
-Your **article** lives in **one place**
+### Content structure
 
-Everything is **self-contained** under `app/src/content/`:
-- **MDX**: `article.mdx` and [**optional chapters**](#chapters) in `chapters/`
-- **Assets**: `assets/` images, audios, datas, etc. (tracked via **Git LFS**)
-- **Embeds**: `embed/` [**HtmlEmbed**](#htmlembed) for Plotly/D3, etc.
+Your **article** lives in **one and unique place**. The `content` folder.
 
-The `article.mdx` file is the **main entry point** of your article.
+<HtmlEmbed frameless src="content-structure.html" /> 
 
-**MDX** is a mix of **Markdown** and **HTML/JSX**: write regular Markdown, and embed **interactive components** inline when needed. We’ll describe the available options you can use later in this guide.
+### Article.mdx
 
-Here's what the file looks like in detail:
+The `article.mdx` file is the **main entry point** of your article which contains **2 main parts**.
+
+<Note emoji="💡" variant="info">**MDX** is a mix of **Markdown** and **HTML/JSX**: write regular <a href="#markdown" >Markdown</a> and <a href="#components" >Components</a> when needed. We’ll describe the available options you can use later in this guide.</Note>
+
+
+#### **Frontmatter**
+
+Metadata and options for the article. Each of them is described in the table below.
 
 <small className="muted">**Frontmatter** in app/src/content/article.mdx</small>
 ```mdx
@@ -58,14 +61,33 @@ seoThumbImage: "https://example.com/thumb.png"
 tableOfContentsAutoCollapse: true
 ---
 ```
-<small className="muted">**Imports** in app/src/content/article.mdx</small>
-```mdx
-import placeholder from '../assets/images/placeholder.png'
-import ResponsiveImage from '../components/ResponsiveImage.astro'
-import Sidenote from '../components/Sidenote.astro'
-```
+
+<Accordion title="Frontmatter fields">
+| Field | Required | Notes | Type |
+| --- | --- | --- | --- |
+| title | Yes | Main title; supports line breaks with "\n" (falls back to "Untitled article") | string |
+| subtitle | Yes | Shown just below the title | string |
+| description | Yes | Used for SEO/meta description | string |
+| published | Yes | e.g., "2025-02-19" or readable date | string/date |
+| tags | No | List of keywords | string[] |
+| authors | No | Affiliation indices refer to the `affiliations` list | `string[] or { name, url?, affiliations? }[]` |
+| affiliations | No | Alias: `affiliation` (single or array) | `{ name, url? }[]` |
+| doi | No | DOI identifier | string |
+| licence | No | Rendered in footer; HTML supported | string (HTML allowed) |
+| seoThumbImage | No | Overrides default OpenGraph image | string (URL) |
+| tableOfContentsAutoCollapse | No | Controls TOC auto-collapse | boolean |
+</Accordion>
+
+#### **Content**
+
+Your story. Write your content here.
+
 <small className="muted">**Content** in app/src/content/article.mdx</small>
 ```mdx
+import placeholder from '../assets/image/placeholder.png'
+import ResponsiveImage from '../components/ResponsiveImage.astro'
+import Sidenote from '../components/Sidenote.astro'
+
 <Sidenote>
   This paragraph is written in Markdown. 
   <Fragment slot="aside">A short callout inserted via a component.</Fragment>
@@ -75,24 +97,7 @@ import Sidenote from '../components/Sidenote.astro'
 This paragraph is also written in Markdown. 
 ```
 
-<Accordion title="Frontmatter fields">
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| title | string | Yes | Main title; supports line breaks with "\n" |
-| subtitle | string | No | Shown just below the title |
-| description | string | No | Used for SEO/meta description |
-| published | string/date | No | e.g., "2025-02-19" or readable date |
-| tags | string[] | No | List of keywords |
-| authors | `string[] or { name, url?, affiliations? }[]` | No | Affiliation indices refer to the `affiliations` list |
-| affiliations | `{ name, url? }[]` | No | Alias: `affiliation` (single or array) |
-| doi | string | No | DOI identifier |
-| licence | string (HTML allowed) | No | Rendered in footer; HTML supported |
-| seoThumbImage | string (URL) | No | Overrides default OpenGraph image |
-| tableOfContentsAutoCollapse | boolean | No | Controls TOC auto-collapse |
-</Accordion>
-
-### Chapters
-
+#### Chapters
 
 **If** your article becomes **too long** for one file, you can **organize** it into **separate chapters**.
 
@@ -108,11 +113,11 @@ import MyChapter from './chapters/my-chapter.mdx';
 ```
 <small className="muted">You can see a living example here <a target="_blank" href="https://huggingface.co/spaces/tfrere/research-article-template/blob/main/app/src/content/chapters/best-pratices.mdx">app/src/content/chapters/best-pratices.mdx</a>.</small>
 
-### Table of contents
+### **Table of contents**
  
 The **Table of contents** is generated **automatically** from your **H2–H4** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**.
 
-<Note variant="info">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the frontmatter. Which is `true` by default.</Note>
+<Note variant="info">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the <a href="#frontmatter">frontmatter</a>. Which is `true` by default.</Note>
 
 ### Theme
 
@@ -147,8 +152,9 @@ Always pair it with text, icons, shape or position. The simulation helps you spo
 #### Using the palettes
 
 ##### CSS
-Use the generated **CSS variables** to style elements.
+Use the generated **CSS variables** to style elements (e.g., `color: var(--palette-categorical-1)`).
 
+<Accordion title="Code example">
 ```css
 /* Usage */
 .series-a { color: var(--palette-categorical-1); }
@@ -162,13 +168,15 @@ Use the generated **CSS variables** to style elements.
 :root { --palette-count: 8; }                    /* global */
 :root { --palette-diverging-count: 7; }          /* per palette */
 ```
+</Accordion>
 
 <Note variant="info">⚠️ **CSS overrides** automatically trigger a **palette regeneration** via JS observers; no manual call is needed.</Note>
 
 ##### JS
-Fetch arrays of colors via **`window.ColorPalettes.getColors(type)`**. To change sizes **at runtime**, set CSS vars and call **`window.ColorPalettes.refresh()`**.
+Fetch arrays of colors via `window.ColorPalettes.getColors('categorical')`. To change sizes **at runtime**, set CSS vars (e.g., `document.documentElement.style.setProperty('--palette-count','8')`) and call `window.ColorPalettes.refresh()`.
 
-```js
+<Accordion title="Code example">
+  ```js
 // Usage
 const cat = window.ColorPalettes.getColors('categorical');
 const seq = window.ColorPalettes.getColors('sequential');
@@ -179,3 +187,4 @@ document.documentElement.style.setProperty('--palette-count', '8');
 document.documentElement.style.setProperty('--palette-diverging-count', '7');
 window.ColorPalettes.refresh();
 ```
+</Accordion>

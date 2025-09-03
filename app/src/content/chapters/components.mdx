@@ -1,5 +1,5 @@
 import { Image } from 'astro:assets';
-import placeholder from '../assets/images/placeholder.png';
+import placeholder from '../assets/image/placeholder.png';
 import audioDemo from '../assets/audio/audio-example.wav';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import Sidenote from '../../components/Sidenote.astro';
@@ -48,7 +48,7 @@ You have to import them in the **.mdx** file you want to use them in.
 <Accordion title="Code example">
 ```mdx
 import ResponsiveImage from '../components/ResponsiveImage.astro'
-import myImage from './assets/images/placeholder.jpg'
+import myImage from './assets/image/placeholder.jpg'
 
 <ResponsiveImage src={myImage} alt="Responsive, optimized example image" />
 
@@ -159,14 +159,6 @@ greet("Astro");
 
 Small contextual callout for tips, caveats, or emphasis.
 
-| Prop     | Required | Type                         | Description                         |
-|----------|----------|------------------------------|-------------------------------------|
-| `title`  | No       | string                       | Short title displayed in header     |
-| `emoji`  | No       | string                       | Emoji displayed before the title    |
-| `class`  | No       | string                       | Extra classes for custom styling    |
-| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note          |
-
-
 <Note title="Heads‑up" emoji="💡" variant="info">
   Use notes to surface context without breaking reading flow.
 </Note>
@@ -182,6 +174,13 @@ Small contextual callout for tips, caveats, or emphasis.
 <Note>
   Plain note without header. Useful for short clarifications.
 </Note>
+
+| Prop     | Required | Type                         | Description                         |
+|----------|----------|------------------------------|-------------------------------------|
+| `title`  | No       | string                       | Short title displayed in header     |
+| `emoji`  | No       | string                       | Emoji displayed before the title    |
+| `class`  | No       | string                       | Extra classes for custom styling    |
+| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note          |
 
 <Accordion title="Code example">
 ```mdx
@@ -214,6 +213,8 @@ They exist in the `app/src/content/embeds` folder.
 
 For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
 
+<HtmlEmbed src="d3-line-example.html" title="This is a chart title" desc="Some chart description" />
+
 | Prop        | Required | Description                                                                                      
 |-------------|----------|----------------------------------------------------------------------------------
 | `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
@@ -222,11 +223,6 @@ For researchers who want to stay in **Python** while targeting **D3**, the [d3bl
 | `frameless` | No       | Removes the card background and border for seamless embeds.                                      
 | `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
 
-<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
----
-<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
-
-<br/>
 <Accordion title="Code example">
 ```mdx
 import HtmlEmbed from '../components/HtmlEmbed.astro'
@@ -251,8 +247,11 @@ Happily, **LLM's** are here to help you! In the `app/src/content/embeds` folder,
 
 Inside this file, you will find every directives you need to code your own **HtmlEmbed** proof **D3.js** chart.
 
-Here are some **real world examples** that were vibe coded to inspire you.
+#### Real world examples
 
+Here are some examples that were vibe coded to inspire you.
+
+---
 <HtmlEmbed src="d3-line.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
 ---
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
@@ -270,6 +269,7 @@ Here are some **real world examples** that were vibe coded to inspire you.
 </Wide>
 ---
 <HtmlEmbed src="d3-comparison.html" title="Image similarity: query vs top-k" desc="Compare a query image to top-k matches. Shows rank and similarity." />
+---
 
 ### Iframes
 

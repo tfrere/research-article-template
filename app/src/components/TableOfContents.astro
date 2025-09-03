@@ -24,22 +24,8 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     const headings = articleRoot.querySelectorAll('h2, h3, h4');
     if (!headings.length) return;
 
-    // Filter out headings that should not appear in TOC
-    const normalize = (s) => String(s || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-    const isTocLabel = (s) => /^(table\s+of\s+contents?)$|^toc$/i.test(String(s || '').replace(/[^a-zA-Z0-9]+/g, ' ').trim());
-    const shouldSkip = (h) => {
-      const t = h.textContent || '';
-      const id = String(h.id || '');
-      const slug = normalize(t).replace(/\s+/g, '_');
-      if (isTocLabel(t)) return true;
-      if (isTocLabel(id.replace(/[_-]+/g, ' '))) return true;
-      if (isTocLabel(slug.replace(/[_-]+/g, ' '))) return true;
-      return false;
-    };
-    const headingsArr = Array.from(headings).filter(h => !shouldSkip(h));
+    // Inclure tous les titres H2/H3/H4 sans filtrer "Table of contents"
+    const headingsArr = Array.from(headings);
     if (!headingsArr.length) return;
 
     // Ensure unique ids for headings (deduplicate duplicates)
