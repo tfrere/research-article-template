@@ -1,28 +1,34 @@
 /* ============================================================================ */
-/* Theme Variables (inspired by Distill) */
+/* Design Tokens */
 /* ============================================================================ */
 :root {
-  /* Neutral palette */
+  /* Neutrals */
   --neutral-600: rgb(107, 114, 128);
   --neutral-400: rgb(185, 185, 185);
   --neutral-300: rgb(228, 228, 228);
   --neutral-200: rgb(245, 245, 245);
 
-  /* Primary brand color */
-  --primary-color: rgb(232, 137, 171);
-  --primary-color-hover: rgb(212, 126, 156);
+  --default-font-family: Source Sans Pro,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+
+  /* Brand (OKLCH base + derived states) */
+  --primary-base: oklch(0.75 0.12 340);
+  --primary-color: var(--primary-base);
+  --primary-color-hover: oklch(from var(--primary-color) calc(l - 0.05) c h);
+  --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
   --on-primary: #ffffff;
 
+  /* Text & Surfaces */
   --text-color: rgba(0,0,0,.85);
   --muted-color: rgba(0,0,0,.6);
   --border-color: rgba(0,0,0,.1);
-
-  /* Light surfaces & links */
   --surface-bg: #fafafa;
   --code-bg: #f6f8fa;
-  --link-underline: var(--primary-color); /* based on --primary-color */
+
+  /* Links */
+  --link-underline: var(--primary-color);
   --link-underline-hover: var(--primary-color-hover);
 
+  /* Spacing scale */
   --spacing-1: 8px;
   --spacing-2: 12px;
   --spacing-3: 16px;
@@ -34,32 +40,63 @@
   --spacing-9: 64px;
   --spacing-10: 72px;
 
-  /* Palettes config */
-  --palette-count: 6; /* default number of colors per palette */
+  /* Breakpoints */
+  --bp-xs: 480px;
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-content-collapse: 1100px; /* layout single-column */
+  --bp-xl: 1280px;
 
-  /* Z-index scale */
-  --z-base: 0;           /* background/base */
-  --z-content: 1;        /* regular content */
-  --z-elevated: 10;      /* wide/full-width blocks, images */
-  --z-overlay: 1000;     /* overlays/lightboxes */
-  --z-modal: 1100;       /* modals/dialogs */
-  --z-tooltip: 1200;     /* tooltips/popovers */
+  /* Layout */
+  --content-padding-x: 16px; /* default page gutter */
+  --block-spacing-y: var(--spacing-4); /* default vertical spacing between block components */
+
+  /* Config */
+  --palette-count: 6;
+
+  /* Button tokens */
+  --button-radius: 6px;
+  --button-padding-x: 12px;
+  --button-padding-y: 8px;
+  --button-font-size: 14px;
+  --button-icon-padding: 8px;
+  /* Big button */
+  --button-big-padding-x: 16px;
+  --button-big-padding-y: 12px;
+  --button-big-font-size: 16px;
+  --button-big-icon-padding: 12px;
+
+  /* Table tokens */
+  --table-border-radius: 8px;
+  --table-header-bg: oklch(from var(--surface-bg) calc(l - 0.02) c h);
+  --table-row-odd-bg: oklch(from var(--surface-bg) calc(l - 0.01) c h);
+
+  /* Z-index */
+  --z-base: 0;
+  --z-content: 1;
+  --z-elevated: 10;
+  --z-overlay: 1000;
+  --z-modal: 1100;
+  --z-tooltip: 1200;
 }
-/* Theme tokens for dark mode */
+
+/* ============================================================================ */
+/* Dark Theme Overrides */
+/* ============================================================================ */
 [data-theme="dark"] {
   --text-color: rgba(255,255,255,.9);
   --muted-color: rgba(255,255,255,.7);
   --border-color: rgba(255,255,255,.15);
   --surface-bg: #12151b;
   --code-bg: #12151b;
-  /* Primary in dark mode */
-  --primary-color: rgb(232, 137, 171);
-  --primary-color-hover: rgb(212, 126, 156);
+
+  /* Primary (lower L in dark) */
+  --primary-color: oklch(from var(--primary-base) calc(l - 0.08) c h);
+  --primary-color-hover: oklch(from var(--primary-color) calc(l - 0.05) c h);
+  --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
   --on-primary: #0f1115;
 
   color-scheme: dark;
   background: #0f1115;
 }
-
-
-

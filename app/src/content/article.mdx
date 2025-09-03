@@ -4,20 +4,37 @@ title: "Bringing paper to life:\n A modern template for\n scientific writing
 subtitle: "A modern, MDX-first research article template with math, citations and interactive figures."
 description: "A modern, MDX-first research article template with math, citations and interactive figures."
 authors:
-  - "Thibaud Frere"
-affiliation: "Hugging Face"
+  - name: "Thibaud Frere"
+    url: "https://huggingface.co/tfrere"
+    affiliations: [1]
+  - name: "Alice Example"
+    url: "https://example.com/~alice"
+    affiliations: [1, 2]
+  - name: "Bob Researcher"
+affiliations:
+  - name: "Hugging Face"
+    url: "https://huggingface.co"
+  - name: "Example University"
+    url: "https://example.edu"
 published: "Sep. 01, 2025"
+doi: 10.1234/abcd.efgh
+licence: >
+  Diagrams and text are licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC‑BY 4.0</a> with the source available on <a href="https://huggingface.co/spaces/tfrere/research-article-template" target="_blank" rel="noopener noreferrer">Hugging Face</a>, unless noted otherwise.
+  Figures reused from other sources are excluded and marked in their captions (“Figure from …”).
 tags:
   - research
   - template
-tocAutoCollapse: true
+tableOfContentsAutoCollapse: true
 ---
 
 import Introduction from "./chapters/introduction.mdx";
 import BestPractices from "./chapters/best-pratices.mdx";
 import WritingYourContent from "./chapters/writing-your-content.mdx";
-import AvailableBlocks from "./chapters/available-blocks.mdx";  
+import AvailableBlocks from "./chapters/markdown.mdx";  
 import GettingStarted from "./chapters/getting-started.mdx";
+import Markdown from "./chapters/markdown.mdx";
+import Components from "./chapters/components.mdx";
+import DebugComponents from "./chapters/debug-components.mdx";
 
 <Introduction />
 
@@ -25,7 +42,10 @@ import GettingStarted from "./chapters/getting-started.mdx";
 
 <WritingYourContent />
 
-<AvailableBlocks />
+<Markdown />
+
+<Components />
 
 <BestPractices />
 
+<DebugComponents />

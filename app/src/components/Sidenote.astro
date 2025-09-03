@@ -1,12 +1,37 @@
 ---
 ---
-<div class="margin-aside">
-  <div class="margin-aside__main">
+<div class="aside">
+  <div class="aside__main">
     <slot />
   </div>
-  <aside class="margin-aside__aside">
+  <aside class="aside__aside">
     <slot name="aside" />
   </aside>
 </div>
 
 
+<style is:global>
+  .aside {
+    position: relative;
+    margin: 12px 0;
+  }
+
+  .aside__aside {
+    position: absolute;
+    top: 0;
+    right: -260px; /* push into the right grid column (width 260 + gap 32) */
+    width: 260px;
+    border-radius: 8px;
+    padding: 0 30px;
+    font-size: 0.9rem;
+    color: var(--muted-color);
+  }
+
+  @media (max-width: var(--bp-content-collapse)) {
+    .aside__aside {
+      position: static;
+      width: auto;
+      margin-top: 8px;
+    }
+  }
+</style>

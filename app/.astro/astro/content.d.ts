@@ -152,16 +152,23 @@ declare module 'astro:content' {
 
 	type ContentEntryMap = {
 		"chapters": {
-"available-blocks.mdx": {
-	id: "available-blocks.mdx";
-  slug: "available-blocks";
+"best-pratices.mdx": {
+	id: "best-pratices.mdx";
+  slug: "best-pratices";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"best-pratices.mdx": {
-	id: "best-pratices.mdx";
-  slug: "best-pratices";
+"components.mdx": {
+	id: "components.mdx";
+  slug: "components";
+  body: string;
+  collection: "chapters";
+  data: any
+} & { render(): Render[".mdx"] };
+"debug-components.mdx": {
+	id: "debug-components.mdx";
+  slug: "debug-components";
   body: string;
   collection: "chapters";
   data: any
@@ -176,6 +183,13 @@ declare module 'astro:content' {
 "introduction.mdx": {
 	id: "introduction.mdx";
   slug: "introduction";
+  body: string;
+  collection: "chapters";
+  data: any
+} & { render(): Render[".mdx"] };
+"markdown.mdx": {
+	id: "markdown.mdx";
+  slug: "markdown";
   body: string;
   collection: "chapters";
   data: any

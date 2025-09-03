@@ -5,12 +5,32 @@ interface Props {
   title: string; // may contain HTML (e.g., <br/>)
   titleRaw?: string; // plain title for slug/PDF (optional)
   description?: string;
-  authors?: string[];
-  affiliation?: string;
+  authors?: Array<string | { name: string; url?: string; affiliationIndices?: number[] }>;
+  affiliations?: Array<{ id: number; name: string; url?: string }>;
+  affiliation?: string; // legacy single affiliation
   published?: string;
+  doi?: string;
 }
 
-const { title, titleRaw, description, authors = [], affiliation, published } = Astro.props as Props;
+const { title, titleRaw, description, authors = [], affiliations = [], affiliation, published, doi } = Astro.props as Props;
+
+type Author = { name: string; url?: string; affiliationIndices?: number[] };
+
+function normalizeAuthors(input: Array<string | { name?: string; url?: string; link?: string; affiliationIndices?: number[] }>): Author[] {
+  return (Array.isArray(input) ? input : [])
+    .map((a) => {
+      if (typeof a === 'string') {
+        return { name: a } as Author;
+      }
+      const name = (a?.name ?? '').toString();
+      const url = (a?.url ?? a?.link) as string | undefined;
+      const affiliationIndices = Array.isArray((a as any)?.affiliationIndices) ? (a as any).affiliationIndices : undefined;
+      return { name, url, affiliationIndices } as Author;
+    })
+    .filter((a) => a.name && a.name.trim().length > 0);
+}
+
+const normalizedAuthors: Author[] = normalizeAuthors(authors as any);
 
 function stripHtml(text: string): string {
   return String(text || '').replace(/<[^>]*>/g, '');
@@ -37,15 +57,36 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   </div>
 </section>
 
-<header class="meta">
+<header class="meta" aria-label="Article meta information">
   <div class="meta-container">
-    {authors.length > 0 && (
+    {normalizedAuthors.length > 0 && (
       <div class="meta-container-cell">
-        <h3>Author {authors.length > 1 ? 's' : ''}</h3>
-        <p>{authors.join(', ')}</p>
+        <h3>Author{normalizedAuthors.length > 1 ? 's' : ''}</h3>
+        <ul class="authors">
+          {normalizedAuthors.map((a, i) => {
+            const supers = Array.isArray(a.affiliationIndices) && a.affiliationIndices.length
+              ? <sup>{a.affiliationIndices.join(',')}</sup>
+              : null;
+            return (
+              <li>
+                {a.url ? <a href={a.url}>{a.name}</a> : a.name}{supers}
+              </li>
+            );
+          })}
+        </ul>
       </div>
     )}
-    {affiliation && (
+    {(Array.isArray(affiliations) && affiliations.length > 0) && (
+      <div class="meta-container-cell">
+        <h3>Affiliation{affiliations.length > 1 ? 's' : ''}</h3>
+        <ol class="affiliations">
+          {affiliations.map((af) => (
+            <li value={af.id}>{af.url ? <a href={af.url} target="_blank" rel="noopener noreferrer">{af.name}</a> : af.name}</li>
+          ))}
+        </ol>
+      </div>
+    )}
+    {(!affiliations || affiliations.length === 0) && affiliation && (
       <div class="meta-container-cell">
         <h3>Affiliation</h3>
         <p>{affiliation}</p>
@@ -57,49 +98,114 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
         <p>{published}</p>
       </div>
     )}
+    <!-- {doi && (
+      <div class="meta-container-cell">
+        <h3>DOI</h3>
+        <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
+      </div>
+    )} -->
     <div class="meta-container-cell meta-container-cell--pdf">
       <h3>PDF</h3>
-      <p><button id="download-pdf-btn" data-pdf-filename={pdfFilename}>Download PDF</button></p>
+      <p>
+        <a class="button" href={`/${pdfFilename}`} download={pdfFilename} aria-label={`Download PDF ${pdfFilename}`}>
+          Download PDF
+        </a>
+      </p>
     </div>
   </div>
 </header>
 
-<script>
-  // Attach a handler to trigger a programmatic download
-  (() => {
-    const ready = () => {
-      const btn = document.getElementById('download-pdf-btn');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        const a = document.createElement('a');
-        const pdf = btn.getAttribute('data-pdf-filename') || 'article.pdf';
-        a.href = `/${pdf}`;
-        a.setAttribute('download', pdf);
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      });
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ready, { once: true });
-    } else { ready(); }
-  })();
-</script>
 
 <style>
   /* Hero (full-width) */
-  .hero { width: 100%; padding: 48px 16px 16px; text-align: center; }
-  .hero-title { font-size: clamp(28px, 4vw, 48px); font-weight: 800; line-height: 1.1; margin: 0 0 8px; max-width: 100%; margin: auto; }
-  .hero-banner { max-width: 980px; margin: 0 auto; }
-  .hero-desc { color: var(--muted-color); font-style: italic; margin: 0 0 16px 0; }
+  .hero {
+    width: 100%;
+    padding: 48px 16px 16px;
+    text-align: center;
+  }
+  .hero-title {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    max-width: 100%;
+    margin: auto;
+  }
+  .hero-banner {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .hero-desc {
+    color: var(--muted-color);
+    font-style: italic;
+    margin: 0 0 16px 0;
+  }
 
   /* Meta (byline-like header) */
-  .meta { border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 1rem 0; font-size: 0.9rem; line-height: 1.8em; }
-  .meta-container { max-width: 720px; display: flex; flex-direction: row; justify-content: space-between; margin: 0 auto; gap: 8px; }
-  .meta-container-cell { display: flex; flex-direction: column; gap: 8px; }
-  .meta-container-cell h3 { margin: 0; font-size: 12px; font-weight: 400; color: var(--muted-color); text-transform: uppercase; letter-spacing: .02em; }
-  .meta-container-cell p { margin: 0; }
-  @media print { .meta-container-cell--pdf { display: none !important; } }
+  .meta {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .meta-container {
+    max-width: 760px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 0 auto;
+    padding: 0 var(--content-padding-x);
+    gap: 8px;
+  }
+  /* Subtle underline for links in meta; keep buttons without underline */
+  .meta-container a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 0.06em;
+    text-decoration-color: var(--link-underline);
+    transition: text-decoration-color .15s ease-in-out;
+  }
+  .meta-container a:hover {
+    text-decoration-color: var(--link-underline-hover);
+  }
+  .meta-container a.button,
+  .meta-container .button {
+    text-decoration: none;
+  }
+  .meta-container-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .meta-container-cell h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted-color);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+  }
+  .meta-container-cell p {
+    margin: 0;
+  } 
+  .authors {
+    margin: 0;
+    list-style-type: none;
+    padding-left: 0;
+  }
+  .affiliations {
+    margin: 0;
+    padding-left: 1.25em;
+  }
+  .affiliations li {
+    margin: 0;
+  }
+  @media print {
+    .meta-container-cell--pdf {
+      display: none !important;
+    }
+  }
 </style>
 
 

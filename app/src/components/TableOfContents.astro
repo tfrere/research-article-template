@@ -2,12 +2,11 @@
 export interface Props { tableOfContentAutoCollapse?: boolean }
 const { tableOfContentAutoCollapse = false } = Astro.props as Props;
 ---
-<aside class="toc" data-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
+<aside class="table-of-contents" data-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
   <div class="title">Table of Contents</div>
   <div id="article-toc-placeholder"></div>
-  
 </aside>
-<details class="toc-mobile">
+<details class="table-of-contents-mobile">
   <summary>Table of Contents</summary>
   <div id="article-toc-mobile-placeholder"></div>
 </details>
@@ -98,7 +97,7 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       ...(holder ? holder.querySelectorAll('a') : []),
       ...(holderMobile ? holderMobile.querySelectorAll('a') : [])
     ];
-    const autoCollapse = (document.querySelector('aside.toc')?.getAttribute('data-auto-collapse') === '1');
+    const autoCollapse = (document.querySelector('aside.table-of-contents')?.getAttribute('data-auto-collapse') === '1');
 
     // Inject styles for collapsible & animation
     const ensureStyles = () => {
@@ -106,10 +105,10 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       const style = document.createElement('style');
       style.id = 'toc-collapse-style';
       style.textContent = `
-        aside.toc nav.toc-collapsible > ul > li > ul,
-        details.toc-mobile nav.toc-collapsible > ul > li > ul { overflow: hidden; transition: height 200ms ease; }
-        aside.toc nav.toc-collapsible > ul > li.collapsed > ul,
-        details.toc-mobile nav.toc-collapsible > ul > li.collapsed > ul { display: block; }
+        aside.table-of-contents nav.table-of-contents-collapsible > ul > li > ul,
+        details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li > ul { overflow: hidden; transition: height 200ms ease; }
+        aside.table-of-contents nav.table-of-contents-collapsible > ul > li.collapsed > ul,
+        details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li.collapsed > ul { display: block; }
       `;
       document.head.appendChild(style);
     };
@@ -125,8 +124,8 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     const setNavCollapsible = () => {
       const sideNav = holder ? holder.querySelector('nav') : null;
       const mobileNav = holderMobile ? holderMobile.querySelector('nav') : null;
-      if (sideNav) sideNav.classList.add('toc-collapsible');
-      if (mobileNav) mobileNav.classList.add('toc-collapsible');
+      if (sideNav) sideNav.classList.add('table-of-contents-collapsible');
+      if (mobileNav) mobileNav.classList.add('table-of-contents-collapsible');
     };
 
     const measure = (el) => {
@@ -205,6 +204,9 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       if (activeIdx !== prevActiveIdx) setCollapsedState(activeIdx);
     };
 
+    // If auto-collapse, collapse immediately (expand first section) before any scroll
+    if (autoCollapse) setCollapsedState(0);
+
     window.addEventListener('scroll', onScroll);
     // Initialize state
     onScroll();
@@ -227,4 +229,128 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
   } else { buildTOC(); }
 </script>
 
+<style is:global>
+  /* Sticky aside */
+  .table-of-contents {
+    position: sticky;
+    top: 32px;
+  }
 
+  .table-of-contents nav {
+    border-left: 1px solid var(--border-color);
+    padding-left: 16px;
+    font-size: 13px;
+  }
+
+  .table-of-contents .title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  /* Look & feel */
+  .table-of-contents nav ul {
+    margin: 0 0 6px;
+    padding-left: 1em;
+  }
+
+  .table-of-contents nav li {
+    list-style: none;
+    margin: .25em 0;
+  }
+
+  .table-of-contents nav a,
+  .table-of-contents nav a:link,
+  .table-of-contents nav a:visited {
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  .table-of-contents nav > ul > li > a {
+    font-weight: 700;
+  }
+
+  .table-of-contents nav a:hover {
+    text-decoration: underline solid var(--muted-color);
+  }
+
+  .table-of-contents nav a.active {
+    text-decoration: underline;
+  }
+
+  /* Mobile accordion */
+  .table-of-contents-mobile {
+    display: none;
+    margin: 8px 0 16px;
+  }
+
+  .table-of-contents-mobile > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-weight: 600;
+  }
+
+  .table-of-contents-mobile[open] > summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .table-of-contents-mobile nav {
+    border-left: none;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+
+  .table-of-contents-mobile nav ul {
+    margin: 0 0 6px;
+    padding-left: 1em;
+  }
+
+  .table-of-contents-mobile nav li {
+    list-style: none;
+    margin: .25em 0;
+  }
+
+  .table-of-contents-mobile nav a,
+  .table-of-contents-mobile nav a:link,
+  .table-of-contents-mobile nav a:visited {
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  .table-of-contents-mobile nav > ul > li > a {
+    font-weight: 700;
+  }
+
+  .table-of-contents-mobile nav a:hover {
+    text-decoration: underline solid var(--muted-color);
+  }
+
+  .table-of-contents-mobile nav a.active {
+    text-decoration: underline;
+  }
+
+  [data-theme="dark"] .table-of-contents nav { border-left-color: rgba(255,255,255,.15); }
+
+  /* Responsive: hide sticky TOC, show mobile */
+  @media (max-width: var(--bp-content-collapse)) {
+    .table-of-contents {
+      position: static;
+      display: none;
+    }
+
+    .table-of-contents-mobile {
+      display: block;
+    }
+  }
+</style>

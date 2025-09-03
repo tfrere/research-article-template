@@ -10,21 +10,27 @@ const wrapperClass = ["note", `note--${variant}`, className].filter(Boolean).joi
 const hasHeader = (emoji && String(emoji).length > 0) || (title && String(title).length > 0);
 ---
 <div class={wrapperClass} {...props}>
-  {hasHeader && <div class="note__header">
-    {emoji && <span class="note__emoji">{emoji}</span>}
-    {title && <span class="note__title">{title}</span>}
-  </div>}
-  <div class="note__content">
-    <slot />
+  <div class="note__layout">
+    {emoji && <div class="note__icon" aria-hidden="true">
+      <span class="note__emoji">{emoji}</span>
+    </div>}
+    <div class="note__body">
+      {title && <div class="note__title">{title}</div>}
+      <div class="note__content">
+        <slot />
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-  .note { background: var(--surface-bg); border-left: 2px solid var(--border-color); border-radius: 4px; padding: 10px 14px; margin: 12px 0; }
-  .note__header { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-color); margin-bottom: 6px; }
-  .note__emoji { font-size: 24px; line-height: 1; }
-  .note__title { font-size: 13px; letter-spacing: .2px; }
-  .note__content { color: var(--text-color); font-size: 0.95rem; }
+  .note { background: var(--surface-bg); border-left: 2px solid var(--border-color); border-radius: 4px; padding: 10px 14px; margin: var(--block-spacing-y) 0; }
+  .note__layout { display: flex; align-items: center; gap: 10px; }
+  .note__icon { flex: 0 0 auto; line-height: 1; }
+  .note__emoji { font-size: 32px; line-height: 1; display: block; }
+  .note__body { flex: 1 1 auto; min-width: 0; }
+  .note__title { font-size: 13px; letter-spacing: .2px; font-weight: 600; color: var(--text-color); margin-bottom: 4px; text-align: left; }
+  .note__content { color: var(--text-color); font-size: 0.95rem; text-align: left; }
   /* Ensure the very last slotted element has no bottom margin */
   .note .note__content > :global(*:last-child) { margin-bottom: 0 !important; }
 

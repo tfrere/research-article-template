@@ -1,56 +1,27 @@
 @import './_variables.css';
+@import './_reset.css';
 @import './_base.css';
 @import './_layout.css';
-@import './components/_footer.css';
+@import './_print.css';
 @import './components/_code.css';
-@import './components/_poltly.css';
+@import './components/_button.css';
+@import './components/_table.css';
+@import './components/_tag.css';
 
-/* Dark-mode form tweak */
-[data-theme="dark"] .plotly_input_container > select { background-color: #1a1f27; border-color: var(--border-color); color: var(--text-color); }
-
-[data-theme="dark"] .html-embed__card:not(.is-frameless) { background: #12151b; border-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .right-aside .aside-card { background: #12151b; border-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .content-grid main pre { background: #12151b; border-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .toc nav { border-left-color: rgba(255,255,255,.15); }
-[data-theme="dark"] .distill-footer { border-top-color: rgba(255,255,255,.15); color: rgba(200,200,200,.8); }
-[data-theme="dark"] .citation { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,.15); color: rgba(200,200,200,1); }
-[data-theme="dark"] .citation a { color: rgba(255,255,255,0.75); }
-
-/* Opt-in zoomable images */
-img[data-zoomable] { cursor: zoom-in; }
-.medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
-
-/* Download button for img[data-downloadable] */
-figure.has-dl-btn { position: relative; }
-.dl-host { position: relative; }
-.img-dl-wrap { position: relative; display: inline-block; }
-.img-dl-btn {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  color: white;
-  text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.25);
-  z-index: var(--z-elevated);
-  display: none;
+.demo-wide,
+.demo-full-width {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  color: var(--muted-color);
+  font-size: 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-bg);
+  margin-bottom: var(--block-spacing-y);
 }
-.img-dl-btn svg { width: 18px; height: 18px; fill: currentColor; }
-.img-dl-wrap:hover .img-dl-btn { display: inline-flex; }
-[data-theme="dark"] .img-dl-btn { background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25); }
-[data-theme="dark"] .img-dl-btn:hover { background: rgba(255,255,255,0.25); }
 
-/* ============================================================================ */
-/* Theme Toggle button (moved from component) */
-/* ============================================================================ */
-#theme-toggle { display: inline-flex; align-items: center; gap: 8px; border: none; background: transparent; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin: 12px 16px; color: var(--text-color) !important; }
-#theme-toggle .icon.dark { display: none; }
-[data-theme="dark"] #theme-toggle .icon.light { display: none; }
-[data-theme="dark"] #theme-toggle .icon.dark { display: inline; }
-#theme-toggle .icon { filter: none !important; }
-
-
+.mermaid {
+    background: none!important;
+    margin-bottom: var(--block-spacing-y) !important;
+}

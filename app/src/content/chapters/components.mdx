@@ -9,101 +9,20 @@ import FullWidth from '../../components/FullWidth.astro';
 import Accordion from '../../components/Accordion.astro';
 import ResponsiveImage from '../../components/ResponsiveImage.astro';
 
-## Available components
+## Components
 
 **All** the following **components** are available in the **article.mdx** file. You can also create your own **components** by creating a new file in the `/components` folder.
+You have to import them in the **.mdx** file you want to use them in.
 
 <br/>
 <div className="button-group">
-  <a className="button" href="#math">Math</a>
-  <a className="button" href="#code-blocks">Code</a>
-  <a className="button" href="#citations-and-notes">Citations & notes</a>
   <a className="button" href="#responsiveimage">ResponsiveImage</a>
-  <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#placement">Placement</a>
   <a className="button" href="#accordion">Accordion</a>
   <a className="button" href="#note">Note</a>
-  <a className="button" href="#minimal-table">Minimal table</a>
-  <a className="button" href="#audio">Audio</a>
-  <a className="button" href="#htmlembeds">HtmlEmbeds</a>
+  <a className="button" href="#htmlembed">HtmlEmbed</a>
+  <a className="button" href="#iframe">Iframe</a>
 </div>
-
-### Math
-
-KaTeX is used for math rendering.
-
-**Inline**
-
-This is an inline math equation: $x^2 + y^2 = z^2$. 
-
-
-<small className="muted">Example</small>
-```mdx
-$x^2 + y^2 = z^2$
-```
-
-**Block**
-
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
-
-<small className="muted">Example</small>
-```mdx
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
-```
-
-### Code
-
-Use fenced code blocks with a language for syntax highlighting.
-
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-
-<small className="muted">Example</small>
-````mdx
-```python
-def greet(name: str) -> None:
-    print(f"Hello, {name}!")
-
-greet("Astro")
-```
-````
-
-
-### Citation and footnote
-
-**Citations** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article. The citation keys come from `app/src/content/bibliography.bib`.
-
-**Footnotes** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
-
-Here are a few variations using the same bibliography:
-
-1) **In-text citation** with brackets: [@example2023].
-
-2) **Narrative citation**: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) **Multiple citations** and a **footnote** together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-
-<small className="muted">Example</small>
-```mdx
-1) In-text citation with brackets: [@example2023].
-
-2) Narrative citation: As shown by @vaswani2017attention, transformers enable efficient sequence modeling.
-
-3) Multiple citations and a footnote together: see [@vaswani2017attention; @example2023] for related work. Also note this footnote[^f1].
-
-[^f1]: Footnote attached to the sentence above.
-```
-
 
 ### ResponsiveImage
 
@@ -145,95 +64,58 @@ import myImage from './assets/images/placeholder.jpg'
 ```
 
 
+### Placement
 
-### Mermaid diagram
+Use these helpers when you need to step outside the main content flow: **Sidenotes** for contextual side notes, **Wide** to extend beyond the main column, and **Full-width** for full-width, immersive sections.
 
-Native mermaid diagrams are supported. You can use the <a target="_blank" href="https://mermaid.live/edit#pako:eNpVjUFPg0AQhf_KZk6a0AYsCywHE0u1lyZ66EnoYQMDSyy7ZFlSK_DfXWiMOqd58773ZoBcFQgxlGd1yQXXhhx3mSR2ntJE6LozDe9OZLV6HPdoSKMkXkeyvdsr0gnVtrWs7m_8doZIMhxmDIkRtfyYblay5F8ljmSXHnhrVHv66xwvaiTPaf0mbP1_R2i0qZe05HHJVznXJOF6QcCBStcFxEb36ECDuuGzhGF2MzACG8wgtmuBJe_PJoNMTjbWcvmuVPOT1KqvBNj6c2dV3xbc4K7mlea_CMoCdaJ6aSCm3lIB8QCfED94dM2o77ssjFzK3MiBq2WCNWUeiza-H26YvU8OfC0_3XVII9eLQuYFIaVBGEzfyTJ22g"> live editor</a> to create your diagram and copy the code to your article.
+#### Sidenotes
 
-
-```mermaid
-erDiagram
-  DATASET ||--o{ SAMPLE : contains
-  RUN }o--o{ SAMPLE : uses
-  RUN ||--|| MODEL : trains
-  RUN ||--o{ METRIC : logs
-
-  DATASET {
-    string id
-    string name
-  }
-
-  SAMPLE {
-    string id
-    string uri
-  }
-
-  MODEL {
-    string id
-    string framework
-  }
-
-  RUN {
-    string id
-    date startedAt
-  }
-
-  METRIC {
-    string name
-    float value
-  }
-```
-
-<small className="muted">Example</small>
-````mdx
-```mermaid
-erDiagram
-  DATASET ||--o{ SAMPLE : contains
-  RUN }o--o{ SAMPLE : uses
-  RUN ||--|| MODEL : trains
-  RUN ||--o{ METRIC : logs
-
-  DATASET {
-    string id
-    string name
-  }
-
-  SAMPLE {
-    string id
-    string uri
-  }
-
-  MODEL {
-    string id
-    string framework
-  }
-
-  RUN {
-    string id
-    date startedAt
-  }
-
-  METRIC {
-    string name
-    float value
-  }
-```
-````
-
-
-### Separator
-
-Use `---` on its own line to insert a horizontal separator between sections. This is a standard Markdown “thematic break”. Don’t confuse it with the `---` used at the very top of the file to delimit the frontmatter.
-
----
+<Sidenote>
+  This paragraph presents a **key idea** concisely.
+  <Fragment slot="aside">
+    **Side note** for brief context or a definition.
+  </Fragment>
+  </Sidenote>
 
 <small className="muted">Example</small>
 ```mdx
-Intro paragraph.
+import Sidenote from '../components/Sidenote.astro'
 
----
+<Sidenote>
+  Main paragraph with the core idea.
+  <Fragment slot="aside">Short side note.</Fragment>
+</Sidenote>
+```
 
-Next section begins here.
+
+#### Wide example
+
+<Wide>
+  <div className="demo-wide">demo wide</div>
+</Wide>
+
+<small className="muted">Example</small>
+```mdx
+import Wide from '../components/Wide.astro'
+
+<Wide>
+  Your content here...
+</Wide>
+```
+
+#### Full-width example
+
+<FullWidth>
+  <div className="demo-full-width">demo full-width</div>
+</FullWidth>
+
+<small className="muted">Example</small>
+```mdx
+import FullWidth from '../components/FullWidth.astro'
+
+<FullWidth>
+  Your content here...
+</FullWidth>
 ```
 
 
@@ -287,7 +169,8 @@ Small contextual callout for tips, caveats, or emphasis.
 | `title`  | No       | string                       | Short title displayed in header     |
 | `emoji`  | No       | string                       | Emoji displayed before the title    |
 | `class`  | No       | string                       | Extra classes for custom styling    |
-| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note            |
+| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note          |
+
 
 <Note title="Heads‑up" emoji="💡" variant="info">
   Use notes to surface context without breaking reading flow.
@@ -325,35 +208,6 @@ import Note from '../../components/Note.astro'
   Plain note without header. Useful for short clarifications.
 </Note>
 ```
-
-
-### Minimal table
-
-| Method | Score |
-|---|---|
-| A | 0.78 |
-| B | 0.86 |
-
-<small className="muted">Example</small>
-```mdx
-| Method | Score |
-| --- | --- |
-| A | 0.78 |
-| B | 0.86 |
-```
-
-### Audio
-
-<audio controls src={audioDemo}/>
-<br/>
-<small className="muted">Example</small>
-```mdx
-import audioDemo from './assets/audio/audio-example.wav'
-
-<audio controls src={audioDemo}/>
-```
-
-
 
 
 ### HtmlEmbed

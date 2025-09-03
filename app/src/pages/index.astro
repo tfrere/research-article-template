@@ -4,7 +4,7 @@ import Hero from '../components/Hero.astro';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Seo from '../components/Seo.astro';
-import TableOfContent from '../components/TableOfContent.astro';
+import TableOfContents from '../components/TableOfContents.astro';
 // Default OG image served from public/
 const ogDefaultUrl = '/thumb.jpg';
 import 'katex/dist/katex.min.css';
@@ -18,11 +18,78 @@ const docTitleHtml = (articleFM?.title ?? 'Untitled article')
   .replace(/\n/g, '<br/>');
 const subtitle = articleFM?.subtitle ?? '';
 const description = articleFM?.description ?? '';
-const authors = articleFM?.authors ?? [];
+// Accept authors as string[] or array of objects { name, url, affiliations? }
+const rawAuthors = (articleFM as any)?.authors ?? [];
+type Affiliation = { id: number; name: string; url?: string };
+type Author = { name: string; url?: string; affiliationIndices?: number[] };
+
+// Normalize affiliations from frontmatter: supports strings or objects { id?, name, url? }
+const rawAffils = (articleFM as any)?.affiliations ?? (articleFM as any)?.affiliation ?? [];
+const normalizedAffiliations: Affiliation[] = (() => {
+  const seen: Map<string, number> = new Map();
+  const list: Affiliation[] = [];
+  const pushUnique = (name: string, url?: string) => {
+    const key = `${String(name).trim()}|${url ? String(url).trim() : ''}`;
+    if (seen.has(key)) return seen.get(key)!;
+    const id = list.length + 1;
+    list.push({ id, name: String(name).trim(), url: url ? String(url) : undefined });
+    seen.set(key, id);
+    return id;
+  };
+  const input = Array.isArray(rawAffils) ? rawAffils : (rawAffils ? [rawAffils] : []);
+  for (const a of input) {
+    if (typeof a === 'string') {
+      pushUnique(a);
+    } else if (a && typeof a === 'object') {
+      const name = a.name ?? a.label ?? a.text ?? a.affiliation ?? '';
+      if (!String(name).trim()) continue;
+      const url = a.url || a.link;
+      // Respect provided numeric id for display stability if present and sequential; otherwise reassign
+      pushUnique(String(name), url ? String(url) : undefined);
+    }
+  }
+  return list;
+})();
+
+// Helper: ensure an affiliation exists and return its id
+const ensureAffiliation = (val: any): number | undefined => {
+  if (val == null) return undefined;
+  if (typeof val === 'number' && Number.isFinite(val) && val > 0) {
+    return Math.floor(val);
+  }
+  const name = typeof val === 'string' ? val : (val?.name ?? val?.label ?? val?.text ?? val?.affiliation);
+  if (!name || !String(name).trim()) return undefined;
+  const existing = normalizedAffiliations.find(a => a.name === String(name).trim());
+  if (existing) return existing.id;
+  const id = normalizedAffiliations.length + 1;
+  normalizedAffiliations.push({ id, name: String(name).trim(), url: val?.url || val?.link });
+  return id;
+};
+
+// Normalize authors and map affiliations -> indices (Distill-like)
+const normalizedAuthors: Author[] = (Array.isArray(rawAuthors) ? rawAuthors : [])
+  .map((a: any) => {
+    if (typeof a === 'string') {
+      return { name: a } as Author;
+    }
+    const name = String(a?.name || '').trim();
+    const url = a?.url || a?.link;
+    let indices: number[] | undefined = undefined;
+    const raw = a?.affiliations ?? a?.affiliation ?? a?.affils;
+    if (raw != null) {
+      const entries = Array.isArray(raw) ? raw : [raw];
+      const ids = entries.map(ensureAffiliation).filter((x): x is number => typeof x === 'number');
+      const unique = Array.from(new Set(ids)).sort((x, y) => x - y);
+      if (unique.length) indices = unique;
+    }
+    return { name, url, affiliationIndices: indices } as Author;
+  })
+  .filter((a: Author) => a.name && a.name.trim().length > 0);
+const authorNames: string[] = normalizedAuthors.map(a => a.name);
 const published = articleFM?.published ?? undefined;
 const tags = articleFM?.tags ?? [];
-// Prefer ogImage from frontmatter if provided
-const fmOg = articleFM?.ogImage as string | undefined;
+// Prefer seoThumbImage from frontmatter if provided
+const fmOg = articleFM?.seoThumbImage as string | undefined;
 const imageAbs: string = fmOg && fmOg.startsWith('http')
   ? fmOg
   : (Astro.site ? new URL((fmOg ?? ogDefaultUrl), Astro.site).toString() : (fmOg ?? ogDefaultUrl));
@@ -43,33 +110,27 @@ const extractYear = (val: string | undefined): number | undefined => {
 };
 
 const year = extractYear(published);
-const citationAuthorsText = authors.join(', ');
+const citationAuthorsText = authorNames.join(', ');
 const citationText = `${citationAuthorsText}${year ? ` (${year})` : ''}. "${titleFlat}".`;
 
-const authorsBib = authors.join(' and ');
-const keyAuthor = (authors[0] || 'article').split(/\s+/).slice(-1)[0].toLowerCase();
+const authorsBib = authorNames.join(' and ');
+const keyAuthor = (authorNames[0] || 'article').split(/\s+/).slice(-1)[0].toLowerCase();
 const keyTitle = titleFlat.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24);
 const bibKey = `${keyAuthor}${year ?? ''}_${keyTitle}`;
-const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBib}},\n  ${year ? `year={${year}}` : ''}\n}`;
-// Determine if TOC auto-collapse is enabled via (priority):
-// 1) article frontmatter: tableOfContentAutoCollapse (fallback: tocAutoCollapse)
-// 2) public env flag: PUBLIC_TOC_AUTO_COLLAPSE
-// Falls back to 'false' when not defined (string or boolean)
-const __env = (import.meta as any)?.env || {};
-const envCollapse = (
-  String((__env.PUBLIC_TABLE_OF_CONTENT_AUTO_COLLAPSE ?? __env.PUBLIC_TOC_AUTO_COLLAPSE ?? 'false')).toLowerCase() === 'true'
-  || (__env.PUBLIC_TABLE_OF_CONTENT_AUTO_COLLAPSE === true)
-  || (__env.PUBLIC_TOC_AUTO_COLLAPSE === true)
-);
+const doi = (ArticleMod as any)?.frontmatter?.doi ? String((ArticleMod as any).frontmatter.doi) : undefined;
+const bibtex = `@misc{${bibKey},\n  title={${titleFlat}},\n  author={${authorsBib}},\n  ${year ? `year={${year}},\n  ` : ''}${doi ? `doi={${doi}}` : ''}\n}`;
+const envCollapse = false;
 const tableOfContentAutoCollapse = Boolean(
-  (articleFM as any)?.tableOfContentAutoCollapse ?? (articleFM as any)?.tocAutoCollapse ?? envCollapse
+  (articleFM as any)?.tableOfContentAutoCollapse ?? (articleFM as any)?.tableOfContentsAutoCollapse ?? envCollapse
 );
+// Licence note (HTML allowed)
+const licence = (articleFM as any)?.licence ?? (articleFM as any)?.license ?? (articleFM as any)?.licenseNote;
 ---
 <html lang="en" data-theme="light" data-toc-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <Seo title={docTitle} description={description} authors={authors} published={published} tags={tags} image={imageAbs} />
+    <Seo title={docTitle} description={description} authors={authorNames} published={published} tags={tags} image={imageAbs} />
     <script is:inline>
       (() => {
         try {
@@ -90,10 +151,10 @@ const tableOfContentAutoCollapse = Boolean(
   </head>
   <body>
     <ThemeToggle />
-    <Hero title={docTitleHtml} titleRaw={docTitle} description={subtitle} authors={articleFM?.authors} affiliation={articleFM?.affiliation} published={articleFM?.published} />
+    <Hero title={docTitleHtml} titleRaw={docTitle} description={subtitle} authors={normalizedAuthors as any} affiliations={normalizedAffiliations as any} affiliation={articleFM?.affiliation} published={articleFM?.published} doi={doi} />
 
     <section class="content-grid">
-      <TableOfContent tableOfContentAutoCollapse={tableOfContentAutoCollapse} />
+      <TableOfContents tableOfContentAutoCollapse={tableOfContentAutoCollapse} />
       <main>
         <Article />
         <style is:inline>
@@ -103,7 +164,7 @@ const tableOfContentAutoCollapse = Boolean(
       </main>
     </section>
 
-    <Footer citationText={citationText} bibtex={bibtex} />
+    <Footer citationText={citationText} bibtex={bibtex} licence={licence} doi={doi} />
 
 
     <script>

@@ -1,9 +1,6 @@
 /* ============================================================================ */
-/* Layout – 3-column grid (TOC / Article / Aside) */
+/* Layout – 3-column grid (Table of Contents / Article / Aside) */
 /* ============================================================================ */
-:root {
-  --content-padding-x: 16px;
-}
 
 .content-grid {
   max-width: 1280px;
@@ -16,75 +13,27 @@
   align-items: start;
 }
 
-.content-grid > main { max-width: 100%;
+.content-grid > main {
+  max-width: 100%;
   margin: 0;
   padding: 0;
 }
 
-@media (max-width: 1100px) {
-  .content-grid { overflow: hidden; }
+@media (max-width: var(--bp-content-collapse)) {
+  .content-grid {
+    overflow: hidden;
+  }
 }
 
-/* TOC (left column) */
-.toc { position: sticky; top: 24px; }
-.toc nav { border-left: 1px solid var(--border-color); padding-left: 16px; font-size: 13px; }
-.toc .title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
-
-/* Hide in-article TOC (duplicated by sticky aside) */
-main > nav:first-of-type { display: none; }
-
-/* TOC look & feel */
-.toc nav ul { margin: 0 0 6px; padding-left: 1em; }
-.toc nav li { list-style: none; margin: .25em 0; }
-.toc nav a { color: var(--text-color); text-decoration: none; border-bottom: none; }
-.toc nav > ul > li > a { font-weight: 700; }
-.toc nav a:hover { text-decoration: underline solid var(--muted-color); }
-.toc nav a.active { text-decoration: underline; }
-
-/* Mobile TOC accordion */
-.toc-mobile { display: none; margin: 8px 0 16px; }
-.toc-mobile > summary { cursor: pointer; list-style: none; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-weight: 600; }
-.toc-mobile[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.toc-mobile nav { border-left: none; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-.toc-mobile nav ul { margin: 0 0 6px; padding-left: 1em; }
-.toc-mobile nav li { list-style: none; margin: .25em 0; }
-.toc-mobile nav a { color: var(--text-color); text-decoration: none; border-bottom: none; }
-.toc-mobile nav > ul > li > a { font-weight: 700; }
-.toc-mobile nav a:hover { text-decoration: underline solid var(--muted-color); }
-.toc-mobile nav a.active { text-decoration: underline; }
-
-/* Right aside (notes) */
-.right-aside { position: sticky; top: 24px; }
-.right-aside .aside-card { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; color: var(--text-color); }
 
 /* Responsive – collapse to single column */
-@media (max-width: 1100px) {
-  .content-grid { grid-template-columns: 1fr; }
-  .toc { position: static; display: none; }
-  .toc-mobile { display: block; }
-  .right-aside { display: none; }
-  main > nav:first-of-type { display: block; }
-}
+@media (max-width: var(--bp-content-collapse)) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 
-
-
-.margin-aside { position: relative; margin: 12px 0; }
-
-.margin-aside__aside {
-  position: absolute;
-  top: 0;
-  right: -260px; /* push into the right grid column (width 260 + gap 32) */
-  width: 260px;
-  border-radius: 8px;
-  padding: 0 30px;
-  font-size: 0.9rem;
-  color: var(--muted-color);
-}
-@media (max-width: 1100px) {
-  .margin-aside__aside {
-    position: static;
-    width: auto;
-    margin-top: 8px;
+  main > nav:first-of-type {
+    display: block;
   }
 }
 
@@ -92,22 +41,18 @@ main > nav:first-of-type { display: none; }
 /* ============================================================================ */
 /* Width helpers – slightly wider than main column, and full-width to viewport */
 /* ---------------------------------------------------------------------------- */
-/* Usage in MDX: */
-/* <div className="wide"> ... </div> */
-/* <div className="full-width"> ... </div> */
-/* These center the content relative to the viewport while keeping it responsive. */
-/* */
-/* Notes: */
-/* - These helpers work inside the main article column; they break out visually */
-/*   to be wider or fully span the viewport. On small screens, they fall back to 100%. */
-/* - Adjust the target width in .wide if desired. */
+
 .wide,
-.full-width { box-sizing: border-box; position: relative; z-index: var(--z-elevated); }
+.full-width {
+  box-sizing: border-box;
+  position: relative;
+  z-index: var(--z-elevated);
+}
 
 .wide {
   /* Target up to ~1100px while staying within viewport minus page gutters */
   width: min(1100px, 100vw - 32px);
-  margin-left: 50%;
+  margin-left: calc(50% + var(--content-padding-x) * 2);
   transform: translateX(-50%);
 }
 
@@ -118,7 +63,7 @@ main > nav:first-of-type { display: none; }
   margin-right: calc(50% - 50vw);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: var(--bp-content-collapse)) {
   .wide,
   .full-width {
     width: 100%;

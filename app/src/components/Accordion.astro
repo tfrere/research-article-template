@@ -76,6 +76,8 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
 
 <style>
   .accordion {
+    margin: 0 0 var(--spacing-4);
+    padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     background: var(--surface-bg);
@@ -87,12 +89,13 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
   }
 
   .accordion__summary {
+    margin: 0;
     list-style: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 4px;
-    padding: 4px;
+    padding: 10px 8px;
     cursor: pointer;
     color: var(--text-color);
     user-select: none;
@@ -131,7 +134,8 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
   }
 
   .accordion__content {
-    padding: 12px 4px 4px;
+    margin: 0;
+    padding: 0;
   }
 
   /* Ensure the very last slotted element has no bottom spacing */
@@ -140,15 +144,30 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     margin-bottom: 0 !important;
   }
 
+  /* Ensure the very first slotted element has no top spacing */
+  .accordion .accordion__content > :global(*:first-child) {
+    margin-top: 0 !important;
+  }
+
+  /* Content padding: default for direct children, opt-out for code/tables */
+  .accordion .accordion__content > :global(*) {
+    padding: 8px;
+  }
+  .accordion .accordion__content > :global(.table-scroll),
+  .accordion .accordion__content > :global(pre),
+  .accordion .accordion__content > :global(.code-card) {
+    padding: 0;
+  }
+
   /* Separator between header and content when open (edge-to-edge) */
   .accordion[open] .accordion__content-wrapper::before {
     content: "";
     position: absolute;
     left: 0;
     right: 0;
-    top: 6px; /* space below header */
+    top: 0px; /* space below header */
     height: 1px;
-    background: var(--neutral-300);
+    background: var(--border-color);
     pointer-events: none;
   }
 
@@ -158,6 +177,8 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     outline-offset: 3px;
     border-radius: 8px;
   }
+
+
 </style>
 
 
