@@ -32,6 +32,19 @@ function normalizeAuthors(input: Array<string | { name?: string; url?: string; l
 
 const normalizedAuthors: Author[] = normalizeAuthors(authors as any);
 
+// Determine if affiliation superscripts should be shown (only when there are multiple distinct affiliations referenced by authors)
+const authorAffiliationIndexSet = new Set<number>();
+for (const author of normalizedAuthors) {
+  const indices = Array.isArray(author.affiliationIndices) ? author.affiliationIndices : [];
+  for (const idx of indices) {
+    if (typeof idx === 'number') {
+      authorAffiliationIndexSet.add(idx);
+    }
+  }
+}
+const shouldShowAffiliationSupers = authorAffiliationIndexSet.size > 1;
+const hasMultipleAffiliations = Array.isArray(affiliations) && affiliations.length > 1;
+
 function stripHtml(text: string): string {
   return String(text || '').replace(/<[^>]*>/g, '');
 }
@@ -64,7 +77,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
         <h3>Author{normalizedAuthors.length > 1 ? 's' : ''}</h3>
         <ul class="authors">
           {normalizedAuthors.map((a, i) => {
-            const supers = Array.isArray(a.affiliationIndices) && a.affiliationIndices.length
+            const supers = shouldShowAffiliationSupers && Array.isArray(a.affiliationIndices) && a.affiliationIndices.length
               ? <sup>{a.affiliationIndices.join(',')}</sup>
               : null;
             return (
@@ -79,11 +92,19 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     {(Array.isArray(affiliations) && affiliations.length > 0) && (
       <div class="meta-container-cell">
         <h3>Affiliation{affiliations.length > 1 ? 's' : ''}</h3>
-        <ol class="affiliations">
-          {affiliations.map((af) => (
-            <li value={af.id}>{af.url ? <a href={af.url} target="_blank" rel="noopener noreferrer">{af.name}</a> : af.name}</li>
-          ))}
-        </ol>
+        {hasMultipleAffiliations ? (
+          <ol class="affiliations">
+            {affiliations.map((af) => (
+              <li value={af.id}>{af.url ? <a href={af.url} target="_blank" rel="noopener noreferrer">{af.name}</a> : af.name}</li>
+            ))}
+          </ol>
+        ) : (
+          <p>
+            {affiliations[0]?.url 
+              ? <a href={affiliations[0].url} target="_blank" rel="noopener noreferrer">{affiliations[0].name}</a> 
+              : affiliations[0]?.name}
+          </p>
+        )}
       </div>
     )}
     {(!affiliations || affiliations.length === 0) && affiliation && (

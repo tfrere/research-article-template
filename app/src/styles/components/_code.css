@@ -33,12 +33,7 @@ section.content-grid pre {
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
   padding: 0;
-}
-
-/* Consistent vertical spacing for code blocks */
-.astro-code,
-section.content-grid pre {
-  margin: 0 0 var(--block-spacing-y);
+  margin-bottom: var(--block-spacing-y) !important;
 }
 
 section.content-grid pre { margin: 0; }
@@ -120,11 +115,14 @@ section.content-grid pre code {
 
 .code-card .code-copy {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
   z-index: 3;
-  padding: 6px 12px;
-  border: none;
+  display: none;
+}
+
+.code-card:hover .code-copy {
+  display: block;
 }
 
 .code-card .code-copy svg {
@@ -135,20 +133,6 @@ section.content-grid pre code {
 }
 
 .code-card pre { margin: 0 0 var(--spacing-1); }
-
-/* Discreet filetype/language label shown under the Copy button */
-.code-card::after {
-  content: attr(data-language);
-  position: absolute;
-  top: 8px;
-  right: 56px; /* leave room for copy button */
-  font-size: 10px;
-  line-height: 1;
-  text-transform: uppercase;
-  color: var(--muted-color);
-  pointer-events: none;
-  z-index: 2;
-}
 
 /* When no copy button (single-line), keep the label in the top-right corner */
 .code-card.no-copy::after { top: 8px; right: 8px; }
@@ -162,9 +146,9 @@ section.content-grid pre code {
 /* ============================================================================ */
 /* Language/extension vignette (bottom-right, discreet) */
 /* ============================================================================ */
-.astro-code::after {
+/* .astro-code::after {
   content: attr(data-language);
-  position: sticky;
+  position: absolute;
   right: 0;
   bottom: 0;
   font-size: 10px;
@@ -175,10 +159,10 @@ section.content-grid pre code {
   border-top: 1px solid var(--border-color);
   border-left: 1px solid var(--border-color);
   opacity: 1;
-  border-radius: 8px 0 0 0; /* round only top-left */
+  border-radius: 8px 0 0 0; 
   padding: 4px 6px;
   pointer-events: none;
-}
+} */
 
 /* Fallback if Shiki uses data-lang instead of data-language */
 .astro-code[data-lang]::after { content: attr(data-lang); }
