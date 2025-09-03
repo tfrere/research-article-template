@@ -117,7 +117,7 @@ import MyChapter from './chapters/my-chapter.mdx';
  
 The **Table of contents** is generated **automatically** from your **H2–H4** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**.
 
-<Note variant="info">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the <a href="#frontmatter">frontmatter</a>. Which is `true` by default.</Note>
+<Note variant="info" emoji="💡">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the <a href="#frontmatter">frontmatter</a>. Which is `true` by default.</Note>
 
 ### Theme
 
@@ -170,7 +170,7 @@ Use the generated **CSS variables** to style elements (e.g., `color: var(--palet
 ```
 </Accordion>
 
-<Note variant="info">⚠️ **CSS overrides** automatically trigger a **palette regeneration** via JS observers; no manual call is needed.</Note>
+<Note variant="info" emoji='💡'>**CSS overrides** automatically trigger a **palette regeneration** via JS observers; no manual call is needed.</Note>
 
 ##### JS
 Fetch arrays of colors via `window.ColorPalettes.getColors('categorical')`. To change sizes **at runtime**, set CSS vars (e.g., `document.documentElement.style.setProperty('--palette-count','8')`) and call `window.ColorPalettes.refresh()`.
