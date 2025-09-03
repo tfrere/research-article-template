@@ -1,6 +1,6 @@
 ---
-interface Props { src: string; title?: string; desc?: string; frameless?: boolean; align?: 'left' | 'center' | 'right' }
-const { src, title, desc, frameless = false, align = 'left' } = Astro.props as Props;
+interface Props { src: string; title?: string; desc?: string; frameless?: boolean; align?: 'left' | 'center' | 'right'; id?: string }
+const { src, title, desc, frameless = false, align = 'left', id } = Astro.props as Props;
 
 // Load all .html embeds under src/content/embeds/** as strings (dev & build)
 const embeds = (import.meta as any).glob('../content/embeds/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -20,7 +20,7 @@ const html = resolveFragment(src);
 const mountId = `frag-${Math.random().toString(36).slice(2)}`;
 ---
 { html ? (
-  <figure class="html-embed">
+  <figure class="html-embed" id={id}>
     {title && <figcaption class="html-embed__title" style={`text-align:${align}`}>{title}</figcaption>}
     <div class={`html-embed__card${frameless ? ' is-frameless' : ''}`}>
       <div id={mountId} set:html={html} />

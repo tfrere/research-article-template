@@ -224,6 +224,7 @@ For researchers who want to stay in **Python** while targeting **D3**, the [d3bl
 | `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
 | `frameless` | No       | Removes the card background and border for seamless embeds.                                      
 | `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
 
 <Accordion title="Code example">
 ```mdx
@@ -231,6 +232,7 @@ import HtmlEmbed from '../components/HtmlEmbed.astro'
 
 <HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
 <HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
+<HtmlEmbed src="d3-line-example.html" id="real-world-examples" title="D3 Line (with id)" desc="Linkable example via #real-world-examples" />
 ```
 </Accordion>
 
