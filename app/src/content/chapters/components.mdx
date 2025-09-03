@@ -125,7 +125,7 @@ import FullWidth from '../components/FullWidth.astro'
 
 ### Accordion
 
-Accessible accordion based on `details/summary`. You can pass any children content.
+Can be used like this `<Accordion>some content</Accordion>`. You can pass any children content.
 
 <Accordion title="What can this accordion hold?" open>
   <p>Text, lists, images, code blocks, etc.</p>
@@ -135,12 +135,34 @@ Accessible accordion based on `details/summary`. You can pass any children conte
   </ul>
 </Accordion>
 
+<Accordion title="A table inside an accordion">
+  | Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
+</Accordion>
+
 <Accordion title="Code example">
 ````mdx
 import Accordion from '../components/Accordion.astro'
 
 <Accordion title="Accordion title" open>
   <p>Free content with <strong>markdown</strong> and MDX components.</p>
+</Accordion>
+
+<Accordion title="A table inside an accordion">
+  | Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
 </Accordion>
 
 <Accordion title="Code example">
