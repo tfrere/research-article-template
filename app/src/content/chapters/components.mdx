@@ -213,6 +213,8 @@ They exist in the `app/src/content/embeds` folder.
 
 For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
 
+<Note>You can refer to a chart by creating a link to it <a href="#real-world-examples">here</a>. All you need to do is put the id="real-world-examples" in the HtmlEmbed. <a href="#neural-network-mnist-like">Fig 1</a></Note>
+
 <HtmlEmbed src="d3-line-example.html" title="This is a chart title" desc="Some chart description" />
 
 | Prop        | Required | Description                                                                                      
@@ -249,7 +251,8 @@ Inside this file, you will find every directives you need to code your own **Htm
 
 #### Real world examples
 
-Here are some examples that were vibe coded to inspire you.
+Here are some examples that were vibe coded to inspire you. 
+
 
 ---
 <HtmlEmbed src="d3-line.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
@@ -257,7 +260,7 @@ Here are some examples that were vibe coded to inspire you.
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
 ---
 <Wide>
-  <HtmlEmbed src="d3-neural.html" title="D3 Interactive neural network (MNIST-like)" desc="Visualize activations and class probabilities (0–9)." align="center" />
+  <HtmlEmbed src="d3-neural.html" id="neural-network-mnist-like" title="D3 Interactive neural network (MNIST-like)" desc="Visualize activations and class probabilities (0–9)." align="center" />
 </Wide>
 ---
 <Wide>
