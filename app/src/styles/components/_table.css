@@ -77,7 +77,10 @@
     border: none;
     border-radius: 0;
     margin: 0;
+    margin-bottom: 0 !important;
   }
+  /* Ensure no bottom margin even if table isn't wrapped (fallback) */
+  .accordion .accordion__content table { margin: 0 !important; }
   .accordion .accordion__content .table-scroll > table thead th:first-child,
   .accordion .accordion__content .table-scroll > table thead th:last-child,
   .accordion .accordion__content .table-scroll > table tbody tr:last-child td:first-child,

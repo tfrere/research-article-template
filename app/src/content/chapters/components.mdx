@@ -45,7 +45,7 @@ You have to import them in the **.mdx** file you want to use them in.
   caption={'A placeholder image description <span class="image-credit">From the <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a></span>'}
 />
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import ResponsiveImage from '../components/ResponsiveImage.astro'
 import myImage from './assets/images/placeholder.jpg'
@@ -62,6 +62,7 @@ import myImage from './assets/images/placeholder.jpg'
   caption={'Optimized image with a descriptive caption. <span class="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>'}
 />
 ```
+</Accordion>
 
 
 ### Placement
@@ -77,7 +78,7 @@ Use these helpers when you need to step outside the main content flow: **Sidenot
   </Fragment>
   </Sidenote>
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import Sidenote from '../components/Sidenote.astro'
 
@@ -86,6 +87,7 @@ import Sidenote from '../components/Sidenote.astro'
   <Fragment slot="aside">Short side note.</Fragment>
 </Sidenote>
 ```
+</Accordion>
 
 
 #### Wide example
@@ -94,7 +96,7 @@ import Sidenote from '../components/Sidenote.astro'
   <div className="demo-wide">demo wide</div>
 </Wide>
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import Wide from '../components/Wide.astro'
 
@@ -102,6 +104,7 @@ import Wide from '../components/Wide.astro'
   Your content here...
 </Wide>
 ```
+</Accordion>
 
 #### Full-width example
 
@@ -109,7 +112,7 @@ import Wide from '../components/Wide.astro'
   <div className="demo-full-width">demo full-width</div>
 </FullWidth>
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import FullWidth from '../components/FullWidth.astro'
 
@@ -117,6 +120,7 @@ import FullWidth from '../components/FullWidth.astro'
   Your content here...
 </FullWidth>
 ```
+</Accordion>
 
 
 ### Accordion
@@ -131,17 +135,7 @@ Accessible accordion based on `details/summary`. You can pass any children conte
   </ul>
 </Accordion>
 
-<Accordion title="Accordion with code example">
-```ts
-function greet(name: string) {
-  console.log(`Hello, ${name}`);
-}
-
-greet("Astro");
-```
-</Accordion>
-
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ````mdx
 import Accordion from '../components/Accordion.astro'
 
@@ -149,7 +143,7 @@ import Accordion from '../components/Accordion.astro'
   <p>Free content with <strong>markdown</strong> and MDX components.</p>
 </Accordion>
 
-<Accordion title="Accordion with code example">
+<Accordion title="Code example">
 ```ts
 function greet(name: string) {
   console.log(`Hello, ${name}`);
@@ -159,6 +153,7 @@ greet("Astro");
 ```
 </Accordion>
 ````
+</Accordion>
 
 ### Note
 
@@ -188,7 +183,7 @@ Small contextual callout for tips, caveats, or emphasis.
   Plain note without header. Useful for short clarifications.
 </Note>
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import Note from '../../components/Note.astro'
 
@@ -208,6 +203,7 @@ import Note from '../../components/Note.astro'
   Plain note without header. Useful for short clarifications.
 </Note>
 ```
+</Accordion>
 
 
 ### HtmlEmbed
@@ -231,13 +227,14 @@ For researchers who want to stay in **Python** while targeting **D3**, the [d3bl
 <HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
 
 <br/>
-<small className="muted">Examples</small>
+<Accordion title="Code example">
 ```mdx
 import HtmlEmbed from '../components/HtmlEmbed.astro'
 
 <HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
 <HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
 ```
+</Accordion>
 
 #### Data
 
@@ -261,12 +258,16 @@ Here are some **real world examples** that were vibe coded to inspire you.
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
 ---
 <Wide>
-  <HtmlEmbed src="d3-neural.html" title="D3 Interactive neural network (MNIST-like)" desc="Draw a digit and visualize activations and class probabilities (0–9)." align="center" />
+  <HtmlEmbed src="d3-neural.html" title="D3 Interactive neural network (MNIST-like)" desc="Visualize activations and class probabilities (0–9)." align="center" />
 </Wide>
 ---
-<FullWidth>
+<Wide>
   <HtmlEmbed src="d3-pie.html" desc="D3 Pie charts by category" align="center" />
-</FullWidth>
+</Wide>
+---
+<Wide>
+  <HtmlEmbed src="filters-quad.html" desc="D3 Stacked Line charts" align="center" />
+</Wide>
 ---
 <HtmlEmbed src="d3-comparison.html" title="Image similarity: query vs top-k" desc="Compare a query image to top-k matches. Shows rank and similarity." />
 
@@ -287,9 +288,10 @@ You can embed external content in your article using **iframes**. For example, *
 <iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 </div>
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 <iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
 <iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
 <iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 ```
+</Accordion>

@@ -142,6 +142,9 @@ section.content-grid pre code {
 /* ============================================================================ */
 /* Inside Accordions: remove padding and border on code containers */
 .accordion .astro-code { padding: 0; border: none; }
+.accordion .astro-code { margin-bottom: 0 !important; }
+.accordion pre { margin-bottom: 0 !important; }
+.accordion .code-card pre { margin: 0 !important; }
 
 /* ============================================================================ */
 /* Language/extension vignette (bottom-right, discreet) */

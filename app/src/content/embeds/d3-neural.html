@@ -3,7 +3,7 @@
   .d3-neural .controls { margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .d3-neural .controls label { font-size: 12px; color: var(--muted-color); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 6px 10px; }
   .d3-neural .controls input[type="range"]{ width: 160px; }
-  .d3-neural .panel { display:flex; gap:16px; align-items:flex-start; }
+  .d3-neural .panel { display:flex; gap:16px; align-items:center; }
   .d3-neural .left { flex: 0 0 320px; display:flex; flex-direction:column; gap:8px; }
   .d3-neural .right { flex: 1 1 auto; min-width: 0; }
   .d3-neural canvas { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-bg); display:block; }
@@ -16,7 +16,7 @@
   .d3-neural .probs .tick { font-size: 10px; color: var(--muted-color); text-align:center; margin-top: 2px; }
   .d3-neural .canvas-wrap { position: relative; }
   .d3-neural .erase-btn { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--border-color);  }
-  .d3-neural .canvas-hint { position: absolute; top: 8px; left: 8px; font-size: 11px; color: var(--muted-color); pointer-events: none; }
+  .d3-neural .canvas-hint { position: absolute; top: 8px; left: 12px; font-size: 12px; font-weight: 700; color: rgb(156, 156, 156); pointer-events: none; }
 </style>
 <script>
   (() => {
@@ -66,7 +66,7 @@
       eraseBtn.addEventListener('click', () => clearCanvas());
       canvasWrap.appendChild(eraseBtn);
       // Hint (top-left)
-      const hint = document.createElement('div'); hint.className='canvas-hint'; hint.textContent='Draw a digit';
+      const hint = document.createElement('div'); hint.className='canvas-hint'; hint.textContent='Draw a digit here';
       canvasWrap.appendChild(hint);
       left.appendChild(canvasWrap);
 
@@ -365,6 +365,15 @@
           .attr('d', pathFor)
           .attr('stroke-width', d=> 0.5 + d.w*1.2);
         linkSel.exit().remove();
+
+        // Ensure output labels remain aligned with the last layer on resize
+        gOutText.selectAll('g.out-label')
+          .attr('transform', function(d){
+            if (!d || typeof d.digit !== 'number') return d3.select(this).attr('transform');
+            const n = layers[2][d.digit];
+            if (!n) return d3.select(this).attr('transform');
+            return `translate(${n.x+18},${n.y})`;
+          });
       }
 
       function setNodeActivations(h1, h2, out){

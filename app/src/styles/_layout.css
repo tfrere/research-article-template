@@ -128,4 +128,26 @@
 }
 
 
+/* ------------------------------------------------------------------------- */
+/* D3 neural embed responsiveness                                            */
+/* Stack canvas (left) over network (right) on small screens                 */
+/* ------------------------------------------------------------------------- */
+@media (--bp-md) {
+  .d3-neural .panel {
+    flex-direction: column;
+  }
+
+  .d3-neural .panel .left {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .d3-neural .panel .right {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+
 

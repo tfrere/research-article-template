@@ -1,13 +1,13 @@
 <div class="image-comparison" style="width:100%;margin:10px 0;"></div>
 <style>
   .image-comparison { position: relative; }
-  .image-comparison .controls { display:flex; align-items:center; gap:16px; justify-content:flex-start; margin:12px 0; }
-  .image-comparison .controls label { font-size:12px; color: var(--muted-color); display:flex; align-items:center; gap:8px; }
+  .image-comparison .controls { display:flex; align-items:center; gap:16px; justify-content:center; flex-wrap:wrap; margin:14px 0; }
+  .image-comparison .controls label { font-size:14px; color: var(--text-color); display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; }
   .image-comparison .controls select {
-    font-size: 12px;
-    padding: 8px 28px 8px 10px;
+    font-size: 14px;
+    padding: 8px 32px 8px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     background-color: var(--surface-bg);
     color: var(--text-color);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -16,6 +16,7 @@
     background-size: 12px;
     -webkit-appearance: none; appearance: none; cursor: pointer;
     transition: border-color .15s ease, box-shadow .15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
   }
   [data-theme="dark"] .image-comparison .controls select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -23,8 +24,15 @@
   .image-comparison .controls select:hover { border-color: var(--primary-color); }
   .image-comparison .controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
 
+  /* Responsive: empiler label et select proprement sur petits écrans */
+  @media (max-width: 520px) {
+    .image-comparison .controls label { flex-direction: column; gap: 6px; }
+  }
+
   .image-comparison .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width:100%; align-items: start; }
-  @media (max-width: 980px) { .image-comparison .grid { grid-template-columns: repeat(2, 1fr); } }
+  /* Large → 4 colonnes; Medium → 2 colonnes; Mobile → 1 colonne */
+  @media (max-width: 1100px) { .image-comparison .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 680px) { .image-comparison .grid { grid-template-columns: 1fr; } }
 
   .image-comparison .card { position: relative; border:1px solid var(--border-color); border-radius:10px; overflow:hidden; background: var(--surface-bg); display:flex; flex-direction:column; }
   .image-comparison .card .media { position: relative; width:100%; height: 200px; background: var(--surface-2, var(--surface-bg)); display:block; }
@@ -36,17 +44,29 @@
 </style>
 <script>
   (() => {
+    const THIS_SCRIPT = document.currentScript;
     const bootstrap = () => {
-      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-      const container = (mount && mount.querySelector && mount.querySelector('.image-comparison')) || document.querySelector('.image-comparison');
+      const scriptEl = THIS_SCRIPT;
+      const host = scriptEl && scriptEl.parentElement;
+      let container = null;
+      if (host && host.querySelector) {
+        container = host.querySelector('.image-comparison');
+      }
+      if (!container) {
+        let sib = scriptEl && scriptEl.previousElementSibling;
+        while (sib && !(sib.classList && sib.classList.contains('image-comparison'))) {
+          sib = sib.previousElementSibling;
+        }
+        container = sib || document.querySelector('.image-comparison');
+      }
       if (!container) return;
       if (container.dataset && container.dataset.mounted === 'true') return; if (container.dataset) container.dataset.mounted = 'true';
 
       // Known filenames in /public/data/comparison
       const FILES = {
-        '1': { 1: 'id_1_rank_1_sim_1.000.png', 2: 'id_1_rank_2_sim_0.165.png', 3: 'id_1_rank_3_sim_0.143.png' },
-        '2': { 1: 'id_2_rank_1_sim_1.000.png', 2: 'id_2_rank_2_sim_0.978.png', 3: 'id_2_rank_3_sim_0.975.png' },
-        '3': { 1: 'id_3_rank_1_sim_0.936.png', 2: 'id_3_rank_2_sim_0.686.png', 3: 'id_3_rank_3_sim_0.676.png' },
+        '1': { query: 'id_1_query.png', 1: 'id_1_rank_1_sim_1.000.png', 2: 'id_1_rank_2_sim_0.165.png', 3: 'id_1_rank_3_sim_0.143.png' },
+        '2': { query: 'id_2_query.png', 1: 'id_2_rank_1_sim_1.000.png', 2: 'id_2_rank_2_sim_0.978.png', 3: 'id_2_rank_3_sim_0.975.png' },
+        '3': { query: 'id_3_query.png', 1: 'id_3_rank_1_sim_0.936.png', 2: 'id_3_rank_2_sim_0.686.png', 3: 'id_3_rank_3_sim_0.676.png' },
       };
 
       // Images served from [domain]/public/data/comparison/*.png → path is /data/comparison/
@@ -66,7 +86,7 @@
       const controls = document.createElement('div'); controls.className = 'controls';
       const label = document.createElement('label'); label.textContent = 'Example';
       const select = document.createElement('select');
-      const EXAMPLE_LABELS = { '1': 'photo', '2': 'chart', '3': 'drawing' };
+      const EXAMPLE_LABELS = { '1': 'Photo', '2': 'Chart', '3': 'Drawing' };
       ['1','2','3'].forEach((id)=>{ const o=document.createElement('option'); o.value=id; o.textContent=EXAMPLE_LABELS[id]; select.appendChild(o); });
       label.appendChild(select); controls.appendChild(label); container.appendChild(controls);
 
@@ -88,29 +108,32 @@
 
       const render = (id) => {
         const files = FILES[id]; if (!files) return;
-        const ordered = [files[1], files[1], files[2], files[3]]; // rank_1 twice then rank_2 and rank_3
+        const ordered = [files.query, files[1], files[2], files[3]]; // query, then matches 1, 2, 3
         grid.innerHTML = '';
         ordered.forEach((fname, idx) => {
           const { sim } = parseInfo(fname);
-          const isFirst = idx === 0;
-          const isDuplicateOfFirst = idx === 1;
+          const isQuery = idx === 0;
           const card = document.createElement('div'); card.className = 'card';
           const media = document.createElement('div'); media.className = 'media';
-          const img = document.createElement('img'); img.alt = `example ${id} image ${idx+1}${isDuplicateOfFirst ? ' identical' : ''}`; img.loading = 'lazy'; img.src = basePath + fname; media.appendChild(img);
+          const img = document.createElement('img'); img.alt = `example ${id} ${isQuery ? 'query' : `match ${idx}`}`; img.loading = 'lazy'; img.src = basePath + fname; media.appendChild(img);
           const meta = document.createElement('div'); meta.className = 'meta';
-          const left = document.createElement('span'); left.className = 'label'; left.textContent = isFirst ? 'Query' : 'Similarity';
-          meta.appendChild(left);
-          if (!isFirst) {
-            const right = document.createElement('span'); right.className = 'value'; right.textContent = isDuplicateOfFirst ? '1.000 identical' : formatSim(sim);
-            meta.appendChild(right);
+          
+          if (isQuery) {
+            const label = document.createElement('span'); label.className = 'value'; label.textContent = 'Query';
+            meta.appendChild(label);
+          } else {
+            const content = document.createElement('span');
+            content.innerHTML = `<span class="value">Match ${idx}</span><br><span class="label">Similarity: ${formatSim(sim)}</span>`;
+            meta.appendChild(content);
           }
+          
           card.appendChild(media); card.appendChild(meta); grid.appendChild(card);
         });
       };
 
       (async () => {
         // Resolve a working base then initial render
-        basePath = await resolveBase(CANDIDATE_BASES, FILES['1'][1]);
+        basePath = await resolveBase(CANDIDATE_BASES, FILES['1'].query);
         render('1');
       })();
 

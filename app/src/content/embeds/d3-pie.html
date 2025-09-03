@@ -10,6 +10,7 @@
 </style>
 <script>
   (() => {
+    const THIS_SCRIPT = document.currentScript;
     const ensureD3 = (cb) => {
       if (window.d3 && typeof window.d3.select === 'function') return cb();
       let s = document.getElementById('d3-cdn-script');
@@ -20,8 +21,19 @@
     };
 
     const bootstrap = () => {
-      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-      const container = (mount && mount.querySelector && mount.querySelector('.d3-pie')) || document.querySelector('.d3-pie');
+      const scriptEl = THIS_SCRIPT;
+      const host = scriptEl && scriptEl.parentElement;
+      let container = null;
+      if (host && host.querySelector) {
+        container = host.querySelector('.d3-pie');
+      }
+      if (!container) {
+        let sib = scriptEl && scriptEl.previousElementSibling;
+        while (sib && !(sib.classList && sib.classList.contains('d3-pie'))) {
+          sib = sib.previousElementSibling;
+        }
+        container = sib || document.querySelector('.d3-pie');
+      }
       if (!container) return;
       if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
 
@@ -39,7 +51,7 @@
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // SVG scaffolding
-      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block');
+      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block').attr('preserveAspectRatio','xMidYMin meet');
       const gRoot = svg.append('g');
       const gLegend = gRoot.append('foreignObject').attr('class','legend');
       const gPlots = gRoot.append('g').attr('class','plots');
@@ -77,65 +89,91 @@
       }));
 
       // Layout
-      let width=800, height=450; const margin = { top: 0, right: 24, bottom: 32, left: 24 };
-      const CAPTION_GAP = 28;   // gap between title and donut (larger)
-      const LEGEND_GAP = 8;     // gap between donut and legend (smaller)
+      let width=800; const margin = { top: 8, right: 24, bottom: 0, left: 24 };
+      const CAPTION_GAP = 24;   // espace entre titre et donut
+      const GAP_X = 20;         // espace entre colonnes
+      const GAP_Y = 12;         // espace entre lignes
+      const LEGEND_HEIGHT = 44; // hauteur de la légende
+      const TOP_OFFSET = 4;     // décalage vertical supplémentaire pour aérer le haut
       const updateSize = () => {
         width = container.clientWidth || 800;
-        height = Math.max(260, Math.round(width/3.4));
-        svg.attr('width', width).attr('height', height);
+        svg.attr('width', width);
         gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
-        return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+        return { innerWidth: width - margin.left - margin.right };
       };
 
       function renderLegend(categories, colorOf, innerWidth, legendY){
-        const legendHeight = 60;
+        const legendHeight = LEGEND_HEIGHT;
         gLegend.attr('x', 0).attr('y', legendY).attr('width', innerWidth).attr('height', legendHeight);
         const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
+        root
+          .style('height', legendHeight + 'px')
+          .style('display', 'flex')
+          .style('align-items', 'center')
+          .style('justify-content', 'center');
         root.html(`<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`);
       }
 
       function drawPies(rows){
-        const { innerWidth, innerHeight } = updateSize();
+        const { innerWidth } = updateSize();
 
-        // Categories
-        const categories = Array.from(new Set(rows.map(r => r.eagle_cathegory))).sort();
-
-        // Build a categorical palette anchored on bar chart vibes + theme primary
-        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
-        const base = [primary, '#4EA5B7', '#E38A42', '#CEC0FA'];
-        const pool = Array.from(new Set([
-          ...base,
-          ...(d3.schemeTableau10 || []),
-          ...(d3.schemeSet3 || []),
-          ...(d3.schemePastel1 || []),
-        ].flat().filter(Boolean)));
-
-        const colorOf = (cat) => {
-          const idx = categories.indexOf(cat);
-          return pool[idx % pool.length] || primary;
-        };
-
-        // Legend will be positioned after radius is known
+        // Catégories (triées) + échelle de couleurs harmonisée avec banner.html
+        const categories = Array.from(new Set(rows.map(r => r.eagle_cathegory || 'Unknown'))).sort();
+        const color = d3.scaleOrdinal().domain(categories).range(d3.schemeTableau10);
+        const colorOf = (cat) => color(cat || 'Unknown');
 
         // Clear plots
         gPlots.selectAll('*').remove();
 
-        const gapX = 20;
-        const cols = 4;
-        const pieAreaWidth = innerWidth;
-        const cellWidth = (pieAreaWidth - gapX * (cols - 1)) / cols;
-        const cellHeight = innerHeight - 6; // room for captions
-        const radius = Math.max(30, Math.min(cellWidth, cellHeight) * 0.42);
-        const innerR = Math.round(radius * 0.28); // donut, moderate hole
+        // Colonnes responsives: tenter 4 colonnes si possible, sinon descendre à 3/2/1
+        const selectCols = () => {
+          const MIN_RADIUS = 80; // garantir lisibilité
+          const allowed = [4, 2, 1]; // seulement 4 / 2 / 1 colonnes
+          // 1) essayer avec contrainte de rayon minimal
+          for (const c of allowed) {
+            const cw = (innerWidth - GAP_X * (c - 1)) / c;
+            const r = Math.max(30, Math.min(cw * 0.42, 120));
+            const gw = c * (r * 2) + (c - 1) * GAP_X;
+            if (gw <= innerWidth && r >= MIN_RADIUS) {
+              return { c, r };
+            }
+          }
+          // 2) sinon, première config qui tient (même si plus petit rayon)
+          for (const c of allowed) {
+            const cw = (innerWidth - GAP_X * (c - 1)) / c;
+            const r = Math.max(30, Math.min(cw * 0.42, 120));
+            const gw = c * (r * 2) + (c - 1) * GAP_X;
+            if (gw <= innerWidth) {
+              return { c, r };
+            }
+          }
+          // 3) fallback très petit écran
+          const r1 = Math.max(30, Math.min(innerWidth * 0.42, 120));
+          return { c: 1, r: r1 };
+        };
+        const { c: cols, r: radius } = selectCols();
+        const rowsCount = Math.ceil(METRICS.length / cols);
+        const innerR = Math.round(radius * 0.28);
+        // Calculer un espacement effectif pour occuper toute la largeur disponible
+        const baseGap = GAP_X;
+        const effectiveGapX = cols > 1
+          ? Math.max(baseGap, Math.floor((innerWidth - cols * (radius * 2)) / (cols - 1)))
+          : 0;
+        // largeur réelle de la grille avec l'espacement effectif
+        const gridWidth = cols * (radius * 2) + (cols - 1) * effectiveGapX;
+        const xOffset = Math.max(0, Math.floor((innerWidth - gridWidth) / 2));
+        gPlots.attr('transform', `translate(${xOffset},${TOP_OFFSET})`);
+        const perRowHeight = Math.ceil(radius * 2 + CAPTION_GAP + 20); // donut + caption + marge
+        const plotsHeight = rowsCount * perRowHeight + (rowsCount - 1) * GAP_Y;
 
         const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
         const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
 
-        // Now that radius is known, position legend just beneath donuts
-        const tempCy = innerHeight / 2;
-        const legendY = tempCy + radius + (CAPTION_GAP * 2);
+        // Positionner la légende sous les graphiques
+        const legendY = TOP_OFFSET + plotsHeight + 4;
+        // Légende centrée globalement (pleine largeur du conteneur)
+        gLegend.attr('x', 0).attr('width', innerWidth);
         renderLegend(categories, colorOf, innerWidth, legendY);
 
         const captions = new Map(METRICS.map(m => [m.key, `${m.title}`]));
@@ -147,9 +185,10 @@
           const values = categories.map(c => ({ category: c, value: totals.get(c) || 0 }));
           const totalSum = d3.sum(values, d => d.value);
 
-          const col = idx; // 0..3
-          const cx = col * (cellWidth + gapX) + cellWidth / 2;
-          const cy = innerHeight / 2;
+          const rowIdx = Math.floor(idx / cols);
+          const colIdx = idx % cols;
+          const cx = colIdx * ((radius * 2) + effectiveGapX) + radius;
+          const cy = TOP_OFFSET + rowIdx * (perRowHeight + GAP_Y) + CAPTION_GAP + radius;
 
           const gCell = gPlots.append('g').attr('transform', `translate(${cx},${cy})`);
 
@@ -188,9 +227,13 @@
           gCell.append('text')
             .attr('class','caption')
             .attr('text-anchor','middle')
-            .attr('y', -(radius + CAPTION_GAP))
+            .attr('y', -(radius + (CAPTION_GAP - 6)))
             .text(captions.get(metric.key));
         });
+
+        // Définir la hauteur totale du SVG après avoir placé les éléments
+        const totalHeight = Math.ceil(margin.top + TOP_OFFSET + plotsHeight + 4 + LEGEND_HEIGHT + margin.bottom);
+        svg.attr('height', totalHeight);
       }
 
       async function init(){

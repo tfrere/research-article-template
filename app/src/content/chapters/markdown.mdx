@@ -27,34 +27,25 @@ All the following **markdown features** are available **natively** in the `artic
 
 ### Math
 
-KaTeX is used for math rendering.
+KaTeX is used for math rendering. You can use inline notation `$...$` inline or block `$$...$$` notation. This is an inline math equation: $x^2 + y^2 = z^2$. 
 
-**Inline**
+$$
+\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
+$$
 
-This is an inline math equation: $x^2 + y^2 = z^2$. 
-
-
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 $x^2 + y^2 = z^2$
-```
-
-**Block**
 
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
-
-<small className="muted">Example</small>
-```mdx
-$$
-\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-$$
 ```
+</Accordion>
 
 ### Code
 
-Use fenced code blocks with a language for syntax highlighting.
+Use fenced code blocks with a language for syntax highlighting (e.g., `python`).
 
 ```python
 def greet(name: str) -> None:
@@ -63,7 +54,7 @@ def greet(name: str) -> None:
 greet("Astro")
 ```
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ````mdx
 ```python
 def greet(name: str) -> None:
@@ -72,6 +63,7 @@ def greet(name: str) -> None:
 greet("Astro")
 ```
 ````
+</Accordion>
 
 ### Citations
 
@@ -85,7 +77,7 @@ greet("Astro")
 
 4) All citations in one group: [@vaswani2017attention; @mckinney2017python; @he2016resnet; @silver2017mastering; @openai2023gpt4; @doe2020thesis; @cover2006entropy; @zenodo2021dataset; @sklearn2024; @smith2024privacy; @kingma2015adam; @raffel2020t5].
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 1) In-text citation with brackets: [@vaswani2017attention].
 
@@ -95,6 +87,7 @@ greet("Astro")
 
 4) All citations in one group: [@vaswani2017attention; @mckinney2017python; @he2016resnet; @silver2017mastering; @openai2023gpt4; @doe2020thesis; @cover2006entropy; @zenodo2021dataset; @sklearn2024; @smith2024privacy; @kingma2015adam; @raffel2020t5].
 ```
+</Accordion>
 
 ### Footnotes
 
@@ -132,7 +125,7 @@ greet("Astro")
 
 [^f5]: Footnote containing citations [@vaswani2017attention] and [@kingma2015adam].
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 1) Footnote attached to the sentence above[^f1].
 
@@ -165,12 +158,12 @@ greet("Astro")
 
 [^f5]: Footnote containing citations [@vaswani2017attention] and [@kingma2015adam].
 ```
+</Accordion>
 
 
 ### Mermaid diagram
 
-Native mermaid diagrams are supported. You can use the <a target="_blank" href="https://mermaid.live/edit#pako:eNpVjUFPg0AQhf_KZk6a0AYsCywHE0u1lyZ66EnoYQMDSyy7ZFlSK_DfXWiMOqd58773ZoBcFQgxlGd1yQXXhhx3mSR2ntJE6LozDe9OZLV6HPdoSKMkXkeyvdsr0gnVtrWs7m_8doZIMhxmDIkRtfyYblay5F8ljmSXHnhrVHv66xwvaiTPaf0mbP1_R2i0qZe05HHJVznXJOF6QcCBStcFxEb36ECDuuGzhGF2MzACG8wgtmuBJe_PJoNMTjbWcvmuVPOT1KqvBNj6c2dV3xbc4K7mlea_CMoCdaJ6aSCm3lIB8QCfED94dM2o77ssjFzK3MiBq2WCNWUeiza-H26YvU8OfC0_3XVII9eLQuYFIaVBGEzfyTJ22g"> live editor</a> to create your diagram and copy the code to your article.
-
+Native mermaid diagrams are supported (use a \`\`\`mermaid\`\`\` code fence). You can use the <a target="_blank" href="https://mermaid.live/edit#pako:eNpVjUFPg0AQhf_KZk6a0AYsCywHE0u1lyZ66EnoYQMDSyy7ZFlSK_DfXWiMOqd58773ZoBcFQgxlGd1yQXXhhx3mSR2ntJE6LozDe9OZLV6HPdoSKMkXkeyvdsr0gnVtrWs7m_8doZIMhxmDIkRtfyYblay5F8ljmSXHnhrVHv66xwvaiTPaf0mbP1_R2i0qZe05HHJVznXJOF6QcCBStcFxEb36ECDuuGzhGF2MzACG8wgtmuBJe_PJoNMTjbWcvmuVPOT1KqvBNj6c2dV3xbc4K7mlea_CMoCdaJ6aSCm3lIB8QCfED94dM2o77ssjFzK3MiBq2WCNWUeiza-H26YvU8OfC0_3XVII9eLQuYFIaVBGEzfyTJ22g"> live editor</a> to create your diagram and copy the code to your article.
 
 ```mermaid
 erDiagram
@@ -205,7 +198,7 @@ erDiagram
   }
 ```
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ````mdx
 ```mermaid
 erDiagram
@@ -240,6 +233,7 @@ erDiagram
   }
 ```
 ````
+</Accordion>
 
 
 ### Separator
@@ -248,7 +242,7 @@ Use `---` on its own line to insert a horizontal separator between sections. Thi
 
 ---
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 Intro paragraph.
 
@@ -256,30 +250,37 @@ Intro paragraph.
 
 Next section begins here.
 ```
+</Accordion>
 
 ### Table
+
+Use pipe tables like `| Column |` with header separator `| --- |`.
 
 | Method | Score |
 |---|---|
 | A | 0.78 |
 | B | 0.86 |
 
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 | Method | Score |
 | --- | --- |
 | A | 0.78 |
 | B | 0.86 |
 ```
+</Accordion>
 
 ### Audio
 
+Embed audio using `<audio controls src={...} />`.
+
 <audio controls src={audioDemo}/>
 <br/>
-<small className="muted">Example</small>
+<Accordion title="Code example">
 ```mdx
 import audioDemo from './assets/audio/audio-example.wav'
 
 <audio controls src={audioDemo}/>
 ```
+</Accordion>
 
