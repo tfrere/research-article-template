@@ -6,7 +6,7 @@ import ThemeToggle from '../components/ThemeToggle.astro';
 import Seo from '../components/Seo.astro';
 import TableOfContents from '../components/TableOfContents.astro';
 // Default OG image served from public/
-const ogDefaultUrl = '/thumb.jpg';
+const ogDefaultUrl = '/thumb.auto.jpg';
 import 'katex/dist/katex.min.css';
 import '../styles/global.css';
 const articleFM = (ArticleMod as any).frontmatter ?? {};
@@ -95,8 +95,9 @@ const imageAbs: string = fmOg && fmOg.startsWith('http')
   : (Astro.site ? new URL((fmOg ?? ogDefaultUrl), Astro.site).toString() : (fmOg ?? ogDefaultUrl));
 
 // ---- Build citation text & BibTeX from frontmatter ----
+const stripHtml = (text: string) => String(text || '').replace(/<[^>]*>/g, '');
 const rawTitle = articleFM?.title ?? 'Untitled article';
-const titleFlat = String(rawTitle)
+const titleFlat = stripHtml(String(rawTitle))
   .replace(/\\n/g, ' ')
   .replace(/\n/g, ' ')
   .replace(/\s+/g, ' ')

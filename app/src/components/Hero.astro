@@ -59,7 +59,7 @@ function slugify(text: string): string {
     .slice(0, 120) || 'article';
 }
 
-const pdfBase = titleRaw ? titleRaw : stripHtml(title);
+const pdfBase = titleRaw ? stripHtml(titleRaw) : stripHtml(title);
 const pdfFilename = `${slugify(pdfBase)}.pdf`;
 ---
 <section class="hero">
