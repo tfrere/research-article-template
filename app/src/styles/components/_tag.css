@@ -4,10 +4,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   font-size: 12px;
   line-height: 1;
-  border-radius: 100px;
+  border-radius: var(--button-radius);
   background: var(--surface-bg);
   border: 1px solid var(--border-color);
   color: var(--text-color);

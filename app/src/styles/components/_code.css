@@ -174,9 +174,7 @@ section.content-grid pre code {
 } */
 
 /* Fallback if Shiki uses data-lang instead of data-language */
-.astro-code[data-lang]::after { content: attr(data-lang); }
-
-/* Normalize to extensions for common languages */
+/* .astro-code[data-lang]::after { content: attr(data-lang); }
 .astro-code[data-language="typescript"]::after { content: "ts"; }
 .astro-code[data-language="tsx"]::after { content: "tsx"; }
 .astro-code[data-language="javascript"]::after,
@@ -191,7 +189,7 @@ section.content-grid pre code {
 .astro-code[data-language="yml"]::after { content: "yml"; }
 .astro-code[data-language="html"]::after { content: "html"; }
 .astro-code[data-language="css"]::after { content: "css"; }
-.astro-code[data-language="json"]::after { content: "json"; }
+.astro-code[data-language="json"]::after { content: "json"; } */
 
 /* In Accordions, keep same bottom-right placement */
 .accordion .astro-code::after { right: 0; bottom: 0; }

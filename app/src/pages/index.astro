@@ -186,7 +186,7 @@ const licence = (articleFM as any)?.licence ?? (articleFM as any)?.license ?? (a
     </script>
 
     <script>
-      // Delegate copy clicks for code blocks injected by rehypeCodeCopyAndLabel
+      // Delegate copy clicks for code blocks injected by rehypeCodeCopy
       document.addEventListener('click', async (e) => {
         const target = e.target instanceof Element ? e.target : null;
         const btn = target ? target.closest('.code-copy') : null;

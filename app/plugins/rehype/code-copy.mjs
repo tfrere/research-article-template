@@ -1,46 +1,14 @@
-// Minimal rehype plugin to wrap code blocks with a copy button and a language label
+// Minimal rehype plugin to wrap code blocks with a copy button
 // Exported as a standalone module to keep astro.config.mjs lean
-export default function rehypeCodeCopyAndLabel() {
+export default function rehypeCodeCopy() {
   return (tree) => {
     // Walk the tree; lightweight visitor to find <pre><code>
     const visit = (node, parent) => {
       if (!node || typeof node !== 'object') return;
       const children = Array.isArray(node.children) ? node.children : [];
       if (node.tagName === 'pre' && children.some(c => c.tagName === 'code')) {
-        // Find code child and guess language
+        // Find code child
         const code = children.find(c => c.tagName === 'code');
-        const collectClasses = (val) => Array.isArray(val) ? val.map(String) : (typeof val === 'string' ? String(val).split(/\s+/) : []);
-        const fromClass = (names) => {
-          const hit = names.find((n) => /^language-/.test(String(n)));
-          return hit ? String(hit).replace(/^language-/, '') : '';
-        };
-        const codeClasses = collectClasses(code?.properties?.className);
-        const preClasses = collectClasses(node?.properties?.className);
-        const candidates = [
-          code?.properties?.['data-language'],
-          fromClass(codeClasses),
-          node?.properties?.['data-language'],
-          fromClass(preClasses),
-        ];
-        let lang = candidates.find(Boolean) || '';
-        const lower = String(lang).toLowerCase();
-        const toExt = (s) => {
-          switch (String(s).toLowerCase()) {
-            case 'typescript': case 'ts': return 'ts';
-            case 'tsx': return 'tsx';
-            case 'javascript': case 'js': case 'node': return 'js';
-            case 'jsx': return 'jsx';
-            case 'python': case 'py': return 'py';
-            case 'bash': case 'shell': case 'sh': return 'sh';
-            case 'markdown': case 'md': return 'md';
-            case 'yaml': case 'yml': return 'yml';
-            case 'html': return 'html';
-            case 'css': return 'css';
-            case 'json': return 'json';
-            default: return lower || '';
-          }
-        };
-        const ext = toExt(lower);
         // Determine if single-line block: prefer Shiki lines, then text content
         const countLinesFromShiki = () => {
           const isLineEl = (el) => el && el.type === 'element' && el.tagName === 'span' && Array.isArray(el.properties?.className) && el.properties.className.includes('line');
@@ -85,16 +53,11 @@ export default function rehypeCodeCopyAndLabel() {
             node.__forceSingle = true;
           }
         }
-        // Ensure CSS-only label works: set data-language on <code> and <pre>, and wrapper
-        code.properties = code.properties || {};
-        if (ext) code.properties['data-language'] = ext;
-        node.properties = node.properties || {};
-        if (ext) node.properties['data-language'] = ext;
         // Replace <pre> with wrapper div.code-card containing button + pre
         const wrapper = {
           type: 'element',
           tagName: 'div',
-          properties: { className: ['code-card'].concat((isSingleLine || node.__forceSingle) ? ['no-copy'] : []), 'data-language': ext },
+          properties: { className: ['code-card'].concat((isSingleLine || node.__forceSingle) ? ['no-copy'] : []) },
           children: (isSingleLine || node.__forceSingle) ? [ node ] : [
             {
               type: 'element',
@@ -125,5 +88,7 @@ export default function rehypeCodeCopyAndLabel() {
     visit(tree, null);
   };
 }
+
+
 
 

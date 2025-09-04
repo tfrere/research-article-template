@@ -8,7 +8,7 @@ import remarkFootnotes from 'remark-footnotes';
 import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeCitation from 'rehype-citation';
-import rehypeCodeCopyAndLabel from './plugins/rehype/code-copy-and-label.mjs';
+import rehypeCodeCopy from './plugins/rehype/code-copy.mjs';
 import rehypeReferencesAndFootnotes from './plugins/rehype/post-citation.mjs';
 import remarkIgnoreCitationsInCode from './plugins/remark/ignore-citations-in-code.mjs';
 import rehypeRestoreAtInCode from './plugins/rehype/restore-at-in-code.mjs';
@@ -56,7 +56,7 @@ export default defineConfig({
       }],
       rehypeReferencesAndFootnotes,
       rehypeRestoreAtInCode,
-      rehypeCodeCopyAndLabel,
+      rehypeCodeCopy,
       rehypeWrapTables
     ]
   }
