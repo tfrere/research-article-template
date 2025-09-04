@@ -34,12 +34,14 @@ You have to import them in the **.mdx** file you want to use them in.
 | `downloadable`    | No       | Adds a download button to fetch the image file.                                                               
 | `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
 | `caption`              | No       | Adds a caption and credit.                                                                                          
+| `id`              | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                                                                                          
 
 
 <ResponsiveImage
   src={placeholder}
   zoomable
   downloadable
+  id="placeholder-image"
   layout="fixed"
   alt="A placeholder image alt text"
   caption={'A placeholder image description <span class="image-credit">From the <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a></span>'}

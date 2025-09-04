@@ -16,8 +16,8 @@ All the following **markdown features** are available **natively** in the `artic
 <div className="button-group">
   <a className="button" href="#math">Math</a>
   <a className="button" href="#code-blocks">Code</a>
-  <a className="button" href="#citations-and-notes">Citations</a>
-  <a className="button" href="#footnotes">Footnotes</a>
+  <a className="button" href="#citation-and-notes">Citation</a>
+  <a className="button" href="#footnote">Footnote</a>
   <a className="button" href="#mermaid-diagrams">Mermaid</a>
   <a className="button" href="#separator">Separator</a>
   <a className="button" href="#table">Table</a>
@@ -26,7 +26,7 @@ All the following **markdown features** are available **natively** in the `artic
 
 ### Math
 
-KaTeX is used for math rendering. You can use inline notation `$...$` inline or block `$$...$$` notation. This is an inline math equation: $x^2 + y^2 = z^2$. 
+KaTeX is used for math rendering. You can use **inline** notation `$...$` or **block** `$$...$$` notation. As an example, this is an **inline** math equation: $x^2 + y^2 = z^2$ and this is a **block**:
 
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
@@ -64,9 +64,13 @@ greet("Astro")
 ````
 </Accordion>
 
-### Citations
+### Citation
 
-**Citations** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article. The citation keys come from `app/src/content/bibliography.bib`.
+The **citation keys** come from `app/src/content/bibliography.bib`.
+
+**Citation** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article.
+
+<Note variant="info" emoji="💡">Multiple citations to the same citation key are automatically merged into a single citation.</Note>
 
 1) In-text citation with brackets: [@vaswani2017attention].
 
@@ -88,9 +92,9 @@ greet("Astro")
 ```
 </Accordion>
 
-### Footnotes
+### Footnote
 
-**Footnotes** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
+**Footnote** use an identifier like `[^f1]` and a definition anywhere in the document, e.g., `[^f1]: Your explanation`. They are **numbered** and **listed automatically** at the end of the article.
 
 1) Footnote attached to the sentence above[^f1].
 
@@ -120,9 +124,9 @@ greet("Astro")
     ```
     Result: `add(2, 3) === 5`.
 
-4) Footnote that includes citations inside[^f5] and another footnote[^f1].
+4) Footnote that includes citation inside[^f5] and another footnote[^f1].
 
-[^f5]: Footnote containing citations [@vaswani2017attention] and [@kingma2015adam].
+[^f5]: Footnote containing citation [@vaswani2017attention] and [@kingma2015adam].
 
 <Accordion title="Code example">
 ```mdx
@@ -134,7 +138,7 @@ greet("Astro")
 
 3) Footnote with an inline code and an indented code block[^f4].
 
-4) Footnote that includes citations inside[^f5].
+4) Footnote that includes citation inside[^f5].
 
 [^f1]: Footnote attached to the sentence above.
 
@@ -155,7 +159,34 @@ greet("Astro")
 
     Result: `add(2, 3) === 5`.
 
-[^f5]: Footnote containing citations [@vaswani2017attention] and [@kingma2015adam].
+[^f5]: Footnote containing citation [@vaswani2017attention] and [@kingma2015adam].
+```
+</Accordion>
+
+
+### Reference
+
+In research articles, you may have to make references to anything. They are basically html anchors. They can be used internally in the article or externally in other articles.
+
+1. **Title**<br/>
+  Each title is automatically generated with a slugged version  from the citation key. ( slugged title from the citation key )
+  like for example, the id `#mermaid-diagrams` is generated from the `Mermaid diagrams` title.
+  <br/><br/>**Example** [Mermaid diagrams](#mermaid-diagram)
+
+2. **Image and chart**<br/>
+  You can make a link to an image or a chart by adding an ID on it.<br/>`<HtmlEmbed id="neural-network-mnist-like"/>` then you can link to it with a link like `<a href="#neural-network-mnist-like">Fig 1</a>`.
+  <br/><br/>**Example** [Chart 1](#neural-network-mnist-like) or [Fig 1](#placeholder-image)
+
+<Accordion title="Code example">
+```mdx
+  #### Mermaid diagrams
+  [Mermaid diagrams](#mermaid-diagrams)
+  
+  <HtmlEmbed id="neural-network-mnist-like"/>
+  [Chart 1](#neural-network-mnist-like)
+
+  <ResponsiveImage id="placeholder-image" src="..."/>
+  [Fig 1](#placeholder-image)
 ```
 </Accordion>
 

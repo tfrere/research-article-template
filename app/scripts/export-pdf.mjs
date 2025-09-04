@@ -168,8 +168,19 @@ async function main() {
   // filename can be provided, else computed from DOM (button) or page title later
   let outFileBase = (args.filename && String(args.filename).replace(/\.pdf$/i, '')) || 'article';
 
-  console.log('> Building Astro site…');
-  await run('npm', ['run', 'build']);
+  // Build only if dist/ does not exist
+  const distDir = resolve(cwd, 'dist');
+  let hasDist = false;
+  try {
+    const st = await fs.stat(distDir);
+    hasDist = st && st.isDirectory();
+  } catch {}
+  if (!hasDist) {
+    console.log('> Building Astro site…');
+    await run('npm', ['run', 'build']);
+  } else {
+    console.log('> Skipping build (dist/ exists)…');
+  }
 
   console.log('> Starting Astro preview…');
   // Start preview in its own process group so we can terminate all children reliably
@@ -413,7 +424,7 @@ async function main() {
           /* Banner centering & visibility */
           .hero .points { mix-blend-mode: normal !important; }
           .d3-galaxy { width: 100% !important; height: 300px; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
-          .d3-galaxy svg { background: var(--surface-bg); width: 100% !important; height: auto !important; }
+          .d3-galaxy svg { width: 100% !important; height: auto !important; }
         ` });
       } catch {}
       await page.pdf({
