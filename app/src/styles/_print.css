@@ -40,8 +40,8 @@
     /* Avoid page breaks inside complex visual blocks */
     .hero,
     .hero-banner,
-    .d3-galaxy,
-    .d3-galaxy svg,
+    .d3-banner,
+    .d3-banner svg,
     .html-embed__card,
     .html-embed__card,
     .js-plotly-plot,

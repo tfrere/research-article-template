@@ -18,6 +18,7 @@
   --on-primary: #ffffff;
 
   /* Text & Surfaces */
+  --page-bg: #ffffff;
   --text-color: rgba(0,0,0,.85);
   --muted-color: rgba(0,0,0,.6);
   --border-color: rgba(0,0,0,.1);
@@ -86,6 +87,7 @@
 /* Dark Theme Overrides */
 /* ============================================================================ */
 [data-theme="dark"] {
+  --page-bg: #0f1115;
   --text-color: rgba(255,255,255,.9);
   --muted-color: rgba(255,255,255,.7);
   --border-color: rgba(255,255,255,.15);

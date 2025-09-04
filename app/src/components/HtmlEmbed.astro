@@ -75,7 +75,13 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     font-weight: 600; 
     font-size: 0.95rem; 
     color: var(--text-color);
-    margin: 0 0 6px 0;
+    margin: 0;
+    padding: var(--spacing-1);
+    background: var(--page-bg);
+    position: relative;
+    z-index: var(--z-elevated);
+    display: block;
+    width: 100%;
   }
   .html-embed__card {
     background: var(--code-bg);
@@ -92,7 +98,13 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     text-align: left; 
     font-size: 0.9rem; 
     color: var(--muted-color); 
-    margin: 6px 0 0 0; 
+    margin: 0; 
+    padding: var(--spacing-1);
+    background: var(--page-bg);
+    position: relative;
+    z-index: var(--z-elevated);
+    display: block;
+    width: 100%;
   }
   /* Plotly – fragments & controls */
   .html-embed__card svg text { fill: var(--text-color) !important; }
