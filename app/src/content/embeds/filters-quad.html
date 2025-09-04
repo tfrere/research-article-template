@@ -162,6 +162,18 @@
         // Axes
         gAxes.selectAll('*').remove();
         let xAxis = d3.axisBottom(xScale).tickSizeOuter(0); xAxis = xAxis.ticks(8);
+        const isMobile = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(max-width: 980px)').matches : false;
+        if (isMobile) {
+          const fmtK = (v) => {
+            const abs = Math.abs(v);
+            if (abs >= 1000) {
+              const n = v / 1000;
+              return (Math.round(n) === n ? n : d3.format('.1f')(n)) + 'K';
+            }
+            return d3.format('d')(v);
+          };
+          xAxis = xAxis.tickFormat(fmtK);
+        }
         const yAxis = d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(isRankStrictFlag ? d3.format('d') : d3.format('.2f'));
         gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });
         gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });

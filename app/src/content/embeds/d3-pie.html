@@ -93,7 +93,8 @@
       const CAPTION_GAP = 24;   // espace entre titre et donut
       const GAP_X = 20;         // espace entre colonnes
       const GAP_Y = 12;         // espace entre lignes
-      const LEGEND_HEIGHT = 62; // hauteur de la légende
+      const LEGEND_HEIGHT_DESKTOP = 62; // hauteur de la légende sur desktop
+      const LEGEND_HEIGHT_MOBILE = 84;  // hauteur de la légende sur mobile
       const TOP_OFFSET = 4;     // décalage vertical supplémentaire pour aérer le haut
       const updateSize = () => {
         width = container.clientWidth || 800;
@@ -102,8 +103,7 @@
         return { innerWidth: width - margin.left - margin.right };
       };
 
-      function renderLegend(categories, colorOf, width, x, legendY){
-        const legendHeight = LEGEND_HEIGHT;
+      function renderLegend(categories, colorOf, width, x, legendY, legendHeight){
         gLegend.attr('x', x).attr('y', legendY).attr('width', width).attr('height', legendHeight);
         const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
         root
@@ -172,7 +172,8 @@
 
         // Positionner la légende sous les graphiques, calée sur la grille centrée
         const legendY = TOP_OFFSET + plotsHeight + 4;
-        renderLegend(categories, colorOf, gridWidth, xOffset, legendY);
+        const legendHeight = innerWidth <= 600 ? LEGEND_HEIGHT_MOBILE : LEGEND_HEIGHT_DESKTOP;
+        renderLegend(categories, colorOf, gridWidth, xOffset, legendY, legendHeight);
 
         const captions = new Map(METRICS.map(m => [m.key, `${m.title}`]));
 
@@ -230,7 +231,7 @@
         });
 
         // Définir la hauteur totale du SVG après avoir placé les éléments
-        const totalHeight = Math.ceil(margin.top + TOP_OFFSET + plotsHeight + 4 + LEGEND_HEIGHT + margin.bottom);
+        const totalHeight = Math.ceil(margin.top + TOP_OFFSET + plotsHeight + 4 + legendHeight + margin.bottom);
         svg.attr('height', totalHeight);
       }
 

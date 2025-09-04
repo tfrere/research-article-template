@@ -124,8 +124,8 @@ async function waitForD3(page, timeoutMs = 20000) {
   await page.evaluate(async (timeout) => {
     const start = Date.now();
     const isReady = () => {
-      // Prioritize hero banner if present
-      const hero = document.querySelector('.hero .d3-galaxy') || document.querySelector('.d3-galaxy');
+      // Prioritize hero banner if present (generic container)
+      const hero = document.querySelector('.hero-banner');
       if (hero) {
         return !!hero.querySelector('svg circle, svg path, svg rect, svg g');
       }
@@ -274,6 +274,8 @@ async function main() {
           }
           function fixSvg(svg){
             if (!svg) return;
+            // Do not alter hero banner SVG sizing; it may rely on explicit width/height
+            try { if (svg.closest && svg.closest('.hero-banner')) return; } catch {}
             if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
             try { svg.removeAttribute('width'); } catch {}
             try { svg.removeAttribute('height'); } catch {}
@@ -320,15 +322,14 @@ async function main() {
         // - Ensure an SVG background (CSS background on svg element)
         const cssHandle = await page.addStyleTag({ content: `
           .hero .points { mix-blend-mode: normal !important; }
-          .d3-galaxy svg { background: var(--surface-bg); }
         ` });
-        const thumbPath = resolve(cwd, 'dist', 'thumb.jpg');
+        const thumbPath = resolve(cwd, 'dist', 'thumb.auto.jpg');
         await page.screenshot({ path: thumbPath, type: 'jpeg', quality: 85, fullPage: false });
         // Also emit PNG for compatibility if needed
-        const thumbPngPath = resolve(cwd, 'dist', 'thumb.png');
+        const thumbPngPath = resolve(cwd, 'dist', 'thumb.auto.png');
         await page.screenshot({ path: thumbPngPath, type: 'png', fullPage: false });
-        const publicThumb = resolve(cwd, 'public', 'thumb.jpg');
-        const publicThumbPng = resolve(cwd, 'public', 'thumb.png');
+        const publicThumb = resolve(cwd, 'public', 'thumb.auto.jpg');
+        const publicThumbPng = resolve(cwd, 'public', 'thumb.auto.png');
         try { await fs.copyFile(thumbPath, publicThumb); } catch {}
         try { await fs.copyFile(thumbPngPath, publicThumbPng); } catch {}
         // Remove temporary style so PDF is unaffected
@@ -371,6 +372,8 @@ async function main() {
             }
             function fixSvg(svg){
               if (!svg) return;
+              // Do not alter hero banner SVG sizing; it may rely on explicit width/height
+              try { if (svg.closest && svg.closest('.hero-banner')) return; } catch {}
               if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
               try { svg.removeAttribute('width'); } catch {}
               try { svg.removeAttribute('height'); } catch {}
@@ -423,8 +426,9 @@ async function main() {
 
           /* Banner centering & visibility */
           .hero .points { mix-blend-mode: normal !important; }
-          .d3-galaxy { width: 100% !important; height: 300px; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
-          .d3-galaxy svg { width: 100% !important; height: auto !important; }
+          /* Do NOT force a fixed height to avoid clipping in PDF */
+          .hero-banner { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
+          .hero-banner svg { width: 100% !important; height: auto !important; }
         ` });
       } catch {}
       await page.pdf({

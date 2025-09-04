@@ -71,6 +71,17 @@
   }
   /* Improved line color via CSS */
   .d3-line-example .lines path.improved { stroke: var(--primary-color); }
+
+  /* Responsive: stack controls on small screens */
+  @media (max-width: 640px) {
+    .d3-line-example .d3-line__controls {
+      flex-wrap: wrap;
+    }
+    .d3-line-example .d3-line__controls label {
+      flex: 1 1 100% !important;
+      width: 100%;
+    }
+  }
 </style>
 <script>
   (() => {

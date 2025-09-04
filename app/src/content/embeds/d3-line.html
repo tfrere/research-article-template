@@ -232,6 +232,29 @@
 
       const overlay = gHover.append('rect').attr('fill', 'transparent').style('cursor', 'crosshair');
 
+      // Responsive layout for controls and inline legend
+      function applyResponsiveLayout(containerWidth) {
+        const isNarrow = containerWidth <= 600;
+        if (isNarrow) {
+          controls.style.flexWrap = 'wrap';
+          controls.style.alignItems = 'flex-start';
+          controls.style.justifyContent = 'flex-start';
+          legendInline.style.flexWrap = 'wrap';
+          legendInline.style.rowGap = '4px';
+          labelMetric.style.marginLeft = '0';
+          labelMetric.style.flexBasis = '100%';
+          labelMetric.style.width = '100%';
+        } else {
+          controls.style.flexWrap = 'nowrap';
+          controls.style.alignItems = 'center';
+          controls.style.justifyContent = 'space-between';
+          legendInline.style.flexWrap = 'nowrap';
+          labelMetric.style.marginLeft = 'auto';
+          labelMetric.style.flexBasis = 'auto';
+          labelMetric.style.width = 'auto';
+        }
+      }
+
       function updateScales() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
@@ -241,6 +264,9 @@
         width = container.clientWidth || 800;
         height = Math.max(260, Math.round(width / 3));
         svg.attr('width', width).attr('height', height);
+
+        // Update controls layout for current width
+        applyResponsiveLayout(width);
 
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
@@ -275,6 +301,12 @@
         // Axes
         gAxes.selectAll('*').remove();
         let xAxis = d3.axisBottom(xScale).tickSizeOuter(0);
+        const isNarrow = width <= 600;
+        const formatK = (v) => {
+          const vv = Math.round(v);
+          if (isNarrow && Math.abs(vv) >= 1000) return `${Math.round(vv / 1000)}K`;
+          return d3.format('d')(vv);
+        };
         if (isRankStrictFlag) {
           const [dx0, dx1] = xScale.domain();
           const start = Math.ceil(dx0 / 1000) * 1000;
@@ -282,9 +314,12 @@
           const xTicks = [];
           for (let v = start; v <= end; v += 1000) xTicks.push(v);
           if (xTicks.length === 0) xTicks.push(Math.round(dx0));
-          xAxis = xAxis.tickValues(xTicks).tickFormat(d3.format('d'));
+          xAxis = xAxis.tickValues(xTicks).tickFormat(formatK);
         } else {
           xAxis = xAxis.ticks(8);
+          if (isNarrow) {
+            xAxis = xAxis.tickFormat((v) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}K` : d3.format('d')(Math.round(v))));
+          }
         }
         const yAxis = d3.axisLeft(yScale)
           .tickValues(yTicks)
