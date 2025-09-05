@@ -1,10 +1,12 @@
 ---
 import * as ArticleMod from '../content/article.mdx';
+
 import Hero from '../components/Hero.astro';
 import Footer from '../components/Footer.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Seo from '../components/Seo.astro';
 import TableOfContents from '../components/TableOfContents.astro';
+import colorPalettesUrl from '../scripts/color-palettes.js?url';
 // Default OG image served from public/
 const ogDefaultUrl = '/thumb.auto.jpg';
 import 'katex/dist/katex.min.css';
@@ -142,7 +144,7 @@ const licence = (articleFM as any)?.licence ?? (articleFM as any)?.license ?? (a
         } catch {}
       })();
     </script>
-    <script is:inline src="/scripts/color-palettes.js"></script>
+    <script type="module" src={colorPalettesUrl}></script>
     
     <!-- TO MANAGE PROPERLY -->
     <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"></script>
