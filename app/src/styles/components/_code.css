@@ -33,16 +33,17 @@ p code, .note code {
 /* Shared sizing & horizontal scroll for code containers */
 .astro-code,
 section.content-grid pre {
-  overflow-x: auto;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
   padding: 0;
   margin-bottom: var(--block-spacing-y) !important;
+  overflow: hidden!important;
+  overflow-x: auto;
 }
 
-section.content-grid pre { margin: 0; }
+section.content-grid pre.astro-code { margin: 0; padding: var(--spacing-1) 0; }
 
 section.content-grid pre code {
   display: inline-block;
@@ -193,3 +194,105 @@ section.content-grid pre code {
 
 /* In Accordions, keep same bottom-right placement */
 .accordion .astro-code::after { right: 0; bottom: 0; }
+
+/* ============================================================================ */
+/* Results blocks glued to code blocks */
+/* ============================================================================ */
+.code-output {
+  position: relative;
+  background: oklch(from var(--code-bg) calc(l - 0.005) c h);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: calc(var(--spacing-3) + 6px) var(--spacing-3) var(--spacing-3) var(--spacing-3);
+  margin-top: 0;
+  margin-bottom: var(--block-spacing-y);
+}
+
+/* If immediately following a code container, keep tight visual connection */
+.code-card + .code-output,
+.astro-code + .code-output,
+section.content-grid pre + .code-output {
+  margin-top: 0;
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  box-shadow: inset 0 8px 12px -12px rgba(0, 0, 0, 0.15);
+
+}
+
+/* Remove bottom margin on code when immediately followed by results */
+.astro-code:has(+ .code-output) {
+  margin-bottom: 0 !important;
+}
+.code-card:has(+ .code-output) .astro-code {
+  margin-bottom: 0 !important;
+}
+section.content-grid pre:has(+ .code-output) {
+  margin-bottom: 0 !important;
+}
+
+/* Remove bottom border radius on code when followed by results */
+.astro-code:has(+ .code-output) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.code-card:has(+ .code-output) .astro-code {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+section.content-grid pre:has(+ .code-output) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Small top-left label */
+.code-output::before {
+  content: "Output";
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-top: none;
+  border-right: none;
+  border-radius: 0 0 0 6px;
+  padding: 10px 10px;
+}
+
+/* Very subtle top shadow so results feels under the code */
+.code-output {
+}
+
+.code-output > :where(*):first-child {
+  margin-top: 0 !important;
+}
+
+.code-output > :where(*):last-child {
+  margin-bottom: 0 !important;
+}
+
+/* ============================================================================ */
+/* Optional filename tag above code blocks */
+/* ============================================================================ */
+.code-filename {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--muted-color);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 4px 8px;
+  margin: 0;
+}
+
+.code-filename + .code-card .astro-code,
+.code-filename + .astro-code,
+.code-filename + section.content-grid pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 6px;
+}

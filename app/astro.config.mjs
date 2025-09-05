@@ -11,8 +11,11 @@ import rehypeCitation from 'rehype-citation';
 import rehypeCodeCopy from './plugins/rehype/code-copy.mjs';
 import rehypeReferencesAndFootnotes from './plugins/rehype/post-citation.mjs';
 import remarkIgnoreCitationsInCode from './plugins/remark/ignore-citations-in-code.mjs';
+import remarkDirective from 'remark-directive';
+import remarkOutputContainer from './plugins/remark/output-container.mjs';
 import rehypeRestoreAtInCode from './plugins/rehype/restore-at-in-code.mjs';
 import rehypeWrapTables from './plugins/rehype/wrap-tables.mjs';
+import rehypeWrapOutput from './plugins/rehype/wrap-outputs.mjs';
 // Built-in Shiki (dual themes) — no rehype-pretty-code
 
 // Plugins moved to app/plugins/*
@@ -44,7 +47,9 @@ export default defineConfig({
     remarkPlugins: [
       remarkIgnoreCitationsInCode,
       remarkMath,
-      [remarkFootnotes, { inlineNotes: true }]
+      [remarkFootnotes, { inlineNotes: true }],
+      remarkDirective,
+      remarkOutputContainer
     ],
     rehypePlugins: [
       rehypeSlug,
@@ -57,6 +62,7 @@ export default defineConfig({
       rehypeReferencesAndFootnotes,
       rehypeRestoreAtInCode,
       rehypeCodeCopy,
+      rehypeWrapOutput,
       rehypeWrapTables
     ]
   }

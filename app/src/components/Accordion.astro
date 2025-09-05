@@ -88,6 +88,10 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     border-color: color-mix(in oklab, var(--border-color), var(--primary-color) 20%);
   }
 
+  .accordion[open] .accordion__summary {
+    border-bottom: 1px solid var(--border-color);
+  }
+
   .accordion__summary {
     margin: 0;
     list-style: none;

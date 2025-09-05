@@ -44,7 +44,31 @@ $$
 
 ### Code
 
-Use fenced code blocks with a language for syntax highlighting (e.g., `python`).
+Use inline code with backticks \`...\` or \`\`\` fenced code blocks \`\`\` with a language for syntax highlighting (e.g., \`python\`).
+
+As an example, here is inline code: `greet("Astro")` and below is a block.
+
+
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+```
+
+<Accordion title="Code example">
+````mdx
+`greet("Astro")`
+
+```python
+def greet(name: str) -> None:
+    print(f"Hello, {name}!")
+```
+````
+</Accordion>
+
+
+### Code output
+
+If you want to display the output of a code block, you can use the `:::output` directive. If it's directly below the code block, it will adapt to the code block's styling.
 
 ```python
 def greet(name: str) -> None:
@@ -52,6 +76,16 @@ def greet(name: str) -> None:
 
 greet("Astro")
 ```
+:::output
+Hello, Astro!
+:::
+
+Or it can also be used at a standalone block.
+
+:::output
+Hello i'm a standalone output block.
+:::
+
 
 <Accordion title="Code example">
 ````mdx
@@ -61,6 +95,15 @@ def greet(name: str) -> None:
 
 greet("Astro")
 ```
+:::output
+Hello, Astro!
+:::
+
+Or you can also use it at a standalone block.
+
+:::output
+Hello i'm a standalone outputs block.
+:::
 ````
 </Accordion>
 
