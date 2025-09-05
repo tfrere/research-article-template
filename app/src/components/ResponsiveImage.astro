@@ -19,29 +19,50 @@ interface Props {
   downloadName?: string;
   /** Optional explicit source URL to download instead of currentSrc */
   downloadSrc?: string;
+  /** Optional link that wraps the image (not the caption) */
+  linkHref?: string;
+  /** Optional target for the link (default: _blank when linkHref provided) */
+  linkTarget?: string;
+  /** Optional rel for the link (default: noopener noreferrer when linkHref provided) */
+  linkRel?: string;
   /** Any additional attributes should be forwarded to the underlying <Image> */
   [key: string]: any;
 }
 
-const { caption, figureClass, zoomable, downloadable, downloadName, downloadSrc, ...imgProps } = Astro.props as Props;
+const { caption, figureClass, zoomable, downloadable, downloadName, downloadSrc, linkHref, linkTarget, linkRel, ...imgProps } = Astro.props as Props;
 const hasCaptionSlot = Astro.slots.has('caption');
 const hasCaption = hasCaptionSlot || (typeof caption === 'string' && caption.length > 0);
 const uid = `ri_${Math.random().toString(36).slice(2)}`;
 const dataZoomable = (zoomable === true || (imgProps as any)['data-zoomable']) ? '1' : undefined;
 const dataDownloadable = (downloadable === true || (imgProps as any)['data-downloadable']) ? '1' : undefined;
+const hasLink = typeof linkHref === 'string' && linkHref.length > 0;
+const resolvedTarget = hasLink ? (linkTarget || '_blank') : undefined;
+const resolvedRel = hasLink ? (linkRel || 'noopener noreferrer') : undefined;
 ---
 <div class="ri-root" data-ri-root={uid}>
   {hasCaption ? (
     <figure class={(figureClass || '') + (dataDownloadable ? ' has-dl-btn' : '')}>
       {dataDownloadable ? (
         <span class="img-dl-wrap">
-          <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+          {hasLink ? (
+            <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
+              <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+            </a>
+          ) : (
+            <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+          )}
           <button type="button" class="button button--ghost img-dl-btn" aria-label="Download image" title={downloadName ? `Download ${downloadName}` : 'Download image'}>
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z"/></svg>
           </button>
         </span>
       ) : (
-        <Image {...imgProps} data-zoomable={dataZoomable} />
+        hasLink ? (
+          <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
+            <Image {...imgProps} data-zoomable={dataZoomable} />
+          </a>
+        ) : (
+          <Image {...imgProps} data-zoomable={dataZoomable} />
+        )
       )}
       <figcaption>
         {hasCaptionSlot ? (
@@ -54,13 +75,25 @@ const dataDownloadable = (downloadable === true || (imgProps as any)['data-downl
   ) : (
     dataDownloadable ? (
       <span class="img-dl-wrap">
-        <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+        {hasLink ? (
+          <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
+            <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+          </a>
+        ) : (
+          <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+        )}
         <button type="button" class="button button--ghost img-dl-btn" aria-label="Download image" title={downloadName ? `Download ${downloadName}` : 'Download image'}>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z"/></svg>
         </button>
       </span>
     ) : (
-      <Image {...imgProps} data-zoomable={dataZoomable} />
+      hasLink ? (
+        <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
+          <Image {...imgProps} data-zoomable={dataZoomable} />
+        </a>
+      ) : (
+        <Image {...imgProps} data-zoomable={dataZoomable} />
+      )
     )
   )}
 </div>

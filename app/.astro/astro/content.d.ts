@@ -180,6 +180,13 @@ declare module 'astro:content' {
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
+"greetings.mdx": {
+	id: "greetings.mdx";
+  slug: "greetings";
+  body: string;
+  collection: "chapters";
+  data: any
+} & { render(): Render[".mdx"] };
 "introduction.mdx": {
 	id: "introduction.mdx";
   slug: "introduction";
