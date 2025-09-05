@@ -8,7 +8,7 @@
   padding: 0 var(--content-padding-x);
   margin-top: 40px;
   display: grid;
-  grid-template-columns: 220px minmax(0, 680px) 260px;
+  grid-template-columns: 260px minmax(0, 680px) 260px;
   gap: 32px;
   align-items: start;
 }
@@ -70,15 +70,15 @@
 
 .wide {
   /* Target up to ~1100px while staying within viewport minus page gutters */
-  width: min(1100px, 100vw - 32px);
-  margin-left: calc(50% + var(--content-padding-x) * 2);
+  width: min(1100px, 100vw - var(--content-padding-x) * 2);
+  margin-left: 50%;
   transform: translateX(-50%);
 }
 
 .full-width {
   /* Span the full viewport width and center relative to viewport */
   width: 100vw;
-  margin-left: calc(50% - 50vw + var(--content-padding-x) * 2);
+  margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
 }
 

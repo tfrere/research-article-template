@@ -79,7 +79,7 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     margin: 0 0 var(--spacing-4);
     padding: 0;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: var(--table-border-radius);
     background: var(--surface-bg);
     transition: box-shadow 180ms ease, border-color 180ms ease;
   }
@@ -141,15 +141,31 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     position: relative;
   }
 
+  /* Subtle top shadow overlay when open (visible above children) */
+  .accordion[open] .accordion__content-wrapper::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 6px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.025), rgba(0,0,0,0));
+    pointer-events: none;
+    z-index: 1;
+  }
+
   .accordion__content {
     margin: 0;
     padding: 0;
   }
 
-  /* Ensure the very last slotted element has no bottom spacing */
+  /* Ensure the very last slotted element has no bottom margin */
   .accordion .accordion__content > :global(*:last-child) {
-    padding-bottom: 0 !important;
     margin-bottom: 0 !important;
+  }
+  /* Remove bottom padding on last child, except for code-output blocks */
+  .accordion .accordion__content > :global(:not(.code-output):last-child) {
+    padding-bottom: 0 !important;
   }
 
   /* Ensure the very first slotted element has no top spacing */
@@ -167,23 +183,11 @@ const wrapperClass = ["accordion", className].filter(Boolean).join(" ");
     padding: 0;
   }
 
-  /* Separator between header and content when open (edge-to-edge) */
-  .accordion[open] .accordion__content-wrapper::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0px; /* space below header */
-    height: 1px;
-    background: var(--border-color);
-    pointer-events: none;
-  }
-
   /* Focus styles for accessibility */
   .accordion__summary:focus-visible {
     outline: 2px solid var(--primary-color);
     outline-offset: 3px;
-    border-radius: 8px;
+    border-radius: var(--table-border-radius);
   }
 
 
