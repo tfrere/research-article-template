@@ -1,0 +1,234 @@
+<div class="d3-scatter" style="width:100%;margin:10px 0;"></div>
+<style>
+  /* Frameless: no controls, no axes, only dots */
+  .d3-scatter svg { display: block; }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-scatter'))){
+        const cs = Array.from(document.querySelectorAll('.d3-scatter')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset){ if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, { position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none', padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)', background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease' });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // SVG
+      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gDots = gRoot.append('g').attr('class','dots');
+      const gCentroids = gRoot.append('g').attr('class','centroids');
+      const gLegend = gRoot.append('foreignObject').attr('class','legend');
+
+      // State & scales
+      let width=800, height=360; const margin = { top: 8, right: 12, bottom: 8, left: 12 };
+      const x = d3.scaleLinear();
+      const y = d3.scaleLinear();
+      const color = d3.scaleOrdinal();
+      const radius = () => 4;
+
+      // Data loading (real): banner visualization positions by category
+      async function fetchFirstAvailable(paths){
+        for (const p of paths){
+          try {
+            const res = await fetch(p, { cache: 'no-cache' });
+            if (res.ok){ return await res.text(); }
+          } catch (e) {}
+        }
+        throw new Error('Failed to load data from provided paths');
+      }
+
+      let data = [];
+      let categories = [];
+      let colorMode = 'group';
+
+      function renderLegend(innerWidth){ gLegend.remove(); }
+
+      function updateScales(data){
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
+        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+
+        width = container.clientWidth || 800; height = Math.max(260, Math.round(width/3)); svg.attr('width', width).attr('height', height);
+        const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom; gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const xExtent = d3.extent(data, d=>d.x);
+        const yExtent = d3.extent(data, d=>d.y);
+        x.domain([xExtent[0], xExtent[1]]).range([0, innerWidth]).nice();
+        y.domain([yExtent[0], yExtent[1]]).range([innerHeight, 0]).nice();
+
+        // Frameless: no grid, no axes
+        gGrid.selectAll('*').remove();
+        gAxes.selectAll('*').remove();
+
+        renderLegend(innerWidth);
+
+        return { innerWidth, innerHeight };
+      }
+
+      function refreshPalette(){
+        try {
+          const raw = getComputedStyle(document.documentElement).getPropertyValue('--palette-categorical-json').trim();
+          const arr = raw ? JSON.parse(raw) : [];
+          if (arr && arr.length) color.range(arr);
+          else color.range(['var(--primary-color)','#4EA5B7','#E38A42','#CEC0FA','#98C97C','#F6BD60']);
+        } catch {
+          color.range(['var(--primary-color)','#4EA5B7','#E38A42','#CEC0FA','#98C97C','#F6BD60']);
+        }
+        // Recolor existing marks/labels after palette changes
+        try { if (data && data.length) draw(); } catch {}
+      }
+
+      function draw(){
+        if (!data || !data.length) return;
+        const { innerWidth, innerHeight } = updateScales(data);
+        const fillFor = d => colorMode === 'group' ? color(d.group) : 'var(--primary-color)';
+
+        const dots = gDots.selectAll('circle.dot').data(data, (d,i)=>d.id || i);
+        dots.enter().append('circle').attr('class','dot')
+          .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
+          .attr('fill', fillFor).attr('fill-opacity', 0.85)
+          .on('mouseenter', function(ev, d){
+            d3.select(this).attr('stroke','rgba(0,0,0,0.9)').attr('stroke-width', 1);
+            tipInner.innerHTML = `<div><strong>${d.label || 'Item'}</strong></div><div>(x: ${d.x.toFixed(2)}, y: ${d.y.toFixed(2)})</div><div>Category: ${d.group}</div>`;
+            tip.style.opacity = '1';
+          })
+          .on('mousemove', function(ev){ const [mx, my] = d3.pointer(ev, container); const ox=12, oy=12; tip.style.transform = `translate(${Math.round(mx+ox)}px, ${Math.round(my+oy)}px)`; })
+          .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','none'); })
+          .merge(dots)
+          .transition().duration(180)
+          .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
+          .attr('fill', fillFor).attr('fill-opacity', 0.85);
+        dots.exit().remove();
+
+        // Compute centroids per category
+        const centroids = Array.from(
+          d3.rollup(
+            data,
+            (v) => ({
+              category: v[0] ? v[0].group : 'Unknown',
+              x: d3.mean(v, (d) => d.x),
+              y: d3.mean(v, (d) => d.y),
+              count: v.length
+            }),
+            (d) => d.group
+          ).values()
+        );
+
+        // Map to pixel space nodes for collision-avoiding label placement
+        const nodes = centroids.map((c) => ({
+          category: c.category,
+          count: c.count,
+          targetX: x(c.x),
+          targetY: y(c.y),
+          x: x(c.x),
+          y: y(c.y),
+          width: Math.max(18, (String(c.category || '').length || 6) * 11),
+          height: 16
+        }));
+
+        if (nodes.length > 1) {
+          const sim = d3.forceSimulation(nodes)
+            .force('x', d3.forceX((d) => d.targetX).strength(0.9))
+            .force('y', d3.forceY((d) => d.targetY).strength(0.9))
+            .force('collide', d3.forceCollide((d) => Math.hypot(d.width/2, d.height/2) + 15))
+            .stop();
+          for (let i = 0; i < 650; i++) sim.tick();
+          const maxOffset = 45;
+          nodes.forEach((n) => {
+            const dx = n.x - n.targetX, dy = n.y - n.targetY; const dist = Math.hypot(dx, dy);
+            if (dist > maxOffset && dist > 0) { const s = maxOffset / dist; n.x = n.targetX + dx * s; n.y = n.targetY + dy * s; }
+          });
+        }
+
+        const labels = gCentroids.selectAll('g.centroid').data(nodes, d => d.category || 'Unknown');
+        const enter = labels.enter().append('g').attr('class','centroid').attr('pointer-events','none');
+        enter.append('text').attr('class','label-bg').attr('text-anchor','middle').attr('dominant-baseline','middle');
+        enter.append('text').attr('class','label-fg').attr('text-anchor','middle').attr('dominant-baseline','middle');
+        const merged = enter.merge(labels);
+        merged
+          .attr('transform', d => `translate(${Math.round(d.x)}, ${Math.round(d.y)})`)
+          .each(function(d){
+            const base = color(d.category || 'Unknown') || 'var(--text-color)';
+            const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface-bg').trim() || '#fff';
+            const bgNode = this.querySelector('text.label-bg');
+            const fgNode = this.querySelector('text.label-fg');
+            if (bgNode) {
+              bgNode.textContent = d.category;
+              bgNode.style.setProperty('fill', bg, 'important');
+              bgNode.style.setProperty('stroke', bg);
+              bgNode.style.setProperty('stroke-width', '10px');
+              bgNode.style.setProperty('paint-order', 'stroke fill');
+              bgNode.style.setProperty('font-weight','800');
+              bgNode.style.setProperty('font-size','16px');
+            }
+            if (fgNode) {
+              fgNode.textContent = d.category;
+              fgNode.style.setProperty('fill', base, 'important');
+              fgNode.style.setProperty('font-weight','800');
+              fgNode.style.setProperty('font-size','16px');
+            }
+          });
+        labels.exit().remove();
+      }
+
+      // Initial load
+      refreshPalette();
+      document.addEventListener('palettes:updated', refreshPalette);
+
+      (async () => {
+        try {
+          const csvText = await fetchFirstAvailable([
+            '/data/banner_visualisation_data.csv',
+            './assets/data/banner_visualisation_data.csv',
+            '../assets/data/banner_visualisation_data.csv',
+            '/data/banner_visualisation_data.csv'
+          ]);
+          const rows = d3.csvParse(csvText);
+          data = rows.map((r, i) => ({
+            id: +r.original_id ?? i,
+            x: +r.x_position,
+            y: +r.y_position,
+            group: r.category || 'Unknown',
+            label: r.subset || r.category || `Item ${i+1}`
+          })).filter(d => Number.isFinite(d.x) && Number.isFinite(d.y));
+          categories = Array.from(new Set(data.map(d=>d.group)));
+          color.domain(categories);
+          draw();
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.style.color = 'crimson'; pre.textContent = 'Failed to load scatter data.'; container.appendChild(pre);
+        }
+      })();
+
+      const rerender = () => { draw(); };
+      if (window.ResizeObserver) { const ro = new ResizeObserver(()=>rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+

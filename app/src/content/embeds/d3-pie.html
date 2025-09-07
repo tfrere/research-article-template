@@ -1,12 +1,55 @@
 <div class="d3-pie" style="width:100%;margin:10px 0;"></div>
 <style>
-  .d3-pie .legend { font-size: 12px; line-height: 1.35; color: var(--text-color); }
+  /* Layout piloté par container queries (par rapport au parent) */
+  .d3-pie { container-type: inline-size; }
+  .d3-pie .legend { width: 80%;margin: 0 auto; font-size: 12px; line-height: 1.35; color: var(--text-color); }
+  .d3-pie .legend { margin-bottom: 32px; }
   .d3-pie .legend .items { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; }
   .d3-pie .legend .item { display:flex; align-items:center; gap:8px; white-space:nowrap; }
   .d3-pie .legend .swatch { width:14px; height:14px; border-radius:3px; display:inline-block; border: 1px solid var(--border-color); }
+  .d3-pie .legend .title { display:block; text-align:center; font-weight:800; margin-bottom:6px; }
   .d3-pie .caption { font-size: 14px; font-weight: 800; fill: var(--text-color); }
+  .d3-pie .caption-subtitle { font-size: 11px; font-weight: 400; fill: var(--muted-color); }
   .d3-pie .nodata { font-size: 12px; fill: var(--muted-color); }
   .d3-pie .slice-label { font-size: 11px; font-weight: 700; fill: var(--text-color); paint-order: stroke; stroke: rgba(255,255,255,0.2); stroke-width: 3px; }
+  /* Layout HTML (pas JS) pour la grille et les cellules */
+  .d3-pie .plots-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 12px 20px;
+    margin-top: 4px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+  /* Par défaut (flux ~1280): 2 colonnes centrées */
+  .content-grid .d3-pie .plots-grid { width: 100%; }
+  .content-grid .d3-pie .pie-cell { flex: 0 0 calc((100% - 20px)/2); }
+  /* En wrappers larges: viser 4 colonnes si l'espace le permet */
+  .wide .d3-pie .plots-grid,
+  .full-width .d3-pie .plots-grid { width: 100%; }
+  .wide .d3-pie .pie-cell,
+  .full-width .d3-pie .pie-cell { flex: 0 0 calc((100% - 60px)/4); }
+  /* Forcer 2 colonnes dans le flux lorsque le parent ~1280px */
+  .content-grid .d3-pie .plots-grid { width: min(740px, 100%); }
+  .d3-pie .pie-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 360px; /* 2 colonnes fixes dans le flux à 1280px */
+  }
+  /* 4/2/1 colonnes en fonction de la largeur du parent */
+  /* @container (min-width: 740px) {
+    .d3-pie .plots-grid { width: 740px; }
+  }
+  @container (max-width: 739.98px) {
+    .d3-pie .plots-grid { width: 100%; }
+  } */
+  @media (max-width: 500px) {
+    .d3-pie .pie-cell { flex: 0 0 100%; }
+  }
 </style>
 <script>
   (() => {
@@ -50,18 +93,16 @@
         tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
-      // SVG scaffolding
-      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block').attr('preserveAspectRatio','xMidYMin meet');
-      const gRoot = svg.append('g');
-      const gLegend = gRoot.append('foreignObject').attr('class','legend');
-      const gPlots = gRoot.append('g').attr('class','plots');
+      // HTML scaffolding: legend and plots grid as HTML; only pies are SVG
+      const legendHost = document.createElement('div'); legendHost.className = 'legend'; container.appendChild(legendHost);
+      const plotsHost = document.createElement('div'); plotsHost.className = 'plots-grid'; container.appendChild(plotsHost);
 
       // Metrics (order and labels as in the Python script)
       const METRICS = [
-        { key:'answer_total_tokens', name:'Answer Tokens', title:'Weighted by Answer Tokens', letter:'a' },
-        { key:'total_samples',       name:'Number of Samples', title:'Weighted by Number of Samples', letter:'b' },
-        { key:'total_turns',         name:'Number of Turns', title:'Weighted by Number of Turns', letter:'c' },
-        { key:'total_images',        name:'Number of Images', title:'Weighted by Number of Images', letter:'d' }
+        { key:'answer_total_tokens', name:'Answer Tokens', title:'Weighted by ', letter:'a' },
+        { key:'total_samples',       name:'Number of Samples', title:'Weighted by ', letter:'b' },
+        { key:'total_turns',         name:'Number of Turns', title:'Weighted by ', letter:'c' },
+        { key:'total_images',        name:'Number of Images', title:'Weighted by ', letter:'d' }
       ];
 
       // CSV: load from public path
@@ -90,28 +131,24 @@
 
       // Layout
       let width=800; const margin = { top: 8, right: 24, bottom: 0, left: 24 };
-      const CAPTION_GAP = 24;   // espace entre titre et donut
+      const CAPTION_GAP = 36;   // espace entre titre et donut
       const GAP_X = 20;         // espace entre colonnes
       const GAP_Y = 12;         // espace entre lignes
-      const LEGEND_HEIGHT_DESKTOP = 62; // hauteur de la légende sur desktop
-      const LEGEND_HEIGHT_MOBILE = 84;  // hauteur de la légende sur mobile
       const TOP_OFFSET = 4;     // décalage vertical supplémentaire pour aérer le haut
+      const DONUT_INNER_RATIO = 0.58; // ratio du trou central (0 = pie plein, 0.5 = moitié)
+      // LEGEND_GAP supprimé: l'espacement est désormais géré en CSS via .d3-pie .legend { margin-bottom }
+      const SVG_VPAD = 16;      // padding vertical supplémentaire à l'intérieur des SVG pour éviter la coupe
+      
       const updateSize = () => {
         width = container.clientWidth || 800;
-        svg.attr('width', width);
-        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
         return { innerWidth: width - margin.left - margin.right };
       };
 
-      function renderLegend(categories, colorOf, width, x, legendY, legendHeight){
-        gLegend.attr('x', x).attr('y', legendY).attr('width', width).attr('height', legendHeight);
-        const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
-        root
-          .style('height', legendHeight + 'px')
-          .style('display', 'flex')
-          .style('align-items', 'center')
-          .style('justify-content', 'center');
-        root.html(`<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`);
+      function renderLegend(categories, colorOf){
+        legendHost.style.display = 'flex';
+        legendHost.style.alignItems = 'center';
+        legendHost.style.justifyContent = 'center';
+        legendHost.innerHTML = `<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`;
       }
 
       function drawPies(rows){
@@ -122,60 +159,25 @@
         const color = d3.scaleOrdinal().domain(categories).range(d3.schemeTableau10);
         const colorOf = (cat) => color(cat || 'Unknown');
 
-        // Clear plots
-        gPlots.selectAll('*').remove();
+        // Clear plots grid
+        plotsHost.innerHTML = '';
 
-        // Colonnes responsives: tenter 4 colonnes si possible, sinon descendre à 3/2/1
-        const selectCols = () => {
-          const MIN_RADIUS = 80; // garantir lisibilité
-          const allowed = [4, 2, 1]; // seulement 4 / 2 / 1 colonnes
-          // 1) essayer avec contrainte de rayon minimal
-          for (const c of allowed) {
-            const cw = (innerWidth - GAP_X * (c - 1)) / c;
-            const r = Math.max(30, Math.min(cw * 0.42, 120));
-            const gw = c * (r * 2) + (c - 1) * GAP_X;
-            if (gw <= innerWidth && r >= MIN_RADIUS) {
-              return { c, r };
-            }
-          }
-          // 2) sinon, première config qui tient (même si plus petit rayon)
-          for (const c of allowed) {
-            const cw = (innerWidth - GAP_X * (c - 1)) / c;
-            const r = Math.max(30, Math.min(cw * 0.42, 120));
-            const gw = c * (r * 2) + (c - 1) * GAP_X;
-            if (gw <= innerWidth) {
-              return { c, r };
-            }
-          }
-          // 3) fallback très petit écran
-          const r1 = Math.max(30, Math.min(innerWidth * 0.42, 120));
-          return { c: 1, r: r1 };
-        };
-        const { c: cols, r: radius } = selectCols();
-        const rowsCount = Math.ceil(METRICS.length / cols);
-        const innerR = Math.round(radius * 0.28);
-        // Calculer un espacement effectif pour occuper toute la largeur disponible
-        const baseGap = GAP_X;
-        const effectiveGapX = cols > 1
-          ? Math.max(baseGap, Math.floor((innerWidth - cols * (radius * 2)) / (cols - 1)))
-          : 0;
-        // largeur réelle de la grille avec l'espacement effectif
-        const gridWidth = cols * (radius * 2) + (cols - 1) * effectiveGapX;
-        const xOffset = Math.max(0, Math.floor((innerWidth - gridWidth) / 2));
-        gPlots.attr('transform', `translate(${xOffset},${TOP_OFFSET})`);
-        const perRowHeight = Math.ceil(radius * 2 + CAPTION_GAP + 20); // donut + caption + marge
-        const plotsHeight = rowsCount * perRowHeight + (rowsCount - 1) * GAP_Y;
+        // Légende au-dessus, centrée
+        renderLegend(categories, colorOf);
+
+        // Rayon fixé selon la largeur cible d'une cellule (gérée par CSS)
+        const CELL_BASIS = 360; // doit correspondre à .pie-cell { flex-basis }
+        const radius = Math.max(80, Math.min(120, Math.floor(CELL_BASIS * 0.42)));
+        const innerR = Math.round(radius * DONUT_INNER_RATIO);
+        // Placement géré par CSS; ici on ne fait que l'espacement vertical minimal
+        plotsHost.style.position = 'relative';
+        plotsHost.style.marginTop = (TOP_OFFSET) + 'px';
 
         const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
         const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
 
-        // Positionner la légende sous les graphiques, calée sur la grille centrée
-        const legendY = TOP_OFFSET + plotsHeight + 4;
-        const legendHeight = innerWidth <= 600 ? LEGEND_HEIGHT_MOBILE : LEGEND_HEIGHT_DESKTOP;
-        renderLegend(categories, colorOf, gridWidth, xOffset, legendY, legendHeight);
-
-        const captions = new Map(METRICS.map(m => [m.key, `${m.title}`]));
+        // Légende déjà rendue au-dessus
 
         METRICS.forEach((metric, idx) => {
           // Aggregate by category
@@ -184,12 +186,20 @@
           const values = categories.map(c => ({ category: c, value: totals.get(c) || 0 }));
           const totalSum = d3.sum(values, d => d.value);
 
-          const rowIdx = Math.floor(idx / cols);
-          const colIdx = idx % cols;
-          const cx = colIdx * ((radius * 2) + effectiveGapX) + radius;
-          const cy = TOP_OFFSET + rowIdx * (perRowHeight + GAP_Y) + CAPTION_GAP + radius;
+          // Create HTML cell container
+          const cell = document.createElement('div');
+          cell.className = 'pie-cell';
+          cell.style.width = (radius * 2) + 'px';
+          cell.style.height = (radius * 2 + SVG_VPAD * 2 + CAPTION_GAP + 24) + 'px';
+          cell.style.display = 'flex';
+          cell.style.flexDirection = 'column';
+          cell.style.alignItems = 'center';
+          cell.style.justifyContent = 'flex-start';
+          plotsHost.appendChild(cell);
 
-          const gCell = gPlots.append('g').attr('transform', `translate(${cx},${cy})`);
+          // SVG pie inside cell
+          const svg = d3.select(cell).append('svg').attr('width', radius * 2).attr('height', radius * 2 + SVG_VPAD * 2).style('display','block');
+          const gCell = svg.append('g').attr('transform', `translate(${radius},${radius + SVG_VPAD})`);
 
           if (!totalSum || totalSum <= 0) {
             gCell.append('text').attr('class','nodata').attr('text-anchor','middle').attr('dy','0').text('No data for this metric');
@@ -222,17 +232,12 @@
               .text(d => `${percent(d.data.value).toFixed(1)}%`);
           }
 
-          // Caption above donut
-          gCell.append('text')
-            .attr('class','caption')
-            .attr('text-anchor','middle')
-            .attr('y', -(radius + (CAPTION_GAP - 6)))
-            .text(captions.get(metric.key));
+          // HTML captions under the SVG (keep design)
+          const subtitleEl = document.createElement('div'); subtitleEl.className = 'caption-subtitle'; subtitleEl.textContent = metric.title; subtitleEl.style.textAlign = 'center'; subtitleEl.style.marginTop = (CAPTION_GAP - 18) + 'px'; cell.appendChild(subtitleEl);
+          const titleEl = document.createElement('div'); titleEl.className = 'caption'; titleEl.textContent = metric.name; titleEl.style.textAlign = 'center'; cell.appendChild(titleEl);
         });
 
-        // Définir la hauteur totale du SVG après avoir placé les éléments
-        const totalHeight = Math.ceil(margin.top + TOP_OFFSET + plotsHeight + 4 + legendHeight + margin.bottom);
-        svg.attr('height', totalHeight);
+        // Container height flows naturally with HTML; nothing to do
       }
 
       async function init(){

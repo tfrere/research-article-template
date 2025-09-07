@@ -61,10 +61,60 @@
   .quad-cell .legend .items { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:flex-end; }
   .quad-cell .legend .item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
   .quad-cell .legend .swatch { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  /* Tooltip refined styling */
+  .filters-quad .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  .filters-quad .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+  }
+  .filters-quad .d3-tooltip__inner > div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+  .filters-quad .d3-tooltip__inner > div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+  .filters-quad .d3-tooltip__inner > div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+  .filters-quad .d3-tooltip__inner svg {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 2px;
+  }
+  .filters-quad .d3-tooltip__inner strong {
+    margin-right: 6px;
+  }
 </style>
 <script>
   (() => {
     const THIS_SCRIPT = document.currentScript;
+    // Pretty label mapping for metric keys
+    const prettyMetricLabel = (key) => {
+      if (!key) return '';
+      const table = {
+        'ai2d_exact_match': 'AI2D Exact Match',
+        'average_rank': 'Average Rank',
+      };
+      if (table[key]) return table[key];
+      const cleaned = String(key).replace(/[_-]+/g, ' ').trim();
+      return cleaned.split(/\s+/).map(w => {
+        if (/^(ai2d|umap|id|auc|f1)$/i.test(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+    };
     const ensureD3 = (cb) => {
       if (window.d3 && typeof window.d3.select === 'function') return cb();
       let s = document.getElementById('d3-cdn-script');
@@ -98,15 +148,43 @@
 
       // Tooltip
       cell.style.position = cell.style.position || 'relative';
-      let tip = cell.querySelector('.d3-tooltip'); let tipInner;
-      if (!tip) { tip = document.createElement('div'); tip.className = 'd3-tooltip'; Object.assign(tip.style, { position:'absolute', top:'0', left:'0', transform:'translate(-9999px,-9999px)', pointerEvents:'none', padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)', background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease' }); tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); cell.appendChild(tip);} else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+      let tip = cell.querySelector('.d3-tooltip'); let tipInner; let hideTipTimer = null;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute',
+          top:'0',
+          left:'0',
+          transform:'translate(-9999px,-9999px)',
+          pointerEvents:'none',
+          padding:'10px 12px',
+          borderRadius:'12px',
+          fontSize:'12px',
+          lineHeight:'1.35',
+          border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)',
+          color:'var(--text-color)',
+          boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)',
+          opacity:'0',
+          transition:'opacity .12s ease',
+          backdropFilter:'saturate(1.12) blur(8px)'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign='left';
+        tip.appendChild(tipInner);
+        cell.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // State
       let metricList = []; let runList = []; let runOrder = []; const dataByMetric = new Map();
-      let width = 800, height = 340; const margin = { top: 12, right: 20, bottom: 46, left: 56 };
+      let width = 800, height = 340; const margin = { top: 16, right: 20, bottom: 46, left: 56 };
       const xScale = d3.scaleLinear(); const yScale = d3.scaleLinear();
       const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
-      let isRankStrictFlag = false; let rankTickMax = 1;
+      let isRankStrictFlag = false; let isRankMetricFlag = false; let rankTickMax = 1;
+      let sharedYConfig = null; // { type: 'rank_strict', maxRank } | { type: 'value', min, max }
+      let axisLabelY = 'Value';
       
       // Colors and markers (match original embeds)
       const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
@@ -129,6 +207,16 @@
           default:
             return selection.append('circle').attr('r', s);
         }
+      }
+      // Inline SVG for tooltip shapes
+      function markerSVG(shape, color) {
+        const size = 12; const s = size / 2; const stroke = color;
+        if (shape === 'circle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
+        if (shape === 'square') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><rect x="-5" y="-5" width="10" height="10" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
+        if (shape === 'triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L5,3 L-5,3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
+        if (shape === 'diamond') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L6,0 L0,6 L-6,0 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
+        if (shape === 'inverted-triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,6 L5,-3 L-5,-3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
+        return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
       }
       // Ready signal for async load completion
       let readyResolve = null;
@@ -162,21 +250,41 @@
         // Axes
         gAxes.selectAll('*').remove();
         let xAxis = d3.axisBottom(xScale).tickSizeOuter(0); xAxis = xAxis.ticks(8);
-        const isMobile = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(max-width: 980px)').matches : false;
-        if (isMobile) {
-          const fmtK = (v) => {
-            const abs = Math.abs(v);
-            if (abs >= 1000) {
-              const n = v / 1000;
-              return (Math.round(n) === n ? n : d3.format('.1f')(n)) + 'K';
-            }
-            return d3.format('d')(v);
-          };
-          xAxis = xAxis.tickFormat(fmtK);
-        }
+        const fmtK = (v) => {
+          const abs = Math.abs(v);
+          if (abs >= 1000) {
+            const n = v / 1000;
+            const s = d3.format('.1f')(n);
+            return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k';
+          }
+          return d3.format('d')(v);
+        };
+        xAxis = xAxis.tickFormat(fmtK);
         const yAxis = d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(isRankStrictFlag ? d3.format('d') : d3.format('.2f'));
         gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });
         gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });
+
+        // Axis labels
+        gAxes.append('text')
+          .attr('class', 'x-axis-label')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 10)))
+          .attr('fill', tickColor)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text('Steps');
+
+        gAxes.append('text')
+          .attr('class', 'y-axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -Math.max(16, Math.min(28, margin.left - 8) + 10))
+          .attr('fill', tickColor)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text(axisLabelY);
 
         // Legend box (top-right)
         // Per-cell legend hidden; global legend is used
@@ -194,9 +302,24 @@
         const isRank = /rank/i.test(metricKey); const isAverage = /average/i.test(metricKey); const isRankStrict = isRank && !isAverage;
         runs.forEach(r => { (map[r]||[]).forEach(pt => { const v = isRankStrict ? Math.round(pt.value) : pt.value; minStep=Math.min(minStep,pt.step); maxStep=Math.max(maxStep,pt.step); maxVal=Math.max(maxVal,v); minVal=Math.min(minVal,v); }); });
         if (!isFinite(minStep) || !isFinite(maxStep)) return;
-        xScale.domain([minStep, maxStep]); if (isRank) { rankTickMax = Math.max(1, Math.round(maxVal)); yScale.domain([rankTickMax, 1]); } else { yScale.domain([minVal, maxVal]).nice(); }
-        isRankStrictFlag = isRankStrict;
+        xScale.domain([minStep, maxStep]);
+        if (sharedYConfig && sharedYConfig.type === 'rank_strict') {
+          rankTickMax = Math.max(1, Math.round(sharedYConfig.maxRank||1));
+          yScale.domain([rankTickMax, 1]);
+          isRankStrictFlag = true;
+          isRankMetricFlag = true;
+        } else if (sharedYConfig && sharedYConfig.type === 'value') {
+          yScale.domain([sharedYConfig.min, sharedYConfig.max]);
+          isRankStrictFlag = isRankStrict;
+          isRankMetricFlag = isRank;
+        } else {
+          if (isRank) { rankTickMax = Math.max(1, Math.round(maxVal)); yScale.domain([rankTickMax, 1]); }
+          else { yScale.domain([minVal, maxVal]).nice(); }
+          isRankStrictFlag = isRankStrict;
+          isRankMetricFlag = isRank;
+        }
 
+        axisLabelY = isRankStrict ? 'Rank' : prettyMetricLabel(metricKey);
         const { innerWidth, innerHeight } = updateScales();
 
         const series = runs.map((r, i) => ({ run:r, color: pool[i % pool.length], marker: markerShapes[i % markerShapes.length], values:(map[r]||[]).slice().sort((a,b)=>a.step-b.step).map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value), stderr: pt.stderr } : pt) }));
@@ -242,10 +365,14 @@
         const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
         const hoverLine = gHover.append('line').attr('stroke','rgba(0,0,0,0.25)').attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
         const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step))); const steps = Array.from(stepSet).sort((a,b)=>a-b);
-        function onMove(ev){ const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
-          let html = `<div><strong>${titleText}</strong></div><div><strong>step</strong> ${nearest}</div>`; series.forEach(s=>{ const m = new Map(s.values.map(v=>[v.step, v])); const pt = m.get(nearest); if (pt && pt.value!=null){ const fmt = (vv)=> (isRankStrictFlag? d3.format('d')(vv) : (+vv).toFixed(4)); const err = (pt.stderr!=null && isFinite(pt.stderr) && pt.stderr>0) ? ` ± ${fmt(pt.stderr)}` : ''; html+=`<div><span style=\"display:inline-block;width:10px;height:10px;background:${s.color};border-radius:50%;margin-right:6px;\"></span><strong>${s.run}</strong> ${fmt(pt.value)}${err}</div>`; }});
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
+          let html = `<div><strong>${titleText}</strong></div><div><strong>step</strong> ${nearest}</div>`;
+          const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, marker:s.marker, pt }; }).filter(e => e.pt && e.pt.value!=null);
+          entries.sort((a,b)=> (a.pt.value - b.pt.value));
+          const fmt = (vv)=> (isRankStrictFlag? d3.format('d')(vv) : (+vv).toFixed(4));
+          entries.forEach(e => { const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : ''; html += `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">${markerSVG(e.marker, e.color)}<strong>${e.run}</strong> ${fmt(e.pt.value)}${err}</div>`; });
           tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`; }
-        function onLeave(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
 
@@ -284,7 +411,16 @@
       return {
         ready,
         getMetrics: () => metricList.slice(),
-        setMetric: (m) => { if (m) renderMetric(m); }
+        setMetric: (m) => { if (m) renderMetric(m); },
+        getYInfo: (m) => {
+          const key = m; const map = dataByMetric.get(key) || {}; const runs = runOrder;
+          let maxVal = 0, minVal = Infinity; let minStep = Infinity, maxStep = -Infinity;
+          const isRank = /rank/i.test(key); const isAverage = /average/i.test(key); const isRankStrict = isRank && !isAverage;
+          runs.forEach(r => { (map[r]||[]).forEach(pt => { const v = isRankStrict ? Math.round(pt.value) : pt.value; minStep=Math.min(minStep,pt.step); maxStep=Math.max(maxStep,pt.step); maxVal=Math.max(maxVal,v); minVal=Math.min(minVal,v); }); });
+          const rankMax = isRank ? Math.max(1, Math.round(maxVal)) : null;
+          return { isRank, isRankStrict, min: minVal, max: maxVal, rankMax };
+        },
+        setSharedY: (cfg) => { sharedYConfig = cfg || null; if (metricList && metricList.length) { /* re-render last metric if possible */ const current = cfg && cfg.key ? cfg.key : null; const m = current || metricList[0]; renderMetric(m); } }
       };
     }
 
@@ -324,11 +460,27 @@
         ctrl.innerHTML = '';
         const label = document.createElement('label'); label.textContent = 'Metric';
         const select = document.createElement('select');
-        metrics.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; select.appendChild(o); });
+        metrics.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=prettyMetricLabel(m); select.appendChild(o); });
         if (def) select.value = def;
         label.appendChild(select); ctrl.appendChild(label);
 
-        const applyAll = (v) => instances.forEach(i => i && typeof i.setMetric === 'function' && i.setMetric(v));
+        const computeAndApplySharedY = (metric) => {
+          try {
+            const infos = instances.map(i => i && typeof i.getYInfo === 'function' ? i.getYInfo(metric) : null).filter(Boolean);
+            if (!infos.length) return;
+            const anyRank = infos.some(info => info.isRank);
+            if (anyRank) {
+              const maxRank = Math.max(1, ...infos.map(info => Math.round(info.rankMax || 1)));
+              instances.forEach(i => i && typeof i.setSharedY === 'function' && i.setSharedY({ type: 'rank_strict', maxRank, key: metric }));
+            } else {
+              const min = Math.min(...infos.map(info => info.min));
+              const max = Math.max(...infos.map(info => info.max));
+              instances.forEach(i => i && typeof i.setSharedY === 'function' && i.setSharedY({ type: 'value', min, max, key: metric }));
+            }
+          } catch (_) {}
+        };
+
+        const applyAll = (v) => { computeAndApplySharedY(v); instances.forEach(i => i && typeof i.setMetric === 'function' && i.setMetric(v)); };
         if (def) applyAll(def);
         select.addEventListener('change', () => applyAll(select.value));
 

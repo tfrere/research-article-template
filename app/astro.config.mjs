@@ -57,7 +57,8 @@ export default defineConfig({
       rehypeKatex,
       [rehypeCitation, {
         bibliography: 'src/content/bibliography.bib',
-        linkCitations: true
+        linkCitations: true,
+        csl: "apa"
       }],
       rehypeReferencesAndFootnotes,
       rehypeRestoreAtInCode,

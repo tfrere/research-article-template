@@ -151,40 +151,20 @@ Always pair it with text, icons, shape or position. The simulation helps you spo
 
 #### Using the palettes
 
-##### CSS
-Use the generated **CSS variables** to style elements (e.g., `color: var(--palette-categorical-1)`).
-
-<Accordion title="Code example">
-```css
-/* Usage */
-.series-a { color: var(--palette-categorical-1); }
-.series-b { color: var(--palette-categorical-2); }
-.heatmap-low  { background: var(--palette-sequential-1); }
-.heatmap-high { background: var(--palette-sequential-6); }
-.neg { color: var(--palette-diverging-1); }  /* left = primary */
-.pos { color: var(--palette-diverging-6); }  /* right = complement */
-
-/* Override size */
-:root { --palette-count: 8; }                    /* global */
-:root { --palette-diverging-count: 7; }          /* per palette */
-```
-</Accordion>
-
-<Note variant="info" emoji='💡'>**CSS overrides** automatically trigger a **palette regeneration** via JS observers; no manual call is needed.</Note>
-
-##### JS
-Fetch arrays of colors via `window.ColorPalettes.getColors('categorical')`. To change sizes **at runtime**, set CSS vars (e.g., `document.documentElement.style.setProperty('--palette-count','8')`) and call `window.ColorPalettes.refresh()`.
+You can copy them manually from the palette viewer just above, or fetch colors via `window.ColorPalettes.getColors(key, count)` where `key` is one of `'categorical'`, `'sequential'`, `'diverging'`, and `count` is the desired number of colors (defaults to 6).
 
 <Accordion title="Code example">
   ```js
-// Usage
-const cat = window.ColorPalettes.getColors('categorical');
-const seq = window.ColorPalettes.getColors('sequential');
-const div = window.ColorPalettes.getColors('diverging');
+// Usage (with explicit counts)
+const cat = window.ColorPalettes.getColors('categorical', 8);
+const seq = window.ColorPalettes.getColors('sequential', 8);
+const div = window.ColorPalettes.getColors('diverging', 7);
 
-// Override size (runtime)
-document.documentElement.style.setProperty('--palette-count', '8');
-document.documentElement.style.setProperty('--palette-diverging-count', '7');
+// For current primary color string
+const primaryHex = window.ColorPalettes.getPrimary();
+
+// If you change --primary-color dynamically, call refresh to notify listeners
+document.documentElement.style.setProperty('--primary-color', '#6D4AFF');
 window.ColorPalettes.refresh();
 ```
 </Accordion>

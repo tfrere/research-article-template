@@ -69,7 +69,11 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
   </script>
 
 <style is:global>
-  .html-embed { margin: 0 0 var(--block-spacing-y); }
+  .html-embed { margin: 0 0 var(--block-spacing-y);
+    z-index: var(--z-elevated);
+    position: relative;
+  
+  }
   .html-embed__title { 
     text-align: left; 
     font-weight: 600; 
@@ -77,9 +81,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     color: var(--text-color);
     margin: 0;
     padding: var(--spacing-1);
-    background: var(--page-bg);
     position: relative;
-    z-index: var(--z-elevated);
     display: block;
     width: 100%;
   }
@@ -88,6 +90,7 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 8px;
+    z-index: var(--z-elevated);
   }
   .html-embed__card.is-frameless {
     background: transparent;
@@ -100,7 +103,6 @@ const mountId = `frag-${Math.random().toString(36).slice(2)}`;
     color: var(--muted-color); 
     margin: 0; 
     padding: var(--spacing-1);
-    background: var(--page-bg);
     position: relative;
     z-index: var(--z-elevated);
     display: block;

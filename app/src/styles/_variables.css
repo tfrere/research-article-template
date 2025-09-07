@@ -55,7 +55,7 @@
   --block-spacing-y: var(--spacing-4); /* default vertical spacing between block components */
 
   /* Config */
-  --palette-count: 6;
+  --palette-count: 8;
 
   /* Button tokens */
   --button-radius: 6px;

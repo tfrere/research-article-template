@@ -284,20 +284,21 @@ Here are some examples that were vibe coded to inspire you.
 ---
 <HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
 ---
-<Wide>
   <HtmlEmbed src="d3-neural.html" id="neural-network-mnist-like" title="D3 Interactive neural network (MNIST-like)" desc="Visualize activations and class probabilities (0–9)." align="center" />
-</Wide>
 ---
-<Wide>
-  <HtmlEmbed src="d3-pie.html" desc="D3 Pie charts by category" align="center" />
-</Wide>
+  <HtmlEmbed src="d3-pie.html" title="D3 Pie charts by category" align="center" frameless />
 ---
-<Wide>
-  <HtmlEmbed src="filters-quad.html" desc="Figure 7: Comparison across thresholds for all four filters individually: Formatting, Relevance, Visual Dependency, and Image-Question Correspondence." align="center" />
-</Wide>
+  <HtmlEmbed src="filters-quad.html" frameless desc={"Figure 7: Comparison across thresholds for all four filters individually: Formatting, Relevance, Visual Dependency, and Image-Question Correspondence <br/> Credit: "+'<a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>'} align="center" />
 
----
+{/* ---
 <HtmlEmbed src="d3-comparison.html" title="Image similarity: query vs top-k" desc="Compare a query image to top-k matches. Shows rank and similarity." />
+---
+<HtmlEmbed src="d3-area-stacked.html" title="Relative metric shares over steps (by run)" desc="Stacked area of normalized metric contributions across training steps. Data: /data/all_ratings_luis.csv" />
+---
+<HtmlEmbed src="d3-boxplot.html" title="Metric distribution across runs (box plots)" desc="Per-run distribution for a selected metric (median, quartiles, whiskers, outliers). Data: /data/all_ratings_luis.csv" />
+*/}
+--- 
+<HtmlEmbed src="d3-scatter.html" title="2D projection by category" desc={`Dataset visualization via UMAP <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>`} frameless align="center" />
 ---
 
 ### Iframes

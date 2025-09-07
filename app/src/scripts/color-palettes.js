@@ -61,15 +61,7 @@
     if (rgb) return toHex(rgb);
     return '#E889AB';
   };
-  const getCounts = () => {
-    const Fallback = 6;
-    const globalCount = clamp(getIntFromCssVar('--palette-count', Fallback), 1, 12);
-    return {
-      categorical: clamp(getIntFromCssVar('--palette-categorical-count', globalCount), 1, 12),
-      sequential: clamp(getIntFromCssVar('--palette-sequential-count', globalCount), 1, 12),
-      diverging: clamp(getIntFromCssVar('--palette-diverging-count', globalCount), 1, 12),
-    };
-  };
+  // No count management via CSS anymore; counts are passed directly to the API
 
   const generators = {
     categorical: (baseHex, count) => {
@@ -79,7 +71,7 @@
       const { C, h } = oklabToOklch(L,a,bb);
       const L0 = Math.min(0.85, Math.max(0.4, L));
       const C0 = Math.min(0.35, Math.max(0.1, C || 0.2));
-      const total = Math.max(1, Math.min(12, count || 6));
+      const total = Math.max(1, Math.min(12, count || 8));
       const hueStep = 360 / total;
       const results = [];
       for (let i=0;i<total;i++) { const hDeg = (h + i*hueStep) % 360; const lVar = ((i % 3) - 1) * 0.04; results.push(oklchToHexSafe(Math.max(0.4, Math.min(0.85, L0 + lVar)), C0, hDeg)); }
@@ -90,7 +82,7 @@
       const { r, g, b } = parseHex(baseHex);
       const { L, a, b: bb } = rgbToOklab(r,g,b);
       const { C, h } = oklabToOklch(L,a,bb);
-      const total = Math.max(1, Math.min(12, count || 6));
+      const total = Math.max(1, Math.min(12, count || 8));
       const startL = Math.max(0.25, L - 0.18);
       const endL = Math.min(0.92, L + 0.18);
       const cBase = Math.min(0.33, Math.max(0.08, C * 0.9 + 0.06));
@@ -103,7 +95,7 @@
       const { r, g, b } = parseHex(baseHex);
       const baseLab = rgbToOklab(r,g,b);
       const baseLch = oklabToOklch(baseLab.L, baseLab.a, baseLab.b);
-      const total = Math.max(1, Math.min(12, count || 6));
+      const total = Math.max(1, Math.min(12, count || 8));
 
       // Left endpoint: EXACT primary color (no darkening)
       const leftLab = baseLab;
@@ -157,41 +149,14 @@
     }
   };
 
-  const setCssVar = (name, value) => { try { MODE.cssRoot.style.setProperty(name, value); } catch {} };
-  const removeCssVar = (name) => { try { MODE.cssRoot.style.removeProperty(name); } catch {} };
-
   let lastSignature = '';
-  let lastCounts = { categorical: 0, sequential: 0, diverging: 0 };
 
   const updatePalettes = () => {
     const primary = getPrimaryHex();
-    const counts = getCounts();
-    const signature = `${primary}|${counts.categorical}|${counts.sequential}|${counts.diverging}`;
+    const signature = `${primary}`;
     if (signature === lastSignature) return;
-
-    const out = {};
-    out.categorical = generators.categorical(primary, counts.categorical);
-    out.sequential = generators.sequential(primary, counts.sequential);
-    out.diverging = generators.diverging(primary, counts.diverging);
-
-    setCssVar('--primary-hex', primary);
-    setCssVar('--palette-categorical-count-current', String(out.categorical.length));
-    setCssVar('--palette-sequential-count-current', String(out.sequential.length));
-    setCssVar('--palette-diverging-count-current', String(out.diverging.length));
-
-    const applyList = (key, list, prevCount) => {
-      for (let i=0;i<list.length;i++) setCssVar(`--palette-${key}-${i+1}`, list[i]);
-      for (let i=list.length;i<prevCount;i++) removeCssVar(`--palette-${key}-${i+1}`);
-      setCssVar(`--palette-${key}-json`, JSON.stringify(list));
-    };
-    applyList('categorical', out.categorical, lastCounts.categorical);
-    applyList('sequential', out.sequential, lastCounts.sequential);
-    applyList('diverging', out.diverging, lastCounts.diverging);
-
-    lastCounts = { categorical: out.categorical.length, sequential: out.sequential.length, diverging: out.diverging.length };
     lastSignature = signature;
-
-    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary, counts, palettes: out } })); } catch {}
+    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary } })); } catch {}
   };
 
   const bootstrap = () => {
@@ -201,11 +166,14 @@
     setInterval(updatePalettes, 400);
     window.ColorPalettes = {
       refresh: updatePalettes,
-      getColors: (key) => {
-        const count = Number(getCssVar(`--palette-${key}-count-current`)) || 0;
-        const arr = [];
-        for (let i=0;i<count;i++) arr.push(getCssVar(`--palette-${key}-${i+1}`));
-        return arr.filter(Boolean);
+      getPrimary: () => getPrimaryHex(),
+      getColors: (key, count = 6) => {
+        const primary = getPrimaryHex();
+        const total = Math.max(1, Math.min(12, Number(count) || 6));
+        if (key === 'categorical') return generators.categorical(primary, total);
+        if (key === 'sequential') return generators.sequential(primary, total);
+        if (key === 'diverging') return generators.diverging(primary, total);
+        return [];
       }
     };
   };

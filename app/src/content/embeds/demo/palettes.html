@@ -66,10 +66,10 @@
     <div class="palettes__field">
       <div class="palettes__label-row">
         <label class="palettes__label" for="color-count">Number of colors</label>
-        <output id="color-count-out" for="color-count" class="ghost-badge">6</output>
+        <output id="color-count-out" for="color-count" class="ghost-badge">8</output>
       </div>
       <div class="palettes__count">
-        <input id="color-count" type="range" min="6" max="10" step="1" value="6" aria-label="Number of colors" />
+        <input id="color-count" type="range" min="6" max="10" step="1" value="8" aria-label="Number of colors" />
       </div>
     </div>
   </div>
@@ -103,18 +103,12 @@
       { key: 'diverging', title: 'Diverging', desc: 'Opposing extremes via <strong>base → white → complement</strong>; smooth contrast around a neutral midpoint.' }
     ];
 
-    const getCssVar = (name) => {
-      try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch { return ''; }
-    };
-
-    const getPaletteColors = (key) => {
-      const count = Number(getCssVar(`--palette-${key}-count-current`)) || Number(getCssVar('--palette-count')) || 6;
-      const colors = [];
-      for (let i = 1; i <= count; i++) {
-        const v = getCssVar(`--palette-${key}-${i}`);
-        if (v) colors.push(v);
+    const getPaletteColors = (key, count) => {
+      const total = Number(count) || 6;
+      if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+        return window.ColorPalettes.getColors(key, total) || [];
       }
-      return colors;
+      return [];
     };
 
     const render = () => {
@@ -123,8 +117,10 @@
       if (!root) return;
       const grid = root.querySelector('.palettes__grid');
       if (!grid) return;
+      const input = document.getElementById('color-count');
+      const total = input ? Number(input.value) || 6 : 6;
       const html = cards.map((c) => {
-        const colors = getPaletteColors(c.key);
+        const colors = getPaletteColors(c.key, total);
         const swatches = colors.map(col => `<div class="sw" style="background:${col}"></div>`).join('');
         return `
           <div class="palette-card" data-colors="${colors.join(',')}">
@@ -172,19 +168,13 @@
       const input = document.getElementById('color-count');
       const out = document.getElementById('color-count-out');
       if (!input) return;
-      const read = () => {
-        const v = Number(getCssVar('--palette-count')) || 6;
-        return Math.max(6, Math.min(10, v));
-      };
-      const write = (v) => {
-        document.documentElement.style.setProperty('--palette-count', String(v));
-        if (window.ColorPalettes && typeof window.ColorPalettes.refresh === 'function') window.ColorPalettes.refresh();
-      };
+      const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+      const read = () => clamp(Number(input.value) || 6, 6, 10);
       const syncOut = () => { if (out) out.textContent = String(read()); };
-      const syncInput = () => { try { input.value = String(read()); } catch {} };
-      syncInput(); syncOut();
-      input.addEventListener('input', () => { write(input.value); syncOut(); });
-      document.addEventListener('palettes:updated', () => { syncInput(); syncOut(); render(); });
+      const onChange = () => { syncOut(); render(); };
+      syncOut();
+      input.addEventListener('input', onChange);
+      document.addEventListener('palettes:updated', () => { syncOut(); render(); });
     };
 
     let copyDelegationSetup = false;
@@ -218,17 +208,8 @@
       setupCountControl();
       render();
       setupCopyDelegation();
-      // Re-render when global palettes update and when :root style changes
+      // Re-render when primary color changes
       document.addEventListener('palettes:updated', render);
-      const mo = new MutationObserver(() => render());
-      mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-
-      // Fallback: if global script loads after this fragment and we missed the event
-      const waitForPalettes = () => {
-        if (getCssVar('--palette-categorical-1')) { render(); return; }
-        setTimeout(waitForPalettes, 50);
-      };
-      waitForPalettes();
     };
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });

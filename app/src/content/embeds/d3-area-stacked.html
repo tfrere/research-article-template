@@ -1,0 +1,220 @@
+<div class="d3-area-stacked" style="width:100%;margin:10px 0;"></div>
+<style>
+  .d3-area-stacked .controls {
+    margin-top: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .d3-area-stacked .controls label {
+    font-size: 12px;
+    color: var(--muted-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    padding: 6px 10px;
+  }
+  .d3-area-stacked .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-theme="dark"] .d3-area-stacked .controls select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .d3-area-stacked .controls select:hover { border-color: var(--primary-color); }
+  .d3-area-stacked .controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
+  .d3-area-stacked .legend { font-size: 12px; line-height: 1.35; color: var(--text-color); }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-area-stacked'))){
+        const cs = Array.from(document.querySelectorAll('.d3-area-stacked')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset){ if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) { tip = document.createElement('div'); tip.className = 'd3-tooltip'; Object.assign(tip.style,{ position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none', padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)', background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease' }); tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip); } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Controls
+      const controls = document.createElement('div'); controls.className='controls';
+      const labelRun = document.createElement('label'); labelRun.textContent='Run';
+      const selRun = document.createElement('select');
+      labelRun.appendChild(selRun);
+      const labelSmooth = document.createElement('label'); labelSmooth.textContent='Smoothing';
+      const selSmooth = document.createElement('select'); ['none','monotone','basis'].forEach((s)=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; selSmooth.appendChild(o); });
+      labelSmooth.appendChild(selSmooth);
+
+      // SVG
+      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gAreas = gRoot.append('g').attr('class','areas');
+      const gLegend = gRoot.append('foreignObject').attr('class','legend');
+
+      // State & scales
+      let width=800,height=360; const margin={top:16,right:28,bottom:56,left:64};
+      const x=d3.scaleLinear();
+      const y=d3.scaleLinear();
+      const color=d3.scaleOrdinal().range(['var(--primary-color)','rgb(78, 165, 183)','rgb(227, 138, 66)','rgb(206, 192, 250)']);
+
+      // Data (real): relative contributions of selected metrics over steps for a run
+      const metricsToUse = ['ai2d_exact_match','docvqa_val_anls','textvqa_val_exact_match','chartqa_relaxed_overall'];
+      let categories = metricsToUse.slice();
+      let allRows = [];
+      let currentRun = null;
+      let stacked = [];
+
+      async function fetchFirstAvailable(paths){
+        for (const p of paths){
+          try { const res = await fetch(p, { cache:'no-cache' }); if (res.ok) return await res.text(); } catch(e){}
+        }
+        throw new Error('Failed to load area data');
+      }
+
+      function computeStackForRun(runName){
+        const rows = allRows.filter(r=>r.run===runName && metricsToUse.includes(r.metric));
+        const byStep = d3.rollup(rows, v=>{
+          const m = new Map(); v.forEach(r=>{ m.set(r.metric, +r.value); });
+          const obj = {}; metricsToUse.forEach(k=>{ obj[k] = m.get(k) ?? 0; });
+          // Normalize to shares
+          const sum = metricsToUse.reduce((acc,k)=>acc + Math.max(0, obj[k]), 0) || 1;
+          metricsToUse.forEach(k=>{ obj[k] = Math.max(0, obj[k]) / sum; });
+          return obj;
+        }, r=>+r.step);
+        const steps = Array.from(byStep.keys()).sort((a,b)=>a-b);
+        const series = categories.map(cat => steps.map(step => ({ x: step, y: byStep.get(step)[cat] })));
+        stacked = d3.stack().keys(d3.range(categories.length)).value((d, key)=>d[key].y)(d3.transpose(series));
+        return steps;
+      }
+
+      function renderLegend(innerWidth){
+        const legendWidth=160, legendHeight=84;
+        gLegend.attr('x', innerWidth-legendWidth).attr('y', 0).attr('width', legendWidth).attr('height', legendHeight);
+        const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
+        root.html(`
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+            ${categories.map((c,i)=>`<div style=\"display:flex;align-items:center;gap:8px;\"><span style=\"width:18px;height:10px;background:${color(c)};border-radius:2px;display:inline-block\"></span><span>${c}</span></div>`).join('')}
+          </div>
+        `);
+      }
+
+      function updateScales(){
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
+        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+
+        width = container.clientWidth || 800; height = Math.max(260, Math.round(width/3)); svg.attr('width', width).attr('height', height);
+        const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom; gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const yMax = stacked.length ? d3.max(stacked[stacked.length-1], (d) => d[1]) : 1;
+        const xMin = stacked.length ? d3.min(stacked[0], d=>d.data[0].x) : 0;
+        const xMax = stacked.length ? d3.max(stacked[0], d=>d.data[d.data.length-1].x) : 1;
+        x.domain([xMin, xMax]).range([0, innerWidth]).nice();
+        y.domain([0, yMax]).range([innerHeight, 0]).nice();
+
+        // Grid
+        gGrid.selectAll('*').remove();
+        gGrid.selectAll('line.grid-y').data(y.ticks(5)).join('line')
+          .attr('class','grid-y').attr('x1',0).attr('x2',innerWidth).attr('y1',d=>y(d)).attr('y2',d=>y(d))
+          .attr('stroke', gridColor).attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // Axes
+        gAxes.selectAll('*').remove();
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6)).call((g)=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','12px'); });
+        gAxes.append('g').call(d3.axisLeft(y).ticks(5)).call((g)=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','12px'); });
+        gAxes.append('text').attr('class','axis-label axis-label--x').attr('x', innerWidth/2).attr('y', innerHeight + 44).attr('text-anchor','middle').style('font-size','12px').style('fill', tickColor).text('Step');
+        gAxes.append('text').attr('class','axis-label axis-label--y').attr('text-anchor','middle').attr('transform', `translate(${-48},${innerHeight/2}) rotate(-90)`).style('font-size','12px').style('fill', tickColor).text('Value');
+
+        renderLegend(innerWidth);
+        return { innerWidth, innerHeight };
+      }
+
+      function draw(){
+        const { innerWidth, innerHeight } = updateScales();
+
+        const curve = selSmooth.value==='monotone' ? d3.curveMonotoneX : selSmooth.value==='basis' ? d3.curveBasis : d3.curveLinear;
+        const area = d3.area().curve(curve).x((d,i)=>x(d.data[i].x)).y0(d=>y(d[0])).y1(d=>y(d[1]));
+
+        const layers = gAreas.selectAll('path.layer').data(stacked);
+        layers.enter().append('path').attr('class','layer')
+          .attr('fill', (d,i)=>color(categories[i]))
+          .attr('opacity', 0.9)
+          .on('mouseenter', function(ev, d){ const i = stacked.indexOf(d); d3.select(this).attr('opacity', 1); tipInner.innerHTML = `<div><strong>${categories[i]}</strong></div>`; tip.style.opacity = '1'; })
+          .on('mousemove', function(ev){ const [mx,my]=d3.pointer(ev, container); const ox=12, oy=12; tip.style.transform = `translate(${Math.round(mx+ox)}px, ${Math.round(my+oy)}px)`; })
+          .on('mouseleave', function(){ d3.select(this).attr('opacity', 0.9); tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; })
+          .merge(layers)
+          .transition().duration(180)
+          .attr('d', d=>area(d));
+        layers.exit().remove();
+      }
+
+      container.appendChild(controls);
+      controls.appendChild(labelRun);
+      controls.appendChild(labelSmooth);
+      selSmooth.addEventListener('change', ()=>draw());
+
+      (async () => {
+        try {
+          const csvText = await fetchFirstAvailable([
+            '/data/all_ratings_luis.csv',
+            '/data/against_baselines.csv',
+            '/data/ss_vs_s1.csv',
+            './assets/data/all_ratings_luis.csv',
+            '../assets/data/all_ratings_luis.csv',
+            '/data/all_ratings_luis.csv'
+          ]);
+          allRows = d3.csvParse(csvText, d=>({ run: d.run, step: +d.step, metric: d.metric, value: +d.value }));
+          const runs = Array.from(new Set(allRows.map(r=>r.run))).filter(Boolean);
+          runs.forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r; selRun.appendChild(o); });
+          currentRun = runs[0]; selRun.value = currentRun;
+          selRun.addEventListener('change', (e)=>{ currentRun = e.target.value; draw(); });
+          color.domain(categories);
+          computeStackForRun(currentRun);
+          draw();
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.style.color = 'crimson'; pre.textContent = 'Failed to load area data.'; container.appendChild(pre);
+        }
+      })();
+
+      const rerender = () => { draw(); };
+      if (window.ResizeObserver) { const ro = new ResizeObserver(()=>rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+

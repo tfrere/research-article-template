@@ -90,9 +90,9 @@ Hello i'm a standalone output block.
 ```python
 print("This script prints a very very long line to check overflow behavior.")
 ```
-::::output
+:::output
 This script prints a very very long line to check overflow behavior.
-::::
+:::
 </Accordion>
 
 
@@ -122,8 +122,6 @@ The **citation keys** come from `app/src/content/bibliography.bib`.
 
 **Citation** use the `@` syntax (e.g., `[@vaswani2017attention]` or `@vaswani2017attention` in narrative form) and are **automatically** collected to render the **bibliography** at the end of the article.
 
-<Note variant="info" emoji="💡">Multiple citations to the same citation key are automatically merged into a single citation.</Note>
-
 1) In-text citation with brackets: [@vaswani2017attention].
 
 2) Narrative citation: As shown by @kingma2015adam, stochastic optimization is widely used.
@@ -143,6 +141,8 @@ The **citation keys** come from `app/src/content/bibliography.bib`.
 4) All citations in one group: [@vaswani2017attention; @mckinney2017python; @he2016resnet; @silver2017mastering; @openai2023gpt4; @doe2020thesis; @cover2006entropy; @zenodo2021dataset; @sklearn2024; @smith2024privacy; @kingma2015adam; @raffel2020t5].
 ```
 </Accordion>
+
+<Note variant="info" emoji="💡">You can change the citation style in the `astro.config.mjs` file. There are several styles available: `apa`, `vancouver`, `harvard1`, `chicago`, `mla`. Default is `apa`.</Note>
 
 ### Footnote
 
