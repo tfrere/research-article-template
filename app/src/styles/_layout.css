@@ -99,8 +99,8 @@
 
 #theme-toggle {
   position: fixed;
-  top: calc(var(--spacing-2) + var(--hf-spaces-topbar, 0px));
-  right: var(--content-padding-x);
+  top: calc(var(--spacing-4) + var(--hf-spaces-topbar, 0px));
+  right: var(--spacing-3);
   margin: 0;
   z-index: var(--z-overlay);
 }
