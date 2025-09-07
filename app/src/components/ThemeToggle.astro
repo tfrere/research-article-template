@@ -53,9 +53,9 @@
           const nodes = Array.from(document.querySelectorAll('*'));
           for (const el of nodes) {
             const cs = window.getComputedStyle(el);
-            if (cs.position === 'fixed' && cs.top === '0px' && el.offsetHeight > 0) {
+            if (cs.position === 'fixed' && cs.top === '0px') {
               const rect = el.getBoundingClientRect();
-              if (rect.top <= 1 && rect.height <= 80) {
+              if (rect.top <= 1 && rect.height > 0 && rect.height <= 80) {
                 topbar = Math.max(topbar, Math.ceil(rect.bottom));
               }
             }
