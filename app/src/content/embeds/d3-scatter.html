@@ -122,12 +122,16 @@
 
       function refreshPalette(){
         try {
-          const raw = getComputedStyle(document.documentElement).getPropertyValue('--palette-categorical-json').trim();
-          const arr = raw ? JSON.parse(raw) : [];
-          if (arr && arr.length) color.range(arr);
-          else color.range(['var(--primary-color)','#4EA5B7','#E38A42','#CEC0FA','#98C97C','#F6BD60']);
+          const cats = categories && categories.length ? categories.length : 6;
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            const arr = window.ColorPalettes.getColors('categorical', cats) || [];
+            if (arr && arr.length) { color.range(arr); return; }
+          }
+          // fallback
+          color.range((d3.schemeTableau10 ? d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab']).slice(0, cats));
         } catch {
-          color.range(['var(--primary-color)','#4EA5B7','#E38A42','#CEC0FA','#98C97C','#F6BD60']);
+          const cats = categories && categories.length ? categories.length : 6;
+          color.range((d3.schemeTableau10 ? d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab']).slice(0, cats));
         }
         // Recolor existing marks/labels after palette changes
         try { if (data && data.length) draw(); } catch {}

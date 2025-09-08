@@ -201,7 +201,11 @@
 
         // Catégories (triées) + échelle de couleurs harmonisée avec banner.html
         const categories = Array.from(new Set(rows.map(r => r.eagle_cathegory || 'Unknown'))).sort();
-        const color = d3.scaleOrdinal().domain(categories).range(d3.schemeTableau10);
+        const getCatColors = (n) => {
+          try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(_) {}
+          return (d3.schemeTableau10 ? d3.schemeTableau10.slice(0, n) : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'].slice(0, n));
+        };
+        const color = d3.scaleOrdinal().domain(categories).range(getCatColors(categories.length));
         const colorOf = (cat) => color(cat || 'Unknown');
 
         // Clear plots grid

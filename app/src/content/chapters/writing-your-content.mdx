@@ -6,6 +6,8 @@ import Wide from '../../components/Wide.astro';
 import Note from '../../components/Note.astro';
 import FullWidth from '../../components/FullWidth.astro';
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
+import ColorPicker from '../../components/ColorPicker.astro';
+import Palettes from '../../components/Palettes.astro';
 import audioDemo from '../assets/audio/audio-example.wav';
 import Accordion from '../../components/Accordion.astro';
 
@@ -130,7 +132,7 @@ Use the **color picker** below to see how the primary color affects the theme.
 #### Brand color
 
 <Sidenote>
-  <HtmlEmbed frameless src="demo/color-picker.html" />
+  <ColorPicker />
   <Fragment slot="aside">
     You can use the color picker to select the right color.
     
@@ -143,7 +145,7 @@ Use the **color picker** below to see how the primary color affects the theme.
 
 Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
 
-<HtmlEmbed frameless src="demo/palettes.html" />
+<Palettes />
 <br/>
 **Use color with care.**
 Color should rarely be the only channel of meaning.

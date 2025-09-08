@@ -33,11 +33,7 @@ const configAttr = typeof config === 'string' ? config : (config != null ? JSON.
   <div><!-- Fragment not found: {src} --></div>
  ) }
 
-<script type="module" is:inline>
-  // Ensure global color palettes generator is loaded once per page
-  import '../scripts/color-palettes.js';
-  export {};
-</script>
+
 
 <script>
   // Re-execute <script> tags inside the injected fragment (innerHTML doesn't run scripts)

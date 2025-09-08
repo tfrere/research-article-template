@@ -184,6 +184,8 @@
 <script>
   (() => {
     const THIS_SCRIPT = document.currentScript;
+    // Shared run->color mapping to keep legend and series perfectly in sync
+    let SHARED_RUN_COLOR = null;
     // Pretty label mapping for metric keys
     const prettyMetricLabel = (key) => {
       if (!key) return '';
@@ -270,8 +272,12 @@
       let axisLabelY = 'Value';
       
       // Colors and markers (match original embeds)
-      const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
-      const pool = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])];
+      const getRunColors = (n) => {
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(_) {}
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])].slice(0, n);
+      };
+      const pool = getRunColors(12);
       // Shapes supprimés: on n'utilise que la couleur
       // Ready signal for async load completion
       let readyResolve = null;
@@ -371,9 +377,15 @@
         }
 
         axisLabelY = isRankStrict ? 'Rank' : prettyMetricLabel(metricKey);
+        const tChange = (window.d3 && d3.transition) ? d3.transition().duration(260).ease(d3.easeCubicOut) : null;
         const { innerWidth, innerHeight } = updateScales();
 
-        const series = runs.map((r, i) => ({ run:r, color: pool[i % pool.length], values:(map[r]||[]).slice().sort((a,b)=>a.step-b.step).map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value), stderr: pt.stderr } : pt) }));
+        const colorForRun = (run, idx) => {
+          if (SHARED_RUN_COLOR && Object.prototype.hasOwnProperty.call(SHARED_RUN_COLOR, run)) return SHARED_RUN_COLOR[run];
+          const j = (typeof idx === 'number' ? idx : runs.indexOf(run));
+          return pool[(j >= 0 ? j : 0) % pool.length];
+        };
+        const series = runs.map((r, i) => ({ run:r, color: colorForRun(r, i), values:(map[r]||[]).slice().sort((a,b)=>a.step-b.step).map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value), stderr: pt.stderr } : pt) }));
 
         // zones ± stderr (métriques non rank)
         gAreas.selectAll('*').remove();
@@ -407,10 +419,10 @@
           .attr('opacity',0)
           .attr('stroke', d=>d.color)
           .attr('d', d=>lineGen(d.values))
-          .transition().duration(450).ease(d3.easeCubicOut)
+          .transition(tChange || undefined)
           .attr('opacity',0.9);
         paths
-          .transition().duration(450).ease(d3.easeCubicOut)
+          .transition(tChange || undefined)
           .attr('stroke', d=>d.color)
           .attr('opacity',0.9)
           .attr('d', d=>lineGen(d.values));
@@ -421,14 +433,16 @@
         const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
         ptsSel.enter().append('circle').attr('class','pt')
           .attr('data-run', d=>d.run)
-          .attr('r', 2)
+          .attr('r', 1.5)
           .attr('fill', d=>d.color)
           .attr('fill-opacity', 0.6)
           .attr('stroke', 'none')
           .attr('cx', d=>xScale(d.step))
           .attr('cy', d=>yScale(d.value))
           .merge(ptsSel)
-          .transition().duration(180)
+          .attr('fill', d=>d.color)
+          .transition(tChange || undefined)
+          .attr('r', 2)
           .attr('cx', d=>xScale(d.step))
           .attr('cy', d=>yScale(d.value));
         ptsSel.exit().remove();
@@ -579,13 +593,22 @@
             if (r.ok && window.d3 && window.d3.csvParse) {
               const txt = await r.text();
               const rows = window.d3.csvParse(txt);
-              const runList = Array.from(new Set(rows.map(row => String(row.run||'').trim()).filter(Boolean)));
-              const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
-              const pool = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...((window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'])];
-              legendItemsHost.innerHTML = runList.map((name, i)=> {
-                const color = pool[i % pool.length];
+              const runList = Array.from(new Set(rows.map(row => String(row.run||'').trim()).filter(Boolean))).sort();
+              const poolLegend = (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function')
+                ? window.ColorPalettes.getColors('categorical', runList.length)
+                : (()=>{ const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB'; return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...((window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'])]; })();
+              // Build shared run->color map once
+              SHARED_RUN_COLOR = {};
+              runList.forEach((name, i) => { SHARED_RUN_COLOR[name] = poolLegend[i % poolLegend.length]; });
+              legendItemsHost.innerHTML = runList.map((name) => {
+                const color = SHARED_RUN_COLOR[name];
                 return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`;
               }).join('');
+              // Re-render all cells with the shared mapping to ensure perfect sync
+              try {
+                const currentMetric = (select && select.value) || def;
+                if (currentMetric) applyAll(currentMetric);
+              } catch {}
               // Legend hover ghosting across all cells
               legendItemsHost.querySelectorAll('.item').forEach(el => {
                 el.addEventListener('mouseenter', () => {

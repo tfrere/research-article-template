@@ -105,7 +105,7 @@
       const gOutText = gRoot.append('g').attr('class','out-probs');
 
       // Network structure (compact: 8 -> 8 -> 10)
-      const layerSizes = [8, 8, 8];
+      const layerSizes = [8, 8, 10];
       const layers = layerSizes.map((n, li)=> Array.from({length:n}, (_, i)=>({ id:`L${li}N${i}`, layer: li, index: i, a:0 })));
       // Links only between hidden->hidden and hidden->output
       const links = [];

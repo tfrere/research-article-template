@@ -214,6 +214,7 @@
     };
     window.ColorPalettes = {
       refresh: updatePalettes,
+      notify: () => { try { const primary = getPrimaryHex(); document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary } })); } catch {} },
       getPrimary: () => getPrimaryHex(),
       getColors: (key, count = 6) => {
         const primary = getPrimaryHex();

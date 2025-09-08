@@ -3,7 +3,7 @@
 ### Quickstart (TL;DR)
 - Create a single self-contained HTML fragment: root div + scoped style + IIFE script.
 - Draw marks/axes in SVG; render UI (legend and controls) in HTML.
-- Place legend and controls ABOVE the chart. Include a legend title "Legend" and a select labeled "Metric" when relevant.
+- Place legend and controls BELOW the chart (header appended after the chart). Include a legend title "Legend" and a select labeled "Metric" when relevant.
 - Load data from public `/data` first, then fall back to `assets/data`.
 - Use `window.ColorPalettes` for colors; stick to CSS variables for theming.
 
@@ -160,27 +160,25 @@ Minimal skeleton:
   - Prefer CSS-only where possible.
 - Keep backgrounds light and borders subtle; the outer card frame is handled by `HtmlEmbed.astro`.
 
-Standard axis/tick/grid colors (reuse across charts):
+Standard axis/tick/grid colors (global variables from `_variables.css`):
 
 ```css
-.your-root-class {
-  --axis-color: rgba(0,0,0,0.25);
-  --tick-color: rgba(0,0,0,0.55);
-  --grid-color: rgba(0,0,0,0.05);
+/* Provided globally */
+:root {
+  --axis-color: var(--text-color);
+  --tick-color: var(--muted-color);
+  --grid-color: rgba(0,0,0,.08);
 }
-[data-theme="dark"] .your-root-class {
-  --axis-color: rgba(255,255,255,0.25);
-  --tick-color: rgba(255,255,255,0.70);
-  --grid-color: rgba(255,255,255,0.08);
+[data-theme="dark"] {
+  --axis-color: var(--text-color);
+  --tick-color: var(--muted-color);
+  --grid-color: rgba(255,255,255,.10);
 }
-/* Example axis application (D3) */
-g.axis-x, g.axis-y { }
-/* In JS after calling axis: */
-// g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
-// g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
-/* Gridlines: */
-// grid.call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
-//   .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)'));
+/* Apply inside charts */
+.your-root-class .axes path,
+.your-root-class .axes line { stroke: var(--axis-color); }
+.your-root-class .axes text { fill: var(--tick-color); }
+.your-root-class .grid line { stroke: var(--grid-color); }
 ```
 
 #### 3.1) Text on fixed-colored backgrounds
