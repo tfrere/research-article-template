@@ -82,7 +82,27 @@
         const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
         return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase();
       };
-      const getName = (hex) => { const h = hexToHsl(hex).h || 0; const labels=['Red','Orange','Yellow','Lime','Green','Cyan','Blue','Indigo','Violet','Magenta']; const idx=Math.round(((h%360)/360)*(labels.length-1)); return labels[idx]; };
+      // Precompute hues for the provided color-name list
+      const NAME_HUES = COLOR_NAMES.map((c) => {
+        const hh = hexToHsl(c.hex).h || 0;
+        return { name: c.name, hue: hh };
+      });
+      // Pick closest name by circular hue distance; fallback to coarse labels
+      const getName = (hex) => {
+        const h = hexToHsl(hex).h || 0;
+        let bestName = '—';
+        let best = 361;
+        for (let i = 0; i < NAME_HUES.length; i++) {
+          const hh = NAME_HUES[i].hue;
+          const d = Math.abs(hh - h);
+          const dist = Math.min(d, 360 - d);
+          if (dist < best) { best = dist; bestName = NAME_HUES[i].name; }
+        }
+        if (bestName !== '—') return bestName;
+        const labels=['Red','Orange','Yellow','Lime','Green','Cyan','Blue','Indigo','Violet','Magenta'];
+        const idx=Math.round(((h%360)/360)*(labels.length-1));
+        return labels[idx];
+      };
       const updateUI = (h, adjusting) => { const rect = slider.getBoundingClientRect(); const r=Math.min(getKnobRadius(), Math.max(0, rect.width/2 - 1)); const t=Math.max(0, Math.min(1, (h/360))); const leftPx = r + t * Math.max(0, (rect.width - 2*r)); if (knob) knob.style.left = (leftPx/rect.width*100) + '%'; if (hueValue) hueValue.textContent=`${Math.round(h)}°`; if (slider) slider.setAttribute('aria-valuenow', String(Math.round(h))); const L=62, S=72; const baseHex=hslToHex(h,S,L); if (currentSwatch) currentSwatch.style.background=baseHex; if (currentName) currentName.textContent=getName(baseHex); if (currentHex) currentHex.textContent=baseHex; if (currentLch) currentLch.textContent = `HSL ${L}, ${S}, ${Math.round(h)}°`; if (currentRgb){ const hex=baseHex.replace('#',''); const R=parseInt(hex.slice(0,2),16), G=parseInt(hex.slice(2,4),16), B=parseInt(hex.slice(4,6),16); currentRgb.textContent=`RGB ${R}, ${G}, ${B}`; } const hoverHex=hslToHex(h, Math.max(0,S-10), Math.max(0, L-8)); const rootEl=document.documentElement; rootEl.style.setProperty('--primary-color', baseHex); rootEl.style.setProperty('--primary-color-hover', hoverHex); };
       const getHueFromEvent = (ev) => { const rect=slider.getBoundingClientRect(); const clientX=ev.touches ? ev.touches[0].clientX : ev.clientX; const x = clientX - rect.left; const r=Math.min(getKnobRadius(), Math.max(0, rect.width/2 - 1)); const effX=Math.max(r, Math.min(rect.width - r, x)); const denom=Math.max(1, rect.width - 2*r); const t=(effX - r) / denom; return t*360; };
       const unsubscribe = bus.subscribe(({ sourceId, hue, adjusting }) => { if (sourceId === instanceId) return; updateUI(hue, adjusting); });

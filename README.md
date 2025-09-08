@@ -12,18 +12,19 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 
 ## Find recent duplicated Spaces
 
-This repository includes a small utility to list public Spaces created in the last N days that were duplicated from a given source Space.
+This repository includes a small Poetry tool under `tools/duplicated-spaces` to list public Spaces created in the last N days that were duplicated from a given source Space.
 
-Prerequisites:
+Setup:
 
 ```bash
-pip install huggingface_hub requests
+cd tools/duplicated-spaces
+poetry install --no-root
 ```
 
 Usage:
 
 ```bash
-python app/scripts/find_duplicated_spaces.py --source owner/space-name --days 14
+poetry run find-duplicated-spaces --source owner/space-name --days 14
 ```
 
 Options:
@@ -40,11 +41,11 @@ Examples:
 export HF_TOKEN=hf_xxx
 
 # Find Spaces duplicated from tfrere/my-space in the last 14 days
-python app/scripts/find_duplicated_spaces.py --source tfrere/my-space
+poetry run find-duplicated-spaces --source tfrere/my-space
 
 # Use a 7-day window and explicit token
-python app/scripts/find_duplicated_spaces.py --source tfrere/my-space --days 7 --token $HF_TOKEN
+poetry run find-duplicated-spaces --source tfrere/my-space --days 7 --token $HF_TOKEN
 ```
 
-The script first checks card metadata (e.g., `duplicated_from`) and optionally falls back to parsing the README frontmatter for robustness.
+The tool first checks card metadata (e.g., `duplicated_from`) and optionally falls back to parsing the README frontmatter for robustness.
 

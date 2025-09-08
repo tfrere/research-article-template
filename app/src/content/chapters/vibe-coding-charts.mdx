@@ -1,6 +1,9 @@
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
+import Note from '../../components/Note.astro';
 
 ## Vibe coding charts
+
+<Note emoji="⚠️" variant="danger">This is a work in progress. It may change quickly.</Note>
 
 ### Prompt
 
@@ -62,7 +65,9 @@ They can be found in the `app/src/content/embeds` folder and you can also use th
 ---
 <HtmlEmbed src="d3-bar.html" title="d3-bar: Memory usage with recomputation" desc={`Figure 6: Memory usage with recomputation.<br/>Credits: <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">Ultrascale playbook</a>`}/>
 --- 
-  <HtmlEmbed src="d3-pie.html" title="d3-pie: Pie charts by category" align="center" frameless desc='Figure 7: Comparison across thresholds for all four filters individually: Formatting, Relevance, Visual Dependency, and Image-Question Correspondence <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>' /> 
+  <HtmlEmbed src="d3-pie.html" title="d3-pie: Pie charts by category" desc='Figure 7: Comparison across thresholds for all four filters individually: Formatting, Relevance, Visual Dependency, and Image-Question Correspondence <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>' /> 
+--- 
+  <HtmlEmbed src="d3-pie-quad.html" title="d3-pie-quad: Quad donuts by metric" align="center" frameless desc={'Quad view: Answer Tokens, Number of Samples, Number of Turns, Number of Images.'} />
 ---
 <HtmlEmbed src="d3-scatter.html" title="d3-scatter: 2D projection by category" desc={`Figure 8: Dataset visualization via UMAP <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>`} frameless align="center" />
 ---

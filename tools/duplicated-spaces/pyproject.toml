@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "duplicated-spaces"
+version = "0.1.0"
+description = "Find recent Hugging Face Spaces duplicated from a given Space"
+authors = ["thibaud frere <>"]
+readme = "README.md"
+packages = [{ include = "duplicated_spaces" }]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+huggingface_hub = "^0.24.0"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+
+[tool.poetry.scripts]
+find-duplicated-spaces = "duplicated_spaces.cli:main"
+
+[build-system]
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
+
+

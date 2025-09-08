@@ -405,6 +405,52 @@ function makeLegend(seriesNames, colorFor) {
 - Axes/labels are legible at small widths.
 - Code is easy to skim: clear naming, early returns, short functions.
 
+### 14.1) Agent Checklist (operational)
+- Ensure root: one `<div .d3-xyz>` + scoped `<style>` + IIFE `<script>`
+- Gate mount with `data-mounted` and select closest previous sibling instance
+- Load D3 once via `#d3-cdn-script`; verify `window.d3.select`
+- Colors from `window.ColorPalettes` with CSS variable fallbacks
+- Legend present with visible title “Legend”; HTML-based, not SVG
+- Controls in HTML only; if metric select exists, label text must be “Metric”
+- Tooltip is a single absolute `.d3-tooltip` within the container
+- Data load public-first; implement `fetchFirstAvailable([...])` with `cache:'no-cache'`
+- Read optional HtmlEmbed `data-datafiles` and `data-config` per section 6.1
+- Responsiveness: width from container; `ResizeObserver` fallback to `window.resize`
+- Axis/tick/grid use CSS variables (`--axis-color`, `--tick-color`, `--grid-color`)
+- SVG for marks only; UI/legend/controls in HTML
+- No globals leaked; no external runtime deps besides D3/TFJS when necessary
+- Error path: append small red `<pre>` with a readable message inside container
+- Print-friendly: `svg` width 100%, height responsive, avoid heavy bitmaps
+
+### 14.2) Definition of Done (DoD)
+- Implements root structure and mounting guard
+- Uses `ColorPalettes` (with safe fallback) and CSS variables for theming
+- Legend with title “Legend” and consistent swatch style (14×14, r=3, 1px border)
+- Metric select labelled “Metric” when present; accessible markup (`<label for>`)
+- Tooltip works (show on hover, hide on leave, positioned via `d3.pointer`)
+- Public-first data loading + HtmlEmbed prop support when applicable
+- Responsive: resizes smoothly; axes and grid legible at small widths
+- No console errors; graceful error message on load failures
+- File is self‑contained; no globals; lints pass
+
+### 14.3) Prompt modèle (for the agent)
+```markdown
+You are implementing a self-contained D3 embed fragment.
+Name: d3-<type>.html (root class .d3-<type>)
+Requirements:
+- One root div + scoped style + IIFE script; no globals
+- UI in HTML (legend+controls), chart primitives in SVG
+- Legend title text exactly “Legend”; swatch 14×14, r=3, 1px border
+- If a select toggles metrics, visible label text exactly “Metric”
+- Colors via window.ColorPalettes (categorical/sequential/diverging), fallback to CSS variables or Tableau10
+- Tooltip: single .d3-tooltip inside container, HTML, positioned via d3.pointer
+- Data loading: try `/data/<file>` first, then `./assets/data/<file>`, `../assets/data/<file>`; implement fetchFirstAvailable(paths)
+- Read optional HtmlEmbed attributes `data-datafiles` and `data-config` if present (see section 6.1)
+- Responsiveness: compute width from container, use ResizeObserver; axis/tick/grid via CSS vars
+- Error handling: append small red <pre> inside container on failure
+Deliver one .html file with only the required elements.
+```
+
 ### 15) Example: small bar chart (structure only)
 ```html
 <div class="d3-mini-bar"></div>
