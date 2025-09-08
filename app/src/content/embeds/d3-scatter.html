@@ -1,7 +1,35 @@
-<div class="d3-scatter" style="width:100%;margin:10px 0;"></div>
+<div class="d3-scatter"  ></div>
 <style>
   /* Frameless: no controls, no axes, only dots */
   .d3-scatter svg { display: block; }
+  /* Tooltip refined styling (align with filters-quad) */
+  .d3-scatter .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  .d3-scatter .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+  }
+  .d3-scatter .d3-tooltip__inner > div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+  .d3-scatter .d3-tooltip__inner > div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+  .d3-scatter .d3-tooltip__inner > div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
 </style>
 <script>
   (() => {
@@ -29,7 +57,7 @@
       let tip = container.querySelector('.d3-tooltip'); let tipInner;
       if (!tip) {
         tip = document.createElement('div'); tip.className = 'd3-tooltip';
-        Object.assign(tip.style, { position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none', padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)', background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease' });
+        Object.assign(tip.style, { position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none', padding:'10px 12px', borderRadius:'12px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)', background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity:'0', transition:'opacity .12s ease', backdropFilter:'saturate(1.12) blur(8px)' });
         tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
@@ -48,6 +76,8 @@
       const y = d3.scaleLinear();
       const color = d3.scaleOrdinal();
       const radius = () => 4;
+      let isDarkMode = false;
+      function getDotStrokeColor(){ return 'var(--muted-color)'; }
 
       // Data loading (real): banner visualization positions by category
       async function fetchFirstAvailable(paths){
@@ -68,9 +98,10 @@
 
       function updateScales(data){
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
-        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
-        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+        isDarkMode = !!isDark;
+        const axisColor = "var(--page-bg)";
+        const tickColor = "var(--page-bg)";
+        const gridColor = "var(--page-bg)";
 
         width = container.clientWidth || 800; height = Math.max(260, Math.round(width/3)); svg.attr('width', width).attr('height', height);
         const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom; gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
@@ -111,17 +142,24 @@
         dots.enter().append('circle').attr('class','dot')
           .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
           .attr('fill', fillFor).attr('fill-opacity', 0.85)
+          .attr('stroke', getDotStrokeColor()).attr('stroke-width', '0.75px')
           .on('mouseenter', function(ev, d){
-            d3.select(this).attr('stroke','rgba(0,0,0,0.9)').attr('stroke-width', 1);
-            tipInner.innerHTML = `<div><strong>${d.label || 'Item'}</strong></div><div>(x: ${d.x.toFixed(2)}, y: ${d.y.toFixed(2)})</div><div>Category: ${d.group}</div>`;
+            d3.select(this).style('stroke','var(--text-color)').style('stroke-width','1.5px').attr('fill-opacity', 1);
+            const swatch = `<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="${fillFor(d)}" /></svg>`;
+            tipInner.innerHTML = `
+              <div><strong>${d.label || 'Item'}</strong></div>
+              <div style="display:flex;align-items:center;gap:6px;">${swatch}<span>${d.group}</span></div>
+              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><strong>x</strong><span style="margin-left:auto;text-align:right;">${d.x.toFixed(2)}</span></div>
+              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><strong>y</strong><span style="margin-left:auto;text-align:right;">${d.y.toFixed(2)}</span></div>`;
             tip.style.opacity = '1';
           })
           .on('mousemove', function(ev){ const [mx, my] = d3.pointer(ev, container); const ox=12, oy=12; tip.style.transform = `translate(${Math.round(mx+ox)}px, ${Math.round(my+oy)}px)`; })
-          .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','none'); })
+          .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).style('stroke', getDotStrokeColor()).style('stroke-width','0.75px').attr('fill-opacity', 0.85); })
           .merge(dots)
           .transition().duration(180)
           .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
-          .attr('fill', fillFor).attr('fill-opacity', 0.85);
+          .attr('fill', fillFor).attr('fill-opacity', 0.85)
+          .attr('stroke', getDotStrokeColor()).attr('stroke-width','0.75px');
         dots.exit().remove();
 
         // Compute centroids per category
@@ -173,14 +211,14 @@
           .attr('transform', d => `translate(${Math.round(d.x)}, ${Math.round(d.y)})`)
           .each(function(d){
             const base = color(d.category || 'Unknown') || 'var(--text-color)';
-            const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface-bg').trim() || '#fff';
+            const bg = getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim() || '#fff';
             const bgNode = this.querySelector('text.label-bg');
             const fgNode = this.querySelector('text.label-fg');
             if (bgNode) {
               bgNode.textContent = d.category;
-              bgNode.style.setProperty('fill', bg, 'important');
-              bgNode.style.setProperty('stroke', bg);
-              bgNode.style.setProperty('stroke-width', '10px');
+              bgNode.style.setProperty('fill', "var(--page-bg)", 'important');
+              bgNode.style.setProperty('stroke', "var(--page-bg)");
+              bgNode.style.setProperty('stroke-width', '8px');
               bgNode.style.setProperty('paint-order', 'stroke fill');
               bgNode.style.setProperty('font-weight','800');
               bgNode.style.setProperty('font-size','16px');

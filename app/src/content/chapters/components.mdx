@@ -28,14 +28,6 @@ You have to import them in the **.mdx** file you want to use them in.
 
 **Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
 
-| Prop                   | Required | Description                                                                                                         
-|------------------------|----------|-------------------------------------------------------
-| `zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
-| `downloadable`    | No       | Adds a download button to fetch the image file.                                                               
-| `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
-| `caption`              | No       | Adds a caption and credit.                                                                                          
-| `id`              | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                                                                                          
-
 
 <ResponsiveImage
   src={placeholder}
@@ -44,8 +36,17 @@ You have to import them in the **.mdx** file you want to use them in.
   id="placeholder-image"
   layout="fixed"
   alt="A placeholder image alt text"
-  caption={'A placeholder image description <span class="image-credit">From the <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a></span>'}
+  caption={'A placeholder image description<br/> Credit: <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a>'}
 />
+
+| Prop                   | Required | Description                                                                                                         
+|------------------------|----------|-------------------------------------------------------
+| `zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
+| `downloadable`    | No       | Adds a download button to fetch the image file.                                                               
+| `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
+| `caption`              | No       | Adds a caption and credit.                                                                                          
+| `id`              | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                                                                                          
+
 
 <Accordion title="Code example">
 ```mdx
@@ -229,92 +230,12 @@ import Note from '../../components/Note.astro'
 </Accordion>
 
 
-### HtmlEmbed
-
-The main purpose of the ```HtmlEmbed``` component is to **embed** a **Plotly** or **D3.js** chart in your article. **Libraries** are already imported in the template.
-
-They exist in the `app/src/content/embeds` folder.
-
-For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
-
-
-<HtmlEmbed src="d3-line-example.html" title="This is a chart title" desc="Some chart description" />
-
-| Prop        | Required | Description                                                                                      
-|-------------|----------|----------------------------------------------------------------------------------
-| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
-| `title`     | No       | Short title displayed above the card.                                                            
-| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
-| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
-| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
-| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
-
-<Accordion title="Code example">
-```mdx
-import HtmlEmbed from '../components/HtmlEmbed.astro'
-
-<HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
-<HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
-<HtmlEmbed src="d3-line-example.html" id="real-world-examples" title="D3 Line (with id)" desc="Linkable example via #real-world-examples" />
-```
-</Accordion>
-
-#### Data
-
-If you need to link your **HTML embeds** to **data files**, there is an **`assets/data`** folder for this.
-As long as your files are there, they will be served from the **`public/data`** folder.
-You can fetch them with this address: **`[domain]/data/your-data.ext`**
-
-<Note emoji="⚠️" variant="danger"><b>Be careful</b>, unlike images, <b>data files are not optimized</b> by Astro. You need to optimize them manually.</Note>
-
-#### Vibe coding charts
-
-If you are from the research field, it can be difficult to use **D3.js** charts instead of **Plotly**.
-Happily, **LLM's** are here to help you! In the `app/src/content/embeds` folder, there is a `vibe-code-d3-embeds-directives.md` file that you can use to vibe code **D3.js** charts.
-
-Inside this file, you will find every directives you need to code your own **HtmlEmbed** proof **D3.js** chart.
-
-#### Real world examples
-
-Here are some examples that were vibe coded to inspire you. 
-
-
----
-<HtmlEmbed src="d3-line.html" title="Training curves by metric" desc="Interactive time series across runs. Choose a metric; hover for values." />
----
-<HtmlEmbed src="d3-bar.html" title="D3 Memory usage with recomputation" desc={`Memory usage with recomputation — <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook?section=activation_recomputation" target="_blank">from the ultrascale playbook</a>`}/>
----
-  <HtmlEmbed src="d3-neural.html" id="neural-network-mnist-like" title="D3 Interactive neural network (MNIST-like)" desc="Visualize activations and class probabilities (0–9)." align="center" />
----
-  <HtmlEmbed src="d3-pie.html" title="D3 Pie charts by category" align="center" frameless />
----
-  <HtmlEmbed src="filters-quad.html" frameless desc={"Figure 7: Comparison across thresholds for all four filters individually: Formatting, Relevance, Visual Dependency, and Image-Question Correspondence <br/> Credit: "+'<a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>'} align="center" />
-
-{/* ---
-<HtmlEmbed src="d3-comparison.html" title="Image similarity: query vs top-k" desc="Compare a query image to top-k matches. Shows rank and similarity." />
----
-<HtmlEmbed src="d3-area-stacked.html" title="Relative metric shares over steps (by run)" desc="Stacked area of normalized metric contributions across training steps. Data: /data/all_ratings_luis.csv" />
----
-<HtmlEmbed src="d3-boxplot.html" title="Metric distribution across runs (box plots)" desc="Per-run distribution for a selected metric (median, quartiles, whiskers, outliers). Data: /data/all_ratings_luis.csv" />
-*/}
---- 
-<HtmlEmbed src="d3-scatter.html" title="2D projection by category" desc={`Dataset visualization via UMAP <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>`} frameless align="center" />
----
-
 ### Iframes
 
 You can embed external content in your article using **iframes**. For example, **TrackIO**, **Gradio** or even **Github code embeds** can be used this way.
 
-<small className="muted">Github code embed</small>
-<iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
-
-<small className="muted">TrackIO embed</small>
-<div className="">
-<iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="660" frameborder="0"></iframe>
-</div>
-
-<small className="muted">Gradio embed</small>
-<div className="">
+<small className="muted">Gradio embed example</small>
+<div className="card">
 <iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 </div>
 
@@ -325,3 +246,50 @@ You can embed external content in your article using **iframes**. For example, *
 <iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 ```
 </Accordion>
+
+
+### HtmlEmbed
+
+The main purpose of the ```HtmlEmbed``` component is to **embed** a **Plotly** or **D3.js** chart in your article. **Libraries** are already imported in the template.
+
+They exist in the `app/src/content/embeds` folder.
+
+For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
+
+
+<HtmlEmbed src="d3-line.html" title="This is a chart title" desc="Figure X: Some chart description<br/>Credit: <a href='https://example.com' target='_blank'>Example</a>" />
+
+| Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
+| `data`      | No       | Path (string) or array of paths (string[]) to data file(s) consumed by the embed.              
+| `config`    | No       | Optional object for embed options (e.g., `{ defaultMetric: 'average_rank' }`).                
+
+<Accordion title="Code example">
+```mdx
+import HtmlEmbed from '../components/HtmlEmbed.astro'
+
+<HtmlEmbed src="d3-line.html" title="This is a chart title" desc="Some chart description <br/>Credit: <a href='https://example.com' target='_blank'>Example</a>" />
+
+<HtmlEmbed
+  src="d3-line.html"
+  title="Comparison A vs B"
+  data={[ 'formatting_filters.csv', 'relevance_filters.csv' ]}
+  config={{ defaultMetric: 'average_rank' }}
+/>
+```
+</Accordion>
+
+
+#### Data
+
+If you need to link your **HTML embeds** to **data files**, there is an **`assets/data`** folder for this.
+As long as your files are there, they will be served from the **`public/data`** folder.
+You can fetch them with this address: **`[domain]/data/your-data.ext`**
+
+<Note emoji="⚠️" variant="danger"><b>Be careful</b>, unlike images, <b>data files are not optimized</b> by Astro. You need to optimize them manually.</Note>

@@ -1,12 +1,66 @@
-<div class="d3-bar" style="width:100%;margin:10px 0;"></div>
+<div class="d3-bar"  ></div>
 <style>
-  .d3-bar .controls { margin-top: 12px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-  .d3-bar .controls label { font-size: 12px; color: var(--muted-color); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 6px 10px; }
+  /* Theme-driven axis/tick/grid variables */
+  .d3-bar {
+    --axis-color: rgba(0,0,0,0.25);
+    --tick-color: rgba(0,0,0,0.55);
+    --grid-color: rgba(0,0,0,0.05);
+  }
+  [data-theme="dark"] .d3-bar {
+    --axis-color: rgba(255,255,255,0.25);
+    --tick-color: rgba(255,255,255,0.70);
+    --grid-color: rgba(255,255,255,0.08);
+  }
+  .d3-bar .controls { margin-top: 0; display: flex; gap: 16px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .d3-bar .controls .control-group { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .d3-bar .controls label { font-size: 12px; color: var(--text-color); font-weight: 700; }
   .d3-bar .controls select { font-size: 12px; padding: 8px 28px 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--surface-bg); color: var(--text-color); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; background-size: 12px; -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
   [data-theme="dark"] .d3-bar .controls select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); }
   .d3-bar .controls select:hover { border-color: var(--primary-color); }
   .d3-bar .controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
-  .d3-bar .legend { font-size: 12px; line-height: 1.35; color: var(--text-color); }
+  /* Header (legend + controls) placed after chart */
+  .d3-bar .chart-header { display: flex; align-items: flex-start; justify-content: flex-start; gap: 12px; margin: 8px 0 0 0; flex-wrap: wrap; }
+  .d3-bar .legend-bottom { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--text-color); }
+  .d3-bar .legend-bottom .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
+  .d3-bar .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-bar .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .d3-bar .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); display: inline-block; }
+  .d3-bar.hovering .legend-bottom .item.ghost { opacity: .35; }
+  .d3-bar.hovering .bars path.ghost { opacity: .35; }
+  .d3-bar .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  /* Apply axis/tick/grid purely via CSS */
+  .d3-bar .axes path,
+  .d3-bar .axes line { stroke: var(--axis-color); }
+  .d3-bar .axes text { fill: var(--tick-color); }
+  .d3-bar .grid line { stroke: var(--grid-color); }
+  /* Tooltip improvements */
+  .d3-bar .d3-tooltip { z-index: var(--z-tooltip); backdrop-filter: saturate(1.12) blur(8px); }
+  /* Hover/transition styling for bars and legend */
+  .d3-bar .bars path.bar { transition: opacity .12s ease, stroke .12s ease, stroke-width .12s ease; }
+  .d3-bar .bars path.bar.highlight { stroke: none; stroke-width: 0; }
+  .d3-bar.hovering .bars path.ghost { opacity: .25; }
+  .d3-bar .legend-bottom .item.hovered { color: inherit; }
+  .d3-bar .legend-bottom .item.hovered .swatch { border-color: var(--border-color); }
+  .d3-bar .d3-tooltip .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); display: inline-block; margin-right: 6px; vertical-align: -2px; }
+  /* Chart card wrapper */
+  .d3-bar .chart-card { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; }
+  /* Layout adjustments to give controls more space */
+  .d3-bar .chart-header {
+    padding-left: 8px;
+    padding-right: 8px;
+    gap: 20px;
+  }
+  .d3-bar .controls {
+    justify-content: flex-start;
+    min-width: 320px;
+  }
+  .d3-bar .controls .control-group {
+    min-width: 150px;
+  }
+  .d3-bar .controls select {
+    font-size: 13px;
+    min-width: 160px;
+  }
 </style>
 <script>
   (() => {
@@ -28,12 +82,7 @@
       // Data, matching bar.py
       const seqLabels = ["1024","2048","4096","8192"];
       const seqScale = [1,2,4,8];
-      const components = [
-        { key: 'parameters',  color: 'rgb(78, 165, 183)' },
-        { key: 'gradients',   color: 'rgb(227, 138, 66)' },
-        { key: 'optimizer',   color: 'var(--primary-color)' },
-        { key: 'activations', color: 'rgb(206, 192, 250)' },
-      ];
+      const componentKeys = ['parameters','gradients','optimizer','activations'];
       const modelSizes = ["1B","3B","8B","70B","405B"];
       const paramsMem = { "1B":4.0, "3B":13.3, "8B":26.0, "70B":244.0, "405B":1520.0 };
       const actCoeff = { "1B":3.6, "3B":9.3, "8B":46.2, "70B":145.7, "405B":1519.9 };
@@ -62,20 +111,32 @@
       // Controls
       const controls = document.createElement('div');
       controls.className = 'controls';
+      const groupSize = document.createElement('div'); groupSize.className = 'control-group';
       const labelSize = document.createElement('label'); labelSize.textContent = 'Model Size';
       const selSize = document.createElement('select'); modelSizes.forEach((s) => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSize.appendChild(o); });
-      labelSize.appendChild(selSize);
+      groupSize.appendChild(labelSize); groupSize.appendChild(selSize);
+      const groupRecomp = document.createElement('div'); groupRecomp.className = 'control-group';
       const labelRecomp = document.createElement('label'); labelRecomp.textContent = 'Recomputation';
       const selRecomp = document.createElement('select'); recomputeModes.forEach((m) => { const o = document.createElement('option'); o.value = m; o.textContent = m; selRecomp.appendChild(o); });
-      labelRecomp.appendChild(selRecomp);
+      groupRecomp.appendChild(labelRecomp); groupRecomp.appendChild(selRecomp);
 
-      // SVG scaffolding
-      const svg = d3.select(container).append('svg').attr('width','100%').style('display','block');
+      // Header (legend + controls) to be placed after chart
+      const header = document.createElement('div'); header.className = 'chart-header';
+      const legendBottom = document.createElement('div'); legendBottom.className = 'legend-bottom';
+      const legendTitle = document.createElement('div'); legendTitle.className = 'legend-title'; legendTitle.textContent = 'Legend';
+      const legendItems = document.createElement('div'); legendItems.className = 'items';
+      legendBottom.appendChild(legendTitle); legendBottom.appendChild(legendItems);
+      header.appendChild(legendBottom);
+      header.appendChild(controls);
+      // SVG scaffolding inside a card wrapper
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      // Place header after the chart card
+      container.appendChild(header);
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
       const gRoot = svg.append('g');
       const gGrid = gRoot.append('g').attr('class','grid');
       const gAxes = gRoot.append('g').attr('class','axes');
       const gBars = gRoot.append('g').attr('class','bars');
-      const gLegend = gRoot.append('foreignObject').attr('class','legend');
 
       // Tooltip
       container.style.position = container.style.position || 'relative';
@@ -91,7 +152,21 @@
       let width=800, height=360; const margin = { top: 16, right: 28, bottom: 56, left: 64 };
       const x0 = d3.scaleBand().paddingInner(0.25).paddingOuter(0.1); // groups (seq)
       const y = d3.scaleLinear();
-      const colorOf = (key) => components.find((c)=>c.key===key).color;
+      function getCategoricalColors(count){
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('categorical', count);
+          }
+        } catch(_) {}
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        const tableau = (window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'];
+        const pool = [primary, ...tableau];
+        const arr = []; for (let i=0;i<count;i++){ arr.push(pool[i % pool.length]); }
+        return arr;
+      }
+      const palette = getCategoricalColors(componentKeys.length);
+      const colorMap = new Map(componentKeys.map((k,i)=>[k, palette[i]]));
+      const colorOf = (key) => colorMap.get(key) || 'var(--primary-color)';
 
       function yMax(sizeKey, mode){
         const s = Y[mode][sizeKey];
@@ -99,23 +174,27 @@
         return max*1.05;
       }
 
-      function renderLegend(innerWidth, innerHeight){
-        const legendWidth = 160, legendHeight = 84;
-        gLegend.attr('x', 15).attr('y', -3).attr('width', legendWidth).attr('height', legendHeight);
-        const root = gLegend.selectAll('div').data([0]).join('xhtml:div');
-        root.html(`
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            ${components.map(c => `<div style="display:flex;align-items:center;gap:8px;"><span style="width:18px;height:10px;background:${c.color};border-radius:2px;display:inline-block"></span><span>${c.key}</span></div>`).join('')}
-          </div>
-        `);
+      function renderLegend(){
+        legendItems.innerHTML = componentKeys.map((key, i) => {
+          const color = palette[i];
+          return `<span class="item" data-key="${key}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${key}</span></span>`;
+        }).join('');
+        legendItems.querySelectorAll('.item').forEach((el) => {
+          el.addEventListener('mouseenter', () => {
+            const k = el.getAttribute('data-key'); if (!k) return;
+            container.classList.add('hovering');
+            gBars.selectAll('path.bar').classed('ghost', d => d && d.key !== k);
+            legendItems.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-key') !== k));
+          });
+          el.addEventListener('mouseleave', () => {
+            container.classList.remove('hovering');
+            gBars.selectAll('path.bar').classed('ghost', false);
+            legendItems.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+          });
+        });
       }
 
       function updateScales(){
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
-        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
-        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
-
         width = container.clientWidth || 800; height = Math.max(260, Math.round(width/3)); svg.attr('width', width).attr('height', height);
         const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom; gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
 
@@ -126,25 +205,25 @@
         gGrid.selectAll('*').remove();
         gGrid.selectAll('line').data(y.ticks(6)).join('line')
           .attr('x1', 0).attr('x2', innerWidth).attr('y1', (d)=>y(d)).attr('y2', (d)=>y(d))
-          .attr('stroke', gridColor).attr('stroke-width', 1).attr('shape-rendering', 'crispEdges');
+          .attr('stroke', 'var(--grid-color)').attr('stroke-width', 1).attr('shape-rendering', 'crispEdges');
 
         // Axes
         gAxes.selectAll('*').remove();
-        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x0)).call((g)=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','12px'); });
-        gAxes.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(d3.format('~f'))).call((g)=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','12px'); });
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x0)).call((g)=>{ g.selectAll('path, line').attr('stroke', 'var(--axis-color)'); g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px'); });
+        gAxes.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(d3.format('~f'))).call((g)=>{ g.selectAll('path, line').attr('stroke', 'var(--axis-color)'); g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px'); });
 
         // Axis labels
-        gAxes.append('text').attr('class','axis-label axis-label--x').attr('x', innerWidth/2).attr('y', innerHeight + 44).attr('text-anchor','middle').style('font-size','12px').style('fill', tickColor).text('Sequence Length');
-        gAxes.append('text').attr('class','axis-label axis-label--y').attr('text-anchor','middle').attr('transform', `translate(${-52},${innerHeight/2}) rotate(-90)`).style('font-size','12px').style('fill', tickColor).text('Memory (GB)');
+        gAxes.append('text').attr('class','axis-label axis-label--x').attr('x', innerWidth/2).attr('y', innerHeight + 44).attr('text-anchor','middle').text('Sequence Length');
+        gAxes.append('text').attr('class','axis-label axis-label--y').attr('text-anchor','middle').attr('transform', `translate(${-52},${innerHeight/2}) rotate(-90)`).text('Memory (GB)');
 
-        renderLegend(innerWidth, innerHeight);
+        renderLegend();
 
         return { innerWidth, innerHeight };
       }
 
       function drawBars(){
         const stacks = Y[currentMode][currentSize];
-        const series = components.map((c)=>({ key: c.key, color: c.color, values: stacks[c.key] }));
+        const series = componentKeys.map((key, i)=>({ key, color: palette[i], values: stacks[key] }));
         // Stack values
         const stacked = seqLabels.map((label, i) => {
           let acc = 0; const items = [];
@@ -153,6 +232,8 @@
             items.push({ key: s.key, color: s.color, i, y0, y1, xLabel: label, value: s.values[i], isBottom: idx === 0, isTop: idx === series.length - 1 });
             acc = y1;
           });
+          const total = acc;
+          items.forEach(it => { it.total = total; });
           return { label, items };
         });
 
@@ -187,14 +268,39 @@
           .attr('d', (d)=> roundedPath(0, y(d.y1), bandWidth, Math.max(0.5, y(d.y0) - y(d.y1)), d.isTop, d.isBottom))
           .attr('fill', (d)=>d.color)
           .on('mouseenter', function(ev, d){
-            d3.select(this).attr('stroke', 'rgba(0,0,0,0.85)').attr('stroke-width', 1);
-            tipInner.innerHTML = `<div><strong>${d.key}</strong></div><div><strong>Seq</strong> ${d.xLabel}</div><div><strong>Mem</strong> ${d.value.toFixed(1)} GB</div>`;
+            container.classList.add('hovering');
+            gBars.selectAll('path.bar').classed('ghost', (dd) => !(dd && dd.key === d.key));
+            const pct = d.total > 0 ? (d.value / d.total * 100) : 0;
+            tipInner.innerHTML = `
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="swatch" style="background:${d.color}"></span>
+                <strong>${d.key}</strong>
+              </div>
+              <div><strong>Seq</strong> ${d.xLabel}</div>
+              <div><strong>Mem</strong> ${d.value.toFixed(1)} GB <span style="opacity:.7">(${pct.toFixed(0)}%)</span></div>
+              <div style="opacity:.7"><strong>Total</strong> ${d.total.toFixed(1)} GB</div>
+            `;
             tip.style.opacity = '1';
+            const li = legendItems.querySelector(`.item[data-key="${d.key}"]`);
+            if (li) li.classList.add('hovered');
+            legendItems.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-key') !== d.key));
           })
           .on('mousemove', function(ev, d){
-            const [mx, my] = d3.pointer(ev, container); const offsetX = 12, offsetY = 12; tip.style.transform = `translate(${Math.round(mx+offsetX)}px, ${Math.round(my+offsetY)}px)`;
+            const [mx, my] = d3.pointer(ev, container);
+            const offsetX = 12, offsetY = 12;
+            const maxX = (container.clientWidth || 0) - (tip.offsetWidth + 6);
+            const maxY = (container.clientHeight || 0) - (tip.offsetHeight + 6);
+            const tx = Math.max(0, Math.min(mx + offsetX, maxX));
+            const ty = Math.max(0, Math.min(my + offsetY, maxY));
+            tip.style.transform = `translate(${Math.round(tx)}px, ${Math.round(ty)}px)`;
           })
-          .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','none'); })
+          .on('mouseleave', function(){
+            tip.style.opacity='0';
+            tip.style.transform='translate(-9999px, -9999px)';
+            container.classList.remove('hovering');
+            gBars.selectAll('path.bar').classed('ghost', false).classed('highlight', false);
+            legendItems.querySelectorAll('.item').forEach(it => { it.classList.remove('hovered'); it.classList.remove('ghost'); });
+          })
           .merge(bars)
           .transition().duration(200)
           .attr('d', (d)=> roundedPath(0, y(d.y1), bandWidth, Math.max(0.5, y(d.y0) - y(d.y1)), d.isTop, d.isBottom))
@@ -206,8 +312,8 @@
 
       // Boot
       update();
-      container.appendChild(controls);
-      controls.appendChild(labelSize); controls.appendChild(labelRecomp);
+      // controls already appended to footer; populate control groups
+      controls.appendChild(groupSize); controls.appendChild(groupRecomp);
       selSize.addEventListener('change', (e)=>{ currentSize = e.target.value; update(); });
       selRecomp.addEventListener('change', (e)=>{ currentMode = e.target.value; update(); });
 

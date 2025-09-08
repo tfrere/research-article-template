@@ -1,11 +1,21 @@
-<div class="d3-neural" style="width:100%;margin:10px 0;"></div>
+<div class="d3-neural"></div>
 <style>
+  .d3-neural { position: relative; width:100%;margin:0;}
   .d3-neural .controls { margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .d3-neural .controls label { font-size: 12px; color: var(--muted-color); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 6px 10px; }
   .d3-neural .controls input[type="range"]{ width: 160px; }
-  .d3-neural .panel { display:flex; gap:16px; align-items:center; }
-  .d3-neural .left { flex: 0 0 320px; display:flex; flex-direction:column; gap:8px; }
-  .d3-neural .right { flex: 1 1 auto; min-width: 0; }
+  .d3-neural .panel { display:flex; gap:8px; align-items:stretch; flex-wrap: nowrap; }
+  .d3-neural .left { flex: 0 0 33.333%; max-width: 33.333%; min-width: 160px; display:flex; flex-direction:column; gap:8px; }
+  .d3-neural .right { flex: 1 1 66.666%; max-width: 66.666%; min-width: 280px; display:flex; }
+  .d3-neural .right > svg { flex: 1 1 auto; height: 100%; }
+  .d3-neural .arrow-sep { flex: 0 0 18px; max-width: 18px; display:flex; align-items:center; justify-content:center; color: var(--muted-color); }
+  .d3-neural .arrow-sep svg { display:block; width: 16px; height: 16px; }
+  @media (max-width: 800px) {
+    .d3-neural .panel { flex-direction: column; }
+    .d3-neural .left,
+    .d3-neural .right { flex: 0 0 100%; max-width: 100%; min-width: 0; }
+    .d3-neural .arrow-sep { display: none; }
+  }
   .d3-neural canvas { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-bg); display:block; }
   .d3-neural .preview28 { display:grid; grid-template-columns: repeat(28, 1fr); gap: 1px; width: 100%; }
   .d3-neural .preview28 span { display:block; aspect-ratio:1/1; border-radius:2px; }
@@ -16,7 +26,8 @@
   .d3-neural .probs .tick { font-size: 10px; color: var(--muted-color); text-align:center; margin-top: 2px; }
   .d3-neural .canvas-wrap { position: relative; }
   .d3-neural .erase-btn { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--border-color);  }
-  .d3-neural .canvas-hint { position: absolute; top: 8px; left: 12px; font-size: 12px; font-weight: 700; color: rgb(156, 156, 156); pointer-events: none; }
+  .d3-neural .canvas-hint { position: absolute; top: 8px; left: 12px; font-size: 12px; font-weight: 700; color: rgba(0,0,0,.9); pointer-events: none; transition: opacity .12s ease; }
+  
 </style>
 <script>
   (() => {
@@ -44,12 +55,16 @@
       if (!container) return;
       if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
 
+      // (tooltip removed)
+
       // Layout: left (canvas + preview + controls), right (svg network)
       const panel = document.createElement('div');
       panel.className = 'panel';
       const left = document.createElement('div'); left.className = 'left';
+      const arrowSep = document.createElement('div'); arrowSep.className = 'arrow-sep';
+      arrowSep.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><line x1="3" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="17,7 22,12 17,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       const right = document.createElement('div'); right.className = 'right';
-      panel.appendChild(left); panel.appendChild(right);
+      panel.appendChild(left); panel.appendChild(arrowSep); panel.appendChild(right);
       container.appendChild(panel);
 
       // Canvas for drawing
@@ -62,6 +77,8 @@
       canvasWrap.appendChild(canvas);
       // Erase icon button (top-right)
       const eraseBtn = document.createElement('button'); eraseBtn.className='erase-btn button--ghost'; eraseBtn.type='button'; eraseBtn.setAttribute('aria-label','Clear');
+      // Hidden until the user interacts with the canvas
+      eraseBtn.style.display = 'none';
       eraseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg>';
       eraseBtn.addEventListener('click', () => clearCanvas());
       canvasWrap.appendChild(eraseBtn);
@@ -78,6 +95,7 @@
 
       // SVG network on right
       const svg = d3.select(right).append('svg').attr('width','100%').style('display','block');
+      const defs = svg.append('defs');
       const gRoot = svg.append('g');
       const gInput = gRoot.append('g').attr('class','input');
       const gInputLinks = gRoot.append('g').attr('class','input-links');
@@ -87,7 +105,7 @@
       const gOutText = gRoot.append('g').attr('class','out-probs');
 
       // Network structure (compact: 8 -> 8 -> 10)
-      const layerSizes = [8, 8, 10];
+      const layerSizes = [8, 8, 8];
       const layers = layerSizes.map((n, li)=> Array.from({length:n}, (_, i)=>({ id:`L${li}N${i}`, layer: li, index: i, a:0 })));
       // Links only between hidden->hidden and hidden->output
       const links = [];
@@ -239,13 +257,15 @@
       function dot(a,b){ let s=0; for (let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
 
       // Resize handling and node layout
-      let width=800, height=360; const margin = { top: 16, right: 24, bottom: 24, left: 24 };
+      let width=640, height=360; const margin = { top: 16, right: 8, bottom: 24, left: 8 };
       let inputGrid = { cell: 0, x: 0, y: 0, width: 0, height: 0 };
       function layoutNodes(){
         // Right panel width, and a non-square aspect ratio for clarity
-        width = Math.max(300, Math.round(right.clientWidth || 800));
-        height = Math.max(260, Math.round(width * 0.45));
+        width = Math.max(280, Math.round(right.clientWidth || 640));
+        height = Math.max(260, Math.round(width * 0.56));
         svg.attr('width', width).attr('height', height);
+        // Match canvas height to SVG height so both columns align vertically
+        try { canvas.style.height = '100%'; canvasWrap.style.height = height + 'px'; } catch(_) {}
         const innerW = width - margin.left - margin.right; const innerH = height - margin.top - margin.bottom;
         gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
         // Input grid layout (28x28) at left — cap width to a fraction of innerW
@@ -255,31 +275,46 @@
         let cell = Math.max(3, Math.min(cellByHeight, cellByWidth));
         let gridH = cell * 28; let gridY = Math.floor((innerH - gridH)/2);
         inputGrid = { cell, x: 0, y: gridY, width: cell*28, height: gridH };
-        // Ensure there is always space for layers to the right
-        const minRightPad = 40; // minimal free space at right
-        let startX = inputGrid.width + 24;
-        if (startX > innerW - minRightPad) {
-          // Shrink grid to free horizontal room
-          cell = Math.max(3, Math.floor((innerW - minRightPad - 24) / 28));
+        // Equal horizontal gaps: grid -> L0 -> L1 -> L2
+        const nLayers = layerSizes.length; // 3
+        const rightLabelPad = 36; // smaller pad; use more width for spreading layers
+        const minGap = 28; const maxGap = 260;
+        // Ensure enough free space; shrink grid if needed
+        const desiredMinFree = rightLabelPad + nLayers * minGap; // 3 equal gaps
+        if (inputGrid.width + desiredMinFree > innerW) {
+          cell = Math.max(3, Math.floor((innerW - desiredMinFree) / 28));
           gridH = cell * 28; gridY = Math.floor((innerH - gridH)/2);
           inputGrid = { cell, x: 0, y: gridY, width: cell*28, height: gridH };
-          startX = inputGrid.width + 24;
         }
-        const nLayers = layerSizes.length;
-        // Reserve space at right for output labels/bars so they don't get cut off
-        const rightLabelPad = 100; // px reserved for digit label + bar
-        const availableW = Math.max(100, innerW - startX - rightLabelPad);
-        // Reduce inter-layer spacing slightly; keep a sane min/max
-        const stepX = nLayers > 1 ? Math.min(200, Math.max(28, availableW / (nLayers - 1))) : 0;
-        const xs = Array.from({ length: nLayers }, (_, li) => startX + stepX * li);
+        const gridRight = inputGrid.x + inputGrid.width;
+        const freeW = Math.max(nLayers * minGap, innerW - gridRight - rightLabelPad);
+        const gapX = Math.min(maxGap, Math.max(minGap, Math.floor(freeW / nLayers)));
+        const xs = Array.from({ length: nLayers }, (_, li) => gridRight + gapX * (li + 1));
         // Y positions evenly spaced per layer
         layers.forEach((nodes, li)=>{
-          const n = nodes.length; const spacing = innerH/(n+1);
-          nodes.forEach((nd, i)=>{ nd.x = xs[li]; nd.y = spacing*(i+1); });
+          const n = nodes.length;
+          if (n <= 1) {
+            nodes.forEach((nd)=>{ nd.x = xs[li]; nd.y = innerH/2; });
+          } else {
+            const occupancy = 0.9; // use 90% of vertical space
+            const span = innerH * occupancy;
+            const topPad = (innerH - span) / 2;
+            const spacing = span / (n - 1);
+            nodes.forEach((nd, i)=>{ nd.x = xs[li]; nd.y = topPad + i*spacing; });
+          }
         });
       }
 
       let lastX28 = new Float32Array(28*28);
+      function nodeRadiusForNode(n){
+        const a = Math.max(0, Math.min(1, (n && typeof n.a === 'number') ? n.a : 0));
+        if (n && n.layer === 2) {
+          // Output nodes: variable radius based on activation
+          return 8 + 10 * a; // ~8–18
+        }
+        // Hidden/feature nodes: variable radius based on activation
+        return 5 + 5 * a; // ~5–10
+      }
       function renderInputGrid(){
         if (!inputGrid || inputGrid.cell <= 0) return;
         const data = Array.from({ length: 28*28 }, (_, i) => ({ i, v: lastX28[i] || 0 }));
@@ -292,32 +327,110 @@
           .merge(sel)
           .attr('x', d => inputGrid.x + (d.i % 28) * inputGrid.cell + offset)
           .attr('y', d => inputGrid.y + Math.floor(d.i / 28) * inputGrid.cell + offset)
-          .attr('fill', d => { const g = 255 - Math.round(d.v * 255); return `rgb(${g},${g},${g})`; })
+          .attr('fill', d => {
+            // Increase perceived contrast of the input grid by applying a gamma curve
+            const k = Math.pow(Math.max(0, Math.min(1, d.v)), 0.6); // gamma < 1 → darker darks
+            const g = 255 - Math.round(k * 255);
+            return `rgb(${g},${g},${g})`;
+          })
           .attr('stroke', 'none');
         sel.exit().remove();
+
+        // Border around the input grid area
+        const borderSel = gInput.selectAll('rect.input-border').data([0]);
+        borderSel.enter().append('rect').attr('class','input-border')
+          .attr('fill','none')
+          .attr('rx', 0).attr('ry', 0)
+          .attr('stroke','var(--text-color)')
+          .attr('stroke-opacity', 0.25)
+          .attr('stroke-width', 1)
+          .lower()
+          .merge(borderSel)
+          .attr('x', inputGrid.x-1)
+          .attr('y', inputGrid.y-1)
+          .attr('width', inputGrid.width+1)
+          .attr('height', inputGrid.height+1);
+
+        // Centered label above the input grid
+        const labelSel = gInput.selectAll('text.input-label').data([0]);
+        labelSel.enter().append('text').attr('class','input-label')
+          .attr('text-anchor','middle')
+          .style('font-size','12px')
+          .style('font-weight','700')
+          .style('fill','var(--muted-color)')
+          .merge(labelSel)
+          .attr('x', inputGrid.x + inputGrid.width / 2)
+          .attr('y', Math.max(12, inputGrid.y - 10))
+          .text('Input 28×28');
+      }
+
+      // Compute link path between two layered nodes using their current radii
+      function computeLinkD(d){
+        const s = layers[d.s.l][d.s.i];
+        const t = layers[d.t.l][d.t.j];
+        if (!s || !t) return '';
+        const rs = nodeRadiusForNode(s);
+        const rt = nodeRadiusForNode(t);
+        // Use fixed anchors on circle edges for all inter-layer links (except grid->L0 handled elsewhere)
+        const x1 = s.x + rs, y1 = s.y;    // right edge of source circle
+        const x2 = t.x - rt, y2 = t.y;    // left edge of target circle
+        const dx = (x2 - x1) * 0.45;
+        return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
       }
 
       function renderInputLinks(){
         // Draw bundle-like links from input grid right edge to first layer nodes (features)
         const firstLayer = layers[0];
         if (!firstLayer || !inputGrid || inputGrid.cell <= 0) { gInputLinks.selectAll('path').remove(); return; }
-        const innerH = height - margin.top - margin.bottom;
         const x0 = inputGrid.x + inputGrid.width;
+        // Define a centered vertical band (half grid height) and distribute sources evenly
+        const k = firstLayer.length;
+        const band = inputGrid.height * 0.5;
+        const centerY = inputGrid.y + inputGrid.height / 2;
+        const yStart = centerY - band / 2;
+        const spacing = k > 1 ? band / (k - 1) : 0;
         const paths = firstLayer.map((n, idx) => {
-          const yTarget = n.y;
-          // source y roughly aligned to node y, clamped within the grid
-          const y0 = Math.max(inputGrid.y, Math.min(inputGrid.y + inputGrid.height, yTarget));
-          const dx = (n.x - x0) * 0.35;
-          return { x0, y0, x1: n.x - 12, y1: yTarget, c1x: x0 + dx, c1y: y0, c2x: n.x - dx, c2y: yTarget };
+          // source y from centered band, equidistant
+          const y0 = k > 1 ? (yStart + idx * spacing) : centerY;
+          // Target anchor: center of left edge of the node circle
+          const r = nodeRadiusForNode(n);
+          const x1 = n.x - r;
+          const y1 = n.y;
+          const dx = (x1 - x0) * 0.35;
+          return { x0, y0, x1, y1, c1x: x0 + dx, c1y: y0, c2x: x1 - dx, c2y: y1, idx };
         });
         const sel = gInputLinks.selectAll('path.input-link').data(paths);
         sel.enter().append('path').attr('class','input-link')
           .attr('fill','none')
-          .attr('stroke','rgba(0,0,0,0.25)')
+          .attr('stroke','var(--text-color)')
+          .attr('stroke-opacity', 0.25)
           .attr('stroke-width', 1)
+          .attr('stroke-linecap','round')
           .merge(sel)
-          .attr('d', d => `M${d.x0},${d.y0} C${d.c1x},${d.c1y} ${d.c2x},${d.c2y} ${d.x1},${d.y1}`);
+          .attr('d', d => `M${d.x0},${d.y0} C${d.c1x},${d.c1y} ${d.c2x},${d.c2y} ${d.x1},${d.y1}`)
+          .attr('stroke','var(--text-color)');
         sel.exit().remove();
+      }
+
+      // Recompute input link path on the fly (used when node radii change)
+      function computeInputLinkD(idx){
+        const firstLayer = layers[0];
+        const n = firstLayer[idx]; if (!n) return '';
+        const x0 = inputGrid.x + inputGrid.width;
+        const k = firstLayer.length;
+        const band = inputGrid.height * 0.5;
+        const centerY = inputGrid.y + inputGrid.height / 2;
+        const yStart = centerY - band / 2;
+        const spacing = k > 1 ? band / (k - 1) : 0;
+        const y0 = k > 1 ? (yStart + idx * spacing) : centerY;
+        const yTarget = n.y;
+        const vx = n.x - x0; const vy = yTarget - y0; const L = Math.hypot(vx, vy) || 1;
+        const r = nodeRadiusForNode(n);
+        const x1 = n.x - (vx / L) * r;
+        const y1 = yTarget - (vy / L) * r;
+        const dx = (x1 - x0) * 0.35;
+        const c1x = x0 + dx, c1y = y0, c2x = x1 - dx, c2y = y1;
+        return `M${x0},${y0} C${c1x},${c1y} ${c2x},${c2y} ${x1},${y1}`;
       }
 
       function renderGraph(showEdges){
@@ -330,8 +443,11 @@
         nodeSel.enter().append('circle').attr('class','node')
           .attr('r', 10)
           .attr('cx', d=>d.x).attr('cy', d=>d.y)
-          .attr('fill', d=> d.layer===2 ? 'var(--primary-color)' : 'var(--surface-bg)')
-          .attr('stroke','var(--border-color)').attr('stroke-width',1)
+          .attr('fill', d=> d.layer===2 ? 'var(--page-bg)' : 'var(--primary-color)')
+          .attr('fill-opacity', d=> d.layer===2 ? 1 : 0.12)
+          .attr('stroke', d=> d.layer===2 ? 'var(--border-color)' : 'var(--border-color)')
+          .attr('stroke-width',1)
+          .attr('stroke-linejoin','round')
           .merge(nodeSel)
           .attr('cx', d=>d.x).attr('cy', d=>d.y)
           .attr('opacity', 1);
@@ -339,30 +455,38 @@
 
         // Labels for first hidden layer only (avoid stacking with output probs)
         const labels = [];
-        layers[0].forEach((n,i)=> labels.push({ x:n.x, y:n.y-16, txt:`f${i+1}` }));
+        layers[0].forEach((n,i)=> labels.push({ x:n.x-30, y:n.y+4, txt:`f${i+1}` }));
         const labSel = gLabels.selectAll('text').data(labels);
-        labSel.enter().append('text').style('font-size','12px').style('fill','var(--muted-color)')
-          .attr('x', d=>d.x).attr('y', d=>d.y)
+        labSel.enter().append('text')
+          .style('font-size','10px')
+          .style('fill','var(--muted-color)')
+          .style('paint-order','stroke')
+          .style('stroke','var(--page-bg)')
+          .style('stroke-width','3px')
+          .attr('x', d=>d.x)
+          .attr('y', d=>d.y)
           .text(d=>d.txt)
           .merge(labSel)
-          .attr('x', d=>d.x).attr('y', d=>d.y).text(d=>d.txt);
+          .style('paint-order','stroke')
+          .style('stroke','var(--page-bg)')
+          .style('stroke-width','5px')
+          .attr('x', d=>d.x)
+          .attr('y', d=>d.y)
+          .text(d=>d.txt);
         labSel.exit().remove();
 
         // Links as smooth curves
-        const pathFor = (d) => {
-          const x1 = layers[d.s.l][d.s.i].x, y1 = layers[d.s.l][d.s.i].y;
-          const x2 = layers[d.t.l][d.t.j].x, y2 = layers[d.t.l][d.t.j].y;
-          const dx = (x2 - x1) * 0.45;
-          return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
-        };
         const linkSel = gLinks.selectAll('path.link').data(links, d=> `${d.s.l}-${d.s.i}-${d.t.l}-${d.t.j}`);
         linkSel.enter().append('path').attr('class','link')
-          .attr('d', pathFor)
+          .attr('d', computeLinkD)
           .attr('fill','none')
-          .attr('stroke','rgba(0,0,0,0.25)')
+          .attr('stroke','var(--text-color)')
+          .attr('stroke-opacity', 0.25)
           .attr('stroke-width', d=> 0.5 + d.w*1.2)
+          .attr('stroke-linecap','round')
           .merge(linkSel)
-          .attr('d', pathFor)
+          .attr('d', computeLinkD)
+          .attr('stroke','var(--text-color)')
           .attr('stroke-width', d=> 0.5 + d.w*1.2);
         linkSel.exit().remove();
 
@@ -372,8 +496,17 @@
             if (!d || typeof d.digit !== 'number') return d3.select(this).attr('transform');
             const n = layers[2][d.digit];
             if (!n) return d3.select(this).attr('transform');
-            return `translate(${n.x+18},${n.y})`;
+            const offset = nodeRadiusForNode(n) + 8;
+            return `translate(${n.x + offset},${n.y})`;
           });
+        // Ensure clip-path circles are updated on resize
+        if (defs) {
+          const clips = defs.selectAll('clipPath.clip-node').data(layers[2], d=>d.id);
+          const ce = clips.enter().append('clipPath').attr('class','clip-node').attr('clipPathUnits','userSpaceOnUse').attr('id', d=>`clip-${d.id}`);
+          ce.append('circle');
+          clips.merge(ce).select('circle').attr('cx', d=>d.x).attr('cy', d=>d.y).attr('r', d=>nodeRadiusForNode(d));
+          clips.exit().remove();
+        }
       }
 
       function setNodeActivations(h1, h2, out){
@@ -385,50 +518,86 @@
         if (Array.isArray(out)) {
           for (let i=0;i<out.length;i++){ if (out[i] > bestProb){ bestProb = out[i]; argmaxIdx = i; } }
         }
-        // Color/opacity by activation
+        // Color/size by activation with smooth transitions
         gNodes.selectAll('circle.node')
-          .attr('fill', d=> d.layer===2 ? 'var(--primary-color)' : `rgba(0,0,0,${0.06 + 0.44*d.a})`)
-          .attr('stroke', d=> d.layer===2 ? 'var(--primary-color)' : 'var(--border-color)')
-          .attr('opacity', d=> 0.25 + 0.75*Math.min(1, d.a))
-          .attr('r', d=> 8 + 6*Math.min(1, d.a));
+          .transition().duration(180).ease(d3.easeCubicOut)
+          .attr('fill', d=> d.layer===2 ? 'var(--page-bg)' : 'var(--primary-color)')
+          .attr('fill-opacity', d=> d.layer===2 ? 1 : (0.12 + 0.58*Math.min(1, d.a||0)))
+          .attr('stroke', 'var(--primary-color)')
+          .attr('stroke-opacity', d=> (d.layer===2 ? 0.9 : (0.45 + 0.45*Math.min(1, d.a||0))))
+          .attr('opacity', d=> 0.55 + 0.45*Math.min(1, d.a||0))
+          .attr('r', d=> nodeRadiusForNode(d));
         // Link opacity by activation flow
         gLinks.selectAll('path.link')
-          .attr('stroke', d=>{
+          .transition().duration(180).ease(d3.easeCubicOut)
+          .attr('d', computeLinkD)
+          .attr('stroke','var(--text-color)')
+          .attr('stroke-opacity', d=>{
             const aS = layers[d.s.l][d.s.i].a || 0; const aT = layers[d.t.l][d.t.j].a || 0;
-            const alpha = Math.min(1, 0.08 + 0.85 * (aS * aT));
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const base = isDark ? 255 : 0;
-            return `rgba(${base},${base},${base},${alpha})`;
+            return Math.min(1, 0.15 + 0.85 * (aS * aT));
+          })
+          .attr('stroke-width', d=>{
+            const aS = layers[d.s.l][d.s.i].a || 0; const aT = layers[d.t.l][d.t.j].a || 0;
+            return 0.6 + 2.2*(aS*aT);
           });
-        // Output labels: bold digit + small horizontal bar for probability
-        const outs = layers[2].map((n,i)=>({ x:n.x+18, y:n.y, digit: i, prob: (out[i]||0), isTop: i===argmaxIdx }));
+        // Theme-aware and activation-aware input links
+        gInputLinks.selectAll('path.input-link')
+          .transition().duration(180).ease(d3.easeCubicOut)
+          .attr('d', (d)=> computeInputLinkD(d.idx))
+          .attr('stroke','var(--text-color)')
+          .attr('stroke-opacity', 0.25)
+          .attr('stroke-width', d=> 0.6 + 2.0*(layers[0][d.idx] ? (layers[0][d.idx].a||0) : 0));
+        // Update clip-path circles to match new radii/positions of output nodes
+        if (defs) {
+          const clips = defs.selectAll('clipPath.clip-node').data(layers[2], d=>d.id);
+          clips.select('circle')
+            .transition().duration(180).ease(d3.easeCubicOut)
+            .attr('cx', d=>d.x)
+            .attr('cy', d=>d.y)
+            .attr('r', d=> nodeRadiusForNode(d));
+        }
+        // Theme-aware input links on updates handled above via transition
+        // Output labels: digit placed to the right of the node
+        const outs = layers[2].map((n,i)=>({ x:n.x + nodeRadiusForNode(n) + 8, y:n.y, digit: i, prob: (out[i]||0), isTop: i===argmaxIdx }));
         const gSel = gOutText.selectAll('g.out-label').data(outs, d=>d.digit);
         const gEnter = gSel.enter().append('g').attr('class','out-label');
         gEnter.append('text').attr('class','out-digit')
-          .style('font-size','12px').style('font-weight','700').style('fill','var(--text-color)');
-        gEnter.append('rect').attr('class','out-bar-bg').attr('rx',2).attr('ry',2)
-          .attr('height', 4).attr('fill', 'var(--border-color)');
-        gEnter.append('rect').attr('class','out-bar').attr('rx',2).attr('ry',2)
-          .attr('height', 4);
-        const BAR_MAX = 64;
-        gEnter.merge(gSel)
+          .style('font-size','12px').style('font-weight','800').style('fill','var(--text-color)')
+          .attr('text-anchor','start').attr('dominant-baseline','middle')
+          .style('paint-order','stroke').style('stroke','var(--transparent-page-contrast)').style('stroke-width','3px');
+        const merged = gEnter.merge(gSel)
           .attr('transform', d=>`translate(${d.x},${d.y})`)
           .each(function(d){
             const sel = d3.select(this);
             sel.select('text.out-digit')
-              .attr('x', 0).attr('y', -2)
+              .attr('x', 0).attr('y', 0)
               .text(String(d.digit));
-            sel.select('rect.out-bar-bg')
-              .attr('x', 0).attr('y', 6)
-              .attr('width', BAR_MAX);
-            sel.select('rect.out-bar')
-              .attr('x', 0).attr('y', 6)
-              .attr('width', Math.max(1, Math.round(d.prob * BAR_MAX)))
-              .attr('fill', d.isTop ? 'var(--primary-color)' : 'var(--border-color)');
             // Ghost non-top predictions
             sel.style('opacity', d.isTop ? 1 : 0.35);
           });
+        // Remove any previous decorative rings (no highlight ring desired)
+        gRoot.selectAll('circle.top-ring').remove();
+        // (tooltip interactions removed)
         gSel.exit().remove();
+
+        // Output liquid fill using clipPath + rect from bottom
+        const rects = gNodes.selectAll('rect.out-liquid').data(layers[2], d=>d.id);
+        const rectEnter = rects.enter().append('rect').attr('class','out-liquid')
+          .attr('fill','var(--primary-color)')
+          .attr('fill-opacity', 0.55)
+          .attr('clip-path', d => `url(#clip-${d.id})`);
+        rectEnter.merge(rects)
+          .transition().duration(180).ease(d3.easeCubicOut)
+          .attr('x', d=> d.x - nodeRadiusForNode(d))
+          .attr('width', d=> 2 * nodeRadiusForNode(d))
+          .attr('y', d=> {
+            const r = nodeRadiusForNode(d);
+            const h = 2 * r * Math.max(0, Math.min(1, d.a||0));
+            return d.y + r - h;
+          })
+          .attr('height', d=> 2 * nodeRadiusForNode(d) * Math.max(0, Math.min(1, d.a||0)))
+          .attr('fill-opacity', 0.55);
+        rects.exit().remove();
       }
 
       // (no separate updateBars; bars are rendered next to nodes)
@@ -441,6 +610,8 @@
         renderInputGrid();
         const feats = computeFeatures(x28); // 8D in [0,1]
         const inkMass = feats[0];
+        // Hide hint when user has drawn something
+        if (hint) { hint.style.opacity = inkMass < 0.01 ? 1 : 0; }
         // Hidden 1 = raw features
         const h1 = feats;
         // Hidden 2 = simple non-linear mix for visualization only
@@ -497,6 +668,7 @@
 
       // Drawing interactions
       let drawing=false; let last=null;
+      let hasInteracted=false;
       const getPos = (ev) => {
         const rect = canvas.getBoundingClientRect();
         const sx = CANVAS_PX/rect.width; const sy = CANVAS_PX/rect.height;
@@ -511,7 +683,11 @@
         ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
         last = p; runPipeline();
       }
-      function onDown(ev){ drawing=true; last=null; drawTo(getPos(ev)); ev.preventDefault(); }
+      function onDown(ev){
+        drawing=true; last=null;
+        if (!hasInteracted){ hasInteracted=true; try { eraseBtn.style.display = 'flex'; } catch(_) {} }
+        drawTo(getPos(ev)); ev.preventDefault();
+      }
       function onMove(ev){ if (!drawing) return; drawTo(getPos(ev)); ev.preventDefault(); }
       function onUp(){ drawing=false; last=null; }
       canvas.addEventListener('mousedown', onDown); canvas.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);

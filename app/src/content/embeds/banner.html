@@ -91,7 +91,8 @@
       // Create SVG
       const svg = d3.select(container).append('svg')
         .attr('width', '100%')
-        .style('display', 'block');
+        .style('display', 'block')
+        .style('cursor', 'crosshair');
 
       const render = () => {
         const width = container.clientWidth || 800;
@@ -104,6 +105,7 @@
         // Subtle stroke color depending on theme
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const strokeColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
+        const glowColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)';
 
 
         // Group for points (no blend mode for better print/PDF visibility)
@@ -122,20 +124,28 @@
             left: '0px',
             transform: 'translate(-9999px, -9999px)',
             pointerEvents: 'none',
-            padding: '8px 10px',
-            borderRadius: '8px',
+            padding: '10px 12px',
+            borderRadius: '12px',
             fontSize: '12px',
             lineHeight: '1.35',
             border: '1px solid var(--border-color)',
             background: 'var(--surface-bg)',
             color: 'var(--text-color)',
-            boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+            boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)',
             opacity: '0',
-            transition: 'opacity .12s ease'
+            transition: 'opacity .12s ease',
+            backdropFilter: 'saturate(1.12) blur(8px)',
+            zIndex: '20'
           });
           tipInner = document.createElement('div');
           tipInner.className = 'd3-tooltip__inner';
-          tipInner.style.textAlign = 'left';
+          Object.assign(tipInner.style, {
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+            minWidth: '220px'
+          });
           tip.appendChild(tipInner);
           container.appendChild(tip);
         } else {
@@ -160,16 +170,21 @@
             .attr('stroke-width', 0.4)
             .on('mouseenter', function(ev, i) {
               d3.select(this).raise()
+                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
+                .transition().duration(120).ease(d3.easeCubicOut)
                 .attr('stroke', isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)')
-                .attr('stroke-width', 1.2);
+                .attr('stroke-width', 1.4)
+                .attr('r', (sizesPx[i] / 2) * 1.25)
+                .attr('fill-opacity', 1);
               const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
               const type = i < lenSpiral ? 'spiral' : 'bulge';
               const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-              tipInner.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
-                `<div><strong>Type</strong> ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
-                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>` +
-                `<div><strong>X</strong> ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                `<div><strong>r</strong> ${r.toFixed(3)} · <strong>z</strong> ${Zraw[i].toFixed(3)}</div>`;
+              tipInner.innerHTML =
+                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
+                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
+                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
+                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
+                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
               tip.style.opacity = '1';
             })
             .on('mousemove', (ev, i) => {
@@ -180,7 +195,13 @@
             .on('mouseleave', function() {
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
-              d3.select(this).attr('stroke', strokeColor).attr('stroke-width', 0.4);
+              d3.select(this)
+                .style('filter', null)
+                .transition().duration(120).ease(d3.easeCubicOut)
+                .attr('stroke', strokeColor)
+                .attr('stroke-width', 0.4)
+                .attr('r', (i2) => sizesPx[i2] / 2)
+                .attr('fill-opacity', 0.9);
             }),
           (update) => update
             .attr('cx', (i) => xScale(X[i]))
@@ -192,16 +213,21 @@
             .attr('stroke-width', 0.4)
             .on('mouseenter', function(ev, i) {
               d3.select(this).raise()
+                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
+                .transition().duration(120).ease(d3.easeCubicOut)
                 .attr('stroke', isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)')
-                .attr('stroke-width', 1.2);
+                .attr('stroke-width', 1.4)
+                .attr('r', (sizesPx[i] / 2) * 1.25)
+                .attr('fill-opacity', 1);
               const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
               const type = i < lenSpiral ? 'spiral' : 'bulge';
               const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-              tipInner.innerHTML = `<div><strong>${labelOf(i)}</strong></div>` +
-                `<div><strong>Type</strong> ${type}${arm ? ` (arm ${arm})` : ''}</div>` +
-                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>` +
-                `<div><strong>X</strong> ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                `<div><strong>r</strong> ${r.toFixed(3)} · <strong>z</strong> ${Zraw[i].toFixed(3)}</div>`;
+              tipInner.innerHTML =
+                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
+                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
+                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
+                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
+                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
               tip.style.opacity = '1';
             })
             .on('mousemove', (ev, i) => {
@@ -212,7 +238,13 @@
             .on('mouseleave', function() {
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
-              d3.select(this).attr('stroke', strokeColor).attr('stroke-width', 0.4);
+              d3.select(this)
+                .style('filter', null)
+                .transition().duration(120).ease(d3.easeCubicOut)
+                .attr('stroke', strokeColor)
+                .attr('stroke-width', 0.4)
+                .attr('r', (i2) => sizesPx[i2] / 2)
+                .attr('fill-opacity', 0.9);
             })
         );
       };

@@ -164,6 +164,54 @@
     const mo = new MutationObserver(() => updatePalettes());
     mo.observe(MODE.cssRoot, { attributes: true, attributeFilter: ['style', 'data-theme'] });
     setInterval(updatePalettes, 400);
+    // Utility: choose high-contrast (or softened) text style against an arbitrary background color
+    const pickTextStyleForBackground = (bgCss, opts = {}) => {
+      const cssRoot = document.documentElement;
+      const getCssVar = (name) => {
+        try { return getComputedStyle(cssRoot).getPropertyValue(name).trim(); } catch { return ''; }
+      };
+      const resolveCssToRgb01 = (css) => {
+        const rgb = parseCssColorToRgb(css);
+        if (!rgb) return null;
+        return rgb; // already 0..1
+      };
+      const mixRgb01 = (a, b, t) => ({ r: a.r*(1-t)+b.r*t, g: a.g*(1-t)+b.g*t, b: a.b*(1-t)+b.b*t });
+      const relLum = (rgb) => {
+        const f = (u) => srgbToLinear(u);
+        return 0.2126*f(rgb.r) + 0.7152*f(rgb.g) + 0.0722*f(rgb.b);
+      };
+      const contrast = (fg, bg) => {
+        const L1 = relLum(fg), L2 = relLum(bg); const a = Math.max(L1,L2), b = Math.min(L1,L2);
+        return (a + 0.05) / (b + 0.05);
+      };
+      try {
+        const bg = resolveCssToRgb01(bgCss);
+        if (!bg) return { fill: getCssVar('--text-color') || '#000', stroke: 'var(--transparent-page-contrast)', strokeWidth: 1 };
+        const candidatesCss = [getCssVar('--text-color') || '#111', getCssVar('--on-primary') || '#0f1115', '#000', '#fff'];
+        const candidates = candidatesCss
+          .map(css => ({ css, rgb: resolveCssToRgb01(css) }))
+          .filter(x => !!x.rgb);
+        // Pick the max contrast
+        let best = candidates[0]; let bestCR = contrast(best.rgb, bg);
+        for (let i=1;i<candidates.length;i++){
+          const cr = contrast(candidates[i].rgb, bg);
+          if (cr > bestCR) { best = candidates[i]; bestCR = cr; }
+        }
+        // Optional softening via blend factor (0..1), blending towards muted color
+        const blend = Math.min(1, Math.max(0, Number(opts.blend || 0)));
+        let finalRgb = best.rgb;
+        if (blend > 0) {
+          const mutedCss = getCssVar('--muted-color') || (getCssVar('--text-color') || '#111');
+          const mutedRgb = resolveCssToRgb01(mutedCss) || best.rgb;
+          finalRgb = mixRgb01(best.rgb, mutedRgb, blend);
+        }
+        const haloStrength = Math.min(1, Math.max(0, Number(opts.haloStrength == null ? 0.5 : opts.haloStrength)));
+        const stroke = (best.css === '#000' || best.css.toLowerCase() === 'black') ? `rgba(255,255,255,${0.30 + 0.40*haloStrength})` : `rgba(0,0,0,${0.30 + 0.30*haloStrength})`;
+        return { fill: toHex(finalRgb), stroke, strokeWidth: (opts.haloWidth == null ? 1 : Number(opts.haloWidth)) };
+      } catch {
+        return { fill: getCssVar('--text-color') || '#000', stroke: 'var(--transparent-page-contrast)', strokeWidth: 1 };
+      }
+    };
     window.ColorPalettes = {
       refresh: updatePalettes,
       getPrimary: () => getPrimaryHex(),
@@ -174,7 +222,9 @@
         if (key === 'sequential') return generators.sequential(primary, total);
         if (key === 'diverging') return generators.diverging(primary, total);
         return [];
-      }
+      },
+      getTextStyleForBackground: (bgCss, opts) => pickTextStyleForBackground(bgCss, opts || {}),
+      chooseReadableText: (bgCss, opts) => pickTextStyleForBackground(bgCss, opts || {})
     };
   };
 

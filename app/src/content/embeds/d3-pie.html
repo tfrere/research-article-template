@@ -1,4 +1,4 @@
-<div class="d3-pie" style="width:100%;margin:10px 0;"></div>
+<div class="d3-pie"></div>
 <style>
   /* Layout piloté par container queries (par rapport au parent) */
   .d3-pie { container-type: inline-size; }
@@ -11,7 +11,16 @@
   .d3-pie .caption { font-size: 14px; font-weight: 800; fill: var(--text-color); }
   .d3-pie .caption-subtitle { font-size: 11px; font-weight: 400; fill: var(--muted-color); }
   .d3-pie .nodata { font-size: 12px; fill: var(--muted-color); }
-  .d3-pie .slice-label { font-size: 11px; font-weight: 700; fill: var(--text-color); paint-order: stroke; stroke: rgba(255,255,255,0.2); stroke-width: 3px; }
+  /* Ghost legend items when hovering slices */
+  .d3-pie.hovering .legend .item.ghost { opacity: .35; }
+  .d3-pie .slice-label { font-size: 11px; font-weight: 700; fill: var(--text-color); paint-order: stroke; stroke: var(--transparent-page-contrast); stroke-width: 3px; }
+  /* Effet ghost synchronisé */
+  .d3-pie .slice {
+    transition: opacity .15s ease;
+  }
+  .d3-pie.hovering .slice.ghost {
+    opacity: .25;
+  }
   /* Layout HTML (pas JS) pour la grille et les cellules */
   .d3-pie .plots-grid {
     display: flex;
@@ -50,6 +59,41 @@
   @media (max-width: 500px) {
     .d3-pie .pie-cell { flex: 0 0 100%; }
   }
+  /* Tooltip styling aligned with filters-quad */
+  .d3-pie .d3-tooltip {
+    z-index: var(--z-elevated);
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  .d3-pie .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+  }
+  .d3-pie .d3-tooltip__inner > div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+  .d3-pie .d3-tooltip__inner > div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+  .d3-pie .d3-tooltip__inner > div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+  .d3-pie .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
 </style>
 <script>
   (() => {
@@ -87,8 +131,9 @@
         tip = document.createElement('div'); tip.className = 'd3-tooltip';
         Object.assign(tip.style, {
           position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
-          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
-          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+          padding:'10px 12px', borderRadius:'12px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity:'0', transition:'opacity .12s ease',
+          zIndex: 'var(--z-elevated)', backdropFilter: 'saturate(1.12) blur(8px)'
         });
         tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
@@ -148,7 +193,7 @@
         legendHost.style.display = 'flex';
         legendHost.style.alignItems = 'center';
         legendHost.style.justifyContent = 'center';
-        legendHost.innerHTML = `<div class="items">${categories.map(c => `<div class="item"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`;
+        legendHost.innerHTML = `<div class="items">${categories.map(c => `<div class="item" data-category="${c}"><span class="swatch" style="background:${colorOf(c)}"></span><span style="font-weight:500">${c}</span></div>`).join('')}</div>`;
       }
 
       function drawPies(rows){
@@ -184,7 +229,8 @@
           const totals = new Map(); categories.forEach(c => totals.set(c, 0));
           rows.forEach(r => { totals.set(r.eagle_cathegory, totals.get(r.eagle_cathegory) + (r[metric.key] || 0)); });
           const values = categories.map(c => ({ category: c, value: totals.get(c) || 0 }));
-          const totalSum = d3.sum(values, d => d.value);
+          const nonZeroValues = values.filter(v => (v.value || 0) > 0);
+          const totalSum = d3.sum(nonZeroValues, d => d.value);
 
           // Create HTML cell container
           const cell = document.createElement('div');
@@ -201,10 +247,10 @@
           const svg = d3.select(cell).append('svg').attr('width', radius * 2).attr('height', radius * 2 + SVG_VPAD * 2).style('display','block');
           const gCell = svg.append('g').attr('transform', `translate(${radius},${radius + SVG_VPAD})`);
 
-          if (!totalSum || totalSum <= 0) {
+          if (!totalSum || totalSum <= 0 || nonZeroValues.length === 0) {
             gCell.append('text').attr('class','nodata').attr('text-anchor','middle').attr('dy','0').text('No data for this metric');
           } else {
-            const data = pie(values);
+            const data = pie(nonZeroValues);
             const percent = (v) => (v / totalSum) * 100;
 
             // Slices
@@ -213,16 +259,33 @@
               .attr('fill', d => colorOf(d.data.category))
               .attr('stroke', 'var(--surface-bg)')
               .attr('stroke-width', 1.2)
+              .attr('data-category', d => d.data.category)
               .on('mouseenter', function(ev, d){
+                const hoveredCategory = d.data.category;
+                d3.select(container).classed('hovering', true);
+                d3.select(container).selectAll('path.slice').classed('ghost', s => (s.data && s.data.category) !== hoveredCategory);
+                // Ghost legend items that are not hovered
+                d3.select(legendHost).selectAll('.item').classed('ghost', function(){ return this.dataset && this.dataset.category !== hoveredCategory; });
                 d3.select(this).attr('stroke', 'rgba(0,0,0,0.85)').attr('stroke-width', 1);
                 const p = percent(d.data.value);
-                tipInner.innerHTML = `<div><strong>${d.data.category}</strong></div><div><strong>${metric.name}</strong> ${d.data.value.toLocaleString()}</div><div><strong>Share</strong> ${p.toFixed(1)}%</div>`;
+                const catColor = colorOf(d.data.category);
+                let html = `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${catColor}\"></span><strong>${d.data.category}</strong></div>`;
+                html += `<div>${metric.name}</div>`;
+                html += `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><strong>Value</strong><span style="margin-left:auto;text-align:right;">${d.data.value.toLocaleString()}</span></div>`;
+                /* Share row removed per request */
+                tipInner.innerHTML = html;
                 tip.style.opacity = '1';
               })
               .on('mousemove', function(ev){
                 const [mx, my] = d3.pointer(ev, container); const offsetX = 12, offsetY = 12; tip.style.transform = `translate(${Math.round(mx+offsetX)}px, ${Math.round(my+offsetY)}px)`;
               })
-              .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).attr('stroke','var(--surface-bg)'); });
+              .on('mouseleave', function(){
+                tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)';
+                d3.select(container).classed('hovering', false);
+                d3.select(container).selectAll('path.slice').classed('ghost', false);
+                d3.select(legendHost).selectAll('.item').classed('ghost', false);
+                d3.select(this).attr('stroke','var(--surface-bg)');
+              });
 
             // Percentage labels (>= 3%)
             gCell.selectAll('text.slice-label').data(data.filter(d => percent(d.data.value) >= 3)).enter()
@@ -233,11 +296,20 @@
           }
 
           // HTML captions under the SVG (keep design)
-          const subtitleEl = document.createElement('div'); subtitleEl.className = 'caption-subtitle'; subtitleEl.textContent = metric.title; subtitleEl.style.textAlign = 'center'; subtitleEl.style.marginTop = (CAPTION_GAP - 18) + 'px'; cell.appendChild(subtitleEl);
+          const subtitleEl = document.createElement('div'); subtitleEl.className = 'caption-subtitle'; subtitleEl.textContent = metric.title; subtitleEl.style.textAlign = 'center'; cell.appendChild(subtitleEl);
           const titleEl = document.createElement('div'); titleEl.className = 'caption'; titleEl.textContent = metric.name; titleEl.style.textAlign = 'center'; cell.appendChild(titleEl);
         });
 
         // Container height flows naturally with HTML; nothing to do
+
+        // Reset global hover/ghost when leaving the plots area
+        plotsHost.onmouseleave = () => {
+          tip.style.opacity='0';
+          tip.style.transform='translate(-9999px, -9999px)';
+          d3.select(container).classed('hovering', false);
+          d3.select(container).selectAll('path.slice').classed('ghost', false);
+          d3.select(legendHost).selectAll('.item').classed('ghost', false);
+        };
       }
 
       async function init(){

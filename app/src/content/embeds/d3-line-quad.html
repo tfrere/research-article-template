@@ -1,43 +1,33 @@
-<div class="filters-quad" style="width:100%;margin:10px 0;">
-  <div class="filters-quad__controls" aria-label="Global chart controls"></div>
-  <div class="filters-quad__legend" aria-label="Global legend"></div>
-  <div class="filters-quad__grid">
+<div class="line-quad">
+  
+  <div class="line-quad__grid">
     <div class="quad-cell" data-title="Formatting Filter" data-csv="/data/formatting_filters.csv"></div>
     <div class="quad-cell" data-title="Relevance Filter" data-csv="/data/relevance_filters.csv"></div>
     <div class="quad-cell" data-title="Visual Dependency Filter" data-csv="/data/visual_dependency_filters.csv"></div>
     <div class="quad-cell" data-title="Image Correspondence Filter" data-csv="/data/image_correspondence_filters.csv"></div>
   </div>
   <noscript>JavaScript is required to render these charts.</noscript>
+
 </div>
 <style>
-  .filters-quad { position: relative; }
-  .filters-quad__grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  @media (max-width: 980px) { .filters-quad__grid { grid-template-columns: 1fr; } }
+  .line-quad { position: relative; }
+  /* Axis/tick/grid use global variables from _variables.css */
+  /* Apply axis/tick/grid purely via CSS */
+  .line-quad .axes path,
+  .line-quad .axes line { stroke: var(--axis-color); }
+  .line-quad .axes text { fill: var(--tick-color); }
+  .line-quad .grid line { stroke: var(--grid-color); }
+  .line-quad__grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 980px) { .line-quad__grid { grid-template-columns: 1fr; } }
 
-  .filters-quad__controls { display:flex; align-items:center; justify-content:center; gap:12px; margin: 6px 0 12px 0; flex-wrap:wrap; }
-  .filters-quad__controls label { font-size:14px; color: var(--text-color); font-weight:600; display:flex; align-items:center; gap:8px; }
-  .filters-quad__controls select {
-    font-size: 14px; padding: 8px 32px 8px 12px; border: 1px solid var(--border-color); border-radius: 10px;
-    background-color: var(--surface-bg); color: var(--text-color);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 8px center; background-size: 12px; -webkit-appearance: none; appearance: none; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease;
-  }
-  [data-theme="dark"] .filters-quad__controls select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  }
-  .filters-quad__controls select:hover { border-color: var(--primary-color); }
-  .filters-quad__controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
-
-  .filters-quad__legend { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; font-size:12px; color: var(--text-color); margin: 2px 0 10px 0; }
-  .filters-quad__legend .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
-  .filters-quad__legend .swatch { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  
 
   .quad-cell { border:1px solid var(--border-color); border-radius:10px; background: var(--surface-bg); display:flex; flex-direction:column; position: relative; }
   /* Stacking order to ensure hover/tooltip overlays are not hidden by neighbors */
-  .filters-quad__grid .quad-cell:nth-child(1) { z-index: 4; } /* top-left */
-  .filters-quad__grid .quad-cell:nth-child(3) { z-index: 3; } /* bottom-left */
-  .filters-quad__grid .quad-cell:nth-child(2) { z-index: 2; } /* top-right */
-  .filters-quad__grid .quad-cell:nth-child(4) { z-index: 1; } /* bottom-right */
+  .line-quad__grid .quad-cell:nth-child(1) { z-index: 4; } /* top-left */
+  .line-quad__grid .quad-cell:nth-child(3) { z-index: 3; } /* bottom-left */
+  .line-quad__grid .quad-cell:nth-child(2) { z-index: 2; } /* top-right */
+  .line-quad__grid .quad-cell:nth-child(4) { z-index: 1; } /* bottom-right */
   .quad-cell .cell-header { padding:8px 10px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px; }
   .quad-cell .cell-title { font-size: 13px; font-weight: 700; color: var(--text-color); }
   .quad-cell .cell-controls { display:flex; align-items:center; gap:12px; }
@@ -45,39 +35,40 @@
   .quad-cell select {
     font-size: 12px; padding: 6px 28px 6px 10px; border: 1px solid var(--border-color); border-radius: 8px;
     background-color: var(--surface-bg); color: var(--text-color);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 8px center; background-size: 12px;
     -webkit-appearance: none; appearance: none; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease;
   }
   [data-theme="dark"] .quad-cell select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   }
   .quad-cell select:hover { border-color: var(--primary-color); }
   .quad-cell select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
   .quad-cell .cell-body { position: relative; }
   .quad-cell .cell-body { width:100%; overflow:hidden; }
   .quad-cell .cell-body svg { max-width:100%; height:auto; }
-  .quad-cell .legend { font-size: 12px; line-height: 1.35; color: var(--text-color); }
-  .quad-cell .legend .items { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:flex-end; }
-  .quad-cell .legend .item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
-  .quad-cell .legend .swatch { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  
+  .line-quad.hovering .lines path.ghost { opacity: .25; }
+  .line-quad.hovering .points circle.ghost { opacity: .25; }
+  .line-quad.hovering .areas path.ghost { opacity: .08; }
+  .line-quad.hovering .legend-bottom .item.ghost { opacity: .35; }
   /* Tooltip refined styling */
-  .filters-quad .d3-tooltip {
+  .line-quad .d3-tooltip {
     z-index: 20;
     backdrop-filter: saturate(1.12) blur(8px);
   }
-  .filters-quad .d3-tooltip__inner {
+  .line-quad .d3-tooltip__inner {
     display: flex;
     flex-direction: column;
     gap: 6px;
     min-width: 220px;
   }
-  .filters-quad .d3-tooltip__inner > div:first-child {
+  .line-quad .d3-tooltip__inner > div:first-child {
     font-weight: 800;
     letter-spacing: 0.1px;
     margin-bottom: 0;
   }
-  .filters-quad .d3-tooltip__inner > div:nth-child(2) {
+  .line-quad .d3-tooltip__inner > div:nth-child(2) {
     font-size: 11px;
     color: var(--muted-color);
     display: block;
@@ -85,18 +76,110 @@
     margin-bottom: 2px;
     letter-spacing: 0.1px;
   }
-  .filters-quad .d3-tooltip__inner > div:nth-child(n+3) {
+  .line-quad .d3-tooltip__inner > div:nth-child(n+3) {
     padding-top: 6px;
     border-top: 1px solid var(--border-color);
   }
-  .filters-quad .d3-tooltip__inner svg {
+  .line-quad .d3-tooltip__inner svg {
     display: inline-block;
     vertical-align: middle;
     margin-right: 2px;
   }
-  .filters-quad .d3-tooltip__inner strong {
+  .line-quad .d3-tooltip__inner strong {
     margin-right: 6px;
   }
+  .line-quad .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  /* Header layout (like d3-line-simple) */
+  .line-quad__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 8px 0 0 0;
+    flex-wrap: wrap;
+  }
+  .line-quad__header .legend-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .line-quad__header .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .line-quad__header .legend-bottom .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .line-quad__header .legend-bottom .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .line-quad__header .legend-bottom .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+  .line-quad .controls {
+    margin-top: 0;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+    flex-wrap: wrap;
+  }
+  .line-quad .controls .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .line-quad .controls label {
+    font-size: 12px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  .line-quad .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-theme="dark"] .line-quad .controls select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .line-quad .controls select:hover { border-color: var(--primary-color); }
+  .line-quad .controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
 </style>
 <script>
   (() => {
@@ -144,7 +227,7 @@
       const gLines = gRoot.append('g').attr('class','lines');
       const gPoints = gRoot.append('g').attr('class','points');
       const gHover = gRoot.append('g').attr('class','hover');
-      const gLegend = gRoot.append('foreignObject').attr('class','legend').style('display','none');
+      // Removed per-cell legend; using global footer legend
 
       // Tooltip
       cell.style.position = cell.style.position || 'relative';
@@ -189,44 +272,27 @@
       // Colors and markers (match original embeds)
       const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
       const pool = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])];
-      const markerShapes = ['circle', 'square', 'triangle', 'diamond', 'inverted-triangle'];
-      const markerSize = 6;
-      function drawMarker(selection, shape, size) {
-        const s = size / 2;
-        switch (shape) {
-          case 'circle':
-            return selection.append('circle').attr('r', s);
-          case 'square':
-            return selection.append('rect').attr('x', -s).attr('y', -s).attr('width', size).attr('height', size);
-          case 'triangle':
-            return selection.append('path').attr('d', `M0,${-s * 1.2} L${s * 1.1},${s * 0.6} L${-s * 1.1},${s * 0.6} Z`);
-          case 'diamond':
-            return selection.append('path').attr('d', `M0,${-s * 1.2} L${s * 1.1},0 L0,${s * 1.2} L${-s * 1.1},0 Z`);
-          case 'inverted-triangle':
-            return selection.append('path').attr('d', `M0,${s * 1.2} L${s * 1.1},${-s * 0.6} L${-s * 1.1},${-s * 0.6} Z`);
-          default:
-            return selection.append('circle').attr('r', s);
-        }
-      }
-      // Inline SVG for tooltip shapes
-      function markerSVG(shape, color) {
-        const size = 12; const s = size / 2; const stroke = color;
-        if (shape === 'circle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-        if (shape === 'square') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><rect x="-5" y="-5" width="10" height="10" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-        if (shape === 'triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L5,3 L-5,3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-        if (shape === 'diamond') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L6,0 L0,6 L-6,0 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-        if (shape === 'inverted-triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,6 L5,-3 L-5,-3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-        return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-      }
+      // Shapes supprimés: on n'utilise que la couleur
       // Ready signal for async load completion
       let readyResolve = null;
       const ready = new Promise((res)=> { readyResolve = res; });
 
+      // Shared formatter for thousands: 5000 -> 5k, 1500 -> 1.5k (trim .0)
+      const formatK = (v) => {
+        const abs = Math.abs(v);
+        if (abs >= 1000) {
+          const n = v / 1000;
+          const s = d3.format('.1f')(n);
+          return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k';
+        }
+        return d3.format('d')(v);
+      };
+
       function updateScales(){
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const axisColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
-        const tickColor = isDark ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.55)';
-        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+        const axisColor = 'var(--axis-color)';
+        const tickColor = 'var(--tick-color)';
+        const gridColor = 'var(--grid-color)';
 
         const rect = cell.getBoundingClientRect();
         width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
@@ -245,31 +311,22 @@
         gGrid.selectAll('*').remove();
         gGrid.selectAll('line').data(yTicks).join('line')
           .attr('x1',0).attr('x2',innerWidth).attr('y1',d=>yScale(d)).attr('y2',d=>yScale(d))
-          .attr('stroke',gridColor).attr('stroke-width',1).attr('shape-rendering','crispEdges');
+          .attr('stroke', gridColor).attr('stroke-width',1).attr('shape-rendering','crispEdges');
 
         // Axes
         gAxes.selectAll('*').remove();
         let xAxis = d3.axisBottom(xScale).tickSizeOuter(0); xAxis = xAxis.ticks(8);
-        const fmtK = (v) => {
-          const abs = Math.abs(v);
-          if (abs >= 1000) {
-            const n = v / 1000;
-            const s = d3.format('.1f')(n);
-            return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k';
-          }
-          return d3.format('d')(v);
-        };
-        xAxis = xAxis.tickFormat(fmtK);
+        xAxis = xAxis.tickFormat(formatK);
         const yAxis = d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(isRankStrictFlag ? d3.format('d') : d3.format('.2f'));
-        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });
-        gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke',axisColor); g.selectAll('text').attr('fill',tickColor).style('font-size','11px'); });
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','11px'); });
+        gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','11px'); });
 
         // Axis labels
         gAxes.append('text')
           .attr('class', 'x-axis-label')
           .attr('x', innerWidth / 2)
           .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 10)))
-          .attr('fill', tickColor)
+          .attr('fill', 'var(--text-color)')
           .attr('text-anchor', 'middle')
           .style('font-size', '12px')
           .style('font-weight', '700')
@@ -280,18 +337,12 @@
           .attr('transform', 'rotate(-90)')
           .attr('x', -innerHeight / 2)
           .attr('y', -Math.max(16, Math.min(28, margin.left - 8) + 10))
-          .attr('fill', tickColor)
+          .attr('fill', 'var(--text-color)')
           .attr('text-anchor', 'middle')
           .style('font-size', '12px')
           .style('font-weight', '700')
           .text(axisLabelY);
 
-        // Legend box (top-right)
-        // Per-cell legend hidden; global legend is used
-        const legendWidth = 0, legendHeight = 0;
-        gLegend.attr('x', 0).attr('y', 0).attr('width', legendWidth).attr('height', legendHeight);
-        const legendRoot = gLegend.selectAll('div').data([0]).join('xhtml:div');
-        Object.assign(legendRoot.node().style, { width:'0px', height:'0px', display:'none' });
         return { innerWidth, innerHeight, tickColor };
       }
 
@@ -322,7 +373,7 @@
         axisLabelY = isRankStrict ? 'Rank' : prettyMetricLabel(metricKey);
         const { innerWidth, innerHeight } = updateScales();
 
-        const series = runs.map((r, i) => ({ run:r, color: pool[i % pool.length], marker: markerShapes[i % markerShapes.length], values:(map[r]||[]).slice().sort((a,b)=>a.step-b.step).map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value), stderr: pt.stderr } : pt) }));
+        const series = runs.map((r, i) => ({ run:r, color: pool[i % pool.length], values:(map[r]||[]).slice().sort((a,b)=>a.step-b.step).map(pt => isRankStrict ? { step: pt.step, value: Math.round(pt.value), stderr: pt.stderr } : pt) }));
 
         // zones ± stderr (métriques non rank)
         gAreas.selectAll('*').remove();
@@ -334,43 +385,70 @@
             const lower = withErr.slice().reverse().map(d => [xScale(d.step), yScale(d.value - d.stderr)]);
             const coords = upper.concat(lower);
             const pathData = d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveLinearClosed)(coords);
-            gAreas.append('path').attr('d', pathData).attr('fill', s.color).attr('opacity', 0.15).attr('stroke', 'none');
+            gAreas.append('path')
+              .attr('class','area')
+              .attr('data-run', s.run)
+              .attr('d', pathData)
+              .attr('fill', s.color)
+              .attr('opacity', 0)
+              .attr('stroke', 'none')
+              .transition().duration(450).ease(d3.easeCubicOut)
+              .attr('opacity', 0.15);
           });
         }
 
         const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
-        paths.enter().append('path').attr('class','run-line').attr('fill','none').attr('stroke-width',2).attr('opacity',0.9)
-          .attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values))
-          .merge(paths).attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
+        paths.enter()
+          .append('path')
+          .attr('class','run-line')
+          .attr('data-run', d=>d.run)
+          .attr('fill','none')
+          .attr('stroke-width', 1)
+          .attr('opacity',0)
+          .attr('stroke', d=>d.color)
+          .attr('d', d=>lineGen(d.values))
+          .transition().duration(450).ease(d3.easeCubicOut)
+          .attr('opacity',0.9);
+        paths
+          .transition().duration(450).ease(d3.easeCubicOut)
+          .attr('stroke', d=>d.color)
+          .attr('opacity',0.9)
+          .attr('d', d=>lineGen(d.values));
         paths.exit().remove();
 
-        gPoints.selectAll('*').remove();
-        series.forEach((s, idx) => {
-          const pointGroup = gPoints.selectAll(`.points-${idx}`)
-            .data(s.values)
-            .join('g')
-            .attr('class', `points-${idx}`)
-            .attr('transform', d => `translate(${xScale(d.step)},${yScale(d.value)})`);
-          drawMarker(pointGroup, s.marker, markerSize)
-            .attr('fill', s.color)
-            .attr('stroke', s.color)
-            .attr('stroke-width', 1.5)
-            .style('cursor', 'crosshair');
-        });
+        // Draw light point markers at each data sample (subtle)
+        const allPoints = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
+        const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
+        ptsSel.enter().append('circle').attr('class','pt')
+          .attr('data-run', d=>d.run)
+          .attr('r', 2)
+          .attr('fill', d=>d.color)
+          .attr('fill-opacity', 0.6)
+          .attr('stroke', 'none')
+          .attr('cx', d=>xScale(d.step))
+          .attr('cy', d=>yScale(d.value))
+          .merge(ptsSel)
+          .transition().duration(180)
+          .attr('cx', d=>xScale(d.step))
+          .attr('cy', d=>yScale(d.value));
+        ptsSel.exit().remove();
 
         // No per-cell legend content (handled globally)
 
         // Hover
         gHover.selectAll('*').remove();
         const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
-        const hoverLine = gHover.append('line').attr('stroke','rgba(0,0,0,0.25)').attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
+        const hoverLine = gHover.append('line').style('stroke','var(--text-color)').attr('stroke-opacity', 0.25).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
         const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step))); const steps = Array.from(stepSet).sort((a,b)=>a-b);
         function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
-          let html = `<div><strong>${titleText}</strong></div><div><strong>step</strong> ${nearest}</div>`;
-          const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, marker:s.marker, pt }; }).filter(e => e.pt && e.pt.value!=null);
+          let html = `<div><strong>${titleText}</strong></div><div><strong>step</strong> ${formatK(nearest)}</div>`;
+          const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null);
           entries.sort((a,b)=> (a.pt.value - b.pt.value));
           const fmt = (vv)=> (isRankStrictFlag? d3.format('d')(vv) : (+vv).toFixed(4));
-          entries.forEach(e => { const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : ''; html += `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">${markerSVG(e.marker, e.color)}<strong>${e.run}</strong> ${fmt(e.pt.value)}${err}</div>`; });
+          entries.forEach(e => {
+            const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : '';
+            html += `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}${err}</span></div>`;
+          });
           tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`; }
         function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
@@ -418,7 +496,7 @@
           const isRank = /rank/i.test(key); const isAverage = /average/i.test(key); const isRankStrict = isRank && !isAverage;
           runs.forEach(r => { (map[r]||[]).forEach(pt => { const v = isRankStrict ? Math.round(pt.value) : pt.value; minStep=Math.min(minStep,pt.step); maxStep=Math.max(maxStep,pt.step); maxVal=Math.max(maxVal,v); minVal=Math.min(minVal,v); }); });
           const rankMax = isRank ? Math.max(1, Math.round(maxVal)) : null;
-          return { isRank, isRankStrict, min: minVal, max: maxVal, rankMax };
+          return { isRank, isRankStrict, min: maxVal === 0 && minVal === Infinity ? null : minVal, max: maxVal, rankMax };
         },
         setSharedY: (cfg) => { sharedYConfig = cfg || null; if (metricList && metricList.length) { /* re-render last metric if possible */ const current = cfg && cfg.key ? cfg.key : null; const m = current || metricList[0]; renderMetric(m); } }
       };
@@ -427,23 +505,30 @@
     const bootstrap = () => {
       const scriptEl = THIS_SCRIPT;
       let host = null;
+      // Build header (legend + controls) and append after grid
+      const header = document.createElement('div'); header.className = 'line-quad__header';
+      const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>';
+      const controls = document.createElement('div'); controls.className = 'controls'; controls.innerHTML = '<div class="control-group"><label>Metric</label><select></select></div>';
+      header.appendChild(legend);
+      header.appendChild(controls);
       // Try finding within parent (fragment mount is inside parent)
       if (scriptEl && scriptEl.parentElement && scriptEl.parentElement.querySelector) {
-        host = scriptEl.parentElement.querySelector('.filters-quad');
+        host = scriptEl.parentElement.querySelector('.line-quad');
       }
       // Fallback: scan previous siblings
       if (!host) {
         let sib = scriptEl && scriptEl.previousElementSibling;
-        while (sib && !(sib.classList && sib.classList.contains('filters-quad'))) {
+        while (sib && !(sib.classList && sib.classList.contains('line-quad'))) {
           sib = sib.previousElementSibling;
         }
         host = sib || null;
       }
       // Last resort: global query
-      if (!host) { host = document.querySelector('.filters-quad'); }
+      if (!host) { host = document.querySelector('.line-quad'); }
       if (!host) return;
       if (host.dataset && host.dataset.mounted === 'true') return; if (host.dataset) host.dataset.mounted = 'true';
       const cells = host.querySelectorAll('.quad-cell'); if (!cells.length) return;
+      host.appendChild(header);
       const instances = Array.from(cells).map(cell => initRunLine(cell));
 
       (async () => {
@@ -455,14 +540,15 @@
         if (!metrics.length) { metrics = lists[0] || []; }
         const def = (metrics.includes('ai2d_exact_match') ? 'ai2d_exact_match' : (metrics.find(m => /average_rank/i.test(m)) || metrics[0] || ''));
 
-        let ctrl = host.querySelector('.filters-quad__controls');
-        if (!ctrl) { ctrl = document.createElement('div'); ctrl.className = 'filters-quad__controls'; host.insertBefore(ctrl, host.firstChild); }
-        ctrl.innerHTML = '';
-        const label = document.createElement('label'); label.textContent = 'Metric';
-        const select = document.createElement('select');
-        metrics.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=prettyMetricLabel(m); select.appendChild(o); });
-        if (def) select.value = def;
-        label.appendChild(select); ctrl.appendChild(label);
+        // Wire header controls (select under "Metric" label)
+        const headerEl = host.querySelector('.line-quad__header');
+        if (headerEl && !headerEl.isConnected) host.appendChild(header);
+        const select = (headerEl || header).querySelector('.controls select');
+        if (select) {
+          select.innerHTML = '';
+          metrics.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=prettyMetricLabel(m); select.appendChild(o); });
+          if (def) select.value = def;
+        }
 
         const computeAndApplySharedY = (metric) => {
           try {
@@ -482,11 +568,11 @@
 
         const applyAll = (v) => { computeAndApplySharedY(v); instances.forEach(i => i && typeof i.setMetric === 'function' && i.setMetric(v)); };
         if (def) applyAll(def);
-        select.addEventListener('change', () => applyAll(select.value));
+        if (select) select.addEventListener('change', () => applyAll(select.value));
 
-        // Légende globale (couleurs + formes, alignée avec les marqueurs des séries)
-        const legendHost = host.querySelector('.filters-quad__legend');
-        if (legendHost) {
+        // Global legend (in header, colors only)
+        const legendItemsHost = (headerEl || header).querySelector('.legend-bottom .items');
+        if (legendItemsHost) {
           try {
             const f = '/data/formatting_filters.csv';
             const r = await fetch(f, { cache:'no-cache' });
@@ -496,21 +582,32 @@
               const runList = Array.from(new Set(rows.map(row => String(row.run||'').trim()).filter(Boolean)));
               const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
               const pool = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...((window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'])];
-              const markerShapes = ['circle', 'square', 'triangle', 'diamond', 'inverted-triangle'];
-              const shapeSVG = (shape, color) => {
-                const size = 12; const s = size/2; const stroke = color;
-                if (shape === 'circle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-                if (shape === 'square') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><rect x="-5" y="-5" width="10" height="10" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-                if (shape === 'triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L5,3 L-5,3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-                if (shape === 'diamond') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,-6 L6,0 L0,6 L-6,0 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-                if (shape === 'inverted-triangle') return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><path d="M0,6 L5,-3 L-5,-3 Z" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-                return `<svg width="12" height="12" viewBox="-6 -6 12 12" aria-hidden="true"><circle r="5" fill="${color}" stroke="${stroke}" stroke-width="1" /></svg>`;
-              };
-              legendHost.innerHTML = runList.map((name, i)=> {
+              legendItemsHost.innerHTML = runList.map((name, i)=> {
                 const color = pool[i % pool.length];
-                const shape = markerShapes[i % markerShapes.length];
-                return `<span class="item">${shapeSVG(shape, color)}<span>${name}</span></span>`;
+                return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`;
               }).join('');
+              // Legend hover ghosting across all cells
+              legendItemsHost.querySelectorAll('.item').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                  const run = el.getAttribute('data-run'); if (!run) return;
+                  host.classList.add('hovering');
+                  host.querySelectorAll('.quad-cell').forEach(cell => {
+                    cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
+                    cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run));
+                    cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run));
+                  });
+                  legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
+                });
+                el.addEventListener('mouseleave', () => {
+                  host.classList.remove('hovering');
+                  host.querySelectorAll('.quad-cell').forEach(cell => {
+                    cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.remove('ghost'));
+                    cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost'));
+                    cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost'));
+                  });
+                  legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+                });
+              });
             }
           } catch {}
         }
@@ -520,4 +617,6 @@
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
   })();
 </script>
+
+
 

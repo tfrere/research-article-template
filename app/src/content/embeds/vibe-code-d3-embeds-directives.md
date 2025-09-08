@@ -1,6 +1,68 @@
 ## Embed Chart Authoring Guidelines
 
+### Quickstart (TL;DR)
+- Create a single self-contained HTML fragment: root div + scoped style + IIFE script.
+- Draw marks/axes in SVG; render UI (legend and controls) in HTML.
+- Place legend and controls ABOVE the chart. Include a legend title "Legend" and a select labeled "Metric" when relevant.
+- Load data from public `/data` first, then fall back to `assets/data`.
+- Use `window.ColorPalettes` for colors; stick to CSS variables for theming.
+
+Minimal header markup:
+```html
+<div class="legend">
+  <div class="legend-title">Legend</div>
+  <div class="items"></div>
+  <!-- items populated by JS: <span class="item"><span class="swatch"></span><span>Name</span></span> -->
+</div>
+<div class="controls">
+  <div class="control-group">
+    <label for="metric-select-<id>">Metric</label>
+    <select id="metric-select-<id>"></select>
+  </div>
+  <!-- optional: other controls -->
+</div>
+```
+
+See also: `d3-line-simple.html`, `d3-line-quad.html`, `d3-benchmark.html`.
+
 Authoring rules for creating a new interactive chart as a single self-contained `.html` file under `src/content/embeds/`. These conventions are derived from `d3-bar.html`, `d3-comparison.html`, `d3-neural.html`, `d3-line.html`, and `d3-pie.html`.
+
+### A) Colors & palettes (MANDATORY)
+- Always obtain color arrays from `window.ColorPalettes`; do not hardcode palettes.
+- Use the categorical/sequential/diverging helpers and the current primary color.
+- If you change `--primary-color` dynamically, call `window.ColorPalettes.refresh()` so listeners update.
+
+Usage:
+```js
+// Usage (with explicit counts)
+const cat = window.ColorPalettes.getColors('categorical', 8);
+const seq = window.ColorPalettes.getColors('sequential', 8);
+const div = window.ColorPalettes.getColors('diverging', 7);
+
+// For current primary color string
+const primaryHex = window.ColorPalettes.getPrimary();
+
+// If you change --primary-color dynamically, call refresh to notify listeners
+document.documentElement.style.setProperty('--primary-color', '#6D4AFF');
+window.ColorPalettes.refresh();
+```
+
+Notes:
+- Keep chart accents (lines, markers, selection) aligned with `--primary-color`.
+- Prefer CSS variables for fills/strokes when possible; derive series colors via `ColorPalettes`.
+- Provide a graceful fallback to CSS variables if `window.ColorPalettes` is unavailable.
+
+### B) Layout & form elements (HTML-only)
+- All UI controls (labels, selects, sliders, buttons, toggles) must be plain HTML inside the root container.
+- Do not draw controls with SVG; style them consistently (rounded 8px, custom caret, focus ring).
+- Use `<label>` wrapping inputs for accessibility and concise text (e.g., "Metric", "Model Size").
+- Manage layout with CSS inside the scoped `<style>` for the root class; avoid global rules.
+
+### C) SVG scope: charts only; UI in HTML
+- SVG is for chart primitives (marks, axes, gridlines) only.
+- Put legends and controls in HTML (adjacent DOM is preferred; `foreignObject` only if necessary).
+- Tooltips are HTML positioned absolutely inside the root container.
+  - Details: see sections 4 (controls), 5 (tooltips), 8 (legends).
 
 ### 1) File, naming, and structure
 - Name files with a clear prefix and purpose: `d3-<type>.html` (e.g., `d3-scatter.html`).
@@ -10,7 +72,7 @@ Authoring rules for creating a new interactive chart as a single self-contained 
 
 Minimal skeleton:
 ```html
-<div class="d3-yourchart" style="width:100%;margin:10px 0;"></div>
+<div class="d3-yourchart"></div>
 <style>
   .d3-yourchart {/* all styles scoped to the root */}
 </style>
@@ -92,15 +154,76 @@ Minimal skeleton:
 ### 3) Styling and theming
 - Scope all rules under the root class; do not style `body`, `svg` globally.
 - Use CSS variables for theme alignment: `--primary-color`, `--text-color`, `--muted-color`, `--surface-bg`, `--border-color`.
+- Derive palette colors from `window.ColorPalettes` (categorical, sequential, diverging); do not hardcode arrays.
 - For dark mode–aware strokes/ticks, either:
   - Read `document.documentElement.getAttribute('data-theme') === 'dark'`, or
   - Prefer CSS-only where possible.
 - Keep backgrounds light and borders subtle; the outer card frame is handled by `HtmlEmbed.astro`.
 
+Standard axis/tick/grid colors (reuse across charts):
+
+```css
+.your-root-class {
+  --axis-color: rgba(0,0,0,0.25);
+  --tick-color: rgba(0,0,0,0.55);
+  --grid-color: rgba(0,0,0,0.05);
+}
+[data-theme="dark"] .your-root-class {
+  --axis-color: rgba(255,255,255,0.25);
+  --tick-color: rgba(255,255,255,0.70);
+  --grid-color: rgba(255,255,255,0.08);
+}
+/* Example axis application (D3) */
+g.axis-x, g.axis-y { }
+/* In JS after calling axis: */
+// g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+// g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+/* Gridlines: */
+// grid.call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
+//   .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)'));
+```
+
+#### 3.1) Text on fixed-colored backgrounds
+
+- When rendering text over cells/areas with fixed background colors (that do not change with theme), compute a readable text style once from the actual background color.
+- Use `window.ColorPalettes.getTextStyleForBackground(bgCss, { blend: 0.6 })` when available; avoid tying text color to dark mode toggles since the background is constant.
+- Do not re-evaluate on theme toggle unless the background color itself changes.
+
+Example:
+```js
+const bg = getComputedStyle(cellRect).fill; // e.g., 'rgb(12, 34, 56)'
+const style = window.ColorPalettes?.getTextStyleForBackground
+  ? window.ColorPalettes.getTextStyleForBackground(bg, { blend: 0.6 })
+  : { fill: 'var(--text-color)' };
+textSel.style('fill', style.fill);
+```
+
 ### 4) Controls (labels, selects, sliders)
-- Compose controls as plain HTML elements appended inside the root container.
+- Compose controls as plain HTML elements appended inside the root container (no SVG UI).
 - Style selects like in `d3-line.html`/`d3-bar.html` for consistency (rounded 8px, custom caret via data-URI, focus ring).
 - Use `<label>` wrapping the input for accessibility; set concise text (e.g., "Metric", "Model Size").
+
+#### 4.1) Required select label: "Metric"
+- When a select is used to switch metrics, include a visible label above the select with the exact text "Metric".
+- Preferred markup (grouped for easy vertical stacking):
+
+```html
+<div class="controls">
+  <div class="control-group">
+    <label for="metric-select-<unique>">Metric</label>
+    <select id="metric-select-<unique>"></select>
+  </div>
+</div>
+```
+
+Minimal CSS (match project styles):
+
+```css
+.controls { display:flex; gap:16px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }
+.controls .control-group { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.controls label { font-size:12px; font-weight:700; color: var(--text-color); }
+.controls select { font-size:12px; padding:8px 28px 8px 10px; border:1px solid var(--border-color); border-radius:8px; background: var(--surface-bg); color: var(--text-color); }
+```
 
 ### 5) Tooltip pattern
 - Create a single `.d3-tooltip` absolutely positioned inside the container.
@@ -113,6 +236,89 @@ Minimal skeleton:
 - Implement `fetchFirstAvailable(paths)`; try in order with `cache:'no-cache'`; handle errors gracefully with a red `<pre>` message.
 - For images or JSON models, mirror the same approach (see `d3-comparison.html`, `d3-neural.html`).
 
+#### 6.1) Data props (HtmlEmbed → embed)
+
+- HtmlEmbed accepts an optional `data` prop that can be a string (single file) or an array of strings (multiple files).
+- This prop is passed to the fragment via the `data-datafiles` HTML attribute.
+- In the embed script, read this attribute from the closest ancestor that carries it (the `HtmlEmbed` wrapper), not necessarily the chart’s direct container.
+- Recommended normalization: if a value contains no slash, automatically prefix it with `/data/` to target the public data folder.
+- If `data` is not provided, keep the usual fallback (public, then `assets/data`).
+
+Optional configuration (e.g., default metric):
+
+```js
+// In HtmlEmbed usage (MDX):
+<HtmlEmbed src="d3-line-simple.html" data="internal_deduplication.csv" config={{ defaultMetric: 'average_rank' }} />
+
+// In the embed script (read from closest ancestor):
+let mountEl = container;
+while (mountEl && !mountEl.getAttribute?.('data-datafiles') && !mountEl.getAttribute?.('data-config')) {
+  mountEl = mountEl.parentElement;
+}
+let providedConfig = null;
+try {
+  const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+  if (cfg && cfg.trim()) providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+} catch(_) {}
+// Example: selecting initial metric if present
+const desired = providedConfig && providedConfig.defaultMetric ? String(providedConfig.defaultMetric) : null;
+```
+
+Examples (MDX):
+
+```mdx
+<HtmlEmbed src="d3-line-simple.html" title="Run A" data="formatting_filters.csv" />
+<HtmlEmbed src="d3-line-simple.html" title="Run B" data="relevance_filters.csv" />
+
+<HtmlEmbed
+  src="d3-line-simple.html"
+  title="Comparison A vs B"
+  data={[ 'formatting_filters.csv', 'relevance_filters.csv' ]}
+/>
+```
+
+Reading on the embed side (JS):
+
+```js
+// Find the closest ancestor that carries the attribute
+let mountEl = container;
+while (mountEl && !mountEl.getAttribute?.('data-datafiles')) {
+  mountEl = mountEl.parentElement;
+}
+let providedData = null;
+try {
+  const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null;
+  if (attr && attr.trim()) {
+    providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
+  }
+} catch(_) {}
+
+const DEFAULT_CSV = '/data/formatting_filters.csv';
+const ensureDataPrefix = (p) => (typeof p === 'string' && p && !p.includes('/')) ? `/data/${p}` : p;
+const normalizeInput = (inp) => Array.isArray(inp)
+  ? inp.map(ensureDataPrefix)
+  : (typeof inp === 'string' ? [ ensureDataPrefix(inp) ] : null);
+
+const CSV_PATHS = Array.isArray(providedData)
+  ? normalizeInput(providedData)
+  : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
+      DEFAULT_CSV,
+      './assets/data/formatting_filters.csv',
+      '../assets/data/formatting_filters.csv',
+      '../../assets/data/formatting_filters.csv'
+    ]);
+
+const fetchFirstAvailable = async (paths) => {
+  for (const p of paths) {
+    try {
+      const r = await fetch(p, { cache: 'no-cache' });
+      if (r.ok) return await r.text();
+    } catch(_){}
+  }
+  throw new Error('CSV not found');
+};
+```
+
 ### 7) Responsiveness and layout
 - Compute `width = container.clientWidth`, and a height derived from width (e.g., `width / 3`), with a sensible minimum height.
 - Maintain a `margin` object and derive `innerWidth/innerHeight` for plots.
@@ -120,9 +326,50 @@ Minimal skeleton:
 - Recompute scales/axes/grid on every render.
 
 ### 8) Legends and labels
-- Use `foreignObject` + inline HTML to render compact legends that wrap nicely (see `d3-line.html`, `d3-pie.html`).
-- For axes, remove and re-append groups each render (simple and predictable), or update in place if needed.
+- Prefer HTML for legends for wrapping and accessibility; avoid SVG-based legends.
 - Always add axis labels when applicable (e.g., `Step`, `Value`).
+- Standardize legend swatch size: 14×14px, border-radius 3px, 1px border `var(--border-color)`.
+
+#### 8.1) Required legend title: "Legend"
+- Always render a visible title above legend items with the exact text "Legend".
+- Canonical markup:
+
+```html
+<div class="legend">
+  <div class="legend-title">Legend</div>
+  <div class="items">
+    <!-- <span class="item"><span class="swatch"></span><span>Series A</span></span> ... -->
+  </div>
+</div>
+```
+
+Minimal CSS (match project styles):
+
+```css
+.legend { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.legend-title { font-size:12px; font-weight:700; color: var(--text-color); }
+.legend .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+.legend .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:12px; color: var(--text-color); }
+.legend .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); }
+```
+
+Recommended JS pattern to (re)build the legend:
+
+```js
+function makeLegend(seriesNames, colorFor) {
+  let legend = container.querySelector('.legend');
+  if (!legend) { legend = document.createElement('div'); legend.className = 'legend'; container.appendChild(legend); }
+  let title = legend.querySelector('.legend-title'); if (!title) { title = document.createElement('div'); title.className = 'legend-title'; title.textContent = 'Legend'; legend.appendChild(title); }
+  let items = legend.querySelector('.items'); if (!items) { items = document.createElement('div'); items.className = 'items'; legend.appendChild(items); }
+  items.innerHTML = '';
+  seriesNames.forEach(name => {
+    const el = document.createElement('span'); el.className = 'item';
+    const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = colorFor(name);
+    const txt = document.createElement('span'); txt.textContent = name;
+    el.appendChild(sw); el.appendChild(txt); items.appendChild(el);
+  });
+}
+```
 
 ### 9) Accessibility
 - Provide `alt` attributes on `<img>` (see `d3-comparison.html`).
@@ -150,18 +397,19 @@ Minimal skeleton:
 ### 14) Conventions checklist (before committing)
 - Root class is unique and matches file name (`d3-<type>`).
 - No globals added; script wrapped in an IIFE.
-- `data-mounded` guard is present to avoid double-mount.
+- `data-mounted` guard is present to avoid double-mount.
+- Colors come from `window.ColorPalettes` (no hardcoded arrays); `--primary-color` respected.
 - Uses CSS variables for colors; dark-mode friendly.
 - Responsive: recomputes layout on resize; uses `ResizeObserver`.
-- Controls are accessible and consistently styled.
-- Tooltip is present (if hover/inspect is required).
+- Controls are HTML-only, accessible, and consistently styled.
+- Legends and tooltips are HTML, not SVG.
 - Data loading includes public-path-first strategy and graceful error.
-- Axes/labels/legends are legible at small widths.
+- Axes/labels are legible at small widths.
 - Code is easy to skim: clear naming, early returns, short functions.
 
 ### 15) Example: small bar chart (structure only)
 ```html
-<div class="d3-mini-bar" style="width:100%;margin:10px 0;"></div>
+<div class="d3-mini-bar"></div>
 <style>
   .d3-mini-bar .bar { stroke: none; }
 </style>
