@@ -1,0 +1,495 @@
+<div class="d3-trackio">
+  <div class="d3-trackio__grid">
+    <div class="cell" data-metric="epoch" data-title="epoch"></div>
+    <div class="cell" data-metric="train_accuracy" data-title="train_accuracy"></div>
+    <div class="cell" data-metric="train_loss" data-title="train_loss"></div>
+    <div class="cell" data-metric="val_accuracy" data-title="val_accuracy"></div>
+    <div class="cell cell--wide" data-metric="val_loss" data-title="val_loss"></div>
+  </div>
+  <noscript>JavaScript is required to render this chart.</noscript>
+</div>
+<style>
+  .d3-trackio { position: relative; }
+  .d3-trackio__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 980px) {
+    .d3-trackio__grid { grid-template-columns: 1fr; }
+  }
+  .d3-trackio__grid .cell--wide { grid-column: 1 / -1; }
+
+  .d3-trackio .cell {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface-bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .d3-trackio .cell-header {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .d3-trackio .cell-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+    text-transform: none;
+  }
+  .d3-trackio .cell-body { position: relative; width: 100%; overflow: hidden; }
+  .d3-trackio .cell-body svg { max-width: 100%; height: auto; display: block; }
+
+  /* Axes/grid colors via project CSS variables */
+  .d3-trackio .axes path,
+  .d3-trackio .axes line { stroke: var(--axis-color); }
+  .d3-trackio .axes text { fill: var(--tick-color); }
+  .d3-trackio .grid line { stroke: var(--grid-color); }
+
+  /* Global header (legend) below the grid for consistency */
+  .d3-trackio__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 8px 0 0 0;
+    flex-wrap: wrap;
+  }
+  .d3-trackio__header .legend-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .d3-trackio__header .legend-bottom .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
+  .d3-trackio__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-trackio__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .d3-trackio__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); display: inline-block; }
+
+  /* Hover ghosting */
+  .d3-trackio.hovering .lines path.ghost { opacity: .25; }
+  .d3-trackio.hovering .points circle.ghost { opacity: .25; }
+  .d3-trackio.hovering .areas path.ghost { opacity: .08; }
+  .d3-trackio.hovering .legend-bottom .item.ghost { opacity: .35; }
+
+  /* Tooltip styling aligned with other embeds */
+  .d3-trackio .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  .d3-trackio .d3-tooltip__inner { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+  .d3-trackio .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .d3-trackio .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .d3-trackio .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--border-color); }
+  .d3-trackio .d3-tooltip__color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+</style>
+<script>
+  (() => {
+    const THIS_SCRIPT = document.currentScript;
+
+    const TARGET_METRICS = [
+      'epoch',
+      'train_accuracy',
+      'train_loss',
+      'val_accuracy',
+      'val_loss'
+    ];
+
+    const prettyMetricLabel = (key) => {
+      if (!key) return '';
+      const table = {
+        'train_accuracy': 'Train Accuracy',
+        'val_accuracy': 'Val Accuracy',
+        'train_loss': 'Train Loss',
+        'val_loss': 'Val Loss',
+        'epoch': 'Epoch'
+      };
+      if (table[key]) return table[key];
+      const cleaned = String(key).replace(/[_-]+/g, ' ').trim();
+      return cleaned.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    };
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    // Build per-cell line chart
+    function initCell(cell) {
+      const d3 = window.d3;
+      const metricKey = cell.getAttribute('data-metric');
+      const titleText = cell.getAttribute('data-title') || metricKey;
+
+      // Header
+      const header = document.createElement('div'); header.className = 'cell-header';
+      const title = document.createElement('div'); title.className = 'cell-title'; title.textContent = prettyMetricLabel(titleText); header.appendChild(title);
+      cell.appendChild(header);
+
+      // Body & SVG
+      const body = document.createElement('div'); body.className = 'cell-body'; cell.appendChild(body);
+      const svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gAreas = gRoot.append('g').attr('class','areas');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      const gHover = gRoot.append('g').attr('class','hover');
+
+      // Tooltip
+      cell.style.position = cell.style.position || 'relative';
+      let tip = cell.querySelector('.d3-tooltip'); let tipInner; let hideTipTimer = null;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute', top:'0', left:'0', transform:'translate(-9999px,-9999px)', pointerEvents:'none',
+          padding:'10px 12px', borderRadius:'12px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity:'0', transition:'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); cell.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Layout & scales
+      let width = 800, height = 200; const margin = { top: 12, right: 20, bottom: 36, left: 56 };
+      const xScale = d3.scaleLinear();
+      const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
+
+      function updateLayout(axisLabelY){
+        const rect = cell.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
+        // Hauteur fixe (encore plus basse) pour uniformiser les 5 graphiques
+        height = 200;
+        svg.attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio','xMidYMid meet');
+        const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom;
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        xScale.range([0, innerWidth]); yScale.range([innerHeight, 0]);
+
+        // Grid
+        gGrid.selectAll('*').remove();
+        gGrid.selectAll('line').data(yScale.ticks(6)).join('line')
+          .attr('x1',0).attr('x2',innerWidth).attr('y1',d=>yScale(d)).attr('y2',d=>yScale(d))
+          .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // Axes
+        gAxes.selectAll('*').remove();
+        let xAxis = d3.axisBottom(xScale).tickSizeOuter(0).ticks(8).tickFormat(formatK);
+        let yAxis = d3.axisLeft(yScale).ticks(6);
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
+        gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
+
+        // Axis labels
+        gAxes.append('text')
+          .attr('class', 'x-axis-label')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 10)))
+          .attr('fill', 'var(--text-color)')
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text('Steps');
+        gAxes.append('text')
+          .attr('class', 'y-axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -Math.max(16, Math.min(28, margin.left - 8) + 10))
+          .attr('fill', 'var(--text-color)')
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text(axisLabelY || 'Value');
+
+        return { innerWidth, innerHeight };
+      }
+
+      const formatK = (v) => {
+        const abs = Math.abs(v);
+        if (abs >= 1000) { const n = v / 1000; const s = d3.format('.1f')(n); return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k'; }
+        return d3.format('d')(v);
+      };
+
+      function render(metricData, colorForRun) {
+        const runs = Object.keys(metricData || {});
+        const hasAny = runs.some(r => (metricData[r]||[]).length > 0);
+        if (!hasAny) {
+          // Show a single empty message and hide the SVG group
+          gRoot.style('display', 'none');
+          let msg = body.querySelector('.empty-msg');
+          if (!msg) {
+            msg = document.createElement('div');
+            msg.className = 'empty-msg';
+            msg.textContent = 'Metric not found in data.';
+            Object.assign(msg.style, { padding:'10px', fontSize:'12px', color:'var(--muted-color)' });
+            body.appendChild(msg);
+          }
+          return;
+        }
+        // Ensure message is removed if previously shown
+        const msg = body.querySelector('.empty-msg'); if (msg) msg.remove();
+        gRoot.style('display', null);
+
+        let minStep = Infinity, maxStep = -Infinity, minVal = Infinity, maxVal = -Infinity;
+        runs.forEach(r => { (metricData[r]||[]).forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); minVal = Math.min(minVal, pt.value); maxVal = Math.max(maxVal, pt.value); }); });
+        const isAccuracy = /accuracy/i.test(metricKey);
+        const axisLabelY = prettyMetricLabel(metricKey);
+        xScale.domain([minStep, maxStep]);
+        if (isAccuracy) yScale.domain([0, 1]).nice(); else yScale.domain([minVal, maxVal]).nice();
+
+        const { innerWidth, innerHeight } = updateLayout(axisLabelY);
+
+        // Vertical grid lines at each available step (same visibility as horizontal)
+        const stepSetForGrid = new Set();
+        runs.forEach(r => { (metricData[r]||[]).forEach(pt => stepSetForGrid.add(pt.step)); });
+        const stepsForGrid = Array.from(stepSetForGrid).sort((a,b)=>a-b);
+        gGrid.selectAll('line.vstep')
+          .data(stepsForGrid)
+          .join(
+            enter => enter.append('line').attr('class','vstep')
+              .attr('y1', 0).attr('y2', innerHeight)
+              .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
+              .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges'),
+            update => update
+              .attr('y1', 0).attr('y2', innerHeight)
+              .attr('x1', d => xScale(d)).attr('x2', d => xScale(d)),
+            exit => exit.remove()
+          );
+
+        // Shaded areas from stderr if available
+        gAreas.selectAll('*').remove();
+        runs.forEach(r => {
+          const vals = (metricData[r]||[]).slice().sort((a,b)=>a.step-b.step);
+          const withErr = vals.filter(v => v && v.stderr != null && isFinite(v.stderr) && v.stderr > 0 && isFinite(v.value));
+          if (!withErr.length) return;
+          const upper = withErr.map(d => [xScale(d.step), yScale(d.value + d.stderr)]);
+          const lower = withErr.slice().reverse().map(d => [xScale(d.step), yScale(d.value - d.stderr)]);
+          const coords = upper.concat(lower);
+          const pathData = d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveLinearClosed)(coords);
+          gAreas.append('path')
+            .attr('class','area')
+            .attr('data-run', r)
+            .attr('d', pathData)
+            .attr('fill', colorForRun(r))
+            .attr('opacity', 0.15)
+            .attr('stroke', 'none');
+        });
+
+        // Lines
+        const series = runs.map(r => ({ run: r, color: colorForRun(r), values: (metricData[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
+        const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
+        paths.enter().append('path').attr('class','run-line').attr('data-run', d=>d.run).attr('fill','none').attr('stroke-width', 1.5).attr('opacity', 0.9)
+          .attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
+        paths.transition().duration(260).attr('stroke', d=>d.color).attr('opacity',0.9).attr('d', d=>lineGen(d.values));
+        paths.exit().remove();
+
+        // Points
+        const allPoints = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
+        const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
+        ptsSel.enter().append('circle').attr('class','pt').attr('data-run', d=>d.run).attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.6)
+          .attr('stroke', 'none').attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value))
+          .merge(ptsSel)
+          .transition().duration(150)
+          .attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value));
+        ptsSel.exit().remove();
+
+        // Hover
+        gHover.selectAll('*').remove();
+        const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        const hoverLine = gHover.append('line').style('stroke','var(--text-color)').attr('stroke-opacity', 0.25).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
+        const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step))); const steps = Array.from(stepSet).sort((a,b)=>a-b);
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
+          let html = `<div><strong>${prettyMetricLabel(metricKey)}</strong></div><div><strong>step</strong> ${formatK(nearest)}</div>`;
+          const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null);
+          entries.sort((a,b)=> (a.pt.value - b.pt.value));
+          const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4));
+          entries.forEach(e => {
+            const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : '';
+            html += `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}${err}</span></div>`;
+          });
+          tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`; }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }, 100); }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      return { metricKey, render };
+    }
+
+    const bootstrap = () => {
+      const scriptEl = THIS_SCRIPT;
+      // Locate host
+      let host = null;
+      if (scriptEl && scriptEl.parentElement && scriptEl.parentElement.querySelector) {
+        host = scriptEl.parentElement.querySelector('.d3-trackio');
+      }
+      if (!host) {
+        let sib = scriptEl && scriptEl.previousElementSibling;
+        while (sib && !(sib.classList && sib.classList.contains('d3-trackio'))) { sib = sib.previousElementSibling; }
+        host = sib || null;
+      }
+      if (!host) { host = document.querySelector('.d3-trackio'); }
+      if (!host) return;
+      if (host.dataset && host.dataset.mounted === 'true') return; if (host.dataset) host.dataset.mounted = 'true';
+
+      // Build global header (legend)
+      const header = document.createElement('div'); header.className = 'd3-trackio__header';
+      const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>';
+      header.appendChild(legend);
+      host.appendChild(header);
+
+      const cells = Array.from(host.querySelectorAll('.cell'));
+      if (!cells.length) return;
+
+      const instances = cells.map(cell => initCell(cell));
+
+      // Read HtmlEmbed attributes from closest ancestor carrying them
+      let mountEl = host;
+      while (mountEl && !mountEl.getAttribute?.('data-datafiles') && !mountEl.getAttribute?.('data-config')) {
+        mountEl = mountEl.parentElement;
+      }
+      let providedData = null; let providedConfig = null;
+      try { const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null; if (attr && attr.trim()) { providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim(); } } catch(_) {}
+      try { const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null; if (cfg && cfg.trim()) { providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg; } } catch(_) {}
+
+      const DEFAULT_CSV = '/data/trackio_wandb_demo.csv';
+      const ensureDataPrefix = (p) => { if (typeof p !== 'string' || !p) return p; return p.includes('/') ? p : `/data/${p}`; };
+      const normalizeInput = (inp) => Array.isArray(inp) ? inp.map(ensureDataPrefix) : (typeof inp === 'string' ? [ ensureDataPrefix(inp) ] : null);
+      const CSV_PATHS = Array.isArray(providedData)
+        ? normalizeInput(providedData)
+        : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
+            DEFAULT_CSV,
+            './assets/data/formatting_filters.csv',
+            '../assets/data/formatting_filters.csv',
+            '../../assets/data/formatting_filters.csv'
+          ]);
+      const fetchFirstAvailable = async (paths) => { for (const p of paths) { try { const r = await fetch(p, { cache: 'no-cache' }); if (r.ok) return await r.text(); } catch(_){} } throw new Error('CSV not found'); };
+
+      const d3 = window.d3;
+      (async () => {
+        try {
+          // Load one or many CSVs and merge rows
+          let textAll = '';
+          if (Array.isArray(CSV_PATHS) && CSV_PATHS.length > 1) {
+            const texts = await Promise.all(CSV_PATHS.map(p => fetch(p, { cache:'no-cache' }).then(r => r.ok ? r.text() : '').catch(()=>'')));
+            textAll = texts.filter(Boolean).join('\n');
+          } else {
+            textAll = await fetchFirstAvailable(CSV_PATHS);
+          }
+          const rows = d3.csvParse(textAll, d => ({
+            run:(d.run||'').trim(),
+            step:+d.step,
+            metric:(d.metric||'').trim(),
+            value:+d.value,
+            stderr: (d.stderr!=null && d.stderr!=='') ? +d.stderr : null
+          }));
+
+          // Filter to target metrics if present in data, with synonym resolution
+          const metricsInData = Array.from(new Set(rows.map(r => r.metric)));
+          const lcSet = new Set(metricsInData.map(m => m.toLowerCase()));
+          const preferIfExists = (cand) => cand.find(c => lcSet.has(String(c).toLowerCase())) || null;
+          const resolveMetric = (target) => {
+            // Config override
+            const override = providedConfig && providedConfig.metricMap && providedConfig.metricMap[target];
+            if (override && lcSet.has(String(override).toLowerCase())) return metricsInData.find(m => m.toLowerCase() === String(override).toLowerCase());
+            // Exact
+            const exact = metricsInData.find(m => m.toLowerCase() === target.toLowerCase()); if (exact) return exact;
+            // Heuristics by target
+            const cands = (name) => metricsInData.filter(m => m.toLowerCase().includes(name));
+            if (target === 'epoch') return preferIfExists(['epoch']);
+            if (target === 'train_accuracy') return preferIfExists([
+              'train_accuracy','training_accuracy','accuracy_train','train_acc','acc_train','train/accuracy','accuracy'
+            ]) || cands('acc').find(m => /train|trn/i.test(m));
+            if (target === 'val_accuracy') return preferIfExists([
+              'val_accuracy','valid_accuracy','validation_accuracy','val_acc','acc_val','val/accuracy'
+            ]) || cands('acc').find(m => /val|valid/i.test(m));
+            if (target === 'train_loss') return preferIfExists([
+              'train_loss','training_loss','loss_train','train/loss','loss'
+            ]) || cands('loss').find(m => /train|trn/i.test(m));
+            if (target === 'val_loss') return preferIfExists([
+              'val_loss','validation_loss','valid_loss','loss_val','val/loss'
+            ]) || cands('loss').find(m => /val|valid/i.test(m));
+            return null;
+          };
+          const TARGET_TO_DATA = Object.fromEntries(TARGET_METRICS.map(t => [t, resolveMetric(t)]));
+          const metricsToDraw = TARGET_METRICS.filter(t => !!TARGET_TO_DATA[t]);
+
+          // Build run list and shared color mapping
+          const runList = Array.from(new Set(rows.map(r => String(r.run||'').trim()).filter(Boolean))).sort();
+          let palette = null;
+          try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') palette = window.ColorPalettes.getColors('categorical', runList.length); } catch(_) {}
+          if (!palette) {
+            const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+            palette = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])];
+          }
+          const colorForRun = (name) => palette[runList.indexOf(name) % palette.length];
+
+          // Populate legend
+          const legendItemsHost = legend.querySelector('.items');
+          legendItemsHost.innerHTML = runList.map((name) => {
+            const color = colorForRun(name);
+            return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`;
+          }).join('');
+
+          // Build per-metric data map (using resolved names)
+          const dataByMetric = new Map();
+          metricsToDraw.forEach(tgt => {
+            const m = TARGET_TO_DATA[tgt];
+            const map = {}; runList.forEach(r => map[r] = []);
+            rows.filter(r=>r.metric===m).forEach(r => {
+              if (!isNaN(r.step) && !isNaN(r.value)) map[r.run].push({ step:r.step, value:r.value, stderr:r.stderr });
+            });
+            dataByMetric.set(tgt, map);
+          });
+
+          // Render each cell
+          instances.forEach(inst => {
+            const metricMap = dataByMetric.get(inst.metricKey) || {};
+            inst.render(metricMap, colorForRun);
+          });
+
+          // Resize handling
+          const rerender = () => { instances.forEach(inst => inst.render(dataByMetric.get(inst.metricKey)||{}, colorForRun)); };
+          if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(host); } else { window.addEventListener('resize', rerender); }
+
+          // Legend hover ghosting across all cells
+          legendItemsHost.querySelectorAll('.item').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+              const run = el.getAttribute('data-run'); if (!run) return;
+              host.classList.add('hovering');
+              host.querySelectorAll('.cell').forEach(cell => {
+                cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
+                cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run));
+                cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run));
+              });
+              legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
+            });
+            el.addEventListener('mouseleave', () => {
+              host.classList.remove('hovering');
+              host.querySelectorAll('.cell').forEach(cell => {
+                cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.remove('ghost'));
+                cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost'));
+                cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost'));
+              });
+              legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+            });
+          });
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; host.appendChild(pre);
+        }
+      })();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+
