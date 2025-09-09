@@ -1,0 +1,385 @@
+<div class="d3-trackio-oblivion">
+  <div class="d3-trackio-oblivion__grid">
+    <div class="cell" data-metric="epoch" data-title="epoch"></div>
+    <div class="cell" data-metric="train_accuracy" data-title="train_accuracy"></div>
+    <div class="cell" data-metric="train_loss" data-title="train_loss"></div>
+    <div class="cell" data-metric="val_accuracy" data-title="val_accuracy"></div>
+    <div class="cell cell--wide" data-metric="val_loss" data-title="val_loss"></div>
+  </div>
+  <noscript>JavaScript is required to render this chart.</noscript>
+</div>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap');
+  /* Futuristic "Oblivion"-inspired styling */
+  .d3-trackio-oblivion { position: relative;
+    --cell-gap: 0px;
+     --obl-cyan: #7FF1FF;
+     --obl-cyan-dim: rgba(127,241,255,.25);
+     --obl-accent: #8BF5FF;
+     --obl-bg: rgba(255,255,255,0.06);
+     --obl-border: rgba(127,241,255,.25);
+     --obl-glow: 0 0 0 1px rgba(127,241,255,.35), 0 8px 40px rgba(127,241,255,.12);
+     background: #0f1115;
+     --corner-inset: 6px;
+     --hud-gap: 10px;
+     --hud-corner-size: 8px;
+     /* Chart background gradient as a variable for easy theming */
+     --hud-bg-gradient: radial-gradient(1200px 200px at 20% -10%, rgba(127,241,255,.03), transparent 80%), radial-gradient(900px 200px at 80% 110%, rgba(127,241,255,.03), transparent 80%);
+     /* Tooltip offset (bottom-right of cursor) */
+    --tip-offset-x: 0px;
+    --tip-offset-y: 0px;
+     padding: var(--hud-gap);
+     font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+ }
+  .d3-trackio-oblivion * { font-family: inherit;
+   }
+  [data-theme="dark"] .d3-trackio-oblivion { --obl-bg: rgba(12,18,22,.45); }
+
+  .d3-trackio-oblivion__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: --cell-gap; }
+  @media (max-width: 980px) { .d3-trackio-oblivion__grid { grid-template-columns: 1fr; } }
+  .d3-trackio-oblivion__grid .cell--wide { grid-column: 1 / -1; }
+
+  .d3-trackio-oblivion .cell {
+    /* border: 1px solid var(--obl-border);
+    border-radius: 4px;
+    background: var(--obl-bg);
+    backdrop-filter: saturate(1.1) blur(10px);
+    box-shadow: var(--obl-glow); */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Important: allow tooltip to overflow outside cell bounds */
+    overflow: visible;
+    z-index: 0;
+  }
+  .d3-trackio-oblivion .cell:hover { z-index: 50; }
+  /* Background and corners are explicit elements for maintainability */
+  .d3-trackio-oblivion .cell-bg { position: absolute; inset: var(--hud-gap); pointer-events: none; z-index: 1; background: var(--hud-bg-gradient); }
+  .d3-trackio-oblivion .cell-corners { position: absolute; inset: var(--corner-inset); pointer-events: none; z-index: 3; background:
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) top left / var(--hud-corner-size) 1px no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) top left / 1px var(--hud-corner-size) no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) top right / var(--hud-corner-size) 1px no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) top right / 1px var(--hud-corner-size) no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom left / var(--hud-corner-size) 1px no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom left / 1px var(--hud-corner-size) no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom right / var(--hud-corner-size) 1px no-repeat,
+      linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom right / 1px var(--hud-corner-size) no-repeat; opacity:.85; }
+  .d3-trackio-oblivion .cell-inner { position: relative; z-index: 2; padding: var(--hud-corner-size) 12px 10px var(--hud-gap); display:flex; flex-direction:column; }
+  .d3-trackio-oblivion .cell-header { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .d3-trackio-oblivion .cell-title { position: relative; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--obl-cyan); padding-left: 14px; }
+  .d3-trackio-oblivion .cell-title:before { content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width: 6px; height: 6px; background: var(--obl-cyan); border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.25) inset; opacity: .5; }
+  .d3-trackio-oblivion .cell-body { position: relative; width: 100%; overflow: hidden; }
+  .d3-trackio-oblivion .cell-body svg { max-width: 100%; height: auto; display: block; }
+
+  /* Axes & grid use cyan tint */
+  .d3-trackio-oblivion .axes path, .d3-trackio-oblivion .axes line { stroke: var(--obl-cyan-dim); stroke-opacity: 1; }
+  .d3-trackio-oblivion .axes text { fill: var(--obl-cyan); opacity: .6; font-weight: 400; letter-spacing: 0.02em; }
+  .d3-trackio-oblivion .grid line { stroke: var(--obl-cyan-dim); stroke-opacity: .5; }
+
+  /* Legend header */
+  .d3-trackio-oblivion__header { display: flex; align-items: flex-start; justify-content: center; gap: 14px; margin: 0 0 10px 0; flex-wrap: wrap; width: 100%; }
+  .d3-trackio-oblivion__header .legend-bottom { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--obl-cyan); text-align: center; }
+  .d3-trackio-oblivion__header .legend-bottom .legend-title { font-size: 11px; font-weight: 900; letter-spacing: 0.18em; color: var(--obl-cyan); text-transform: uppercase; }
+  .d3-trackio-oblivion__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-trackio-oblivion__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--obl-cyan); }
+  .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--obl-border); display: inline-block; box-shadow: 0 0 12px rgba(127,241,255,.18) inset; }
+
+  /* Hover ghosting */
+  .d3-trackio-oblivion.hovering .lines path.ghost { opacity: .22; }
+  .d3-trackio-oblivion.hovering .points circle.ghost { opacity: .22; }
+  .d3-trackio-oblivion.hovering .areas path.ghost { opacity: .06; }
+  .d3-trackio-oblivion.hovering .legend-bottom .item.ghost { opacity: .35; }
+
+  /* Tooltip */
+  .d3-trackio-oblivion .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 10px 12px;
+    border-radius: 0;
+    font-size: 12px;
+    line-height: 1.35;
+    background: var(--obl-bg);
+    color: var(--obl-cyan);
+    box-shadow: 0 8px 32px rgba(127,241,255,.12), 0 2px 8px rgba(0,0,0,.20);
+    opacity: .5;
+    transition: opacity .12s ease;
+    z-index: 1000;
+    backdrop-filter: saturate(1.1) blur(10px);
+  }
+  .d3-trackio-oblivion .d3-tooltip.is-visible { opacity: 1; }
+  .d3-trackio-oblivion .d3-tooltip__inner { display: flex; flex-direction: column; gap: 6px; min-width: 220px; text-align: left; }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:first-child { font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: var(--obl-cyan); }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--obl-cyan); opacity: .8; display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.06em; }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--obl-border); }
+  .d3-trackio-oblivion .d3-tooltip__color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.2) inset; }
+</style>
+<script>
+  (() => {
+    const THIS_SCRIPT = document.currentScript;
+    const TARGET_METRICS = ['epoch','train_accuracy','train_loss','val_accuracy','val_loss'];
+
+    const prettyMetricLabel = (key) => {
+      if (!key) return '';
+      const table = { 'train_accuracy':'Train Accuracy', 'val_accuracy':'Val Accuracy', 'train_loss':'Train Loss', 'val_loss':'Val Loss', 'epoch':'Epoch' };
+      if (table[key]) return table[key];
+      const cleaned = String(key).replace(/[_-]+/g, ' ').trim();
+      return cleaned.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    };
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    function initCell(cell){
+      const d3 = window.d3;
+      const metricKey = cell.getAttribute('data-metric');
+      const titleText = cell.getAttribute('data-title') || metricKey;
+      // Structured layers: bg + corners + inner (header + svg)
+      const bg = document.createElement('div'); bg.className = 'cell-bg'; cell.appendChild(bg);
+      const corners = document.createElement('div'); corners.className = 'cell-corners'; cell.appendChild(corners);
+      const inner = document.createElement('div'); inner.className = 'cell-inner'; cell.appendChild(inner);
+      const header = document.createElement('div'); header.className = 'cell-header';
+      const title = document.createElement('div'); title.className = 'cell-title'; title.textContent = prettyMetricLabel(titleText); header.appendChild(title); inner.appendChild(header);
+
+      const body = document.createElement('div'); body.className = 'cell-body'; inner.appendChild(body);
+      const svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gAreas = gRoot.append('g').attr('class','areas');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      const gHover = gRoot.append('g').attr('class','hover');
+
+      // Tooltip
+      cell.style.position = cell.style.position || 'relative';
+      let tip = cell.querySelector('.d3-tooltip'); let tipInner; let hideTipTimer = null;
+      if (!tip) { tip = document.createElement('div'); tip.className = 'd3-tooltip'; tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner); cell.appendChild(tip); } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Layout & scales
+      let width = 800, height = 180; const margin = { top: 12, right: 20, bottom: 36, left: 44 };
+      const xScale = d3.scaleLinear(); const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
+
+      function updateLayout(axisLabelY){
+        const rect = cell.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
+        height = 180;
+        svg.attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio','xMidYMid meet');
+        // Respect HUD gap: keep content inside gradient inset
+        const css = getComputedStyle(cell);
+        const hudGap = Math.max(0, parseFloat(css.getPropertyValue('--hud-gap')) || 0);
+        const innerWidth = Math.max(0, width - margin.left - margin.right - hudGap * 2);
+        const innerHeight = Math.max(0, height - margin.top - margin.bottom - hudGap * 2);
+        gRoot.attr('transform', `translate(${margin.left + hudGap},${margin.top + hudGap})`);
+        xScale.range([0, innerWidth]); yScale.range([innerHeight, 0]);
+        // grid cleared; drawn as dot intersections in render()
+        gGrid.selectAll('*').remove();
+        gAxes.selectAll('*').remove();
+        // Build ticks that always include domain edges
+        const makeTicks = (scale, approx) => {
+          const arr = scale.ticks(approx);
+          const dom = scale.domain();
+          if (arr.length === 0 || arr[0] !== dom[0]) arr.unshift(dom[0]);
+          if (arr[arr.length - 1] !== dom[dom.length - 1]) arr.push(dom[dom.length - 1]);
+          // dedupe
+          return Array.from(new Set(arr));
+        };
+        const xTicksForced = makeTicks(xScale, 8);
+        const yTicksForced = makeTicks(yScale, 6);
+        gAxes
+          .append('g')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(
+            d3.axisBottom(xScale).tickValues(xTicksForced)
+          )
+          .call((g) => {
+            g.selectAll('path, line')
+              .attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('text')
+              .attr('fill', 'var(--obl-cyan)')
+              .style('font-size', '11px');
+          });
+
+        gAxes
+          .append('g')
+          .call(d3.axisLeft(yScale).tickValues(yTicksForced))
+          .call((g) => {
+            g.selectAll('path, line')
+              .attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('text')
+              .attr('fill', 'var(--obl-cyan)')
+              .style('font-size', '11px');
+          });
+        gAxes
+          .append('text')
+          .attr('class','x-axis-label')
+          .attr('x', innerWidth/2)
+          .attr('y', innerHeight + Math.max(22, Math.min(36, margin.bottom - 2)))
+          .attr('fill', 'var(--obl-cyan)')
+          .attr('text-anchor', 'middle')
+          .style('font-size','9px')
+          .style('opacity', '0.3')
+          .style('font-weight','500')
+          .style('letter-spacing','.12em')
+          .style('text-transform','uppercase')
+          .text('Steps');
+        // Y-axis label removed to gain horizontal space
+        return { innerWidth, innerHeight, xTicksForced, yTicksForced };
+      }
+
+      function render(metricData, colorForRun){
+        const runs = Object.keys(metricData || {});
+        const hasAny = runs.some(r => (metricData[r]||[]).length > 0);
+        if (!hasAny) { gRoot.style('display','none'); let msg = body.querySelector('.empty-msg'); if (!msg) { msg = document.createElement('div'); msg.className='empty-msg'; msg.textContent='Metric not found in data.'; Object.assign(msg.style,{ padding:'10px', fontSize:'12px', color:'var(--obl-cyan)', opacity:.6 }); body.appendChild(msg); } return; }
+        const msg = body.querySelector('.empty-msg'); if (msg) msg.remove(); gRoot.style('display', null);
+
+        let minStep = Infinity, maxStep = -Infinity, minVal = Infinity, maxVal = -Infinity;
+        runs.forEach(r => { (metricData[r]||[]).forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); minVal = Math.min(minVal, pt.value); maxVal = Math.max(maxVal, pt.value); }); });
+        if (!isFinite(minStep) || !isFinite(maxStep)) return;
+        const isAccuracy = /accuracy/i.test(metricKey);
+        const axisLabelY = prettyMetricLabel(metricKey);
+        xScale.domain([minStep, maxStep]); if (isAccuracy) yScale.domain([0,1]).nice(); else yScale.domain([minVal, maxVal]).nice();
+        const { innerWidth, innerHeight, xTicksForced, yTicksForced } = updateLayout(axisLabelY);
+
+        // Grid as small dots at intersections of y ticks × step positions
+        const gridPoints = [];
+        xTicksForced.forEach(s => { yTicksForced.forEach(t => { gridPoints.push({ sx: s, ty: t }); }); });
+        gGrid.selectAll('circle.grid-dot')
+          .data(gridPoints)
+          .join('circle')
+          .attr('class', 'grid-dot')
+          .attr('cx', d => xScale(d.sx))
+          .attr('cy', d => yScale(d.ty))
+          .attr('r', 1.25)
+          .attr('fill', 'var(--obl-cyan-dim)')
+          .attr('fill-opacity', 0.5);
+
+        // No stderr correction shapes for now (kept intentionally minimal)
+        gAreas.selectAll('*').remove();
+
+        // Lines
+        const series = runs.map(r => ({ run:r, color: colorForRun(r), values:(metricData[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
+        const paths = gLines.selectAll('path.run').data(series, d=>d.run);
+        paths.enter().append('path').attr('class','run').attr('fill','none').attr('stroke-width',1.8).attr('opacity',0.95).attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
+        paths.transition().duration(260).attr('stroke', d=>d.color).attr('opacity',0.95).attr('d', d=>lineGen(d.values));
+        paths.exit().remove();
+
+        // Points
+        const allPts = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
+        const ptsSel = gPoints.selectAll('circle.pt').data(allPts, d=>`${d.run}-${d.step}`);
+        ptsSel.enter().append('circle').attr('class','pt').attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.65).attr('stroke','none').attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value)).merge(ptsSel).transition().duration(150).attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value));
+        ptsSel.exit().remove();
+
+        // Hover
+        gHover.selectAll('*').remove();
+        const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        const hoverLine = gHover.append('line').style('stroke','var(--obl-cyan)').attr('stroke-opacity', 0.35).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null); let html = `<div>${prettyMetricLabel(metricKey)}</div><div>Step ${nearest}</div>`; const entries = series.map(s=>{ const m = new Map(s.values.map(v=>[v.step, v])); const pt = m.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null); entries.sort((a,b)=> (a.pt.value - b.pt.value)); const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4)); entries.forEach(e => { const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : ''; html += `<div style=\"display:flex;align-items:center;gap:8px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}${err}</span></div>`; }); tipInner.innerHTML = html; const cssVars = getComputedStyle(cell); const offx = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-x')) || 0); const offy = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-y')) || 0); const cellRect = cell.getBoundingClientRect(); const cx = (ev && ev.clientX != null) ? ev.clientX : (cellRect.left + mx); const cy = (ev && ev.clientY != null) ? ev.clientY : (cellRect.top + my); const x = cx - cellRect.left + offx; const y = cy - cellRect.top + offy; tip.classList.add('is-visible'); tip.style.transform=`translate(${x}px, ${y}px)`; 
+          // Animate points at the hovered step to grow slightly
+          try {
+            gPoints.selectAll('circle.pt')
+              .transition().duration(140).ease(d3.easeCubicOut)
+              .attr('r', d => (d && d.step === nearest ? 4 : 2));
+          } catch(_) {}
+        }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.classList.remove('is-visible'); tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); try { gPoints.selectAll('circle.pt').transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } catch(_) {} }, 100); }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      return { metricKey, render };
+    }
+
+    const bootstrap = () => {
+      const scriptEl = THIS_SCRIPT; let host = null; const header = document.createElement('div'); header.className = 'd3-trackio-oblivion__header'; const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>'; header.appendChild(legend);
+      if (scriptEl && scriptEl.parentElement && scriptEl.parentElement.querySelector) host = scriptEl.parentElement.querySelector('.d3-trackio-oblivion'); if (!host) { let sib = scriptEl && scriptEl.previousElementSibling; while (sib && !(sib.classList && sib.classList.contains('d3-trackio-oblivion'))) { sib = sib.previousElementSibling; } host = sib || null; }
+      if (!host) { host = document.querySelector('.d3-trackio-oblivion'); }
+      if (!host) return; if (host.dataset && host.dataset.mounted==='true') return; if (host.dataset) host.dataset.mounted='true';
+
+      // Insert legend header above the grid container
+      const gridNode = host.querySelector('.d3-trackio-oblivion__grid');
+      if (gridNode && gridNode.parentNode === host) { host.insertBefore(header, gridNode); } else { host.insertBefore(header, host.firstChild); }
+      const cells = Array.from(host.querySelectorAll('.cell')); if (!cells.length) return;
+      const instances = cells.map(cell => initCell(cell));
+
+      // Read HtmlEmbed attributes
+      let mountEl = host; while (mountEl && !mountEl.getAttribute?.('data-datafiles') && !mountEl.getAttribute?.('data-config')) { mountEl = mountEl.parentElement; }
+      let providedData = null; let providedConfig = null;
+      try { const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null; if (attr && attr.trim()) providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim(); } catch(_){ }
+      try { const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null; if (cfg && cfg.trim()) providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg; } catch(_){ }
+
+      const DEFAULT_CSV = '/data/trackio_wandb_demo.csv';
+      const ensureDataPrefix = (p) => { if (typeof p !== 'string' || !p) return p; return p.includes('/') ? p : `/data/${p}`; };
+      const normalizeInput = (inp) => Array.isArray(inp) ? inp.map(ensureDataPrefix) : (typeof inp === 'string' ? [ ensureDataPrefix(inp) ] : null);
+      const CSV_PATHS = Array.isArray(providedData) ? normalizeInput(providedData) : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [ DEFAULT_CSV, './assets/data/trackio_wandb_demo.csv', '../assets/data/trackio_wandb_demo.csv', '../../assets/data/trackio_wandb_demo.csv' ]);
+
+      const d3 = window.d3;
+      (async () => {
+        try {
+          const texts = await Promise.all(CSV_PATHS.map(p => fetch(p, { cache:'no-cache' }).then(r => r.ok ? r.text() : '').catch(()=>'')));
+          const textAll = texts.filter(Boolean).join('\n');
+          const rows = d3.csvParse(textAll, d => ({ run:(d.run||'').trim(), step:+d.step, metric:(d.metric||'').trim(), value:+d.value, stderr: (d.stderr!=null && d.stderr!=='') ? +d.stderr : null }));
+          // Filter out comments and invalid rows before building lists/maps
+          const cleanRows = rows.filter(r => {
+            const run = String(r.run||'').trim();
+            const metric = String(r.metric||'').trim();
+            return run && run.charAt(0) !== '#' && metric && isFinite(+r.step) && !isNaN(+r.step) && isFinite(+r.value) && !isNaN(+r.value);
+          });
+          const metricsInData = Array.from(new Set(cleanRows.map(r => r.metric)));
+          const lcSet = new Set(metricsInData.map(m => m.toLowerCase()));
+          const preferIfExists = (cand) => cand.find(c => lcSet.has(String(c).toLowerCase())) || null;
+          const resolveMetric = (target) => {
+            const override = providedConfig && providedConfig.metricMap && providedConfig.metricMap[target]; if (override && lcSet.has(String(override).toLowerCase())) return metricsInData.find(m => m.toLowerCase() === String(override).toLowerCase());
+            const exact = metricsInData.find(m => m.toLowerCase() === target.toLowerCase()); if (exact) return exact;
+            const cands = (name) => metricsInData.filter(m => m.toLowerCase().includes(name));
+            if (target === 'epoch') return preferIfExists(['epoch']);
+            if (target === 'train_accuracy') return preferIfExists(['train_accuracy','training_accuracy','accuracy_train','train_acc','acc_train','train/accuracy','accuracy']) || cands('acc').find(m => /train|trn/i.test(m));
+            if (target === 'val_accuracy') return preferIfExists(['val_accuracy','valid_accuracy','validation_accuracy','val_acc','acc_val','val/accuracy']) || cands('acc').find(m => /val|valid/i.test(m));
+            if (target === 'train_loss') return preferIfExists(['train_loss','training_loss','loss_train','train/loss','loss']) || cands('loss').find(m => /train|trn/i.test(m));
+            if (target === 'val_loss') return preferIfExists(['val_loss','validation_loss','valid_loss','loss_val','val/loss']) || cands('loss').find(m => /val|valid/i.test(m));
+            return null;
+          };
+          const TARGET_TO_DATA = Object.fromEntries(TARGET_METRICS.map(t => [t, resolveMetric(t)]));
+          const metricsToDraw = TARGET_METRICS.filter(t => !!TARGET_TO_DATA[t]);
+
+          const runList = Array.from(new Set(cleanRows.map(r => String(r.run||'').trim()).filter(Boolean))).sort();
+          const palette = (() => {
+            try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') return window.ColorPalettes.getColors('categorical', runList.length); } catch(_) {}
+            const d = (window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#7ff1ff','#5ae0e8','#3cc2da','#289ab8','#1a7e9a','#0f637b','#0a4b5e','#083948','#062a36','#041e27'];
+            return d;
+          })();
+          const colorForRun = (name) => palette[runList.indexOf(name) % palette.length];
+
+          const legendItemsHost = legend.querySelector('.items');
+          legendItemsHost.innerHTML = runList.map((name) => { const color = colorForRun(name); return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`; }).join('');
+
+          const dataByMetric = new Map();
+          metricsToDraw.forEach(tgt => { const m = TARGET_TO_DATA[tgt]; const map = {}; runList.forEach(r => map[r] = []); cleanRows.filter(r=>r.metric===m).forEach(r => { map[r.run].push({ step:r.step, value:r.value, stderr:r.stderr }); }); dataByMetric.set(tgt, map); });
+
+          instances.forEach(inst => { const metricMap = dataByMetric.get(inst.metricKey) || {}; inst.render(metricMap, colorForRun); });
+
+          const rerender = () => { instances.forEach(inst => inst.render(dataByMetric.get(inst.metricKey)||{}, colorForRun)); };
+          if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(host); } else { window.addEventListener('resize', rerender); }
+
+          legendItemsHost.querySelectorAll('.item').forEach(el => {
+            el.addEventListener('mouseenter', () => { const run = el.getAttribute('data-run'); if (!run) return; host.classList.add('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.toggle('ghost', (p.__data__ && p.__data__.run) !== run)); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run)); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run)); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run)); });
+            el.addEventListener('mouseleave', () => { host.classList.remove('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.remove('ghost')); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost')); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost')); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost')); });
+          });
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e); pre.style.color = 'var(--obl-cyan)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; host.appendChild(pre);
+        }
+      })();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+
