@@ -9,7 +9,18 @@
   <noscript>JavaScript is required to render this chart.</noscript>
 </div>
 <style>
-  .d3-trackio { position: relative; }
+  .d3-trackio { position: relative; --z-tooltip: 50; --z-overlay: 99999999;
+    /* Softer chart theming (light) */
+    --axis-color: rgba(0,0,0,.28);
+    --tick-color: rgba(0,0,0,.62);
+    --grid-color: rgba(0,0,0,.10);
+  }
+  /* Softer chart theming (dark) */
+  [data-theme="dark"] .d3-trackio {
+    --axis-color: rgba(255,255,255,.28);
+    --tick-color: rgba(255,255,255,.68);
+    --grid-color: rgba(255,255,255,.10);
+  }
   .d3-trackio__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -30,7 +41,6 @@
   }
   .d3-trackio .cell-header {
     padding: 8px 10px;
-    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -42,6 +52,67 @@
     color: var(--text-color);
     text-transform: none;
   }
+  .d3-trackio .cell-action {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--text-color);
+    opacity: .8;
+    cursor: pointer;
+  }
+  .d3-trackio .cell-action:hover { opacity: 1; }
+  .d3-trackio .cell-action svg { width: 28px; height: 28px; }
+  .d3-trackio .cell-action svg, .d3-trackio .cell-action svg path { fill: var(--text-color); stroke: none; }
+
+  /* Fullscreen overlay */
+  .d3-trackio__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.48);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-overlay);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .d3-trackio__overlay.is-open { opacity: 1; pointer-events: auto; }
+  .d3-trackio__modal {
+    position: relative;
+    width: min(92vw, 1200px);
+    height: min(92vh, 900px);
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    transform: scale(.96);
+    transition: transform .2s ease;
+  }
+  .d3-trackio__overlay.is-open .d3-trackio__modal { transform: scale(1); }
+  .d3-trackio__modal .cell { width: 100%; height: 100%; }
+  .d3-trackio__modal .cell .cell-body { height: calc(100% - 44px); }
+  /* Conserver le ratio pour éviter les décalages points/ticks lors du zoom */
+  .d3-trackio__modal .cell .cell-body svg { width: 100% !important; height: auto !important; }
+  .d3-trackio__modal .cell .cell-action { display: none; }
+  .d3-trackio__modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
   .d3-trackio .cell-body { position: relative; width: 100%; overflow: hidden; }
   .d3-trackio .cell-body svg { max-width: 100%; height: auto; display: block; }
 
@@ -51,22 +122,24 @@
   .d3-trackio .axes text { fill: var(--tick-color); }
   .d3-trackio .grid line { stroke: var(--grid-color); }
 
-  /* Global header (legend) below the grid for consistency */
+  /* Global header (legend) above the grid and centered */
   .d3-trackio__header {
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 12px;
-    margin: 8px 0 0 0;
+    margin: 0 0 10px 0;
     flex-wrap: wrap;
+    width: 100%;
   }
   .d3-trackio__header .legend-bottom {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 6px;
     font-size: 12px;
     color: var(--text-color);
+    text-align: center;
   }
   .d3-trackio__header .legend-bottom .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
   .d3-trackio__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
@@ -81,7 +154,7 @@
 
   /* Tooltip styling aligned with other embeds */
   .d3-trackio .d3-tooltip {
-    z-index: 20;
+    z-index: var(--z-tooltip);
     backdrop-filter: saturate(1.12) blur(8px);
   }
   .d3-trackio .d3-tooltip__inner { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
@@ -129,6 +202,8 @@
       const d3 = window.d3;
       const metricKey = cell.getAttribute('data-metric');
       const titleText = cell.getAttribute('data-title') || metricKey;
+      const host = cell.closest('.d3-trackio');
+      const shouldSuppress = () => !!(host && host.dataset && host.dataset.suppressTransitions === '1');
 
       // Header
       const header = document.createElement('div'); header.className = 'cell-header';
@@ -146,6 +221,9 @@
       const gPoints = gRoot.append('g').attr('class','points');
       const gHover = gRoot.append('g').attr('class','hover');
 
+      // Legacy flag, kept for compatibility but computed via shouldSuppress()
+      let suppressTransitions = false;
+
       // Tooltip
       cell.style.position = cell.style.position || 'relative';
       let tip = cell.querySelector('.d3-tooltip'); let tipInner; let hideTipTimer = null;
@@ -160,16 +238,16 @@
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // Layout & scales
-      let width = 800, height = 200; const margin = { top: 12, right: 20, bottom: 36, left: 56 };
+      let width = 800, height = 200; const margin = { top: 10, right: 20, bottom: 46, left: 44 };
       const xScale = d3.scaleLinear();
       const yScale = d3.scaleLinear();
       const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
 
-      function updateLayout(axisLabelY){
+      function updateLayout(axisLabelY, xTicksArg){
         const rect = cell.getBoundingClientRect();
         width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
-        // Hauteur fixe (encore plus basse) pour uniformiser les 5 graphiques
-        height = 200;
+        // Hauteur fixe par défaut, overridable via data-height (pour fullscreen)
+        height = Number(cell.getAttribute('data-height')) || 200;
         svg.attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio','xMidYMid meet');
         const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom;
         gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
@@ -183,39 +261,67 @@
 
         // Axes
         gAxes.selectAll('*').remove();
-        let xAxis = d3.axisBottom(xScale).tickSizeOuter(0).ticks(8).tickFormat(formatK);
-        let yAxis = d3.axisLeft(yScale).ticks(6);
-        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
-        gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
+        // Ticks: for x, force equal spacing on indices and include edges; for y, equally spaced within domain, count ~ x ticks bounded [2,6]
+        const makeTicks = (scale, approx) => {
+          const arr = scale.ticks(approx);
+          const dom = scale.domain();
+          if (arr.length === 0 || arr[0] !== dom[0]) arr.unshift(dom[0]);
+          if (arr[arr.length - 1] !== dom[dom.length - 1]) arr.push(dom[dom.length - 1]);
+          return Array.from(new Set(arr));
+        };
+        const xTicksForced = (Array.isArray(xTicksArg) && xTicksArg.length)
+          ? Array.from({ length: xTicksArg.length }, (_, i) => i)
+          : makeTicks(xScale, 8);
+        const yCount = Math.max(2, Math.min(6, xTicksForced.length));
+        const yDom = yScale.domain();
+        const yTicksForced = (yCount <= 2)
+          ? [yDom[0], yDom[1]]
+          : Array.from({ length: yCount }, (_, i) => yDom[0] + ((yDom[1] - yDom[0]) * (i / (yCount - 1))));
+        // X axis with forced ticks (indices) and formatted labels mapped to original steps in render()
+        gAxes.append('g')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(
+            d3.axisBottom(xScale)
+              .tickValues(xTicksForced)
+              .tickFormat((i) => {
+                // Label mapping will be provided by caller via closure over xTicksArg
+                const val = (Array.isArray(xTicksArg) && xTicksArg[i] != null ? xTicksArg[i] : i);
+                return formatAbbrev(val);
+              })
+          )
+          .call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
+        // Y axis with forced ticks
+        gAxes.append('g')
+          .call(d3.axisLeft(yScale).tickValues(yTicksForced).tickFormat((v)=>formatAbbrev(v)))
+          .call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px'); });
 
-        // Axis labels
+        // Axis labels (only X; Y-label removed to gain space)
         gAxes.append('text')
           .attr('class', 'x-axis-label')
           .attr('x', innerWidth / 2)
-          .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 10)))
+          .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 12)))
           .attr('fill', 'var(--text-color)')
           .attr('text-anchor', 'middle')
-          .style('font-size', '12px')
-          .style('font-weight', '700')
+          .style('font-size', '8px')
+          .style('opacity', '.5')
+          .style('letter-spacing', '.5px')
+          .style('text-transform', 'uppercase')
+          .style('font-weight', '500')
           .text('Steps');
-        gAxes.append('text')
-          .attr('class', 'y-axis-label')
-          .attr('transform', 'rotate(-90)')
-          .attr('x', -innerHeight / 2)
-          .attr('y', -Math.max(16, Math.min(28, margin.left - 8) + 10))
-          .attr('fill', 'var(--text-color)')
-          .attr('text-anchor', 'middle')
-          .style('font-size', '12px')
-          .style('font-weight', '700')
-          .text(axisLabelY || 'Value');
 
-        return { innerWidth, innerHeight };
+        return { innerWidth, innerHeight, xTicksForced, yTicksForced };
       }
 
-      const formatK = (v) => {
-        const abs = Math.abs(v);
-        if (abs >= 1000) { const n = v / 1000; const s = d3.format('.1f')(n); return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k'; }
-        return d3.format('d')(v);
+      // Generic number abbreviation for ticks (K/M/B) with up to 2 decimals
+      const formatAbbrev = (value) => {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return String(value);
+        const abs = Math.abs(num);
+        const trim2 = (n) => Number(n).toFixed(2).replace(/\.?0+$/, '');
+        if (abs >= 1e9) return `${trim2(num / 1e9)}B`;
+        if (abs >= 1e6) return `${trim2(num / 1e6)}M`;
+        if (abs >= 1e3) return `${trim2(num / 1e3)}K`;
+        return trim2(num);
       };
 
       function render(metricData, colorForRun) {
@@ -242,17 +348,21 @@
         runs.forEach(r => { (metricData[r]||[]).forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); minVal = Math.min(minVal, pt.value); maxVal = Math.max(maxVal, pt.value); }); });
         const isAccuracy = /accuracy/i.test(metricKey);
         const axisLabelY = prettyMetricLabel(metricKey);
-        xScale.domain([minStep, maxStep]);
         if (isAccuracy) yScale.domain([0, 1]).nice(); else yScale.domain([minVal, maxVal]).nice();
+        // Build unique steps and index mapping for equal spacing and snapping
+        const stepSet = new Set(); runs.forEach(r => (metricData[r]||[]).forEach(v => stepSet.add(v.step)));
+        const hoverSteps = Array.from(stepSet).sort((a,b)=>a-b);
+        const stepIndex = new Map(hoverSteps.map((s,i)=>[s,i]));
+        xScale.domain([0, Math.max(0, hoverSteps.length - 1)]);
 
-        const { innerWidth, innerHeight } = updateLayout(axisLabelY);
+        // Update line generator X accessor to use index directly
+        lineGen.x(d => xScale(stepIndex.get(d.step)));
 
-        // Vertical grid lines at each available step (same visibility as horizontal)
-        const stepSetForGrid = new Set();
-        runs.forEach(r => { (metricData[r]||[]).forEach(pt => stepSetForGrid.add(pt.step)); });
-        const stepsForGrid = Array.from(stepSetForGrid).sort((a,b)=>a-b);
+        const { innerWidth, innerHeight, xTicksForced } = updateLayout(axisLabelY, hoverSteps);
+
+        // Vertical grid lines at each step index (same visibility as horizontal)
         gGrid.selectAll('line.vstep')
-          .data(stepsForGrid)
+          .data(xTicksForced)
           .join(
             enter => enter.append('line').attr('class','vstep')
               .attr('y1', 0).attr('y2', innerHeight)
@@ -264,61 +374,158 @@
             exit => exit.remove()
           );
 
-        // Shaded areas from stderr if available
+        // Remove stderr correction shapes (no uncertainty area)
         gAreas.selectAll('*').remove();
-        runs.forEach(r => {
-          const vals = (metricData[r]||[]).slice().sort((a,b)=>a.step-b.step);
-          const withErr = vals.filter(v => v && v.stderr != null && isFinite(v.stderr) && v.stderr > 0 && isFinite(v.value));
-          if (!withErr.length) return;
-          const upper = withErr.map(d => [xScale(d.step), yScale(d.value + d.stderr)]);
-          const lower = withErr.slice().reverse().map(d => [xScale(d.step), yScale(d.value - d.stderr)]);
-          const coords = upper.concat(lower);
-          const pathData = d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveLinearClosed)(coords);
-          gAreas.append('path')
-            .attr('class','area')
-            .attr('data-run', r)
-            .attr('d', pathData)
-            .attr('fill', colorForRun(r))
-            .attr('opacity', 0.15)
-            .attr('stroke', 'none');
-        });
 
         // Lines
         const series = runs.map(r => ({ run: r, color: colorForRun(r), values: (metricData[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
         const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
         paths.enter().append('path').attr('class','run-line').attr('data-run', d=>d.run).attr('fill','none').attr('stroke-width', 1.5).attr('opacity', 0.9)
           .attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
-        paths.transition().duration(260).attr('stroke', d=>d.color).attr('opacity',0.9).attr('d', d=>lineGen(d.values));
+        if (shouldSuppress()) {
+          paths.attr('stroke', d=>d.color).attr('opacity',0.9).attr('d', d=>lineGen(d.values));
+        } else {
+          paths.transition().duration(260).attr('stroke', d=>d.color).attr('opacity',0.9).attr('d', d=>lineGen(d.values));
+        }
         paths.exit().remove();
 
         // Points
         const allPoints = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
         const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
         ptsSel.enter().append('circle').attr('class','pt').attr('data-run', d=>d.run).attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.6)
-          .attr('stroke', 'none').attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value))
+          .attr('stroke', 'none').attr('cx', d=>xScale(stepIndex.get(d.step))).attr('cy', d=>yScale(d.value))
           .merge(ptsSel)
-          .transition().duration(150)
-          .attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value));
+          .each(function(d){ /* placeholder to keep merge chain intact */ })
+          .attr('cx', d=>xScale(stepIndex.get(d.step))).attr('cy', d=>yScale(d.value));
+        if (!shouldSuppress()) {
+          try { gPoints.selectAll('circle.pt').transition().duration(150).attr('cx', d=>xScale(stepIndex.get(d.step))).attr('cy', d=>yScale(d.value)); } catch(_){}
+        }
         ptsSel.exit().remove();
 
         // Hover
         gHover.selectAll('*').remove();
         const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
         const hoverLine = gHover.append('line').style('stroke','var(--text-color)').attr('stroke-opacity', 0.25).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
-        const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step))); const steps = Array.from(stepSet).sort((a,b)=>a-b);
-        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
-          let html = `<div><strong>${prettyMetricLabel(metricKey)}</strong></div><div><strong>step</strong> ${formatK(nearest)}</div>`;
+
+        // Expose external hover handlers for cross-chart sync
+        cell.__showExternalStep = (stepVal) => {
+          if (stepVal == null) { hoverLine.style('display','none'); return; }
+          const idx = stepIndex.get(stepVal);
+          if (idx == null) { hoverLine.style('display','none'); return; }
+          const xpx = xScale(idx);
+          hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
+        };
+        cell.__clearExternalStep = () => { hoverLine.style('display','none'); };
+        if (!cell.__syncAttached && host) {
+          host.addEventListener('trackio-hover-step', (ev) => { const d = ev && ev.detail; if (!d) return; if (cell.__showExternalStep) cell.__showExternalStep(d.step); });
+          host.addEventListener('trackio-hover-clear', () => { if (cell.__clearExternalStep) cell.__clearExternalStep(); });
+          cell.__syncAttached = true;
+        }
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const idx = Math.round(Math.max(0, Math.min(hoverSteps.length-1, xScale.invert(mx)))); const nearest = hoverSteps[idx]; const xpx = xScale(idx); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-step', { detail: { step: nearest } })); } catch(_){} }
+          let html = `<div><strong>step</strong> ${formatAbbrev(nearest)}</div><div><strong>${prettyMetricLabel(metricKey)}</strong></div>`;
           const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null);
           entries.sort((a,b)=> (a.pt.value - b.pt.value));
           const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4));
           entries.forEach(e => {
-            const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : '';
-            html += `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}${err}</span></div>`;
+            html += `<div style=\"display:flex;align-items:center;gap:8px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}</span></div>`;
           });
-          tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`; }
-        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }, 100); }
+          tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`;
+          // No animation on chart while scaling up/down
+          try {
+            const sel = gPoints.selectAll('circle.pt');
+            if (shouldSuppress()) { sel.interrupt().attr('r', d => (d && d.step === nearest ? 4 : 2)); }
+            else { sel.transition().duration(140).ease(d3.easeCubicOut).attr('r', d => (d && d.step === nearest ? 4 : 2)); }
+          } catch(_) {}
+        }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { const sel = gPoints.selectAll('circle.pt'); if (shouldSuppress()) { sel.interrupt().attr('r', 2); } else { sel.transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } } catch(_) {} }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
+
+      // Fullscreen: button + modal behavior
+      const fsBtn = document.createElement('button'); fsBtn.className = 'cell-action cell-action--fullscreen'; fsBtn.type = 'button'; fsBtn.title='Fullscreen'; fsBtn.setAttribute('aria-label','Open fullscreen');
+      fsBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM6 18h3v2H4v-5h2v3zm12-3h2v5h-5v-2h3v-3z"/></svg>';
+      header.appendChild(fsBtn);
+
+      function ensureOverlay(host){
+        let overlay = host.querySelector('.d3-trackio__overlay');
+        if (!overlay) {
+          overlay = document.createElement('div'); overlay.className='d3-trackio__overlay';
+          const modal = document.createElement('div'); modal.className='d3-trackio__modal';
+          const close = document.createElement('button'); close.className='d3-trackio__modal-close'; close.type='button'; close.innerHTML='&#10005;';
+          overlay.appendChild(modal); overlay.appendChild(close);
+          host.appendChild(overlay);
+          overlay.addEventListener('click', (e)=>{ if (e.target === overlay) close.click(); });
+          close.addEventListener('click', ()=>{
+            const moving = modal.querySelector('.cell'); if (!moving) { overlay.classList.remove('is-open'); return; }
+            const placeholder = moving.__placeholder;
+            if (!placeholder) { overlay.classList.remove('is-open'); return; }
+            // Global suppression across charts inside this host
+            host.dataset.suppressTransitions = '1';
+            // Cancel any in-flight D3 transitions
+            try { d3.select(host).selectAll('path.run-line').interrupt(); d3.select(host).selectAll('circle.pt').interrupt(); } catch(_){ }
+            // FLIP: animate from current (modal) to placeholder position
+            const from = moving.getBoundingClientRect();
+            const to = placeholder.getBoundingClientRect();
+            const dx = to.left - from.left; const dy = to.top - from.top;
+            const sx = Math.max(0.0001, to.width / from.width);
+            const sy = Math.max(0.0001, to.height / from.height);
+            moving.style.transformOrigin = 'top left';
+            moving.style.transition = 'transform 220ms cubic-bezier(.2,.8,.2,1)';
+            moving.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+            const onEnd = () => {
+              moving.removeEventListener('transitionend', onEnd);
+              overlay.classList.remove('is-open');
+              moving.style.transition = '';
+              moving.style.transform = '';
+              if (placeholder && placeholder.parentNode) { placeholder.parentNode.insertBefore(moving, placeholder); placeholder.remove(); }
+              moving.removeAttribute('data-height');
+              // Recompute layout without any line/point animation
+              try { const h = host; if (h && h.__rerender) h.__rerender(); } catch {}
+              requestAnimationFrame(()=>{ delete host.dataset.suppressTransitions; });
+            };
+            moving.addEventListener('transitionend', onEnd);
+          });
+          window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape' && overlay.classList.contains('is-open')) { const btn = overlay.querySelector('.d3-trackio__modal-close'); btn && btn.click(); }});
+        }
+        return overlay;
+      }
+
+      fsBtn.addEventListener('click', ()=>{
+        const hostNode = cell.closest('.d3-trackio'); if (!hostNode) return;
+        const overlay = ensureOverlay(hostNode); const modal = overlay.querySelector('.d3-trackio__modal');
+        // If another chart is open, close it first then proceed
+        const existing = modal.querySelector('.cell');
+        if (overlay.classList.contains('is-open') && existing && existing !== cell) {
+          const btn = overlay.querySelector('.d3-trackio__modal-close');
+          if (btn) { btn.dispatchEvent(new Event('click')); }
+          const waitEnd = () => {
+            if (!overlay.classList.contains('is-open')) { fsBtn.click(); return; }
+            requestAnimationFrame(waitEnd);
+          };
+          waitEnd();
+          return;
+        }
+        // Global suppression across charts inside this host
+        hostNode.dataset.suppressTransitions = '1';
+        // Cancel any in-flight D3 transitions
+        try { d3.select(hostNode).selectAll('path.run-line').interrupt(); d3.select(hostNode).selectAll('circle.pt').interrupt(); } catch(_){ }
+        const before = cell.getBoundingClientRect();
+        const placeholder = document.createElement('div'); placeholder.style.width = cell.offsetWidth + 'px'; placeholder.style.height = cell.offsetHeight + 'px';
+        cell.__placeholder = placeholder; cell.parentNode.insertBefore(placeholder, cell);
+        modal.appendChild(cell);
+        // Do NOT re-render or change SVG internals; scale via CSS only
+        const after = cell.getBoundingClientRect();
+        const dx = before.left - after.left; const dy = before.top - after.top;
+        const sx = Math.max(0.0001, before.width / after.width);
+        const sy = Math.max(0.0001, before.height / after.height);
+        cell.style.transformOrigin = 'top left';
+        cell.style.transition = 'transform 220ms cubic-bezier(.2,.8,.2,1)';
+        cell.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+        overlay.classList.add('is-open');
+        requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ cell.style.transform = 'none'; }); });
+        const onEnd = () => { cell.removeEventListener('transitionend', onEnd); cell.style.transition = ''; cell.style.transform = ''; requestAnimationFrame(()=>{ /* keep suppress until settled or close */ }); };
+        cell.addEventListener('transitionend', onEnd);
+      });
 
       return { metricKey, render };
     }
@@ -339,11 +546,12 @@
       if (!host) return;
       if (host.dataset && host.dataset.mounted === 'true') return; if (host.dataset) host.dataset.mounted = 'true';
 
-      // Build global header (legend)
+      // Build global header (legend) and insert ABOVE the grid
       const header = document.createElement('div'); header.className = 'd3-trackio__header';
-      const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>';
+      const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Runs</div><div class="items"></div>';
       header.appendChild(legend);
-      host.appendChild(header);
+      const gridNode = host.querySelector('.d3-trackio__grid');
+      if (gridNode && gridNode.parentNode === host) { host.insertBefore(header, gridNode); } else { host.insertBefore(header, host.firstChild); }
 
       const cells = Array.from(host.querySelectorAll('.cell'));
       if (!cells.length) return;
@@ -457,6 +665,7 @@
 
           // Resize handling
           const rerender = () => { instances.forEach(inst => inst.render(dataByMetric.get(inst.metricKey)||{}, colorForRun)); };
+          host.__rerender = rerender;
           if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(host); } else { window.addEventListener('resize', rerender); }
 
           // Legend hover ghosting across all cells

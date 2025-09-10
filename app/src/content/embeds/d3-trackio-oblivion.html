@@ -13,27 +13,56 @@
   /* Futuristic "Oblivion"-inspired styling */
   .d3-trackio-oblivion { position: relative;
     --cell-gap: 0px;
-     --obl-cyan: #7FF1FF;
-     --obl-cyan-dim: rgba(127,241,255,.25);
-     --obl-accent: #8BF5FF;
-     --obl-bg: rgba(255,255,255,0.06);
-     --obl-border: rgba(127,241,255,.25);
-     --obl-glow: 0 0 0 1px rgba(127,241,255,.35), 0 8px 40px rgba(127,241,255,.12);
-     background: #0f1115;
-     --corner-inset: 6px;
-     --hud-gap: 10px;
-     --hud-corner-size: 8px;
-     /* Chart background gradient as a variable for easy theming */
-     --hud-bg-gradient: radial-gradient(1200px 200px at 20% -10%, rgba(127,241,255,.03), transparent 80%), radial-gradient(900px 200px at 80% 110%, rgba(127,241,255,.03), transparent 80%);
-     /* Tooltip offset (bottom-right of cursor) */
-    --tip-offset-x: 0px;
-    --tip-offset-y: 0px;
-     padding: var(--hud-gap);
-     font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* Default: light/neutral theme */
+    --obl-cyan: #2f343b;
+    --obl-cyan-dim: rgba(47,52,59,.28);
+    --obl-accent: #1a1d21;
+    --obl-bg: rgba(0,0,0,0.04);
+    --obl-border: rgba(47,52,59,.22);
+    --ghost-obl-border: rgba(47,52,59,.06);
+    --obl-glow: 0 0 0 1px rgba(0,0,0,.05), 0 8px 40px rgba(0,0,0,.06);
+    /* Engraved separator colors (light theme) */
+    --engrave-light: rgba(255,255,255,.15);
+    --engrave-dark: rgba(0,0,0,.10);
+    background: transparent;
+    --corner-inset: 6px;
+    --hud-gap: 10px;
+    --hud-corner-size: 8px;
+    /* Chart background gradient as a variable for easy theming */
+    --hud-bg-gradient: radial-gradient(1200px 200px at 20% -10%, rgba(0,0,0,.05), transparent 80%), radial-gradient(900px 200px at 80% 110%, rgba(0,0,0,.05), transparent 80%);
+    /* Tooltip offset (bottom-right of cursor) */
+    --tip-offset-x: 10px;
+    --tip-offset-y: 10px;
+    padding: var(--hud-gap);
+    --z-tooltip: 50;
+    --z-overlay: 99999999;
+    z-index: var(--z-tooltip);
+    font-family: 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
  }
   .d3-trackio-oblivion * { font-family: inherit;
    }
-  [data-theme="dark"] .d3-trackio-oblivion { --obl-bg: rgba(12,18,22,.45); }
+  /* Dark mode: cyan/Oblivion theme */
+  [data-theme="dark"] .d3-trackio-oblivion {
+    --obl-cyan: #7FF1FF;
+    --obl-cyan-dim: rgba(127,241,255,.25);
+    --obl-accent: #8BF5FF;
+    --obl-bg: rgba(255,255,255,0.06);
+    --obl-border: rgba(127,241,255,.25);
+    --ghost-obl-border: rgba(127,241,255,.02);
+    --obl-glow: 0 0 0 1px rgba(127,241,255,.35), 0 8px 40px rgba(127,241,255,.12);
+    /* Richer cyan gradients for the classic Oblivion blue feel */
+    --hud-bg-gradient:
+      radial-gradient(1400px 260px at 20% -10%, rgba(127,241,255,.065), transparent 80%),
+      radial-gradient(1100px 240px at 80% 110%, rgba(127,241,255,.06), transparent 80%),
+      linear-gradient(180deg, rgba(127,241,255,.035), rgba(127,241,255,0) 45%);
+    /* Engraved separator colors (dark theme) */
+    --engrave-light: rgba(127,241,255,.05);
+    --engrave-dark: rgba(0,0,0,.15);
+    background: #0f1115;
+  }
+  /* Tooltip shadows: neutral by default, bluish tint in dark */
+  .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.06); }
+  [data-theme="dark"] .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px rgba(127,241,255,.05), 0 2px 8px rgba(0,0,0,.10); }
 
   .d3-trackio-oblivion__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: --cell-gap; }
   @media (max-width: 980px) { .d3-trackio-oblivion__grid { grid-template-columns: 1fr; } }
@@ -65,9 +94,14 @@
       linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom right / var(--hud-corner-size) 1px no-repeat,
       linear-gradient(var(--obl-cyan), var(--obl-cyan)) bottom right / 1px var(--hud-corner-size) no-repeat; opacity:.85; }
   .d3-trackio-oblivion .cell-inner { position: relative; z-index: 2; padding: var(--hud-corner-size) 12px 10px var(--hud-gap); display:flex; flex-direction:column; }
-  .d3-trackio-oblivion .cell-header { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .d3-trackio-oblivion .cell-header { padding: 10px 6px 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .d3-trackio-oblivion .cell-title { position: relative; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--obl-cyan); padding-left: 14px; }
   .d3-trackio-oblivion .cell-title:before { content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width: 6px; height: 6px; background: var(--obl-cyan); border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.25) inset; opacity: .5; }
+  /* Fullscreen button (icon only, no behavior here) */
+  .d3-trackio-oblivion .cell-action { padding: 0 !important; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; background: transparent; color: var(--obl-cyan); opacity: .7; cursor: pointer; z-index: 4; }
+  .d3-trackio-oblivion .cell-action:hover { opacity: 1; }
+  .d3-trackio-oblivion .cell-action svg { width: 22px; height: 22px; opacity: .2; margin-left: 5px; }
+  .d3-trackio-oblivion .cell-action svg, .d3-trackio-oblivion .cell-action svg path { fill: currentColor; stroke: none; }
   .d3-trackio-oblivion .cell-body { position: relative; width: 100%; overflow: hidden; }
   .d3-trackio-oblivion .cell-body svg { max-width: 100%; height: auto; display: block; }
 
@@ -82,7 +116,7 @@
   .d3-trackio-oblivion__header .legend-bottom .legend-title { font-size: 11px; font-weight: 900; letter-spacing: 0.18em; color: var(--obl-cyan); text-transform: uppercase; }
   .d3-trackio-oblivion__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
   .d3-trackio-oblivion__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--obl-cyan); }
-  .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--obl-border); display: inline-block; box-shadow: 0 0 12px rgba(127,241,255,.18) inset; }
+  .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--ghost-obl-border); display: inline-block; box-shadow: 0 0 12px rgba(127,241,255,.18) inset; }
 
   /* Hover ghosting */
   .d3-trackio-oblivion.hovering .lines path.ghost { opacity: .22; }
@@ -98,12 +132,12 @@
     transform: translate(-9999px, -9999px);
     pointer-events: none;
     padding: 10px 12px;
-    border-radius: 0;
+    border-radius: 8px;
     font-size: 12px;
     line-height: 1.35;
     background: var(--obl-bg);
     color: var(--obl-cyan);
-    box-shadow: 0 8px 32px rgba(127,241,255,.12), 0 2px 8px rgba(0,0,0,.20);
+    box-shadow: 0 8px 32px rgba(127,241,255,.05), 0 2px 8px rgba(0,0,0,.10);
     opacity: .5;
     transition: opacity .12s ease;
     z-index: 1000;
@@ -112,8 +146,10 @@
   .d3-trackio-oblivion .d3-tooltip.is-visible { opacity: 1; }
   .d3-trackio-oblivion .d3-tooltip__inner { display: flex; flex-direction: column; gap: 6px; min-width: 220px; text-align: left; }
   .d3-trackio-oblivion .d3-tooltip__inner > div:first-child { font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: var(--obl-cyan); }
-  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--obl-cyan); opacity: .8; display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.06em; }
-  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--obl-border); }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--obl-cyan); opacity: .4; display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.06em; }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3) { position: relative; padding-top: 10px; margin-top: 6px; }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3)::before { content:""; position:absolute; left:0; right:0; top:0; height:1px; background: var(--engrave-dark); }
+  .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3)::after { content:""; position:absolute; left:0; right:0; top:1px; height:1px; background: var(--engrave-light); }
   .d3-trackio-oblivion .d3-tooltip__color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.2) inset; }
 </style>
 <script>
@@ -146,7 +182,12 @@
       const corners = document.createElement('div'); corners.className = 'cell-corners'; cell.appendChild(corners);
       const inner = document.createElement('div'); inner.className = 'cell-inner'; cell.appendChild(inner);
       const header = document.createElement('div'); header.className = 'cell-header';
-      const title = document.createElement('div'); title.className = 'cell-title'; title.textContent = prettyMetricLabel(titleText); header.appendChild(title); inner.appendChild(header);
+      const title = document.createElement('div'); title.className = 'cell-title'; title.textContent = prettyMetricLabel(titleText); header.appendChild(title);
+      // Fullscreen icon button (no click handler here)
+      const fsBtn = document.createElement('button'); fsBtn.className = 'cell-action cell-action--fullscreen'; fsBtn.type = 'button'; fsBtn.title = 'Fullscreen'; fsBtn.setAttribute('aria-label', 'Open fullscreen');
+      fsBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM6 18h3v2H4v-5h2v3zm12-3h2v5h-5v-2h3v-3z"/></svg>';
+      header.appendChild(fsBtn);
+      inner.appendChild(header);
 
       const body = document.createElement('div'); body.className = 'cell-body'; inner.appendChild(body);
       const svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
@@ -157,6 +198,7 @@
       const gLines = gRoot.append('g').attr('class','lines');
       const gPoints = gRoot.append('g').attr('class','points');
       const gHover = gRoot.append('g').attr('class','hover');
+      const host = cell.closest('.d3-trackio-oblivion');
 
       // Tooltip
       cell.style.position = cell.style.position || 'relative';
@@ -165,10 +207,22 @@
 
       // Layout & scales
       let width = 800, height = 180; const margin = { top: 12, right: 20, bottom: 36, left: 44 };
-      const xScale = d3.scaleLinear(); const yScale = d3.scaleLinear();
-      const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
+      let xScale = d3.scaleLinear(); const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(0)).y(d => yScale(d.value));
 
-      function updateLayout(axisLabelY){
+      // Generic number abbreviation for axis ticks (K/M/B) with up to 2 decimals
+      const formatAbbrev = (value) => {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return String(value);
+        const abs = Math.abs(num);
+        const trim2 = (n) => Number(n).toFixed(2).replace(/\.?0+$/, '');
+        if (abs >= 1e9) return `${trim2(num / 1e9)}B`;
+        if (abs >= 1e6) return `${trim2(num / 1e6)}M`;
+        if (abs >= 1e3) return `${trim2(num / 1e3)}K`;
+        return trim2(num);
+      };
+
+      function updateLayout(axisLabelY, xTicksArg){
         const rect = cell.getBoundingClientRect();
         width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
         height = 180;
@@ -192,13 +246,24 @@
           // dedupe
           return Array.from(new Set(arr));
         };
-        const xTicksForced = makeTicks(xScale, 8);
-        const yTicksForced = makeTicks(yScale, 6);
+        const xTicksForced = (Array.isArray(xTicksArg) && xTicksArg.length)
+          ? Array.from({ length: xTicksArg.length }, (_, i) => i)
+          : makeTicks(xScale, 8);
+        const yCount = Math.max(2, Math.min(6, xTicksForced.length));
+        const yDom = yScale.domain();
+        const yTicksForced = (yCount <= 2)
+          ? [yDom[0], yDom[1]]
+          : Array.from({ length: yCount }, (_, i) => yDom[0] + ((yDom[1] - yDom[0]) * (i / (yCount - 1))));
         gAxes
           .append('g')
           .attr('transform', `translate(0,${innerHeight})`)
           .call(
-            d3.axisBottom(xScale).tickValues(xTicksForced)
+            d3.axisBottom(xScale)
+              .tickValues(xTicksForced)
+              .tickFormat((i) => {
+                const val = (Array.isArray(xTicksArg) && xTicksArg[i] != null ? xTicksArg[i] : i);
+                return formatAbbrev(val);
+              })
           )
           .call((g) => {
             g.selectAll('path, line')
@@ -210,7 +275,7 @@
 
         gAxes
           .append('g')
-          .call(d3.axisLeft(yScale).tickValues(yTicksForced))
+          .call(d3.axisLeft(yScale).tickValues(yTicksForced).tickFormat((v) => formatAbbrev(v)))
           .call((g) => {
             g.selectAll('path, line')
               .attr('stroke', 'var(--obl-cyan-dim)');
@@ -246,12 +311,31 @@
         if (!isFinite(minStep) || !isFinite(maxStep)) return;
         const isAccuracy = /accuracy/i.test(metricKey);
         const axisLabelY = prettyMetricLabel(metricKey);
-        xScale.domain([minStep, maxStep]); if (isAccuracy) yScale.domain([0,1]).nice(); else yScale.domain([minVal, maxVal]).nice();
-        const { innerWidth, innerHeight, xTicksForced, yTicksForced } = updateLayout(axisLabelY);
+        if (isAccuracy) yScale.domain([0,1]).nice(); else yScale.domain([minVal, maxVal]).nice();
+        // Compute unique x steps and build index mapping
+        const rawSteps = [];
+        runs.forEach(r => (metricData[r]||[]).forEach(pt => rawSteps.push(pt.step)));
+        const hoverSteps = Array.from(new Set(rawSteps)).sort((a,b)=>a-b);
+        const stepIndex = new Map(hoverSteps.map((s,i)=>[s,i]));
+        const indices = hoverSteps.map((_, i) => i);
+        // Linear index scale → ticks at edges, equal spacing
+        xScale = d3.scaleLinear().domain([0, Math.max(0, indices.length - 1)]);
+        // Update line generator X accessor to use index directly
+        lineGen.x(d => xScale(stepIndex.get(d.step)));
+        const { innerWidth, innerHeight, xTicksForced, yTicksForced } = updateLayout(axisLabelY, hoverSteps);
 
         // Grid as small dots at intersections of y ticks × step positions
+        // Exclude dots that fall on the origin axes lines (left Y-axis and bottom X-axis)
         const gridPoints = [];
-        xTicksForced.forEach(s => { yTicksForced.forEach(t => { gridPoints.push({ sx: s, ty: t }); }); });
+        const yDomAll = yScale.domain();
+        const yMin = Array.isArray(yDomAll) ? yDomAll[0] : null;
+        xTicksForced.forEach(i => {
+          yTicksForced.forEach(t => {
+            if (i !== 0 && (yMin == null || t !== yMin)) {
+              gridPoints.push({ sx: i, ty: t });
+            }
+          });
+        });
         gGrid.selectAll('circle.grid-dot')
           .data(gridPoints)
           .join('circle')
@@ -275,14 +359,40 @@
         // Points
         const allPts = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
         const ptsSel = gPoints.selectAll('circle.pt').data(allPts, d=>`${d.run}-${d.step}`);
-        ptsSel.enter().append('circle').attr('class','pt').attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.65).attr('stroke','none').attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value)).merge(ptsSel).transition().duration(150).attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value));
+        ptsSel.enter().append('circle')
+          .attr('class','pt')
+          .attr('r', 2)
+          .attr('fill', d=>d.color)
+          .attr('stroke','none')
+          .attr('cx', d=> xScale(stepIndex.get(d.step)))
+          .attr('cy', d=>yScale(d.value))
+          .merge(ptsSel)
+          .transition().duration(150)
+          .attr('cx', d=> xScale(stepIndex.get(d.step)))
+          .attr('cy', d=>yScale(d.value));
         ptsSel.exit().remove();
+        // Steps used for hover snapping (unique data steps)
+        // already computed above as hoverSteps
 
         // Hover
         gHover.selectAll('*').remove();
         const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
         const hoverLine = gHover.append('line').style('stroke','var(--obl-cyan)').attr('stroke-opacity', 0.35).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
-        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null); let html = `<div>${prettyMetricLabel(metricKey)}</div><div>Step ${nearest}</div>`; const entries = series.map(s=>{ const m = new Map(s.values.map(v=>[v.step, v])); const pt = m.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null); entries.sort((a,b)=> (a.pt.value - b.pt.value)); const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4)); entries.forEach(e => { const err = (e.pt.stderr!=null && isFinite(e.pt.stderr) && e.pt.stderr>0) ? ` ± ${fmt(e.pt.stderr)}` : ''; html += `<div style=\"display:flex;align-items:center;gap:8px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}${err}</span></div>`; }); tipInner.innerHTML = html; const cssVars = getComputedStyle(cell); const offx = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-x')) || 0); const offy = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-y')) || 0); const cellRect = cell.getBoundingClientRect(); const cx = (ev && ev.clientX != null) ? ev.clientX : (cellRect.left + mx); const cy = (ev && ev.clientY != null) ? ev.clientY : (cellRect.top + my); const x = cx - cellRect.left + offx; const y = cy - cellRect.top + offy; tip.classList.add('is-visible'); tip.style.transform=`translate(${x}px, ${y}px)`; 
+        // External hover handlers
+        cell.__showExternalStep = (stepVal) => {
+          if (stepVal == null) { hoverLine.style('display','none'); return; }
+          const idx = stepIndex.get(stepVal);
+          if (idx == null) { hoverLine.style('display','none'); return; }
+          const xpx = xScale(idx);
+          hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
+        };
+        cell.__clearExternalStep = () => { hoverLine.style('display','none'); };
+        if (!cell.__syncAttached && host) {
+          host.addEventListener('trackio-hover-step', (ev) => { const d = ev && ev.detail; if (!d) return; if (cell.__showExternalStep) cell.__showExternalStep(d.step); });
+          host.addEventListener('trackio-hover-clear', () => { if (cell.__clearExternalStep) cell.__clearExternalStep(); });
+          cell.__syncAttached = true;
+        }
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const idx = Math.round(Math.max(0, Math.min(hoverSteps.length-1, xScale.invert(mx)))); const nearest = hoverSteps[idx]; const xpx = xScale(idx); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-step', { detail: { step: nearest } })); } catch(_){} } let html = `<div>Step ${formatAbbrev(nearest)}</div><div>${prettyMetricLabel(metricKey)}</div>`; const entries = series.map(s=>{ const m = new Map(s.values.map(v=>[v.step, v])); const pt = m.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null); entries.sort((a,b)=> (a.pt.value - b.pt.value)); const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4)); entries.forEach(e => { html += `<div style=\"display:flex;align-items:center;gap:8px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}</span></div>`; }); tipInner.innerHTML = html; const cssVars = getComputedStyle(cell); const offx = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-x')) || 0); const offy = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-y')) || 0); const cellRect = cell.getBoundingClientRect(); const cx = (ev && ev.clientX != null) ? ev.clientX : (cellRect.left + mx); const cy = (ev && ev.clientY != null) ? ev.clientY : (cellRect.top + my); const x = cx - cellRect.left + offx; const y = cy - cellRect.top + offy; tip.classList.add('is-visible'); tip.style.transform=`translate(${x}px, ${y}px)`; 
           // Animate points at the hovered step to grow slightly
           try {
             gPoints.selectAll('circle.pt')
@@ -290,7 +400,7 @@
               .attr('r', d => (d && d.step === nearest ? 4 : 2));
           } catch(_) {}
         }
-        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.classList.remove('is-visible'); tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); try { gPoints.selectAll('circle.pt').transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } catch(_) {} }, 100); }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.classList.remove('is-visible'); tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { gPoints.selectAll('circle.pt').transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } catch(_) {} }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
 
@@ -298,7 +408,7 @@
     }
 
     const bootstrap = () => {
-      const scriptEl = THIS_SCRIPT; let host = null; const header = document.createElement('div'); header.className = 'd3-trackio-oblivion__header'; const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>'; header.appendChild(legend);
+      const scriptEl = THIS_SCRIPT; let host = null; const header = document.createElement('div'); header.className = 'd3-trackio-oblivion__header'; const legend = document.createElement('div'); legend.className = 'legend-bottom'; legend.innerHTML = '<div class="legend-title">Runs</div><div class="items"></div>'; header.appendChild(legend);
       if (scriptEl && scriptEl.parentElement && scriptEl.parentElement.querySelector) host = scriptEl.parentElement.querySelector('.d3-trackio-oblivion'); if (!host) { let sib = scriptEl && scriptEl.previousElementSibling; while (sib && !(sib.classList && sib.classList.contains('d3-trackio-oblivion'))) { sib = sib.previousElementSibling; } host = sib || null; }
       if (!host) { host = document.querySelector('.d3-trackio-oblivion'); }
       if (!host) return; if (host.dataset && host.dataset.mounted==='true') return; if (host.dataset) host.dataset.mounted='true';
