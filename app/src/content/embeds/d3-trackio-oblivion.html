@@ -14,16 +14,16 @@
   .d3-trackio-oblivion { position: relative;
     --cell-gap: 0px;
     /* Default: light/neutral theme */
-    --obl-cyan: #2f343b;
-    --obl-cyan-dim: rgba(47,52,59,.28);
-    --obl-accent: #1a1d21;
-    --obl-bg: rgba(0,0,0,0.04);
-    --obl-border: rgba(47,52,59,.22);
-    --ghost-obl-border: rgba(47,52,59,.06);
-    --obl-glow: 0 0 0 1px rgba(0,0,0,.05), 0 8px 40px rgba(0,0,0,.06);
+    --obl-base: #323232; /* base hue for the UI (light theme) */
+    --obl-cyan: var(--obl-base);
+    --obl-cyan-dim: color-mix(in srgb, var(--obl-base) 28%, transparent);
+    --obl-bg: color-mix(in srgb, var(--obl-base) 4%, transparent);
+    --obl-border: color-mix(in srgb, var(--obl-base) 22%, transparent);
+    --ghost-obl-border: color-mix(in srgb, var(--obl-base) 6%, transparent);
+    --obl-glow: 0 0 0 1px color-mix(in srgb, var(--obl-base) 5%, transparent), 0 8px 40px color-mix(in srgb, var(--obl-base) 6%, transparent);
     /* Engraved separator colors (light theme) */
-    --engrave-light: rgba(255,255,255,.15);
-    --engrave-dark: rgba(0,0,0,.10);
+    --engrave-light: color-mix(in srgb, white 15%, transparent);
+    --engrave-dark: color-mix(in srgb, var(--obl-base) 10%, transparent);
     background: transparent;
     --corner-inset: 6px;
     --hud-gap: 10px;
@@ -43,26 +43,26 @@
    }
   /* Dark mode: cyan/Oblivion theme */
   [data-theme="dark"] .d3-trackio-oblivion {
-    --obl-cyan: #7FF1FF;
-    --obl-cyan-dim: rgba(127,241,255,.25);
-    --obl-accent: #8BF5FF;
-    --obl-bg: rgba(255,255,255,0.06);
-    --obl-border: rgba(127,241,255,.25);
-    --ghost-obl-border: rgba(127,241,255,.02);
-    --obl-glow: 0 0 0 1px rgba(127,241,255,.35), 0 8px 40px rgba(127,241,255,.12);
+    --obl-base: #ffffff; /* base hue for the UI (dark theme) */
+    --obl-cyan: var(--obl-base);
+    --obl-cyan-dim: color-mix(in srgb, var(--obl-base) 25%, transparent);
+    --obl-bg: color-mix(in srgb, var(--obl-base) 6%, transparent);
+    --obl-border: color-mix(in srgb, var(--obl-base) 25%, transparent);
+    --ghost-obl-border: color-mix(in srgb, var(--obl-base) 2%, transparent);
+    --obl-glow: 0 0 0 1px color-mix(in srgb, var(--obl-base) 35%, transparent), 0 8px 40px color-mix(in srgb, var(--obl-base) 12%, transparent);
     /* Richer cyan gradients for the classic Oblivion blue feel */
     --hud-bg-gradient:
-      radial-gradient(1400px 260px at 20% -10%, rgba(127,241,255,.065), transparent 80%),
-      radial-gradient(1100px 240px at 80% 110%, rgba(127,241,255,.06), transparent 80%),
-      linear-gradient(180deg, rgba(127,241,255,.035), rgba(127,241,255,0) 45%);
+      radial-gradient(1400px 260px at 20% -10%, color-mix(in srgb, var(--obl-base) 6.5%, transparent), transparent 80%),
+      radial-gradient(1100px 240px at 80% 110%, color-mix(in srgb, var(--obl-base) 6%, transparent), transparent 80%),
+      linear-gradient(180deg, color-mix(in srgb, var(--obl-base) 3.5%, transparent), transparent 45%);
     /* Engraved separator colors (dark theme) */
-    --engrave-light: rgba(127,241,255,.05);
-    --engrave-dark: rgba(0,0,0,.15);
+    --engrave-light: color-mix(in srgb, var(--obl-base) 5%, transparent);
+    --engrave-dark: color-mix(in srgb, black 15%, transparent);
     background: #0f1115;
   }
   /* Tooltip shadows: neutral by default, bluish tint in dark */
-  .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.06); }
-  [data-theme="dark"] .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px rgba(127,241,255,.05), 0 2px 8px rgba(0,0,0,.10); }
+  .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px color-mix(in srgb, var(--obl-base) 8%, transparent), 0 2px 8px color-mix(in srgb, var(--obl-base) 6%, transparent); }
+  [data-theme="dark"] .d3-trackio-oblivion .d3-tooltip { box-shadow: 0 8px 32px color-mix(in srgb, var(--obl-base) 5%, transparent), 0 2px 8px color-mix(in srgb, black 10%, transparent); }
 
   .d3-trackio-oblivion__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: --cell-gap; }
   @media (max-width: 980px) { .d3-trackio-oblivion__grid { grid-template-columns: 1fr; } }
@@ -96,12 +96,13 @@
   .d3-trackio-oblivion .cell-inner { position: relative; z-index: 2; padding: var(--hud-corner-size) 12px 10px var(--hud-gap); display:flex; flex-direction:column; }
   .d3-trackio-oblivion .cell-header { padding: 10px 6px 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .d3-trackio-oblivion .cell-title { position: relative; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--obl-cyan); padding-left: 14px; }
-  .d3-trackio-oblivion .cell-title:before { content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width: 6px; height: 6px; background: var(--obl-cyan); border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.25) inset; opacity: .5; }
+  .d3-trackio-oblivion .cell-title:before { content:""; position:absolute; left:0; top:50%; transform:translateY(-50%); width: 6px; height: 6px; background: var(--obl-cyan); border: 1px solid var(--obl-border); box-shadow: 0 0 10px color-mix(in srgb, var(--obl-base) 25%, transparent) inset; opacity: .5; }
   /* Fullscreen button (icon only, no behavior here) */
-  .d3-trackio-oblivion .cell-action { padding: 0 !important; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; background: transparent; color: var(--obl-cyan); opacity: .7; cursor: pointer; z-index: 4; }
-  .d3-trackio-oblivion .cell-action:hover { opacity: 1; }
-  .d3-trackio-oblivion .cell-action svg { width: 22px; height: 22px; opacity: .2; margin-left: 5px; }
+  .d3-trackio-oblivion .cell-action { padding: 0 !important; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; background: transparent; color: var(--obl-cyan); opacity: .5; cursor: pointer; z-index: 4; }
+  .d3-trackio-oblivion .cell-action:hover { opacity: .7; }
+  .d3-trackio-oblivion .cell-action svg { width: 22px; height: 22px; opacity: .6; margin-left: 5px; }
   .d3-trackio-oblivion .cell-action svg, .d3-trackio-oblivion .cell-action svg path { fill: currentColor; stroke: none; }
+  [data-theme="dark"] .d3-trackio-oblivion .cell-action svg { opacity: .85; }
   .d3-trackio-oblivion .cell-body { position: relative; width: 100%; overflow: hidden; }
   .d3-trackio-oblivion .cell-body svg { max-width: 100%; height: auto; display: block; }
 
@@ -116,7 +117,7 @@
   .d3-trackio-oblivion__header .legend-bottom .legend-title { font-size: 11px; font-weight: 900; letter-spacing: 0.18em; color: var(--obl-cyan); text-transform: uppercase; }
   .d3-trackio-oblivion__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
   .d3-trackio-oblivion__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--obl-cyan); }
-  .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--ghost-obl-border); display: inline-block; box-shadow: 0 0 12px rgba(127,241,255,.18) inset; }
+  .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--ghost-obl-border); display: inline-block; box-shadow: 0 0 12px color-mix(in srgb, var(--obl-base) 18%, transparent) inset; }
 
   /* Hover ghosting */
   .d3-trackio-oblivion.hovering .lines path.ghost { opacity: .22; }
@@ -150,7 +151,7 @@
   .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3) { position: relative; padding-top: 10px; margin-top: 6px; }
   .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3)::before { content:""; position:absolute; left:0; right:0; top:0; height:1px; background: var(--engrave-dark); }
   .d3-trackio-oblivion .d3-tooltip__inner > div:nth-child(n+3)::after { content:""; position:absolute; left:0; right:0; top:1px; height:1px; background: var(--engrave-light); }
-  .d3-trackio-oblivion .d3-tooltip__color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--obl-border); box-shadow: 0 0 10px rgba(127,241,255,.2) inset; }
+  .d3-trackio-oblivion .d3-tooltip__color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--obl-border); box-shadow: 0 0 10px color-mix(in srgb, var(--obl-base) 20%, transparent) inset; }
 </style>
 <script>
   (() => {
@@ -266,8 +267,11 @@
               })
           )
           .call((g) => {
-            g.selectAll('path, line')
-              .attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('path.domain').attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('.tick line')
+              .attr('stroke', 'var(--obl-cyan-dim)')
+              .attr('y1', 4)
+              .attr('y2', 6);
             g.selectAll('text')
               .attr('fill', 'var(--obl-cyan)')
               .style('font-size', '11px');
@@ -277,8 +281,11 @@
           .append('g')
           .call(d3.axisLeft(yScale).tickValues(yTicksForced).tickFormat((v) => formatAbbrev(v)))
           .call((g) => {
-            g.selectAll('path, line')
-              .attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('path.domain').attr('stroke', 'var(--obl-cyan-dim)');
+            g.selectAll('.tick line')
+              .attr('stroke', 'var(--obl-cyan-dim)')
+              .attr('x1', -4)
+              .attr('x2', -6);
             g.selectAll('text')
               .attr('fill', 'var(--obl-cyan)')
               .style('font-size', '11px');
