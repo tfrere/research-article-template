@@ -10,10 +10,12 @@
     "export:pdf": "node ./scripts/export-pdf.mjs"
   },
   "devDependencies": {
+    "@astrojs/svelte": "^5.5.0",
     "@astrojs/mdx": "^3.1.9",
     "astro": "^4.10.0",
     "astro-compressor": "^0.4.1",
     "astro-mermaid": "^1.0.4",
+    "svelte": "^4.2.19",
     "mermaid": "^11.10.1",
     "playwright": "^1.55.0",
     "postcss": "^8.5.6",

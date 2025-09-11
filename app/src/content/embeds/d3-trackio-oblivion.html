@@ -80,10 +80,11 @@
     /* Important: allow tooltip to overflow outside cell bounds */
     overflow: visible;
     z-index: 0;
+    
   }
   .d3-trackio-oblivion .cell:hover { z-index: 50; }
   /* Background and corners are explicit elements for maintainability */
-  .d3-trackio-oblivion .cell-bg { position: absolute; inset: var(--hud-gap); pointer-events: none; z-index: 1; background: var(--hud-bg-gradient); }
+  .d3-trackio-oblivion .cell-bg { position: absolute; inset: var(--hud-gap); pointer-events: none; z-index: 1; background: var(--hud-bg-gradient);  border-radius: 4px!important;}
   .d3-trackio-oblivion .cell-corners { position: absolute; inset: var(--corner-inset); pointer-events: none; z-index: 3; background:
       linear-gradient(var(--obl-cyan), var(--obl-cyan)) top left / var(--hud-corner-size) 1px no-repeat,
       linear-gradient(var(--obl-cyan), var(--obl-cyan)) top left / 1px var(--hud-corner-size) no-repeat,
@@ -100,7 +101,7 @@
   /* Fullscreen button (icon only, no behavior here) */
   .d3-trackio-oblivion .cell-action { padding: 0 !important; margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; background: transparent; color: var(--obl-cyan); opacity: .5; cursor: pointer; z-index: 4; }
   .d3-trackio-oblivion .cell-action:hover { opacity: .7; }
-  .d3-trackio-oblivion .cell-action svg { width: 22px; height: 22px; opacity: .6; margin-left: 5px; }
+  .d3-trackio-oblivion .cell-action svg { width: 22px; height: 22px; opacity: .6; margin-left: 5px; fill: var(--interaction-color); }
   .d3-trackio-oblivion .cell-action svg, .d3-trackio-oblivion .cell-action svg path { fill: currentColor; stroke: none; }
   [data-theme="dark"] .d3-trackio-oblivion .cell-action svg { opacity: .85; }
   .d3-trackio-oblivion .cell-body { position: relative; width: 100%; overflow: hidden; }
@@ -115,7 +116,7 @@
   .d3-trackio-oblivion__header { display: flex; align-items: flex-start; justify-content: center; gap: 14px; margin: 0 0 10px 0; flex-wrap: wrap; width: 100%; }
   .d3-trackio-oblivion__header .legend-bottom { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--obl-cyan); text-align: center; }
   .d3-trackio-oblivion__header .legend-bottom .legend-title { font-size: 11px; font-weight: 900; letter-spacing: 0.18em; color: var(--obl-cyan); text-transform: uppercase; }
-  .d3-trackio-oblivion__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-trackio-oblivion__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; align-items: center; }
   .d3-trackio-oblivion__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--obl-cyan); }
   .d3-trackio-oblivion__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 2px; border: 1px solid var(--ghost-obl-border); display: inline-block; box-shadow: 0 0 12px color-mix(in srgb, var(--obl-base) 18%, transparent) inset; }
 
@@ -250,7 +251,35 @@
         const xTicksForced = (Array.isArray(xTicksArg) && xTicksArg.length)
           ? Array.from({ length: xTicksArg.length }, (_, i) => i)
           : makeTicks(xScale, 8);
-        const yCount = Math.max(2, Math.min(6, xTicksForced.length));
+        // Adapt tick density to available space (fewer ticks when range is large), prioritizing nice numeric values (1,2,5×10^k)
+        const maxXTicks = Math.max(3, Math.min(12, Math.floor(innerWidth / 90)));
+        let xTickVals = xTicksForced;
+        if (Array.isArray(xTicksArg) && xTicksArg.length) {
+          const realMin = xTicksArg[0];
+          const realMax = xTicksArg[xTicksArg.length - 1];
+          const niceVals = d3.ticks(realMin, realMax, maxXTicks);
+          const nearestIndex = (val) => {
+            let bestIdx = 0; let bestDist = Infinity;
+            for (let i = 0; i < xTicksArg.length; i++) {
+              const d = Math.abs(xTicksArg[i] - val);
+              if (d < bestDist) { bestDist = d; bestIdx = i; }
+            }
+            return bestIdx;
+          };
+          const indices = Array.from(new Set(niceVals.map(v => nearestIndex(v)))).sort((a,b)=>a-b);
+          // Ensure edges included
+          if (indices[0] !== 0) indices.unshift(0);
+          const lastIdx = xTicksArg.length - 1;
+          if (indices[indices.length - 1] !== lastIdx) indices.push(lastIdx);
+          xTickVals = indices;
+        } else if (xTicksForced.length > maxXTicks) {
+          const stride = Math.max(1, Math.ceil(xTicksForced.length / maxXTicks));
+          const last = xTicksForced[xTicksForced.length - 1];
+          xTickVals = xTicksForced.filter((i, idx) => (idx % stride) === 0);
+          if (xTickVals[xTickVals.length - 1] !== last) xTickVals.push(last);
+        }
+        const maxYTicks = Math.max(5, Math.min(6, Math.floor(innerHeight / 60)));
+        const yCount = maxYTicks;
         const yDom = yScale.domain();
         const yTicksForced = (yCount <= 2)
           ? [yDom[0], yDom[1]]
@@ -260,7 +289,7 @@
           .attr('transform', `translate(0,${innerHeight})`)
           .call(
             d3.axisBottom(xScale)
-              .tickValues(xTicksForced)
+              .tickValues(xTickVals)
               .tickFormat((i) => {
                 const val = (Array.isArray(xTicksArg) && xTicksArg[i] != null ? xTicksArg[i] : i);
                 return formatAbbrev(val);
@@ -304,7 +333,7 @@
           .style('text-transform','uppercase')
           .text('Steps');
         // Y-axis label removed to gain horizontal space
-        return { innerWidth, innerHeight, xTicksForced, yTicksForced };
+        return { innerWidth, innerHeight, xTicksForced: xTickVals, yTicksForced };
       }
 
       function render(metricData, colorForRun){
@@ -317,8 +346,9 @@
         runs.forEach(r => { (metricData[r]||[]).forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); minVal = Math.min(minVal, pt.value); maxVal = Math.max(maxVal, pt.value); }); });
         if (!isFinite(minStep) || !isFinite(maxStep)) return;
         const isAccuracy = /accuracy/i.test(metricKey);
+        const isLoss = /loss/i.test(metricKey);
         const axisLabelY = prettyMetricLabel(metricKey);
-        if (isAccuracy) yScale.domain([0,1]).nice(); else yScale.domain([minVal, maxVal]).nice();
+        if (isAccuracy) yScale.domain([0,1]).nice(); else if (isLoss) yScale.domain([0,1]).nice(); else yScale.domain([minVal, maxVal]).nice();
         // Compute unique x steps and build index mapping
         const rawSteps = [];
         runs.forEach(r => (metricData[r]||[]).forEach(pt => rawSteps.push(pt.step)));
@@ -329,14 +359,21 @@
         xScale = d3.scaleLinear().domain([0, Math.max(0, indices.length - 1)]);
         // Update line generator X accessor to use index directly
         lineGen.x(d => xScale(stepIndex.get(d.step)));
+        const normalizeY = (v) => (isLoss ? ((maxVal > minVal) ? (v - minVal) / (maxVal - minVal) : 0) : v);
+        lineGen.y(d => yScale(normalizeY(d.value)));
         const { innerWidth, innerHeight, xTicksForced, yTicksForced } = updateLayout(axisLabelY, hoverSteps);
 
-        // Grid as small dots at intersections of y ticks × step positions
+        // Grid as small dots at intersections of y ticks × step positions (X density relative to number of data steps)
         // Exclude dots that fall on the origin axes lines (left Y-axis and bottom X-axis)
         const gridPoints = [];
         const yDomAll = yScale.domain();
         const yMin = Array.isArray(yDomAll) ? yDomAll[0] : null;
-        xTicksForced.forEach(i => {
+        const desiredCols = 24; // target grid columns; density scales with data size via stride
+        const xGridStride = Math.max(1, Math.ceil(hoverSteps.length / desiredCols));
+        const xGridIdx = [];
+        for (let idx = 0; idx < hoverSteps.length; idx += xGridStride) xGridIdx.push(idx);
+        if (xGridIdx[xGridIdx.length - 1] !== hoverSteps.length - 1) xGridIdx.push(hoverSteps.length - 1);
+        xGridIdx.forEach(i => {
           yTicksForced.forEach(t => {
             if (i !== 0 && (yMin == null || t !== yMin)) {
               gridPoints.push({ sx: i, ty: t });
@@ -368,15 +405,16 @@
         const ptsSel = gPoints.selectAll('circle.pt').data(allPts, d=>`${d.run}-${d.step}`);
         ptsSel.enter().append('circle')
           .attr('class','pt')
-          .attr('r', 2)
+          .attr('r', 0) /* default invisible */
           .attr('fill', d=>d.color)
           .attr('stroke','none')
           .attr('cx', d=> xScale(stepIndex.get(d.step)))
-          .attr('cy', d=>yScale(d.value))
+          .attr('cy', d=>yScale(normalizeY(d.value)))
           .merge(ptsSel)
           .transition().duration(150)
           .attr('cx', d=> xScale(stepIndex.get(d.step)))
-          .attr('cy', d=>yScale(d.value));
+          .attr('cy', d=>yScale(normalizeY(d.value)))
+          .attr('r', 0); /* keep baseline at 0 when not hovering */
         ptsSel.exit().remove();
         // Steps used for hover snapping (unique data steps)
         // already computed above as hoverSteps
@@ -400,14 +438,14 @@
           cell.__syncAttached = true;
         }
         function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const idx = Math.round(Math.max(0, Math.min(hoverSteps.length-1, xScale.invert(mx)))); const nearest = hoverSteps[idx]; const xpx = xScale(idx); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-step', { detail: { step: nearest } })); } catch(_){} } let html = `<div>Step ${formatAbbrev(nearest)}</div><div>${prettyMetricLabel(metricKey)}</div>`; const entries = series.map(s=>{ const m = new Map(s.values.map(v=>[v.step, v])); const pt = m.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null); entries.sort((a,b)=> (a.pt.value - b.pt.value)); const fmt = (vv)=> (isAccuracy? (+vv).toFixed(4) : (+vv).toFixed(4)); entries.forEach(e => { html += `<div style=\"display:flex;align-items:center;gap:8px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}</span></div>`; }); tipInner.innerHTML = html; const cssVars = getComputedStyle(cell); const offx = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-x')) || 0); const offy = Math.max(0, parseFloat(cssVars.getPropertyValue('--tip-offset-y')) || 0); const cellRect = cell.getBoundingClientRect(); const cx = (ev && ev.clientX != null) ? ev.clientX : (cellRect.left + mx); const cy = (ev && ev.clientY != null) ? ev.clientY : (cellRect.top + my); const x = cx - cellRect.left + offx; const y = cy - cellRect.top + offy; tip.classList.add('is-visible'); tip.style.transform=`translate(${x}px, ${y}px)`; 
-          // Animate points at the hovered step to grow slightly
+          // Animate points: from 0 to hover size only for the hovered step
           try {
             gPoints.selectAll('circle.pt')
               .transition().duration(140).ease(d3.easeCubicOut)
-              .attr('r', d => (d && d.step === nearest ? 4 : 2));
+              .attr('r', d => (d && d.step === nearest ? 4 : 0));
           } catch(_) {}
         }
-        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.classList.remove('is-visible'); tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { gPoints.selectAll('circle.pt').transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } catch(_) {} }, 100); }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.classList.remove('is-visible'); tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { gPoints.selectAll('circle.pt').transition().duration(150).ease(d3.easeCubicOut).attr('r', 0); } catch(_) {} }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
 
@@ -467,15 +505,23 @@
           const metricsToDraw = TARGET_METRICS.filter(t => !!TARGET_TO_DATA[t]);
 
           const runList = Array.from(new Set(cleanRows.map(r => String(r.run||'').trim()).filter(Boolean))).sort();
-          const palette = (() => {
-            try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') return window.ColorPalettes.getColors('categorical', runList.length); } catch(_) {}
+          let currentRunList = runList.slice();
+          let palette = (() => {
+            try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') return window.ColorPalettes.getColors('categorical', currentRunList.length); } catch(_) {}
             const d = (window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#7ff1ff','#5ae0e8','#3cc2da','#289ab8','#1a7e9a','#0f637b','#0a4b5e','#083948','#062a36','#041e27'];
             return d;
           })();
-          const colorForRun = (name) => palette[runList.indexOf(name) % palette.length];
+          const colorForRun = (name) => palette[currentRunList.indexOf(name) % palette.length];
 
           const legendItemsHost = legend.querySelector('.items');
-          legendItemsHost.innerHTML = runList.map((name) => { const color = colorForRun(name); return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`; }).join('');
+          function rebuildLegend(){
+            legendItemsHost.innerHTML = currentRunList.map((name) => { const color = colorForRun(name); return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`; }).join('');
+            legendItemsHost.querySelectorAll('.item').forEach(el => {
+              el.addEventListener('mouseenter', () => { const run = el.getAttribute('data-run'); if (!run) return; host.classList.add('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.toggle('ghost', (p.__data__ && p.__data__.run) !== run)); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run)); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run)); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run)); });
+              el.addEventListener('mouseleave', () => { host.classList.remove('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.remove('ghost')); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost')); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost')); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost')); });
+            });
+          }
+          rebuildLegend();
 
           const dataByMetric = new Map();
           metricsToDraw.forEach(tgt => { const m = TARGET_TO_DATA[tgt]; const map = {}; runList.forEach(r => map[r] = []); cleanRows.filter(r=>r.metric===m).forEach(r => { map[r.run].push({ step:r.step, value:r.value, stderr:r.stderr }); }); dataByMetric.set(tgt, map); });
@@ -484,11 +530,133 @@
 
           const rerender = () => { instances.forEach(inst => inst.render(dataByMetric.get(inst.metricKey)||{}, colorForRun)); };
           if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(host); } else { window.addEventListener('resize', rerender); }
+          // Cycle through step lengths: 0=short,1=medium,2=long
+          let cycleIdx = 2;
 
-          legendItemsHost.querySelectorAll('.item').forEach(el => {
-            el.addEventListener('mouseenter', () => { const run = el.getAttribute('data-run'); if (!run) return; host.classList.add('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.toggle('ghost', (p.__data__ && p.__data__.run) !== run)); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run)); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run)); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run)); });
-            el.addEventListener('mouseleave', () => { host.classList.remove('hovering'); host.querySelectorAll('.cell').forEach(cell => { cell.querySelectorAll('.lines path.run').forEach(p => p.classList.remove('ghost')); cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost')); cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost')); }); legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost')); });
-          });
+          // Randomize data slightly on 'r' key press (in-place jitter)
+          function jitterData(){
+            const mList = (metricsToDraw && metricsToDraw.length) ? metricsToDraw : TARGET_METRICS;
+            mList.forEach((tgt) => {
+              if (tgt === 'epoch') return; // keep epoch intact
+              const map = dataByMetric.get(tgt);
+              if (!map) return;
+              const isAcc = /acc/i.test(tgt);
+              const isLoss = /loss/i.test(tgt);
+              const scale = isAcc ? 0.01 : (isLoss ? 0.03 : 0.02);
+              Object.keys(map).forEach((run) => {
+                map[run].forEach((pt) => {
+                  const base = Math.abs(pt.value) || 1;
+                  const delta = (Math.random() * 2 - 1) * scale * base;
+                  let nv = pt.value + delta;
+                  if (isAcc) nv = Math.max(0, Math.min(1, nv));
+                  pt.value = nv;
+                });
+              });
+            });
+          }
+          // Simulate a fresh dataset on 's' key press (realistic-ish patterns)
+          function generateRunNames(count){
+            const adjectives = ['ancient','brave','calm','clever','crimson','daring','eager','fearless','gentle','glossy','golden','hidden','icy','jolly','lively','mighty','noble','proud','quick','silent','swift','tiny','vivid','wild'];
+            const nouns = ['river','mountain','harbor','forest','valley','ocean','meadow','desert','island','canyon','harbor','trail','summit','delta','lagoon','ridge','tundra','reef','plateau','prairie','grove','bay','dune','cliff'];
+            const used = new Set(); const names = [];
+            const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+            while (names.length < count) { const name = `${pick(adjectives)}-${pick(nouns)}-${Math.floor(1+Math.random()*9)}`; if (!used.has(name)) { used.add(name); names.push(name); } }
+            return names;
+          }
+          function simulateData(){
+            // Randomize number of runs between 2 and 7 with W&B-like names
+            const wantRuns = Math.max(2, Math.floor(2 + Math.random()*6));
+            const runsSim = generateRunNames(wantRuns);
+            const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
+            // Cycle: short -> medium -> long -> repeat
+            let stepsCount = 16;
+            if (cycleIdx === 0) stepsCount = rnd(4, 12);
+            else if (cycleIdx === 1) stepsCount = rnd(16, 48);
+            else stepsCount = rnd(80, 240);
+            cycleIdx = (cycleIdx + 1) % 3;
+            const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
+            function genCurves(n){
+              const quality = Math.random(); const good = quality > 0.66; const poor = quality < 0.33;
+              // Train loss with LR phases and decaying noise
+              const l0 = 2.0 + Math.random()*4.5;
+              const targetLoss = good ? l0*(0.12+Math.random()*0.12) : (poor ? l0*(0.35+Math.random()*0.25) : l0*(0.22+Math.random()*0.16));
+              const phases = 1 + Math.floor(Math.random()*3);
+              const marksSet = new Set();
+              while (marksSet.size < phases-1) { marksSet.add(Math.floor((0.25+Math.random()*0.5)*(n-1))); }
+              const marks = [0, ...Array.from(marksSet).sort((a,b)=>a-b), n-1];
+              let kLoss = 0.02 + Math.random()*0.08; const loss = new Array(n);
+              for (let seg=0; seg<marks.length-1; seg++){
+                const a=marks[seg], b=marks[seg+1]||a+1;
+                for (let i=a;i<=b;i++){
+                  const t = (i-a)/Math.max(1,(b-a));
+                  const segTarget = targetLoss * Math.pow(0.85, seg);
+                  let v = l0*Math.exp(-kLoss*(i+1));
+                  v = 0.6*v + 0.4*(l0 + (segTarget - l0)*(seg + t)/Math.max(1,(marks.length-1)));
+                  const noiseAmp = (0.08*l0) * (1 - 0.8*(i/(n-1)));
+                  v += (Math.random()*2-1)*noiseAmp; if (Math.random() < 0.02) v += 0.15*l0;
+                  loss[i] = Math.max(0, v);
+                }
+                kLoss *= 1.6;
+              }
+              // Train accuracy logistic rise with decaying noise and phase boosts
+              const a0 = 0.1 + Math.random()*0.35; const aMax = good ? (0.92+Math.random()*0.07) : (poor ? (0.62+Math.random()*0.14) : (0.8+Math.random()*0.1));
+              let kAcc = 0.02 + Math.random()*0.08; const acc = new Array(n);
+              for (let i=0;i<n;i++){
+                let v = aMax - (aMax - a0)*Math.exp(-kAcc*(i+1));
+                const noiseAmp = 0.04*(1 - 0.8*(i/(n-1)));
+                v += (Math.random()*2-1)*noiseAmp; acc[i] = Math.max(0, Math.min(1, v));
+                if (marksSet.has(i)) kAcc *= 1.4;
+              }
+              // Validation: gap + noise + optional overfitting
+              const accGap = 0.02 + Math.random()*0.06; const lossGap = 0.05 + Math.random()*0.15;
+              const accVal = new Array(n); const lossVal = new Array(n);
+              let ofStart = Math.floor(((good ? 0.85 : 0.7) + (Math.random()*0.15 - 0.05))*(n-1));
+              ofStart = Math.max(Math.floor(0.5*(n-1)), Math.min(Math.floor(0.95*(n-1)), ofStart));
+              for (let i=0;i<n;i++){
+                let av = acc[i] - accGap + (Math.random()*0.06 - 0.03);
+                let lv = loss[i]*(1+lossGap) + (Math.random()*0.1 - 0.05)*Math.max(1, l0*0.2);
+                if (i>=ofStart && !poor){ const t = (i-ofStart)/Math.max(1,(n-1-ofStart)); av -= 0.03*t; lv += 0.12*t*loss[i]; }
+                accVal[i] = Math.max(0, Math.min(1, av)); lossVal[i] = Math.max(0, lv);
+              }
+              return { accTrain: acc, lossTrain: loss, accVal, lossVal };
+            }
+            // Build fresh maps per metric
+            const nextByMetric = new Map();
+            const mList = (metricsToDraw && metricsToDraw.length) ? metricsToDraw : TARGET_METRICS;
+            mList.forEach(tgt => {
+              const map = {}; runsSim.forEach(r => map[r] = []); nextByMetric.set(tgt, map);
+            });
+            runsSim.forEach(run => {
+              const curves = genCurves(stepsCount);
+              steps.forEach((s,i)=>{
+                if (metricsToDraw.includes('epoch')) nextByMetric.get('epoch')[run].push({ step:s, value:s });
+                if (metricsToDraw.includes('train_accuracy')) nextByMetric.get('train_accuracy')[run].push({ step:s, value: curves.accTrain[i] });
+                if (metricsToDraw.includes('val_accuracy')) nextByMetric.get('val_accuracy')[run].push({ step:s, value: curves.accVal[i] });
+                if (metricsToDraw.includes('train_loss')) nextByMetric.get('train_loss')[run].push({ step:s, value: curves.lossTrain[i] });
+                if (metricsToDraw.includes('val_loss')) nextByMetric.get('val_loss')[run].push({ step:s, value: curves.lossVal[i] });
+              });
+            });
+            // Swap data
+            nextByMetric.forEach((v,k)=> dataByMetric.set(k,v));
+            // Update current run list, palette and legend
+            currentRunList = runsSim.slice();
+            try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') palette = window.ColorPalettes.getColors('categorical', currentRunList.length); } catch(_) {}
+            if (!palette) { palette = (window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#7ff1ff','#5ae0e8','#3cc2da','#289ab8','#1a7e9a','#0f637b','#0a4b5e','#083948','#062a36','#041e27']; }
+            rebuildLegend();
+          }
+          const onKeyDownJitter = (ev) => {
+            try {
+              const key = ev && ev.key ? ev.key.toLowerCase() : '';
+              if (key === 'r') { jitterData(); rerender(); }
+              if (key === 's') { simulateData(); rerender(); }
+            } catch(_) {}
+          };
+          window.addEventListener('keydown', onKeyDownJitter);
+          // Start with level 3 (long) synthetic data by default
+          simulateData();
+          rerender();
+
+          // (Legend hover handlers bound inside rebuildLegend())
         } catch (e) {
           const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e); pre.style.color = 'var(--obl-cyan)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; host.appendChild(pre);
         }

@@ -8,6 +8,7 @@
 @import './components/_table.css';
 @import './components/_tag.css';
 @import './components/_card.css';
+@import './components/_form.css'; 
 
 .demo-wide,
 .demo-full-width {

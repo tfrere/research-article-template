@@ -125,7 +125,7 @@
   /* Global header (legend) above the grid and centered */
   .d3-trackio__header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     gap: 12px;
     margin: 0 0 10px 0;
@@ -142,7 +142,7 @@
     text-align: center;
   }
   .d3-trackio__header .legend-bottom .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
-  .d3-trackio__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-trackio__header .legend-bottom .items { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; align-items: center; }
   .d3-trackio__header .legend-bottom .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .d3-trackio__header .legend-bottom .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); display: inline-block; }
 
@@ -238,7 +238,7 @@
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // Layout & scales
-      let width = 800, height = 200; const margin = { top: 10, right: 20, bottom: 46, left: 44 };
+      let width = 800, height = 10; const margin = { top: 10, right: 20, bottom: 46, left: 44 };
       const xScale = d3.scaleLinear();
       const yScale = d3.scaleLinear();
       const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
@@ -261,7 +261,9 @@
 
         // Axes
         gAxes.selectAll('*').remove();
-        // Ticks: for x, force equal spacing on indices and include edges; for y, equally spaced within domain, count ~ x ticks bounded [2,6]
+        // Ticks (Oblivion logic):
+        // - X: nice values mapped to nearest indices, include edges, density by width
+        // - Y: at least 5 ticks, density by height
         const makeTicks = (scale, approx) => {
           const arr = scale.ticks(approx);
           const dom = scale.domain();
@@ -269,10 +271,33 @@
           if (arr[arr.length - 1] !== dom[dom.length - 1]) arr.push(dom[dom.length - 1]);
           return Array.from(new Set(arr));
         };
-        const xTicksForced = (Array.isArray(xTicksArg) && xTicksArg.length)
-          ? Array.from({ length: xTicksArg.length }, (_, i) => i)
-          : makeTicks(xScale, 8);
-        const yCount = Math.max(2, Math.min(6, xTicksForced.length));
+        const maxXTicks = Math.max(3, Math.min(12, Math.floor(innerWidth / 90)));
+        let xTicksForced = (Array.isArray(xTicksArg) && xTicksArg.length) ? [] : makeTicks(xScale, 8);
+        if (Array.isArray(xTicksArg) && xTicksArg.length) {
+          const realMin = xTicksArg[0];
+          const realMax = xTicksArg[xTicksArg.length - 1];
+          const niceVals = d3.ticks(realMin, realMax, maxXTicks);
+          const nearestIndex = (val) => {
+            let bestIdx = 0; let bestDist = Infinity;
+            for (let i = 0; i < xTicksArg.length; i++) {
+              const d = Math.abs(xTicksArg[i] - val);
+              if (d < bestDist) { bestDist = d; bestIdx = i; }
+            }
+            return bestIdx;
+          };
+          const indices = Array.from(new Set(niceVals.map(v => nearestIndex(v)))).sort((a,b)=>a-b);
+          if (indices[0] !== 0) indices.unshift(0);
+          const lastIdx = xTicksArg.length - 1;
+          if (indices[indices.length - 1] !== lastIdx) indices.push(lastIdx);
+          xTicksForced = indices;
+        } else if (xTicksForced.length > maxXTicks) {
+          const stride = Math.max(1, Math.ceil(xTicksForced.length / maxXTicks));
+          const last = xTicksForced[xTicksForced.length - 1];
+          xTicksForced = xTicksForced.filter((_, idx) => (idx % stride) === 0);
+          if (xTicksForced[xTicksForced.length - 1] !== last) xTicksForced.push(last);
+        }
+        const maxYTicks = Math.max(5, Math.min(6, Math.floor(innerHeight / 60)));
+        const yCount = maxYTicks;
         const yDom = yScale.domain();
         const yTicksForced = (yCount <= 2)
           ? [yDom[0], yDom[1]]
@@ -392,7 +417,7 @@
         // Points
         const allPoints = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
         const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
-        ptsSel.enter().append('circle').attr('class','pt').attr('data-run', d=>d.run).attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.6)
+        ptsSel.enter().append('circle').attr('class','pt').attr('data-run', d=>d.run).attr('r', 0).attr('fill', d=>d.color).attr('fill-opacity', 0.6)
           .attr('stroke', 'none').attr('cx', d=>xScale(stepIndex.get(d.step))).attr('cy', d=>yScale(d.value))
           .merge(ptsSel)
           .each(function(d){ /* placeholder to keep merge chain intact */ })
@@ -433,11 +458,11 @@
           // No animation on chart while scaling up/down
           try {
             const sel = gPoints.selectAll('circle.pt');
-            if (shouldSuppress()) { sel.interrupt().attr('r', d => (d && d.step === nearest ? 4 : 2)); }
-            else { sel.transition().duration(140).ease(d3.easeCubicOut).attr('r', d => (d && d.step === nearest ? 4 : 2)); }
+            if (shouldSuppress()) { sel.interrupt().attr('r', d => (d && d.step === nearest ? 4 : 0)); }
+            else { sel.transition().duration(140).ease(d3.easeCubicOut).attr('r', d => (d && d.step === nearest ? 4 : 0)); }
           } catch(_) {}
         }
-        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { const sel = gPoints.selectAll('circle.pt'); if (shouldSuppress()) { sel.interrupt().attr('r', 2); } else { sel.transition().duration(150).ease(d3.easeCubicOut).attr('r', 2); } } catch(_) {} }, 100); }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); if (host) { try { host.dispatchEvent(new CustomEvent('trackio-hover-clear')); } catch(_){} } try { const sel = gPoints.selectAll('circle.pt'); if (shouldSuppress()) { sel.interrupt().attr('r', 0); } else { sel.transition().duration(150).ease(d3.easeCubicOut).attr('r', 0); } } catch(_) {} }, 100); }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
 
@@ -631,20 +656,46 @@
 
           // Build run list and shared color mapping
           const runList = Array.from(new Set(rows.map(r => String(r.run||'').trim()).filter(Boolean))).sort();
+          let currentRunList = runList.slice();
           let palette = null;
-          try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') palette = window.ColorPalettes.getColors('categorical', runList.length); } catch(_) {}
+          try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') palette = window.ColorPalettes.getColors('categorical', currentRunList.length); } catch(_) {}
           if (!palette) {
             const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
             palette = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])];
           }
-          const colorForRun = (name) => palette[runList.indexOf(name) % palette.length];
+          const colorForRun = (name) => palette[currentRunList.indexOf(name) % palette.length];
 
           // Populate legend
           const legendItemsHost = legend.querySelector('.items');
-          legendItemsHost.innerHTML = runList.map((name) => {
-            const color = colorForRun(name);
-            return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`;
-          }).join('');
+          function rebuildLegend(){
+            legendItemsHost.innerHTML = currentRunList.map((name) => {
+              const color = colorForRun(name);
+              return `<span class="item" data-run="${name}"><span class=\"swatch\" style=\"background:${color}\"></span><span>${name}</span></span>`;
+            }).join('');
+            // Bind hover ghosting
+            legendItemsHost.querySelectorAll('.item').forEach(el => {
+              el.addEventListener('mouseenter', () => {
+                const run = el.getAttribute('data-run'); if (!run) return;
+                host.classList.add('hovering');
+                host.querySelectorAll('.cell').forEach(cell => {
+                  cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
+                  cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run));
+                  cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run));
+                });
+                legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
+              });
+              el.addEventListener('mouseleave', () => {
+                host.classList.remove('hovering');
+                host.querySelectorAll('.cell').forEach(cell => {
+                  cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.remove('ghost'));
+                  cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost'));
+                  cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost'));
+                });
+                legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+              });
+            });
+          }
+          rebuildLegend();
 
           // Build per-metric data map (using resolved names)
           const dataByMetric = new Map();
@@ -665,31 +716,119 @@
 
           // Resize handling
           const rerender = () => { instances.forEach(inst => inst.render(dataByMetric.get(inst.metricKey)||{}, colorForRun)); };
+          // Synthetic data support: jitter (r) and simulation (s)
+          let cycleIdx = 2;
+          function jitterData(){
+            const mList = (metricsToDraw && metricsToDraw.length) ? metricsToDraw : TARGET_METRICS;
+            mList.forEach((tgt) => {
+              if (tgt === 'epoch') return;
+              const map = dataByMetric.get(tgt); if (!map) return;
+              const isAcc = /acc/i.test(tgt); const isLoss = /loss/i.test(tgt);
+              const scale = isAcc ? 0.01 : (isLoss ? 0.03 : 0.02);
+              Object.keys(map).forEach((run) => {
+                map[run].forEach((pt) => {
+                  const base = Math.abs(pt.value) || 1;
+                  const delta = (Math.random()*2-1) * scale * base;
+                  let nv = pt.value + delta;
+                  if (isAcc) nv = Math.max(0, Math.min(1, nv));
+                  pt.value = nv;
+                });
+              });
+            });
+          }
+          function genCurves(n){
+            const quality = Math.random(); const good = quality > 0.66; const poor = quality < 0.33;
+            const l0 = 2.0 + Math.random()*4.5;
+            const targetLoss = good ? l0*(0.12+Math.random()*0.12) : (poor ? l0*(0.35+Math.random()*0.25) : l0*(0.22+Math.random()*0.16));
+            const phases = 1 + Math.floor(Math.random()*3);
+            const marksSet = new Set();
+            while (marksSet.size < phases-1) { marksSet.add(Math.floor((0.25+Math.random()*0.5)*(n-1))); }
+            const marks = [0, ...Array.from(marksSet).sort((a,b)=>a-b), n-1];
+            let kLoss = 0.02 + Math.random()*0.08; const loss = new Array(n);
+            for (let seg=0; seg<marks.length-1; seg++){
+              const a=marks[seg], b=marks[seg+1]||a+1;
+              for (let i=a;i<=b;i++){
+                const t = (i-a)/Math.max(1,(b-a));
+                const segTarget = targetLoss * Math.pow(0.85, seg);
+                let v = l0*Math.exp(-kLoss*(i+1));
+                v = 0.6*v + 0.4*(l0 + (segTarget - l0)*(seg + t)/Math.max(1,(marks.length-1)));
+                const noiseAmp = (0.08*l0) * (1 - 0.8*(i/(n-1)));
+                v += (Math.random()*2-1)*noiseAmp; if (Math.random() < 0.02) v += 0.15*l0;
+                loss[i] = Math.max(0, v);
+              }
+              kLoss *= 1.6;
+            }
+            const a0 = 0.1 + Math.random()*0.35; const aMax = good ? (0.92+Math.random()*0.07) : (poor ? (0.62+Math.random()*0.14) : (0.8+Math.random()*0.1));
+            let kAcc = 0.02 + Math.random()*0.08; const acc = new Array(n);
+            for (let i=0;i<n;i++){
+              let v = aMax - (aMax - a0)*Math.exp(-kAcc*(i+1));
+              const noiseAmp = 0.04*(1 - 0.8*(i/(n-1)));
+              v += (Math.random()*2-1)*noiseAmp; acc[i] = Math.max(0, Math.min(1, v));
+              if (marksSet.has(i)) kAcc *= 1.4;
+            }
+            const accGap = 0.02 + Math.random()*0.06; const lossGap = 0.05 + Math.random()*0.15;
+            const accVal = new Array(n); const lossVal = new Array(n);
+            let ofStart = Math.floor(((good ? 0.85 : 0.7) + (Math.random()*0.15 - 0.05))*(n-1));
+            ofStart = Math.max(Math.floor(0.5*(n-1)), Math.min(Math.floor(0.95*(n-1)), ofStart));
+            for (let i=0;i<n;i++){
+              let av = acc[i] - accGap + (Math.random()*0.06 - 0.03);
+              let lv = loss[i]*(1+lossGap) + (Math.random()*0.1 - 0.05)*Math.max(1, l0*0.2);
+              if (i>=ofStart && !poor){ const t = (i-ofStart)/Math.max(1,(n-1-ofStart)); av -= 0.03*t; lv += 0.12*t*loss[i]; }
+              accVal[i] = Math.max(0, Math.min(1, av)); lossVal[i] = Math.max(0, lv);
+            }
+            return { accTrain: acc, lossTrain: loss, accVal, lossVal };
+          }
+          function generateRunNames(count){
+            const adjectives = ['ancient','brave','calm','clever','crimson','daring','eager','fearless','gentle','glossy','golden','hidden','icy','jolly','lively','mighty','noble','proud','quick','silent','swift','tiny','vivid','wild'];
+            const nouns = ['river','mountain','harbor','forest','valley','ocean','meadow','desert','island','canyon','harbor','trail','summit','delta','lagoon','ridge','tundra','reef','plateau','prairie','grove','bay','dune','cliff'];
+            const used = new Set(); const names = [];
+            const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+            while (names.length < count) {
+              const name = `${pick(adjectives)}-${pick(nouns)}-${Math.floor(1+Math.random()*9)}`;
+              if (!used.has(name)) { used.add(name); names.push(name); }
+            }
+            return names;
+          }
+          function simulateData(){
+            // Randomize number of runs between 2 and 7 with W&B-like names
+            const wantRuns = Math.max(2, Math.floor(2 + Math.random()*6));
+            const runsSim = generateRunNames(wantRuns);
+            const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
+            let stepsCount = 16;
+            if (cycleIdx === 0) stepsCount = rnd(4, 12);
+            else if (cycleIdx === 1) stepsCount = rnd(16, 48);
+            else stepsCount = rnd(80, 240);
+            cycleIdx = (cycleIdx + 1) % 3;
+            const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
+            const nextByMetric = new Map();
+            const mList = (metricsToDraw && metricsToDraw.length) ? metricsToDraw : TARGET_METRICS;
+            mList.forEach(tgt => { const map = {}; runsSim.forEach(r => map[r] = []); nextByMetric.set(tgt, map); });
+            runsSim.forEach(run => {
+              const curves = genCurves(stepsCount);
+              steps.forEach((s,i)=>{
+                if (mList.includes('epoch')) nextByMetric.get('epoch')[run].push({ step:s, value:s });
+                if (mList.includes('train_accuracy')) nextByMetric.get('train_accuracy')[run].push({ step:s, value: curves.accTrain[i] });
+                if (mList.includes('val_accuracy')) nextByMetric.get('val_accuracy')[run].push({ step:s, value: curves.accVal[i] });
+                if (mList.includes('train_loss')) nextByMetric.get('train_loss')[run].push({ step:s, value: curves.lossTrain[i] });
+                if (mList.includes('val_loss')) nextByMetric.get('val_loss')[run].push({ step:s, value: curves.lossVal[i] });
+              });
+            });s
+            nextByMetric.forEach((v,k)=> dataByMetric.set(k,v));
+            // Update currentRunList and palette, then legend
+            currentRunList = runsSim.slice();
+            try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') palette = window.ColorPalettes.getColors('categorical', currentRunList.length); } catch(_) {}
+            if (!palette) { const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB'; palette = [primary, '#4EA5B7', '#E38A42', '#CEC0FA', ...(d3.schemeTableau10||[])]; }
+            rebuildLegend();
+          }
+          const onKeyDownSim = (ev) => { try { const key = ev && ev.key ? ev.key.toLowerCase() : ''; if (key==='r') { jitterData(); rerender(); } if (key==='s') { simulateData(); rerender(); } } catch(_) {} };
+          window.addEventListener('keydown', onKeyDownSim);
+          // Start with level 3 (long) synthetic data by default
+          simulateData();
+          rerender();
           host.__rerender = rerender;
           if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(host); } else { window.addEventListener('resize', rerender); }
 
-          // Legend hover ghosting across all cells
-          legendItemsHost.querySelectorAll('.item').forEach(el => {
-            el.addEventListener('mouseenter', () => {
-              const run = el.getAttribute('data-run'); if (!run) return;
-              host.classList.add('hovering');
-              host.querySelectorAll('.cell').forEach(cell => {
-                cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
-                cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run));
-                cell.querySelectorAll('.areas path.area').forEach(a => a.classList.toggle('ghost', a.getAttribute('data-run') !== run));
-              });
-              legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
-            });
-            el.addEventListener('mouseleave', () => {
-              host.classList.remove('hovering');
-              host.querySelectorAll('.cell').forEach(cell => {
-                cell.querySelectorAll('.lines path.run-line').forEach(p => p.classList.remove('ghost'));
-                cell.querySelectorAll('.points circle.pt').forEach(c => c.classList.remove('ghost'));
-                cell.querySelectorAll('.areas path.area').forEach(a => a.classList.remove('ghost'));
-              });
-              legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
-            });
-          });
+          // (Legend hover handlers bound inside rebuildLegend())
         } catch (e) {
           const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
           pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; host.appendChild(pre);

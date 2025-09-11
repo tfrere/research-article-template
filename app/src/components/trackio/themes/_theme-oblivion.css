@@ -1,0 +1,106 @@
+/* =========================
+   TRACKIO THEME: OBLIVION
+   Futuristic HUD-style interface theme
+   ========================= */
+
+.trackio.theme--oblivion {
+  /* Core oblivion color system - Light mode: darker colors for visibility */
+  --trackio-oblivion-base: #2a2a2a;
+  --trackio-oblivion-primary: var(--trackio-oblivion-base);
+  --trackio-oblivion-dim: color-mix(in srgb, var(--trackio-oblivion-base) 30%, transparent);
+  --trackio-oblivion-subtle: color-mix(in srgb, var(--trackio-oblivion-base) 8%, transparent);
+  --trackio-oblivion-ghost: color-mix(in srgb, var(--trackio-oblivion-base) 4%, transparent);
+  
+  /* Chart rendering overrides */
+  --trackio-chart-grid-type: 'dots';
+  --trackio-chart-axis-stroke: var(--trackio-oblivion-dim);
+  --trackio-chart-axis-text: var(--trackio-oblivion-primary);
+  --trackio-chart-grid-stroke: var(--trackio-oblivion-dim);
+  --trackio-chart-grid-opacity: 0.6;
+  
+  /* Cell styling overrides */
+  --trackio-cell-background: var(--trackio-oblivion-subtle);
+  --trackio-cell-border: var(--trackio-oblivion-dim);
+  --trackio-cell-corner-inset: 6px;
+  --trackio-cell-gap: 0px;
+  
+  /* HUD-specific variables */
+  --trackio-oblivion-hud-gap: 10px;
+  --trackio-oblivion-hud-corner-size: 8px;
+  --trackio-oblivion-hud-bg-gradient: 
+    radial-gradient(1200px 200px at 20% -10%, var(--trackio-oblivion-ghost), transparent 80%),
+    radial-gradient(900px 200px at 80% 110%, var(--trackio-oblivion-ghost), transparent 80%);
+  
+  /* Typography overrides */
+  --trackio-font-family: 'Roboto Mono', 'Roboto Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --trackio-text-primary: var(--trackio-oblivion-primary);
+  --trackio-text-secondary: var(--trackio-oblivion-dim);
+  --trackio-text-accent: var(--trackio-oblivion-primary);
+  
+  /* Tooltip overrides */
+  --trackio-tooltip-background: var(--trackio-oblivion-subtle);
+  --trackio-tooltip-border: var(--trackio-oblivion-dim);
+  --trackio-tooltip-shadow: 
+    0 8px 32px color-mix(in srgb, var(--trackio-oblivion-base) 8%, transparent),
+    0 2px 8px color-mix(in srgb, var(--trackio-oblivion-base) 6%, transparent);
+  
+  /* Legend overrides */
+  --trackio-legend-text: var(--trackio-oblivion-primary);
+  --trackio-legend-swatch-border: var(--trackio-oblivion-dim);
+  
+  /* Force font application */
+  font-family: var(--trackio-font-family) !important;
+  color: var(--trackio-text-primary);
+}
+
+/* Dark mode overrides for Oblivion theme */
+:global([data-theme="dark"]) .trackio.theme--oblivion {
+  --trackio-oblivion-base: #ffffff;
+  --trackio-oblivion-primary: var(--trackio-oblivion-base);
+  --trackio-oblivion-dim: color-mix(in srgb, var(--trackio-oblivion-base) 25%, transparent);
+  --trackio-oblivion-subtle: color-mix(in srgb, var(--trackio-oblivion-base) 8%, transparent);
+  --trackio-oblivion-ghost: color-mix(in srgb, var(--trackio-oblivion-base) 4%, transparent);
+  
+  --trackio-oblivion-hud-bg-gradient: 
+    radial-gradient(1400px 260px at 20% -10%, color-mix(in srgb, var(--trackio-oblivion-base) 6.5%, transparent), transparent 80%),
+    radial-gradient(1100px 240px at 80% 110%, color-mix(in srgb, var(--trackio-oblivion-base) 6%, transparent), transparent 80%),
+    linear-gradient(180deg, color-mix(in srgb, var(--trackio-oblivion-base) 3.5%, transparent), transparent 45%);
+  
+  --trackio-tooltip-shadow: 
+    0 8px 32px color-mix(in srgb, var(--trackio-oblivion-base) 5%, transparent),
+    0 2px 8px color-mix(in srgb, black 10%, transparent);
+  
+  background: #0f1115;
+}
+
+/* Force Roboto Mono application in Oblivion theme */
+.trackio.theme--oblivion,
+.trackio.theme--oblivion * {
+  font-family: 'Roboto Mono', 'Roboto Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+/* Specific overrides for different elements in Oblivion */
+.trackio.theme--oblivion .cell-title,
+.trackio.theme--oblivion .legend-bottom,
+.trackio.theme--oblivion .legend-title,
+.trackio.theme--oblivion .item {
+  font-family: 'Roboto Mono', 'Roboto Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+/* Oblivion theme: remove default cell border */
+.trackio.theme--oblivion .cell {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Grid type switching for Oblivion */
+.trackio.theme--oblivion .grid { 
+  display: none; 
+}
+.trackio.theme--oblivion .grid-dots { 
+  display: block; 
+}
+.trackio.theme--oblivion .cell-bg,
+.trackio.theme--oblivion .cell-corners { 
+  display: block; 
+}

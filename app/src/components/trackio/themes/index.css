@@ -1,0 +1,41 @@
+/* =========================
+   TRACKIO THEME SYSTEM
+   Main theme entry point
+   ========================= */
+
+/* Import base theme system */
+@import './_theme-base.css';
+
+/* Import component styles */
+@import './_components.css';
+
+/* Import individual themes */
+@import './_theme-classic.css';
+@import './_theme-oblivion.css';
+@import './_theme-neon.css';
+
+/* =========================
+   LAYOUT SYSTEM
+   ========================= */
+
+.trackio__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--trackio-cell-gap);
+}
+
+@media (max-width: 980px) {
+  .trackio__grid { 
+    grid-template-columns: 1fr; 
+  }
+}
+
+.trackio__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 0 10px 0;
+  flex-wrap: wrap;
+  width: 100%;
+}

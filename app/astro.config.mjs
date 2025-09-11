@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
+import svelte from '@astrojs/svelte';
 import mermaid from 'astro-mermaid';
 import compressor from 'astro-compressor';
 import remarkMath from 'remark-math';
@@ -25,6 +26,7 @@ export default defineConfig({
   integrations: [
     mermaid({ theme: 'forest', autoTheme: true }),
     mdx(),
+    svelte(),
     // Precompress output with Gzip only (Brotli disabled due to server module mismatch)
     compressor({ brotli: false, gzip: true })
   ],

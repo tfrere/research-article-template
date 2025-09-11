@@ -1,0 +1,49 @@
+/* =========================
+   TRACKIO THEME SYSTEM
+   Base theme variables and typography
+   ========================= */
+
+/* Font imports for themes */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700;800;900&display=swap');
+
+/* Fallback font-face declaration */
+@font-face {
+  font-family: 'Roboto Mono Fallback';
+  src: url('https://fonts.gstatic.com/s/robotomono/v23/L0xuDF4xlVMF-BfR8bXMIhJHg45mwgGEFl0_3vq_ROW4AJi8SJQt.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Base variables - all themes inherit these */
+.trackio {
+  position: relative;
+  --z-tooltip: 50;
+  --z-overlay: 99999999;
+  
+  /* Typography system */
+  --trackio-font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  --trackio-font-weight-normal: 400;
+  --trackio-font-weight-medium: 600;
+  --trackio-font-weight-bold: 700;
+  --trackio-font-weight-extra-bold: 800;
+  --trackio-font-weight-black: 900;
+  
+  /* Apply font-family to root element */
+  font-family: var(--trackio-font-family);
+  
+  /* Layout system */
+  --trackio-cell-gap: 12px;
+  --trackio-border-radius: 10px;
+  --trackio-inner-padding: 8px 12px 10px 10px;
+  
+  /* Animation system */
+  --trackio-transition-fast: 0.12s ease;
+  --trackio-transition-normal: 0.15s ease;
+  --trackio-transition-slow: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Dark mode base adjustments */
+:global([data-theme="dark"]) .trackio {
+  /* Dark mode base overrides will be defined in individual theme files */
+}

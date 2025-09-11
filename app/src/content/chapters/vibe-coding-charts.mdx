@@ -1,5 +1,6 @@
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
 import Note from '../../components/Note.astro';
+import TrackioWrapper from '../../components/TrackioWrapper.astro';
 
 ## Vibe coding charts
 
@@ -70,15 +71,8 @@ They can be found in the `app/src/content/embeds` folder and you can also use th
   <HtmlEmbed src="d3-pie-quad.html" title="d3-pie-quad: Quad donuts by metric" align="center" frameless desc={'Quad view: Answer Tokens, Number of Samples, Number of Turns, Number of Images.'} />
 ---
 <HtmlEmbed src="d3-scatter.html" title="d3-scatter: 2D projection by category" desc={`Figure 8: Dataset visualization via UMAP <br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>`} frameless align="center" />
+
+### Trackio
 ---
-<HtmlEmbed
-  src="d3-trackio.html"
-  frameless
-/>
----
-<HtmlEmbed
-  src="d3-trackio-oblivion.html"
-  frameless
-/>
----
+<TrackioWrapper />
 
