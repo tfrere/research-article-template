@@ -20,11 +20,11 @@ import Trackio from './trackio/Trackio.svelte';
       </div>
       <div class="scale-controls">
         <label>
-          <input type="checkbox" id="log-scale-x">
+          <input type="checkbox" id="log-scale-x" checked>
           Log Scale X
         </label>
         <label>
-          <input type="checkbox" id="smooth-data">
+          <input type="checkbox" id="smooth-data" checked>
           Smooth
         </label>
       </div>
@@ -35,7 +35,7 @@ import Trackio from './trackio/Trackio.svelte';
   </div>
   
   <div class="trackio-container">
-    <Trackio client:load variant="classic" />
+    <Trackio client:load variant="classic" logScaleX={true} smoothing={true} />
   </div>
 </div>
 
@@ -110,6 +110,25 @@ import Trackio from './trackio/Trackio.svelte';
         console.log('Trackio instance not found for smooth change');
       }
     });
+    
+    // Initialize with default checked states
+    setTimeout(() => {
+      if (logScaleXCheckbox.checked) {
+        const trackioEl = trackioContainer.querySelector('.trackio');
+        if (trackioEl && trackioEl.__trackioInstance) {
+          console.log('Initializing with log scale X enabled');
+          trackioEl.__trackioInstance.setLogScaleX(true);
+        }
+      }
+      
+      if (smoothDataCheckbox.checked) {
+        const trackioEl = trackioContainer.querySelector('.trackio');
+        if (trackioEl && trackioEl.__trackioInstance) {
+          console.log('Initializing with smoothing enabled');
+          trackioEl.__trackioInstance.setSmoothing(true);
+        }
+      }
+    }, 100); // Small delay to ensure Trackio is fully loaded
     
     // Randomize data handler - now uses the store
     randomizeBtn.addEventListener('click', () => {

@@ -66,7 +66,13 @@
     else wantRuns = 6;                   // 5% chance
     const runsSim = generateRunNames(wantRuns);
     const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
-    let stepsCount = rnd(80, 240); // Random number of steps
+    
+    // Random number of steps with rare chance of very few steps
+    let stepsCount;
+    const stepsRand = Math.random();
+    if (stepsRand < 0.05) stepsCount = rnd(5, 15);     // 5% chance - très peu de steps
+    else if (stepsRand < 0.1) stepsCount = rnd(16, 30); // 5% chance - peu de steps
+    else stepsCount = rnd(80, 240);                     // 90% chance - normal
     const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
     const nextByMetric = new Map();
     const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
@@ -193,9 +199,19 @@
       else wantRuns = 6;                   // 5% chance
       const runsSim = generateRunNames(wantRuns);
       const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
-      let stepsCount = 16;
-      if (cycleIdx === 0) stepsCount = rnd(4, 12); else if (cycleIdx === 1) stepsCount = rnd(16, 48); else stepsCount = rnd(80, 240);
-      cycleIdx = (cycleIdx + 1) % 3;
+      
+      // Random number of steps with rare chance of very few steps
+      let stepsCount;
+      const stepsRand = Math.random();
+      if (stepsRand < 0.05) stepsCount = rnd(5, 15);     // 5% chance - très peu de steps
+      else if (stepsRand < 0.1) stepsCount = rnd(16, 30); // 5% chance - peu de steps
+      else {
+        // Use original cycling logic for normal cases
+        if (cycleIdx === 0) stepsCount = rnd(4, 12); 
+        else if (cycleIdx === 1) stepsCount = rnd(16, 48); 
+        else stepsCount = rnd(80, 240);
+        cycleIdx = (cycleIdx + 1) % 3;
+      }
       const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
       const nextByMetric = new Map();
       const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
