@@ -230,6 +230,11 @@ declare module 'astro:content' {
 
 	type DataEntryMap = {
 		"assets": {
+"data/llm_benchmarks": {
+	id: "data/llm_benchmarks";
+  collection: "assets";
+  data: any
+};
 "data/mnist-variant-model": {
 	id: "data/mnist-variant-model";
   collection: "assets";

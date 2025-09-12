@@ -66,7 +66,7 @@
     color: var(--text-color);
     box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
     opacity: 0;
-    transition: opacity .12s ease;
+    transition: none;
     z-index: var(--z-tooltip, 50);
     backdrop-filter: saturate(1.12) blur(8px);
   }

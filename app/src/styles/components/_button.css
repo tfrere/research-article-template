@@ -1,7 +1,7 @@
 button, .button {
     appearance: none;
     background: linear-gradient(15deg, var(--primary-color) 0%, var(--primary-color-hover) 35%);
-    color: white!important;
+    color: white;
     border: 1px solid transparent;
     border-radius: var(--button-radius);
     padding: var(--button-padding-y) var(--button-padding-x);
@@ -15,7 +15,7 @@ button, .button {
   /* Icon-only buttons: equal X/Y padding */
   button:has(> svg:only-child),
   .button:has(> svg:only-child) {
-    padding: var(--button-icon-padding) !important;
+    padding: var(--button-icon-padding);
   }
   button:hover, .button:hover {
     filter: brightness(96%);
@@ -32,24 +32,24 @@ button, .button {
   }
   
   /* Ghost/Muted button: subtle outline, primary color text/border */
-  .button--ghost {
+  .button.button--ghost {
     background: transparent !important;
     color: var(--primary-color) !important;
     border-color: var(--primary-color) !important;
   }
-  .button--ghost:hover {
+  .button.button--ghost:hover {
     color: var(--primary-color-hover) !important;
     border-color: var(--primary-color-hover) !important;
     filter: none;
   }
   
   /* Big button: larger padding and font size */
-  .button--big {
-    padding: var(--button-big-padding-y) var(--button-big-padding-x) !important;
+  .button.button--big {
+    padding: var(--button-big-padding-y) var(--button-big-padding-x);
     font-size: var(--button-big-font-size);
   }
-  .button--big:has(> svg:only-child) {
-    padding: var(--button-big-icon-padding) !important;
+  .button.button--big:has(> svg:only-child) {
+    padding: var(--button-big-icon-padding);
   }
   
   .button-group .button {

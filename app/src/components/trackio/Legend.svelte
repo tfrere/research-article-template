@@ -1,13 +1,28 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  
+  // Props
   export let items = [];
+  export let alignment = 'center'; // 'left', 'center', 'right' - Controls the alignment of the legend
+  
+  // Events
   const dispatch = createEventDispatcher();
   function enter(name){ dispatch('legend-hover', { name }); }
   function leave(){ dispatch('legend-leave'); }
+  
+  /**
+   * Usage examples:
+   * <Legend items={runs} alignment="left" />
+   * <Legend items={runs} alignment="center" />
+   * <Legend items={runs} alignment="right" />
+   */
 </script>
 
-<div class="legend-bottom">
-  <div class="legend-title">Runs</div>
+<div class="legend-bottom legend-align-{alignment}">
+  <div class="legend-title">
+    Runs 
+    <span class="legend-count">({items.length})</span>
+  </div>
   <div class="items">
     {#each items as it}
       <div class="item" role="presentation" data-run={it.name} on:mouseenter={() => enter(it.name)} on:mouseleave={leave}>
@@ -26,14 +41,30 @@
   .legend-bottom { 
     display: flex; 
     flex-direction: column; 
-    align-items: center; 
     gap: 6px; 
     font-size: 12px; 
-    text-align: center; 
     width: 80%; 
-    margin: 0 auto; 
     color: var(--trackio-legend-text);
     font-family: var(--trackio-font-family);
+  }
+  
+  /* Alignment variations */
+  .legend-align-left {
+    align-items: flex-start;
+    text-align: left;
+    margin: 0 auto 0 0;
+  }
+  
+  .legend-align-center {
+    align-items: center;
+    text-align: center;
+    margin: 0 auto;
+  }
+  
+  .legend-align-right {
+    align-items: flex-end;
+    text-align: right;
+    margin: 0 0 0 auto;
   }
   
   /* Force Roboto Mono in Oblivion theme */
@@ -50,18 +81,43 @@
     text-transform: uppercase !important;
   }
   
+  :global(.trackio.theme--oblivion) .legend-count {
+    font-weight: 500 !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+  }
+  
   .legend-title { 
     font-size: 12px; 
     font-weight: 700;
     color: var(--trackio-legend-text);
   }
   
+  .legend-count {
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.6;
+    margin-left: 2px;
+  }
+  
   .items { 
     display: flex; 
     flex-wrap: wrap; 
     gap: 8px 14px; 
-    justify-content: center; 
     align-items: center; 
+  }
+  
+  /* Items alignment */
+  .legend-align-left .items {
+    justify-content: flex-start;
+  }
+  
+  .legend-align-center .items {
+    justify-content: center;
+  }
+  
+  .legend-align-right .items {
+    justify-content: flex-end;
   }
   
   .item { 

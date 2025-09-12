@@ -4,6 +4,7 @@
   import { generateRunNames, genCurves } from './data-generator.js';
   import Legend from './Legend.svelte';
   import Cell from './Cell.svelte';
+  import FullscreenModal from './FullscreenModal.svelte';
   import { onMount, onDestroy } from 'svelte';
   import { jitterTrigger } from './store.js';
 
@@ -175,6 +176,34 @@
 
 
   // Chart logic now handled by Cell.svelte
+  
+  // Fullscreen navigation state
+  let currentFullscreenIndex = 0;
+  let isModalOpen = false;
+  
+  function handleNavigate(newIndex) {
+    currentFullscreenIndex = newIndex;
+  }
+  
+  function openModal(index) {
+    currentFullscreenIndex = index;
+    isModalOpen = true;
+  }
+  
+  function closeModal() {
+    isModalOpen = false;
+  }
+  
+  // Prepare all charts data for navigation
+  $: allChartsData = cellsDef.map(c => ({
+    metricKey: c.metric,
+    titleText: c.title,
+    metricData: (preparedData && preparedData[c.metric]) || {},
+    rawMetricData: (preparedRawData && preparedRawData[c.metric]) || {}
+  }));
+  
+  // Color function for the modal
+  $: modalColorForRun = (name) => colorsByRun[name] || '#999';
 
   let cleanup = null;
   onMount(() => {
@@ -296,6 +325,7 @@
       // Ghost the chart lines and points
       hostEl.querySelectorAll('.cell').forEach(cell => {
         cell.querySelectorAll('svg .lines path.run-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
+        cell.querySelectorAll('svg .lines path.raw-line').forEach(p => p.classList.toggle('ghost', p.getAttribute('data-run') !== run));
         cell.querySelectorAll('svg .points circle.pt').forEach(c => c.classList.toggle('ghost', c.getAttribute('data-run') !== run));
       });
       
@@ -313,6 +343,7 @@
       // Clear ghost from chart lines and points
       hostEl.querySelectorAll('.cell').forEach(cell => {
         cell.querySelectorAll('svg .lines path.run-line').forEach(p => p.classList.remove('ghost'));
+        cell.querySelectorAll('svg .lines path.raw-line').forEach(p => p.classList.remove('ghost'));
         cell.querySelectorAll('svg .points circle.pt').forEach(c => c.classList.remove('ghost'));
       });
       
@@ -329,11 +360,51 @@
     <Legend items={legendItems} on:legend-hover={(e) => { const run = e?.detail?.name; if (!run) return; ghostRun(run); }} on:legend-leave={() => { clearGhost(); }} />
   </div>
   <div class="trackio__grid" bind:this={gridEl}>
-    {#each cellsDef as c}
-      <Cell metricKey={c.metric} titleText={c.title} wide={c.wide} variant={variant} normalizeLoss={normalizeLoss} logScaleX={logScaleX} smoothing={smoothing} metricData={(preparedData && preparedData[c.metric]) || {}} rawMetricData={(preparedRawData && preparedRawData[c.metric]) || {}} colorForRun={(name)=> colorsByRun[name] || '#999'} hostEl={hostEl} />
+    {#each cellsDef as c, i}
+      <Cell 
+        metricKey={c.metric} 
+        titleText={c.title} 
+        wide={c.wide} 
+        {variant} 
+        {normalizeLoss} 
+        {logScaleX} 
+        {smoothing} 
+        metricData={(preparedData && preparedData[c.metric]) || {}} 
+        rawMetricData={(preparedRawData && preparedRawData[c.metric]) || {}} 
+        colorForRun={(name)=> colorsByRun[name] || '#999'} 
+        {hostEl}
+        currentIndex={i}
+        onOpenModal={openModal}
+      />
     {/each}
   </div>
+  <div class="trackio__footer">
+    <small>
+      Built with <a href="https://github.com/huggingface/trackio" target="_blank" rel="noopener noreferrer">TrackIO</a>
+      <span class="separator">•</span>
+      <a href="https://huggingface.co/docs/hub/spaces-sdks-docker" target="_blank" rel="noopener noreferrer">Use via API</a>
+    </small>
+  </div>
 </div>
+
+<!-- Centralized Fullscreen Modal -->
+<FullscreenModal
+  visible={isModalOpen}
+  title={allChartsData[currentFullscreenIndex]?.titleText || ''}
+  metricData={allChartsData[currentFullscreenIndex]?.metricData || {}}
+  rawMetricData={allChartsData[currentFullscreenIndex]?.rawMetricData || {}}
+  colorForRun={modalColorForRun}
+  {variant}
+  {logScaleX}
+  {smoothing}
+  {normalizeLoss}
+  metricKey={allChartsData[currentFullscreenIndex]?.metricKey || ''}
+  titleText={allChartsData[currentFullscreenIndex]?.titleText || ''}
+  currentIndex={currentFullscreenIndex}
+  totalCharts={cellsDef.length}
+  onNavigate={handleNavigate}
+  on:close={closeModal}
+/>
 
 <style>
   /* =========================
@@ -576,6 +647,51 @@
   .trackio.theme--oblivion .grid-dots { display: block; }
   .trackio.theme--oblivion .cell-bg,
   .trackio.theme--oblivion .cell-corners { display: block; }
+
+  /* =========================
+     FOOTER
+     ========================= */
+
+  .trackio__footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 12px;
+    padding-top: 6px;
+    opacity: 1;
+  }
+
+  .trackio__footer small {
+    font-size: 10px;
+    color: var(--trackio-text-secondary);
+    font-family: var(--trackio-font-family);
+    opacity: 0.7;
+  }
+
+  .trackio__footer a {
+    color: var(--trackio-text-secondary);
+    text-decoration: none;
+    border-top: 1px solid var(--trackio-chart-grid-stroke);
+    font-weight: var(--trackio-font-weight-normal);
+    transition: opacity 0.15s ease;
+  }
+
+  .trackio__footer a:hover {
+    text-decoration: none;
+  }
+
+  .trackio__footer .separator {
+    margin: 0 6px;
+  }
+
+  /* Oblivion theme footer adjustments */
+  .trackio.theme--oblivion .trackio__footer {
+    border-top-color: var(--trackio-oblivion-dim);
+  }
+
+  .trackio.theme--oblivion .trackio__footer small {
+    font-family: 'Roboto Mono', 'Roboto Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  }
 </style>
 
 
