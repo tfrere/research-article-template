@@ -1,9 +1,9 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import ChartRenderer from './ChartRenderer.svelte';
-  import ChartTooltip from './ChartTooltip.svelte';
+  import ChartRenderer from '../renderers/ChartRendererRefactored.svelte';
+  import ChartTooltip from '../renderers/ChartTooltip.svelte';
   import Legend from './Legend.svelte';
-  import { formatAbbrev } from './chart-utils.js';
+  import { formatAbbrev } from '../core/chart-utils.js';
   
   // Props
   export let visible = false;

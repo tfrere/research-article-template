@@ -1,7 +1,7 @@
 <script>
-  import ChartRenderer from './ChartRenderer.svelte';
-  import ChartTooltip from './ChartTooltip.svelte';
-  import { formatAbbrev } from './chart-utils.js';
+  import ChartRenderer from '../renderers/ChartRendererRefactored.svelte';
+  import ChartTooltip from '../renderers/ChartTooltip.svelte';
+  import { formatAbbrev } from '../core/chart-utils.js';
   
   // Props
   export let metricKey;

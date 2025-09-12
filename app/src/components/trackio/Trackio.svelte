@@ -1,12 +1,12 @@
 <script>
   import * as d3 from 'd3';
-  import { formatAbbrev, smoothMetricData } from './chart-utils.js';
-  import { generateRunNames, genCurves } from './data-generator.js';
-  import Legend from './Legend.svelte';
-  import Cell from './Cell.svelte';
-  import FullscreenModal from './FullscreenModal.svelte';
+  import { formatAbbrev, smoothMetricData } from './core/chart-utils.js';
+  import { generateRunNames, genCurves, Random, Performance } from './core/data-generator.js';
+  import Legend from './components/Legend.svelte';
+  import Cell from './components/Cell.svelte';
+  import FullscreenModal from './components/FullscreenModal.svelte';
   import { onMount, onDestroy } from 'svelte';
-  import { jitterTrigger } from './store.js';
+  import { jitterTrigger } from './core/store.js';
 
   export let variant = 'classic'; // 'classic' | 'oblivion'
   export let normalizeLoss = true;
@@ -65,15 +65,9 @@
     else if (rand < 0.85) wantRuns = 4;  // 15% chance
     else if (rand < 0.95) wantRuns = 5;  // 10% chance
     else wantRuns = 6;                   // 5% chance
-    const runsSim = generateRunNames(wantRuns);
-    const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
-    
-    // Random number of steps with rare chance of very few steps
-    let stepsCount;
-    const stepsRand = Math.random();
-    if (stepsRand < 0.05) stepsCount = rnd(5, 15);     // 5% chance - très peu de steps
-    else if (stepsRand < 0.1) stepsCount = rnd(16, 30); // 5% chance - peu de steps
-    else stepsCount = rnd(80, 240);                     // 90% chance - normal
+    // Use realistic ML training step counts
+    const stepsCount = Random.trainingSteps();
+    const runsSim = generateRunNames(wantRuns, stepsCount);
     const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
     const nextByMetric = new Map();
     const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
@@ -137,6 +131,72 @@
     console.log(`Smoothing set to: ${smoothing}`);
     // Re-prepare data with smoothing applied
     updatePreparedData();
+  }
+
+  // Public API: add live data point for simulation
+  function addLiveDataPoint(runName, dataPoint) {
+    console.log(`Adding live data point for run "${runName}":`, dataPoint);
+    
+    // Add run to currentRunList if it doesn't exist
+    if (!currentRunList.includes(runName)) {
+      currentRunList = [...currentRunList, runName];
+      updateDynamicPalette();
+      colorsByRun = Object.fromEntries(currentRunList.map((name) => [name, colorForRun(name)]));
+      legendItems = currentRunList.map((name) => ({ name, color: colorForRun(name) }));
+    }
+    
+    // Initialize data structures for the run if needed
+    const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
+    TARGET_METRICS.forEach(metric => {
+      if (!dataByMetric.has(metric)) {
+        dataByMetric.set(metric, {});
+      }
+      const metricData = dataByMetric.get(metric);
+      if (!metricData[runName]) {
+        metricData[runName] = [];
+      }
+    });
+    
+    // Add the new data points to each metric
+    const step = dataPoint.step;
+    
+    // Add epoch data
+    const epochData = dataByMetric.get('epoch');
+    epochData[runName].push({ step, value: step });
+    
+    // Add accuracy data (train and val get the same value for simplicity)
+    if (dataPoint.accuracy !== undefined) {
+      const trainAccData = dataByMetric.get('train_accuracy');
+      const valAccData = dataByMetric.get('val_accuracy');
+      
+      // Add some noise between train and val accuracy
+      const trainAcc = dataPoint.accuracy;
+      const valAcc = Math.max(0, Math.min(1, dataPoint.accuracy - 0.01 - Math.random() * 0.03));
+      
+      trainAccData[runName].push({ step, value: trainAcc });
+      valAccData[runName].push({ step, value: valAcc });
+    }
+    
+    // Add loss data (train and val get the same value for simplicity)
+    if (dataPoint.loss !== undefined) {
+      const trainLossData = dataByMetric.get('train_loss');
+      const valLossData = dataByMetric.get('val_loss');
+      
+      // Add some noise between train and val loss
+      const trainLoss = dataPoint.loss;
+      const valLoss = dataPoint.loss + 0.05 + Math.random() * 0.1;
+      
+      trainLossData[runName].push({ step, value: trainLoss });
+      valLossData[runName].push({ step, value: valLoss });
+    }
+    
+    // Update all metrics to draw
+    metricsToDraw = TARGET_METRICS;
+    
+    // Update prepared data with new values
+    updatePreparedData();
+    
+    console.log(`Live data point added successfully. Total runs: ${currentRunList.length}`);
   }
 
   // Update prepared data with optional smoothing
@@ -226,21 +286,20 @@
       else if (rand < 0.85) wantRuns = 4;  // 15% chance
       else if (rand < 0.95) wantRuns = 5;  // 10% chance
       else wantRuns = 6;                   // 5% chance
-      const runsSim = generateRunNames(wantRuns);
-      const rnd = (min,max)=> Math.floor(min + Math.random()*(max-min+1));
-      
-      // Random number of steps with rare chance of very few steps
+      // Use realistic ML training step counts with cycling scenarios
       let stepsCount;
-      const stepsRand = Math.random();
-      if (stepsRand < 0.05) stepsCount = rnd(5, 15);     // 5% chance - très peu de steps
-      else if (stepsRand < 0.1) stepsCount = rnd(16, 30); // 5% chance - peu de steps
-      else {
-        // Use original cycling logic for normal cases
-        if (cycleIdx === 0) stepsCount = rnd(4, 12); 
-        else if (cycleIdx === 1) stepsCount = rnd(16, 48); 
-        else stepsCount = rnd(80, 240);
-        cycleIdx = (cycleIdx + 1) % 3;
+      if (cycleIdx === 0) {
+        stepsCount = Random.trainingStepsForScenario('prototyping');
+      } else if (cycleIdx === 1) {
+        stepsCount = Random.trainingStepsForScenario('development');
+      } else if (cycleIdx === 2) {
+        stepsCount = Random.trainingStepsForScenario('production');
+      } else {
+        stepsCount = Random.trainingSteps(); // Full range for variety
       }
+      cycleIdx = (cycleIdx + 1) % 4; // Cycle through 4 scenarios now
+      
+      const runsSim = generateRunNames(wantRuns, stepsCount);
       const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
       const nextByMetric = new Map();
       const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
@@ -282,9 +341,9 @@
 
   // Expose instance for debugging and external theme control
   onMount(() => {
-    window.trackioInstance = { jitterData };
+    window.trackioInstance = { jitterData, addLiveDataPoint };
     if (hostEl) {
-      hostEl.__trackioInstance = { setTheme, setLogScaleX, setSmoothing, jitterData };
+      hostEl.__trackioInstance = { setTheme, setLogScaleX, setSmoothing, jitterData, addLiveDataPoint };
     }
     
     // Initialize dynamic palette
