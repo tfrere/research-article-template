@@ -77,7 +77,31 @@
       const color = d3.scaleOrdinal();
       const radius = () => 4;
       let isDarkMode = false;
-      function getDotStrokeColor(){ return 'var(--muted-color)'; }
+      function getDotStrokeColor(fillColor = null){ 
+        if (!fillColor) return 'var(--muted-color)';
+        
+        // Résoudre les variables CSS en couleurs réelles
+        let resolvedColor = fillColor;
+        if (fillColor.startsWith('var(')) {
+          const tempEl = document.createElement('div');
+          tempEl.style.color = fillColor;
+          document.body.appendChild(tempEl);
+          resolvedColor = getComputedStyle(tempEl).color;
+          document.body.removeChild(tempEl);
+        }
+        
+        try {
+          const colorObj = d3.color(resolvedColor);
+          if (!colorObj) return 'var(--muted-color)';
+          
+          // En mode light: bordure plus claire, en mode dark: bordure plus sombre
+          return isDarkMode ? 
+            colorObj.darker(0.3).toString() : 
+            colorObj.brighter(0.8).toString();
+        } catch {
+          return 'var(--muted-color)';
+        }
+      }
 
       // Data loading (real): banner visualization positions by category
       async function fetchFirstAvailable(paths){
@@ -146,7 +170,7 @@
         dots.enter().append('circle').attr('class','dot')
           .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
           .attr('fill', fillFor).attr('fill-opacity', 0.85)
-          .attr('stroke', getDotStrokeColor()).attr('stroke-width', '0.75px')
+          .attr('stroke', d => getDotStrokeColor(fillFor(d))).attr('stroke-width', '0.75px')
           .on('mouseenter', function(ev, d){
             d3.select(this).style('stroke','var(--text-color)').style('stroke-width','1.5px').attr('fill-opacity', 1);
             const swatch = `<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="${fillFor(d)}" /></svg>`;
@@ -158,12 +182,12 @@
             tip.style.opacity = '1';
           })
           .on('mousemove', function(ev){ const [mx, my] = d3.pointer(ev, container); const ox=12, oy=12; tip.style.transform = `translate(${Math.round(mx+ox)}px, ${Math.round(my+oy)}px)`; })
-          .on('mouseleave', function(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).style('stroke', getDotStrokeColor()).style('stroke-width','0.75px').attr('fill-opacity', 0.85); })
+          .on('mouseleave', function(ev, d){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; d3.select(this).style('stroke', getDotStrokeColor(fillFor(d))).style('stroke-width','0.75px').attr('fill-opacity', 0.85); })
           .merge(dots)
           .transition().duration(180)
           .attr('cx', d=>x(d.x)).attr('cy', d=>y(d.y)).attr('r', radius())
           .attr('fill', fillFor).attr('fill-opacity', 0.85)
-          .attr('stroke', getDotStrokeColor()).attr('stroke-width','0.75px');
+          .attr('stroke', d => getDotStrokeColor(fillFor(d))).attr('stroke-width','0.75px');
         dots.exit().remove();
 
         // Compute centroids per category
