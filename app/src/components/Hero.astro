@@ -128,9 +128,9 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     <div class="meta-container-cell meta-container-cell--pdf">
       <h3>PDF</h3>
       <p>
-        <button class="button" href={`/${pdfFilename}`} download={pdfFilename} aria-label={`Download PDF ${pdfFilename}`}>
+        <a class="button" href={`/${pdfFilename}`} download={pdfFilename} aria-label={`Download PDF ${pdfFilename}`}>
           Download PDF
-        </button>
+        </a>
       </p>
     </div>
   </div>
@@ -179,7 +179,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     gap: 8px;
   }
   /* Subtle underline for links in meta; keep buttons without underline */
-  .meta-container a {
+  .meta-container a:not(.button) {
     color: var(--primary-color);
     text-decoration: underline;
     text-underline-offset: 2px;
