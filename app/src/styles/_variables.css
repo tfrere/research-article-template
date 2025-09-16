@@ -84,8 +84,8 @@
   --z-tooltip: 1200;
 
   /* Charts (global) */
-  --axis-color: var(--text-color);
-  --tick-color: var(--muted-color);
+  --axis-color: var(--muted-color);
+  --tick-color: var(--text-color);
   --grid-color: rgba(0,0,0,.08);
 }
 
@@ -102,7 +102,7 @@
   --transparent-page-contrast: rgba(0,0,0,.85);
   
   /* Charts (global) */
-  --axis-color: var(--text-color);
+  --axis-color: var(--muted-color);
   --tick-color: var(--muted-color);
   --grid-color: rgba(255,255,255,.10);
 

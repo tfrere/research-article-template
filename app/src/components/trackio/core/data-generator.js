@@ -38,12 +38,12 @@ export const Random = {
     return [0, ...Array.from(marks).sort((a, b) => a - b), maxSteps - 1];
   },
 
-  // Training steps count with realistic ML training ranges (performance optimized)
+  // Training steps count with realistic ML training ranges (with large dataset support)
   trainingSteps: () => {
     const rand = Math.random();
     
     // Distribution basée sur des patterns d'entraînement ML réels
-    // MAIS limitée pour éviter les problèmes de performance du navigateur
+    // Inclut maintenant des datasets plus larges pour tester le sampling
     if (rand < 0.05) {
       // 5% - Très court : Tests rapides, prototypage
       return Random.intBetween(5, 50);
@@ -52,19 +52,22 @@ export const Random = {
       return Random.intBetween(50, 200);
     } else if (rand < 0.35) {
       // 20% - Moyen-court : Entraînements standards
-      return Random.intBetween(200, 100);
-    } else if (rand < 0.65) {
-      // 30% - Moyen : La plupart des entraînements
-      return Random.intBetween(100, 500);
-    } else if (rand < 0.85) {
-      // 20% - Long : Entraînements approfondis
-      return Random.intBetween(500, 500);
+      return Random.intBetween(200, 400);
+    } else if (rand < 0.55) {
+      // 20% - Moyen : La plupart des entraînements
+      return Random.intBetween(400, 800);
+    } else if (rand < 0.75) {
+      // 20% - Long : Entraînements approfondis (déclenche le sampling)
+      return Random.intBetween(800, 1500);
+    } else if (rand < 0.90) {
+      // 15% - Très long : Large-scale training
+      return Random.intBetween(1500, 3000);
     } else if (rand < 0.98) {
-      // 13% - Très long : Large-scale training
-      return Random.intBetween(500, 500);
+      // 8% - Extrêmement long : Research-scale
+      return Random.intBetween(3000, 5000);
     } else {
-      // 2% - Extrêmement long : LLMs, recherche (avec sampling)
-      return Random.intBetween(500, 500);
+      // 2% - Massive : LLMs, très gros datasets (pour tester les limites)
+      return Random.intBetween(5000, 10000);
     }
   },
 
@@ -74,13 +77,16 @@ export const Random = {
       case 'prototyping':
         return Random.intBetween(5, 100);
       case 'development':
-        return Random.intBetween(100, 100);
+        return Random.intBetween(100, 400);
       case 'production':
-        return Random.intBetween(100, 100);
+        return Random.intBetween(400, 800);
       case 'research':
-        return Random.intBetween(500, 500);
+        return Random.intBetween(800, 2000);
       case 'llm':
-        return Random.intBetween(500, 500);
+        return Random.intBetween(2000, 5000);
+      case 'massive':
+        // Nouveau scénario pour tester le sampling avec de très gros datasets
+        return Random.intBetween(5000, 15000);
       default:
         return Random.trainingSteps();
     }
@@ -354,11 +360,60 @@ export function generateRunNames(count, stepsHint = null) {
 export function getScenarioDescription(steps) {
   if (steps < 25) return '🚀 Rapid Prototyping';
   if (steps < 100) return '⚡ Quick Experiment';
-  if (steps < 500) return '🔧 Development Phase';
-  if (steps < 2000) return '📊 Standard Training';
-  if (steps < 10000) return '🎯 Production Training';
-  if (steps < 50000) return '🏗️ Large-Scale Training';
-  return '🌌 Research-Scale Training';
+  if (steps < 400) return '🔧 Development Phase';
+  if (steps < 800) return '📊 Standard Training';
+  if (steps < 1500) return '🎯 Production Training (Sampling Active)';
+  if (steps < 3000) return '🏗️ Large-Scale Training (Smart Sampling)';
+  if (steps < 5000) return '🌌 Research-Scale Training (Adaptive Sampling)';
+  return '🚀 Massive Dataset (Advanced Sampling)';
+}
+
+/**
+ * Generate a massive dataset for testing sampling performance
+ * @param {number} steps - Number of steps (default: random large number)
+ * @param {number} runs - Number of runs (default: 3)
+ * @returns {Object} Large dataset for testing
+ */
+export function generateMassiveTestDataset(steps = null, runs = 3) {
+  const actualSteps = steps || Random.trainingStepsForScenario('massive');
+  const runNames = generateRunNames(runs, actualSteps);
+  const dataByMetric = new Map();
+  
+  console.log(`🧪 Generating massive test dataset: ${actualSteps} steps × ${runs} runs = ${actualSteps * runs} total points`);
+  
+  const TARGET_METRICS = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
+  
+  // Initialize data structure
+  TARGET_METRICS.forEach((metric) => {
+    const map = {};
+    runNames.forEach((r) => { map[r] = []; });
+    dataByMetric.set(metric, map);
+  });
+  
+  // Generate curves for each run
+  runNames.forEach((run, runIndex) => {
+    console.log(`🔄 Generating curves for run ${runIndex + 1}/${runs}: ${run}`);
+    const curves = genCurves(actualSteps);
+    
+    for (let stepIndex = 0; stepIndex < actualSteps; stepIndex++) {
+      const step = stepIndex + 1;
+      dataByMetric.get('epoch')[run].push({ step, value: step });
+      dataByMetric.get('train_accuracy')[run].push({ step, value: curves.accTrain[stepIndex] });
+      dataByMetric.get('val_accuracy')[run].push({ step, value: curves.accVal[stepIndex] });
+      dataByMetric.get('train_loss')[run].push({ step, value: curves.lossTrain[stepIndex] });
+      dataByMetric.get('val_loss')[run].push({ step, value: curves.lossVal[stepIndex] });
+    }
+  });
+  
+  console.log(`✅ Massive dataset generated successfully`);
+  
+  return {
+    dataByMetric,
+    runNames,
+    stepCount: actualSteps,
+    totalPoints: actualSteps * runs * TARGET_METRICS.length,
+    description: getScenarioDescription(actualSteps)
+  };
 }
 
 /**

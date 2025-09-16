@@ -1,7 +1,7 @@
 <script>
   import * as d3 from 'd3';
   import { formatAbbrev, smoothMetricData } from './core/chart-utils.js';
-  import { generateRunNames, genCurves, Random, Performance } from './core/data-generator.js';
+  import { generateRunNames, genCurves, Random, Performance, generateMassiveTestDataset } from './core/data-generator.js';
   import Legend from './components/Legend.svelte';
   import Cell from './components/Cell.svelte';
   import FullscreenModal from './components/FullscreenModal.svelte';
@@ -131,6 +131,28 @@
     console.log(`Smoothing set to: ${smoothing}`);
     // Re-prepare data with smoothing applied
     updatePreparedData();
+  }
+
+  // Public API: generate massive test dataset
+  function generateMassiveDataset(steps = null, runs = 3) {
+    console.log('🧪 Generating massive test dataset for sampling validation...');
+    
+    const result = generateMassiveTestDataset(steps, runs);
+    
+    // Update reactive data with massive dataset
+    result.dataByMetric.forEach((v, k) => dataByMetric.set(k, v));
+    metricsToDraw = ['epoch', 'train_accuracy', 'train_loss', 'val_accuracy', 'val_loss'];
+    currentRunList = result.runNames.slice();
+    updateDynamicPalette();
+    legendItems = currentRunList.map((name) => ({ name, color: colorForRun(name) }));
+    updatePreparedData();
+    colorsByRun = Object.fromEntries(currentRunList.map((name) => [name, colorForRun(name)]));
+    
+    console.log(`✅ Massive dataset loaded: ${result.stepCount} steps × ${result.runNames.length} runs`);
+    console.log(`📊 Total data points: ${result.totalPoints.toLocaleString()}`);
+    console.log(`🎯 Description: ${result.description}`);
+    
+    return result;
   }
 
   // Public API: add live data point for simulation
@@ -294,10 +316,16 @@
         stepsCount = Random.trainingStepsForScenario('development');
       } else if (cycleIdx === 2) {
         stepsCount = Random.trainingStepsForScenario('production');
+      } else if (cycleIdx === 3) {
+        stepsCount = Random.trainingStepsForScenario('research');
+      } else if (cycleIdx === 4) {
+        stepsCount = Random.trainingStepsForScenario('llm');
+      } else if (cycleIdx === 5) {
+        stepsCount = Random.trainingStepsForScenario('massive');
       } else {
         stepsCount = Random.trainingSteps(); // Full range for variety
       }
-      cycleIdx = (cycleIdx + 1) % 4; // Cycle through 4 scenarios now
+      cycleIdx = (cycleIdx + 1) % 7; // Cycle through 7 scenarios now
       
       const runsSim = generateRunNames(wantRuns, stepsCount);
       const steps = Array.from({length: stepsCount}, (_,i)=> i+1);
@@ -341,9 +369,9 @@
 
   // Expose instance for debugging and external theme control
   onMount(() => {
-    window.trackioInstance = { jitterData, addLiveDataPoint };
+    window.trackioInstance = { jitterData, addLiveDataPoint, generateMassiveDataset };
     if (hostEl) {
-      hostEl.__trackioInstance = { setTheme, setLogScaleX, setSmoothing, jitterData, addLiveDataPoint };
+      hostEl.__trackioInstance = { setTheme, setLogScaleX, setSmoothing, jitterData, addLiveDataPoint, generateMassiveDataset };
     }
     
     // Initialize dynamic palette

@@ -5,6 +5,7 @@
   import { PathRenderer } from './core/path-renderer.js';
   import { InteractionManager } from './core/interaction-manager.js';
   import { ChartTransforms } from './utils/chart-transforms.js';
+  import { trackioSampler } from '../core/adaptive-sampler.js';
   
   // Props - same as original ChartRenderer
   export let metricData = {};
@@ -30,6 +31,11 @@
   let pathRenderer;
   let interactionManager;
   let cleanup;
+  
+  // Sampling state
+  let sampledData = {};
+  let samplingInfo = {};
+  let needsSampling = false;
   
   // Computed values
   $: innerHeight = height - margin.top - margin.bottom;
@@ -68,13 +74,45 @@
   }
   
   /**
+   * Apply adaptive sampling to large datasets
+   */
+  function applySampling() {
+    // Check if any run has more than 400 points
+    const runSizes = Object.keys(metricData).map(run => (metricData[run] || []).length);
+    const maxSize = Math.max(0, ...runSizes);
+    needsSampling = maxSize > 400;
+    
+    if (needsSampling) {
+      console.log(`🎯 Large dataset detected (${maxSize} points), applying adaptive sampling`);
+      const result = trackioSampler.sampleMetricData(metricData, 'smart');
+      sampledData = result.sampledData;
+      samplingInfo = result.samplingInfo;
+      
+      // Log sampling stats
+      Object.keys(samplingInfo).forEach(run => {
+        const info = samplingInfo[run];
+        console.log(`📊 ${run}: ${info.originalLength} → ${info.sampledLength} points (${(info.compressionRatio * 100).toFixed(1)}% retained)`);
+      });
+    } else {
+      sampledData = metricData;
+      samplingInfo = {};
+    }
+  }
+
+  /**
    * Main render function - orchestrates all rendering
    */
   function render() {
     if (!svgManager) return;
     
+    // Apply sampling if needed
+    applySampling();
+    
+    // Use sampled data for rendering
+    const dataToRender = needsSampling ? sampledData : metricData;
+    
     // Validate and clean data
-    const cleanedData = ChartTransforms.validateData(metricData);
+    const cleanedData = ChartTransforms.validateData(dataToRender);
     const processedData = ChartTransforms.processMetricData(cleanedData, metricKey, normalizeLoss);
     
     if (!processedData.hasData) {
@@ -139,7 +177,10 @@
   export function showHoverLine(step) {
     if (!interactionManager) return;
     
-    const processedData = ChartTransforms.processMetricData(metricData, metricKey, normalizeLoss);
+    // Use sampled data for interactions as well
+    const dataToRender = needsSampling ? sampledData : metricData;
+    const cleanedData = ChartTransforms.validateData(dataToRender);
+    const processedData = ChartTransforms.processMetricData(cleanedData, metricKey, normalizeLoss);
     const { stepIndex } = ChartTransforms.setupScales(svgManager, processedData, logScaleX);
     
     interactionManager.showHoverLine(step, processedData.hoverSteps, stepIndex, logScaleX);

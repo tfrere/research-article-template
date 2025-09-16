@@ -93,7 +93,7 @@
 
         const radius = Math.max(60, Math.min(inner, 120));
         const innerR = Math.round(radius * DONUT_INNER_RATIO);
-        const pie = d3.pie().sort(null).value(d=>d.value).padAngle(0.02);
+        const pie = d3.pie().sort(null).value(d=>d.value).padAngle(0.005); // Réduit de 0.02 à 0.005
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
         const arcLabel = d3.arc().innerRadius((innerR + radius)/2).outerRadius((innerR + radius)/2);
 

@@ -216,31 +216,20 @@ declare module 'astro:content' {
   data: any
 } & { render(): Render[".mdx"] };
 };
-"embeds": {
-"vibe-code-d3-embeds-directives.md": {
-	id: "vibe-code-d3-embeds-directives.md";
-  slug: "vibe-code-d3-embeds-directives";
-  body: string;
-  collection: "embeds";
-  data: any
-} & { render(): Render[".md"] };
-};
 
 	};
 
 	type DataEntryMap = {
-		"assets": {
-"data/llm_benchmarks": {
-	id: "data/llm_benchmarks";
+		"assets": Record<string, {
+  id: string;
   collection: "assets";
-  data: any
-};
-"data/mnist-variant-model": {
-	id: "data/mnist-variant-model";
-  collection: "assets";
-  data: any
-};
-};
+  data: any;
+}>;
+"embeds": Record<string, {
+  id: string;
+  collection: "embeds";
+  data: any;
+}>;
 
 	};
 

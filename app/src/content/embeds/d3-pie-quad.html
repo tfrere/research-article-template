@@ -222,7 +222,7 @@
         plotsHost.style.position = 'relative';
         plotsHost.style.marginTop = (TOP_OFFSET) + 'px';
 
-        const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
+        const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.005); // Réduit de 0.02 à 0.005
         const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
         const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
 
@@ -276,7 +276,6 @@
                 let html = `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${catColor}\"></span><strong>${d.data.category}</strong></div>`;
                 html += `<div>${metric.name}</div>`;
                 html += `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><strong>Value</strong><span style="margin-left:auto;text-align:right;">${d.data.value.toLocaleString()}</span></div>`;
-                /* Share row removed per request */
                 tipInner.innerHTML = html;
                 tip.style.opacity = '1';
               })
