@@ -9,7 +9,9 @@
     "preview": "astro preview --port 8080 --host",
     "export:pdf": "node ./scripts/export-pdf.mjs",
     "export:latex": "node ./scripts/export-latex.mjs",
-    "export:tex": "node ./scripts/export-latex.mjs"
+    "export:tex": "node ./scripts/export-latex.mjs",
+    "latex-to-md": "node ./scripts/latex-to-markdown.mjs",
+    "latex-project-to-mdx": "node ./scripts/latex-project-to-mdx.mjs"
   },
   "devDependencies": {
     "@astrojs/svelte": "^5.5.0",

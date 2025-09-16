@@ -19,6 +19,8 @@ node_modules/
 *.env
 *.cache
 
+app/scripts/latex-converter/input-example/
+
 # PDF export
 app/public/*.pdf
 app/public/*.png

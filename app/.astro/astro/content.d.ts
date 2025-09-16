@@ -152,65 +152,58 @@ declare module 'astro:content' {
 
 	type ContentEntryMap = {
 		"chapters": {
-"best-pratices.mdx": {
-	id: "best-pratices.mdx";
-  slug: "best-pratices";
+"01_introduction.mdx": {
+	id: "01_introduction.mdx";
+  slug: "01_introduction";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"components.mdx": {
-	id: "components.mdx";
-  slug: "components";
+"02_classic_robotics.mdx": {
+	id: "02_classic_robotics.mdx";
+  slug: "02_classic_robotics";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"debug-components.mdx": {
-	id: "debug-components.mdx";
-  slug: "debug-components";
+"03_reinforcement_learning.mdx": {
+	id: "03_reinforcement_learning.mdx";
+  slug: "03_reinforcement_learning";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"getting-started.mdx": {
-	id: "getting-started.mdx";
-  slug: "getting-started";
+"04_imitation_learning.mdx": {
+	id: "04_imitation_learning.mdx";
+  slug: "04_imitation_learning";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"greetings.mdx": {
-	id: "greetings.mdx";
-  slug: "greetings";
+"05_foundation_models.mdx": {
+	id: "05_foundation_models.mdx";
+  slug: "05_foundation_models";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"introduction.mdx": {
-	id: "introduction.mdx";
-  slug: "introduction";
+"06_next_directions.mdx": {
+	id: "06_next_directions.mdx";
+  slug: "06_next_directions";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"markdown.mdx": {
-	id: "markdown.mdx";
-  slug: "markdown";
+"07_conclusions.mdx": {
+	id: "07_conclusions.mdx";
+  slug: "07_conclusions";
   body: string;
   collection: "chapters";
   data: any
 } & { render(): Render[".mdx"] };
-"vibe-coding-charts.mdx": {
-	id: "vibe-coding-charts.mdx";
-  slug: "vibe-coding-charts";
-  body: string;
-  collection: "chapters";
-  data: any
-} & { render(): Render[".mdx"] };
-"writing-your-content.mdx": {
-	id: "writing-your-content.mdx";
-  slug: "writing-your-content";
+"A_foreword.mdx": {
+	id: "A_foreword.mdx";
+  slug: "a_foreword";
   body: string;
   collection: "chapters";
   data: any
@@ -223,11 +216,6 @@ declare module 'astro:content' {
 		"assets": Record<string, {
   id: string;
   collection: "assets";
-  data: any;
-}>;
-"embeds": Record<string, {
-  id: string;
-  collection: "embeds";
   data: any;
 }>;
 
