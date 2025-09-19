@@ -140,8 +140,42 @@ Use the **color picker** below to see how the primary color affects the theme.
   Here is an example of an <a href="#">interactive element</a>.
 </Sidenote>
 
+#### Color palettes
+
+Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
+
+<Palettes />
+<br/>
+**Use color with care.**
+Color should rarely be the only channel of meaning.
+Always pair it with text, icons, shape or position. The simulation helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies.
+
+#### Using the palettes
+
+You can copy them manually from the palette viewer just above, or fetch colors via `window.ColorPalettes.getColors(key, count)` where `key` is one of `'categorical'`, `'sequential'`, `'diverging'`, and `count` is the desired number of colors (defaults to 6).
+
+<Accordion title="Code example">
+  ```js
+// Usage (with explicit counts)
+const cat = window.ColorPalettes.getColors('categorical', 8);
+const seq = window.ColorPalettes.getColors('sequential', 8);
+const div = window.ColorPalettes.getColors('diverging', 7);
+
+// For current primary color string
+const primaryHex = window.ColorPalettes.getPrimary();
+
+// If you change --primary-color dynamically, call refresh to notify listeners
+document.documentElement.style.setProperty('--primary-color', '#6D4AFF');
+window.ColorPalettes.refresh();
+```
+</Accordion>
+
 
 ### LaTeX to Template Conversion
+
+<Note variant="warning">
+⚠️ **Highly Experimental Feature** — This LaTeX conversion toolkit is in active development and may not work perfectly with all LaTeX documents. Results may vary depending on your document structure and complexity.
+</Note>
 
 Convert your existing LaTeX papers directly to this template using the built-in LaTeX to MDX toolkit. This powerful system transforms academic LaTeX documents into fully interactive web articles with all template features.
 
@@ -248,32 +282,10 @@ node index.mjs --input=paper.tex --output=../content/
 
 The result is a fully interactive article that preserves your scientific content while gaining all template benefits: responsive design, interactive equations, zoomable figures, and modern web features.
 
-#### Color palettes
+#### Docker deployment with LaTeX conversion
 
-Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
+When deploying on Hugging Face Spaces, you can enable automatic LaTeX conversion during the build process by setting the `ENABLE_LATEX_CONVERSION=true` environment variable. 
 
-<Palettes />
-<br/>
-**Use color with care.**
-Color should rarely be the only channel of meaning.
-Always pair it with text, icons, shape or position. The simulation helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies.
+If this variable is configured in your Space, the build process will automatically execute the LaTeX to MDX conversion, transforming your LaTeX sources into the final blog post format.
 
-#### Using the palettes
-
-You can copy them manually from the palette viewer just above, or fetch colors via `window.ColorPalettes.getColors(key, count)` where `key` is one of `'categorical'`, `'sequential'`, `'diverging'`, and `count` is the desired number of colors (defaults to 6).
-
-<Accordion title="Code example">
-  ```js
-// Usage (with explicit counts)
-const cat = window.ColorPalettes.getColors('categorical', 8);
-const seq = window.ColorPalettes.getColors('sequential', 8);
-const div = window.ColorPalettes.getColors('diverging', 7);
-
-// For current primary color string
-const primaryHex = window.ColorPalettes.getPrimary();
-
-// If you change --primary-color dynamically, call refresh to notify listeners
-document.documentElement.style.setProperty('--primary-color', '#6D4AFF');
-window.ColorPalettes.refresh();
-```
-</Accordion>
+This allows you to maintain LaTeX sources in your repository while automatically generating the MDX content for production deployment.

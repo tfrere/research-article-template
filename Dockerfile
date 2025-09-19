@@ -2,6 +2,15 @@
 # Build with Playwright (browsers and deps ready)
 FROM mcr.microsoft.com/playwright:v1.55.0-jammy AS build
 
+# Install git, git-lfs, and dependencies for Pandoc (only if ENABLE_LATEX_CONVERSION=true)
+RUN apt-get update && apt-get install -y git git-lfs wget && apt-get clean
+
+# Install latest Pandoc from GitHub releases (only installed if needed later)
+RUN wget -qO- https://github.com/jgm/pandoc/releases/download/3.8/pandoc-3.8-linux-amd64.tar.gz | tar xzf - -C /tmp && \
+    cp /tmp/pandoc-3.8/bin/pandoc /usr/local/bin/ && \
+    cp /tmp/pandoc-3.8/bin/pandoc-lua /usr/local/bin/ && \
+    rm -rf /tmp/pandoc-3.8
+
 # Set the working directory in the container
 WORKDIR /app
 
@@ -13,6 +22,15 @@ RUN npm install
 
 # Copy the rest of the application code
 COPY app/ .
+
+# Conditionally convert LaTeX to MDX if ENABLE_LATEX_CONVERSION=true
+ARG ENABLE_LATEX_CONVERSION=false
+RUN if [ "$ENABLE_LATEX_CONVERSION" = "true" ]; then \
+    echo "🔄 LaTeX conversion enabled - running latex:convert..."; \
+    npm run latex:convert; \
+    else \
+    echo "⏭️  LaTeX conversion disabled - skipping..."; \
+    fi
 
 # Ensure `public/data` is a real directory with real files (not a symlink)
 # This handles the case where `public/data` is a symlink in the repo, which

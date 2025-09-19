@@ -14,7 +14,8 @@
     "latex-project-to-mdx": "node ./scripts/latex-project-to-mdx.mjs",
     "sync:template": "node ./scripts/sync-template.mjs",
     "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
-    "sync:template:force": "node ./scripts/sync-template.mjs --force"
+    "sync:template:force": "node ./scripts/sync-template.mjs --force",
+    "latex:convert": "cd scripts/latex-to-mdx && node index.mjs"
   },
   "devDependencies": {
     "@astrojs/svelte": "^5.5.0",
