@@ -205,12 +205,8 @@ import FullWidth from '../../../components/FullWidth.astro'
 
 Can be used like this `<Accordion>some content</Accordion>`. You can pass any children content.
 
-<Accordion title="What can this accordion hold?" open>
-  <p>Text, lists, images, code blocks, etc.</p>
-  <ul>
-    <li>Item one</li>
-    <li>Item two</li>
-  </ul>
+<Accordion title="What is an accordion?" open>
+  The accordion component provides a collapsible content area that helps organize information efficiently. It's perfect for creating expandable sections, FAQ entries, or any content that benefits from progressive disclosure. Users can click the title to toggle the visibility of the content inside.
 </Accordion>
 
 <Accordion title="A table inside an accordion">
@@ -306,23 +302,22 @@ import Note from '../../../components/Note.astro'
 
 ### Quote
 
-Elegant quotes with optional author attribution.
+Elegant quotes with optional source attribution.
 
-<Quote author="Geoffrey Hinton">
-  The brain has about 10^14 synapses and we only live for about 10^9 seconds. So we have a lot more parameters than data. This motivates the idea that we must do a lot of unsupervised learning since labeled examples are so limited.
+<Quote source="Geoffrey Hinton, <a href='https://list-quotes.com/quotes/geoffrey-hinton-300077/'>Interview on Brain Complexity</a>">
+  In the brain, you have connections between the neurons called synapses, and they can change. All your knowledge is stored in those synapses. You have about 1,000-trillion synapses - 10 to the 15, it's a very big number.
 </Quote>
 
 | Prop     | Required | Type   | Description                    |
 |----------|----------|--------|--------------------------------|
-| `author` | No       | string | Author of the quote           |
-| `source` | No       | string | Source publication or context |
+| `source` | No       | HTML   | Quote source/author (supports HTML links) |
 
 <Accordion title="Code example">
 ```mdx
 import Quote from '../../../components/Quote.astro'
 
-<Quote author="Geoffrey Hinton">
-  The brain has about 10^14 synapses and we only live for about 10^9 seconds. So we have a lot more parameters than data. This motivates the idea that we must do a lot of unsupervised learning since labeled examples are so limited.
+<Quote source="Geoffrey Hinton, <a href='https://list-quotes.com/quotes/geoffrey-hinton-300077/'>Interview on Brain Complexity</a>">
+  In the brain, you have connections between the neurons called synapses, and they can change. All your knowledge is stored in those synapses. You have about 1,000-trillion synapses - 10 to the 15, it's a very big number.
 </Quote>
 ```
 </Accordion>

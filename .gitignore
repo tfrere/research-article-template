@@ -29,3 +29,8 @@ app/public/data/**/*
 
 .astro/
 
+# Template sync temporary directories
+.template-sync/
+.temp-*/
+.backup-*/
+

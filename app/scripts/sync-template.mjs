@@ -32,9 +32,12 @@ const PRESERVE_PATHS = [
     'app/node_modules',
     '.backup-*',
     '.temp-*',
+    '.template-sync*',
 
-    // Git
-    '.git'
+    // Git - CRITIQUE: Ne jamais toucher au Git principal
+    '.git',
+    '.gitignore',
+    '.gitattributes'
 ];
 
 // Fichiers à traiter avec précaution (demander confirmation)
@@ -82,10 +85,20 @@ async function pathExists(filePath) {
 }
 
 async function isPathPreserved(relativePath) {
+    // Protection CRITIQUE: Ne jamais toucher aux fichiers Git
+    if (relativePath.startsWith('.git') ||
+        relativePath === '.gitignore' ||
+        relativePath === '.gitattributes') {
+        return true;
+    }
+
     return PRESERVE_PATHS.some(preserve =>
+        // Correspondance exacte
         relativePath === preserve ||
-        relativePath.startsWith(preserve + '/') ||
-        preserve.startsWith(relativePath + '/')
+        // Le chemin est dans un dossier préservé
+        relativePath.startsWith(preserve + '/')
+        // Suppression de la condition qui préservait les parents
+        // preserve.startsWith(relativePath + '/') - PROBLÈME : préservait tout 'app/' si 'app/src/content' était préservé
     );
 }
 
@@ -167,13 +180,10 @@ async function syncDirectory(sourceDir, targetDir) {
 async function cloneOrUpdateTemplate() {
     console.log('📥 Récupération du template...');
 
-    // Nettoyer le dossier temporaire s'il existe
+    // Nettoyer le dossier temporaire s'il existe (toujours le faire pour permettre le clone)
     if (await pathExists(TEMP_DIR)) {
-        if (!isDryRun) {
-            await fs.rm(TEMP_DIR, { recursive: true, force: true });
-        } else {
-            console.log(`[DRY-RUN] Suppression: ${TEMP_DIR}`);
-        }
+        await fs.rm(TEMP_DIR, { recursive: true, force: true });
+        console.log(`🗑️  Dossier temporaire nettoyé: ${TEMP_DIR}`);
     }
 
     // Cloner le repo template (même en dry-run pour pouvoir comparer)
