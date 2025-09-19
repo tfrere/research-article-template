@@ -25,27 +25,43 @@ const TEMPLATE_REPO = 'https://huggingface.co/spaces/tfrere/research-article-tem
 
 // Fichiers et dossiers à PRÉSERVER (ne pas écraser)
 const PRESERVE_PATHS = [
-    // Contenu spécifique au projet
+    // Contenu spécifique au projet SmolLM
     'app/src/content',
 
-    // Fichiers temporaires et de développement
+    // Données publiques (lien symbolique vers nos données)
+    'app/public/data',
+
+    // Configuration locale
+    'app/package-lock.json',
     'app/node_modules',
+
+    // Scripts spécifiques (préserver notre script de sync)
+    'app/scripts/sync-template.mjs',
+
+    // Fichiers de configuration du projet
+    'README.md',
+    'tools',
+
+    // Fichiers de backup et temporaires
     '.backup-*',
     '.temp-*',
-    '.template-sync*',
 
-    // Git - CRITIQUE: Ne jamais toucher au Git principal
+    // Git
     '.git',
-    '.gitignore',
-    '.gitattributes'
+    '.gitignore'
 ];
 
 // Fichiers à traiter avec précaution (demander confirmation)
-const SENSITIVE_FILES = [];
+const SENSITIVE_FILES = [
+    'app/package.json',
+    'app/astro.config.mjs',
+    'Dockerfile',
+    'nginx.conf'
+];
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
-const shouldBackup = args.includes('--backup') || !args.includes('--no-backup');
+const shouldBackup = args.includes('--backup'); // Désactivé par défaut, utiliser --backup pour l'activer
 const isForce = args.includes('--force');
 
 console.log('🔄 Script de synchronisation avec le template research-article-template');
@@ -53,6 +69,7 @@ console.log(`📁 Répertoire de travail: ${PROJECT_ROOT}`);
 console.log(`🎯 Template source: ${TEMPLATE_REPO}`);
 if (isDryRun) console.log('🔍 Mode DRY-RUN activé - aucun fichier ne sera modifié');
 if (shouldBackup) console.log('💾 Backup activé');
+if (!shouldBackup) console.log('🚫 Backup désactivé (utilisez --backup pour l\'activer)');
 console.log('');
 
 async function executeCommand(command, options = {}) {
@@ -85,20 +102,9 @@ async function pathExists(filePath) {
 }
 
 async function isPathPreserved(relativePath) {
-    // Protection CRITIQUE: Ne jamais toucher aux fichiers Git
-    if (relativePath.startsWith('.git') ||
-        relativePath === '.gitignore' ||
-        relativePath === '.gitattributes') {
-        return true;
-    }
-
     return PRESERVE_PATHS.some(preserve =>
-        // Correspondance exacte
         relativePath === preserve ||
-        // Le chemin est dans un dossier préservé
         relativePath.startsWith(preserve + '/')
-        // Suppression de la condition qui préservait les parents
-        // preserve.startsWith(relativePath + '/') - PROBLÈME : préservait tout 'app/' si 'app/src/content' était préservé
     );
 }
 
@@ -135,9 +141,16 @@ async function syncFile(sourcePath, targetPath) {
         }
     }
 
-    // Créer un backup si le fichier existe déjà
+    // Créer un backup si le fichier existe déjà (et que ce n'est pas un lien symbolique)
     if (await pathExists(targetPath)) {
-        await createBackup(targetPath);
+        try {
+            const stats = await fs.lstat(targetPath);
+            if (!stats.isSymbolicLink()) {
+                await createBackup(targetPath);
+            }
+        } catch (error) {
+            console.warn(`⚠️  Impossible de vérifier ${targetPath}: ${error.message}`);
+        }
     }
 
     if (isDryRun) {
@@ -147,6 +160,23 @@ async function syncFile(sourcePath, targetPath) {
 
     // Assurer que le répertoire parent existe
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+    // Vérifier si la source est un lien symbolique
+    try {
+        const sourceStats = await fs.lstat(sourcePath);
+        if (sourceStats.isSymbolicLink()) {
+            console.log(`🔗 LIEN SYMBOLIQUE (ignoré): ${relativeTarget}`);
+            return;
+        }
+    } catch (error) {
+        console.warn(`⚠️  Impossible de vérifier la source ${sourcePath}: ${error.message}`);
+        return;
+    }
+
+    // Supprimer le fichier cible s'il existe (pour gérer les liens symboliques)
+    if (await pathExists(targetPath)) {
+        await fs.rm(targetPath, { recursive: true, force: true });
+    }
 
     // Copier le fichier
     await fs.copyFile(sourcePath, targetPath);
@@ -180,10 +210,13 @@ async function syncDirectory(sourceDir, targetDir) {
 async function cloneOrUpdateTemplate() {
     console.log('📥 Récupération du template...');
 
-    // Nettoyer le dossier temporaire s'il existe (toujours le faire pour permettre le clone)
+    // Nettoyer le dossier temporaire s'il existe
     if (await pathExists(TEMP_DIR)) {
-        await fs.rm(TEMP_DIR, { recursive: true, force: true });
-        console.log(`🗑️  Dossier temporaire nettoyé: ${TEMP_DIR}`);
+        if (!isDryRun) {
+            await fs.rm(TEMP_DIR, { recursive: true, force: true });
+        } else {
+            console.log(`[DRY-RUN] Suppression: ${TEMP_DIR}`);
+        }
     }
 
     // Cloner le repo template (même en dry-run pour pouvoir comparer)
