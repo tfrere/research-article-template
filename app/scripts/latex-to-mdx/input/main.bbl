@@ -1,0 +1,49 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Lipman et~al.(2024)Lipman, Havasi, Holderrieth, Shaul, Le, Karrer, Chen, {Lopez-Paz}, {Ben-Hamu}, and Gat]{lipmanFlowMatchingGuide2024}
+Yaron Lipman, Marton Havasi, Peter Holderrieth, Neta Shaul, Matt Le, Brian Karrer, Ricky T.~Q. Chen, David {Lopez-Paz}, Heli {Ben-Hamu}, and Itai Gat.
+\newblock Flow {{Matching Guide}} and {{Code}}, December 2024.
+
+\bibitem[Nakkiran et~al.(2024)Nakkiran, Bradley, Zhou, and Advani]{nakkiranStepbyStepDiffusionElementary2024}
+Preetum Nakkiran, Arwen Bradley, Hattie Zhou, and Madhu Advani.
+\newblock Step-by-{{Step Diffusion}}: {{An Elementary Tutorial}}, June 2024.
+
+\bibitem[Prince(2023)]{prince2023understanding}
+Simon~J.D. Prince.
+\newblock \emph{Understanding Deep Learning}.
+\newblock The MIT Press, 2023.
+
+\bibitem[{Shalev-Shwartz} and {Ben-David}(2014)]{shalev-shwartzUnderstandingMachineLearning2014}
+Shai {Shalev-Shwartz} and Shai {Ben-David}.
+\newblock \emph{Understanding {{Machine Learning}}: {{From Theory}} to {{Algorithms}}}.
+\newblock Cambridge University Press, 1 edition, May 2014.
+\newblock ISBN 978-1-107-05713-5 978-1-107-29801-9.
+\newblock \doi{10.1017/CBO9781107298019}.
+
+\bibitem[Siciliano and Khatib(2016)]{sicilianoSpringerHandbookRobotics2016}
+Bruno Siciliano and Oussama Khatib, editors.
+\newblock \emph{Springer {{Handbook}} of {{Robotics}}}.
+\newblock Springer {{Handbooks}}. Springer International Publishing, Cham, 2016.
+\newblock ISBN 978-3-319-32550-7 978-3-319-32552-1.
+\newblock \doi{10.1007/978-3-319-32552-1}.
+
+\bibitem[Sutton and Barto(2018)]{suttonReinforcementLearningIntroduction2018}
+Richard~S. Sutton and Andrew~G. Barto.
+\newblock \emph{Reinforcement Learning: An Introduction}.
+\newblock Adaptive Computation and Machine Learning Series. The MIT Press, Cambridge, Massachusetts, second edition edition, 2018.
+\newblock ISBN 978-0-262-03924-6.
+
+\bibitem[Tedrake({\natexlab{a}})]{tedrakeRoboticManipulationPerception}
+Russ Tedrake.
+\newblock Robotic {{Manipulation}}. {{Perception}}, {{Planning}} and {{Control}}., {\natexlab{a}}.
+
+\bibitem[Tedrake({\natexlab{b}})]{tedrakeUnderactuatedRoboticsAlgorithms}
+Russ Tedrake.
+\newblock Underactuated {{Robotics}}. {{Algorithms}} for {{Walking}}, {{Running}}, {{Swimming}}, {{Flying}}, and {{Manipulation}}, {\natexlab{b}}.
+
+\end{thebibliography}

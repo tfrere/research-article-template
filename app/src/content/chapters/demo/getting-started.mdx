@@ -80,3 +80,25 @@ Serving the `dist/` directory on any static host is enough to deliver the site.
 <Note>
 A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder and point to them at `[domain]/public/thumb.jpg`.
 </Note>
+
+### Template Synchronization
+
+Keep your project up-to-date with the latest template improvements. The sync system fetches the most recent changes from the official template repository at `https://huggingface.co/spaces/tfrere/research-article-template` and copies them to your project.
+
+```bash
+# Preview what would be updated
+npm run sync:template -- --dry-run
+
+# Update template files (preserves your content)
+npm run sync:template
+```
+
+**What gets preserved:**
+- Your content in `/src/content/`
+
+**What gets updated:**
+- All template files (components, styles, configuration)
+- Dockerfile and deployment configuration
+- Dependencies and build system
+
+

@@ -11,7 +11,10 @@
     "export:latex": "node ./scripts/export-latex.mjs",
     "export:tex": "node ./scripts/export-latex.mjs",
     "latex-to-md": "node ./scripts/latex-to-markdown.mjs",
-    "latex-project-to-mdx": "node ./scripts/latex-project-to-mdx.mjs"
+    "latex-project-to-mdx": "node ./scripts/latex-project-to-mdx.mjs",
+    "sync:template": "node ./scripts/sync-template.mjs",
+    "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
+    "sync:template:force": "node ./scripts/sync-template.mjs --force"
   },
   "devDependencies": {
     "@astrojs/svelte": "^5.5.0",

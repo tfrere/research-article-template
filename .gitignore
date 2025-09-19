@@ -19,7 +19,7 @@ node_modules/
 *.env
 *.cache
 
-app/scripts/latex-converter/input-example/
+app/scripts/latex-converter/output/
 
 # PDF export
 app/public/*.pdf
@@ -28,3 +28,4 @@ app/public/*.jpg
 app/public/data/**/*
 
 .astro/
+
