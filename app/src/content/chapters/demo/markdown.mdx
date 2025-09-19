@@ -63,13 +63,17 @@ See also the complete [**Markdown documentation**](https://www.markdownguide.org
 
 ### Math
 
-KaTeX is used for math rendering. You can use **inline** notation `$...$` or **block** `$$...$$` notation. As an example, this is an **inline** math equation: $x^2 + y^2 = z^2$ and this is a **block**:
+**KaTeX** provides full LaTeX math support with two simple syntaxes:
+
+**Inline math** — Use `$...$` for equations within text: $x^2 + y^2 = z^2$
+
+**Block math** — Use `$$...$$` for centered equations:
 
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
 
-Aligned math equations are also supported. You can add IDs to equations using `\htmlId{my_id}` and then reference them with links like [this equation](#trajectory_definition).
+**Advanced features** — Aligned equations with IDs for cross-referencing:
 
 ```math
 \htmlId{trajectory_definition}{\begin{align}
@@ -80,6 +84,7 @@ Aligned math equations are also supported. You can add IDs to equations using `\
 \end{align}}
 ```
 
+You can reference equations with links like [this equation](#trajectory_definition).
 
 <Accordion title="Code example">
 ```mdx
