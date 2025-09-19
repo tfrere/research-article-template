@@ -8,7 +8,7 @@
   --neutral-300: rgb(228, 228, 228);
   --neutral-200: rgb(245, 245, 245);
 
-  --default-font-family: Source Sans Pro,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+  --default-font-family: Source Sans Pro, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   /* Brand (OKLCH base + derived states) */
   --primary-base: oklch(0.75 0.12 340);
@@ -19,10 +19,10 @@
 
   /* Text & Surfaces */
   --page-bg: #ffffff;
-  --text-color: rgba(0,0,0,.85);
-  --transparent-page-contrast: rgba(255,255,255,.85);
-  --muted-color: rgba(0,0,0,.6);
-  --border-color: rgba(0,0,0,.1);
+  --text-color: rgba(0, 0, 0, .85);
+  --transparent-page-contrast: rgba(255, 255, 255, .85);
+  --muted-color: rgba(0, 0, 0, .6);
+  --border-color: rgba(0, 0, 0, .1);
   --surface-bg: #fafafa;
   --code-bg: #f6f8fa;
 
@@ -52,8 +52,10 @@
   @custom-media --bp-content-collapse (max-width: 1100px);
 
   /* Layout */
-  --content-padding-x: 16px; /* default page gutter */
-  --block-spacing-y: var(--spacing-4); /* default vertical spacing between block components */
+  --content-padding-x: 16px;
+  /* default page gutter */
+  --block-spacing-y: var(--spacing-4);
+  /* default vertical spacing between block components */
 
   /* Config */
   --palette-count: 8;
@@ -86,7 +88,7 @@
   /* Charts (global) */
   --axis-color: var(--muted-color);
   --tick-color: var(--text-color);
-  --grid-color: rgba(0,0,0,.08);
+  --grid-color: rgba(0, 0, 0, .08);
 }
 
 /* ============================================================================ */
@@ -94,17 +96,17 @@
 /* ============================================================================ */
 [data-theme="dark"] {
   --page-bg: #0f1115;
-  --text-color: rgba(255,255,255,.9);
-  --muted-color: rgba(255,255,255,.7);
-  --border-color: rgba(255,255,255,.15);
+  --text-color: rgba(255, 255, 255, .9);
+  --muted-color: rgba(255, 255, 255, .7);
+  --border-color: rgba(255, 255, 255, .15);
   --surface-bg: #12151b;
   --code-bg: #12151b;
-  --transparent-page-contrast: rgba(0,0,0,.85);
-  
+  --transparent-page-contrast: rgba(0, 0, 0, .85);
+
   /* Charts (global) */
   --axis-color: var(--muted-color);
   --tick-color: var(--muted-color);
-  --grid-color: rgba(255,255,255,.10);
+  --grid-color: rgba(255, 255, 255, .10);
 
   /* Primary (lower L in dark) */
   --primary-color: oklch(from var(--primary-base) calc(l - 0.08) c h);

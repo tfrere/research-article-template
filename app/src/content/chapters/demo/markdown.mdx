@@ -1,27 +1,64 @@
-import placeholder from '../assets/image/placeholder.png';
-import audioDemo from '../assets/audio/audio-example.wav';
-import HtmlEmbed from '../../components/HtmlEmbed.astro';
-import Sidenote from '../../components/Sidenote.astro';
-import Wide from '../../components/Wide.astro';
-import Note from '../../components/Note.astro';
-import FullWidth from '../../components/FullWidth.astro';
-import Accordion from '../../components/Accordion.astro';
-import ResponsiveImage from '../../components/ResponsiveImage.astro';
+import placeholder from '../../assets/image/placeholder.png';
+import audioDemo from '../../assets/audio/audio-example.wav';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Sidenote from '../../../components/Sidenote.astro';
+import Wide from '../../../components/Wide.astro';
+import Note from '../../../components/Note.astro';
+import FullWidth from '../../../components/FullWidth.astro';
+import Accordion from '../../../components/Accordion.astro';
+import ResponsiveImage from '../../../components/ResponsiveImage.astro';
 
 ## Markdown
 
-All the following **markdown features** are available **natively** in the `article.mdx` file. See also the complete [**Markdown documentation**](https://www.markdownguide.org/basic-syntax/).
+All the following **markdown features** are available **natively** in the `article.mdx` file. No imports needed, just write markdown directly:
 
-<br/>
-<div className="button-group">
-  <button className="button" href="#math">Math</button>
-  <button className="button" href="#code-blocks">Code</button>
-  <button className="button" href="#citation-and-notes">Citation</button>
-  <button className="button" href="#footnote">Footnote</button>
-  <button className="button" href="#mermaid-diagrams">Mermaid</button>
-  <button className="button" href="#separator">Separator</button>
-  <button className="button" href="#table">Table</button>
-  <button className="button" href="#audio">Audio</button>
+**Text formatting** — `**Bold**` → **Bold**, `*italic*` → *italic*, `~~strikethrough~~` → ~~strikethrough~~
+
+**Code** — `` `inline code` `` → `inline code`, triple backticks for code blocks
+
+**Lists** — `- Item` for bullets, `1. Item` for numbered lists with nesting support
+
+**Links** — `[text](url)` → [External links](https://example.com) and internal navigation
+
+**Highlight** — `<mark>text</mark>` → <mark>Highlighted text</mark> for emphasis
+
+See also the complete [**Markdown documentation**](https://www.markdownguide.org/basic-syntax/).
+
+**Advanced features** — Explore specialized content types:
+
+<div className="feature-grid">
+  <a href="#math" className="feature-card">
+    <strong>Math</strong>
+    <span>LaTeX equations</span>
+  </a>
+  <a href="#code-blocks" className="feature-card">
+    <strong>Code</strong>
+    <span>Syntax highlighting</span>
+  </a>
+  <a href="#citation-and-notes" className="feature-card">
+    <strong>Citation</strong>
+    <span>Academic references</span>
+  </a>
+  <a href="#footnote" className="feature-card">
+    <strong>Footnote</strong>
+    <span>Additional context</span>
+  </a>
+  <a href="#mermaid-diagrams" className="feature-card">
+    <strong>Mermaid</strong>
+    <span>Diagrams & flowcharts</span>
+  </a>
+  <a href="#separator" className="feature-card">
+    <strong>Separator</strong>
+    <span>Visual breaks</span>
+  </a>
+  <a href="#table" className="feature-card">
+    <strong>Table</strong>
+    <span>Data presentation</span>
+  </a>
+  <a href="#audio" className="feature-card">
+    <strong>Audio</strong>
+    <span>Sound embeds</span>
+  </a>
 </div>
 
 ### Math
@@ -32,6 +69,18 @@ $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
 
+Aligned math equations are also supported. You can add IDs to equations using `\htmlId{my_id}` and then reference them with links like [this equation](#trajectory_definition).
+
+```math
+\htmlId{trajectory_definition}{\begin{align}
+    \log p_\theta(\mathcal D) &= \log \sum_{i=0}^N p_\theta ((o,a)_i) \\
+                              &= \log \sum_{i=0}^N \int_{\text{supp}({Z})} p_\theta((o,a)_i \vert z) p(z) \\
+                              &= \log \sum_{i=0}^N \int_{\text{supp}({Z})} \frac{q_\theta(z \vert (o,a)_i)}{q_\theta(z \vert (o,a)_i)} \cdot p_\theta((o,a)_i \vert z) p(z) \\
+                              &= \log \sum_{i=0}^N \mathbb E_{z \sim p_\theta(\bullet \vert (o,a)_i)} [\frac{p(z)}{q_\theta(z \vert (o,a)_i)} \cdot p_\theta((o,a)_i \vert z)], 
+\end{align}}
+```
+
+
 <Accordion title="Code example">
 ```mdx
 $x^2 + y^2 = z^2$
@@ -39,6 +88,16 @@ $x^2 + y^2 = z^2$
 $$
 \mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
 $$
+
+$$
+\htmlId{trajectory_definition}{\begin{align}
+    \log p_\theta(\mathcal D) &= \log \sum_{i=0}^N p_\theta ((o,a)_i) \\
+                              &= \log \sum_{i=0}^N \int_{\text{supp}({Z})} p_\theta((o,a)_i \vert z) p(z) \\
+                              &= \log \sum_{i=0}^N \int_{\text{supp}({Z})} \frac{q_\theta(z \vert (o,a)_i)}{q_\theta(z \vert (o,a)_i)} \cdot p_\theta((o,a)_i \vert z) p(z) \\
+                              &= \log \sum_{i=0}^N \mathbb E_{z \sim p_\theta(\bullet \vert (o,a)_i)} [\frac{p(z)}{q_\theta(z \vert (o,a)_i)} \cdot p_\theta((o,a)_i \vert z)], 
+\end{align}}
+$$
+
 ```
 </Accordion>
 

@@ -1,6 +1,6 @@
 ---
 // @ts-ignore - types provided by Astro at runtime
-import { Image } from 'astro:assets';
+import { Image } from "astro:assets";
 
 interface Props {
   /** Source image imported via astro:assets */
@@ -29,82 +29,172 @@ interface Props {
   [key: string]: any;
 }
 
-const { caption, figureClass, zoomable, downloadable, downloadName, downloadSrc, linkHref, linkTarget, linkRel, ...imgProps } = Astro.props as Props;
-const hasCaptionSlot = Astro.slots.has('caption');
-const hasCaption = hasCaptionSlot || (typeof caption === 'string' && caption.length > 0);
+const {
+  caption,
+  figureClass,
+  zoomable,
+  downloadable,
+  downloadName,
+  downloadSrc,
+  linkHref,
+  linkTarget,
+  linkRel,
+  ...imgProps
+} = Astro.props as Props;
+const hasCaptionSlot = Astro.slots.has("caption");
+const hasCaption =
+  hasCaptionSlot || (typeof caption === "string" && caption.length > 0);
 const uid = `ri_${Math.random().toString(36).slice(2)}`;
-const dataZoomable = (zoomable === true || (imgProps as any)['data-zoomable']) ? '1' : undefined;
-const dataDownloadable = (downloadable === true || (imgProps as any)['data-downloadable']) ? '1' : undefined;
-const hasLink = typeof linkHref === 'string' && linkHref.length > 0;
-const resolvedTarget = hasLink ? (linkTarget || '_blank') : undefined;
-const resolvedRel = hasLink ? (linkRel || 'noopener noreferrer') : undefined;
+const dataZoomable =
+  zoomable === true || (imgProps as any)["data-zoomable"] ? "1" : undefined;
+const dataDownloadable =
+  downloadable === true || (imgProps as any)["data-downloadable"]
+    ? "1"
+    : undefined;
+const hasLink = typeof linkHref === "string" && linkHref.length > 0;
+const resolvedTarget = hasLink ? linkTarget || "_blank" : undefined;
+const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
 ---
+
 <div class="ri-root" data-ri-root={uid}>
-  {hasCaption ? (
-    <figure class={(figureClass || '') + (dataDownloadable ? ' has-dl-btn' : '')}>
-      {dataDownloadable ? (
-        <span class="img-dl-wrap">
-          {hasLink ? (
-            <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
-              <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
-            </a>
-          ) : (
-            <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
-          )}
-          <button type="button" class="button button--ghost img-dl-btn" aria-label="Download image" title={downloadName ? `Download ${downloadName}` : 'Download image'}>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z"/></svg>
-          </button>
-        </span>
-      ) : (
-        hasLink ? (
-          <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
+  {
+    hasCaption ? (
+      <figure
+        class={(figureClass || "") + (dataDownloadable ? " has-dl-btn" : "")}
+      >
+        {dataDownloadable ? (
+          <span class="img-dl-wrap">
+            {hasLink ? (
+              <a
+                class="ri-link"
+                href={linkHref}
+                target={resolvedTarget}
+                rel={resolvedRel}
+              >
+                <Image
+                  {...imgProps}
+                  data-zoomable={dataZoomable}
+                  data-downloadable={dataDownloadable}
+                  data-download-name={downloadName}
+                  data-download-src={downloadSrc}
+                />
+              </a>
+            ) : (
+              <Image
+                {...imgProps}
+                data-zoomable={dataZoomable}
+                data-downloadable={dataDownloadable}
+                data-download-name={downloadName}
+                data-download-src={downloadSrc}
+              />
+            )}
+            <button
+              type="button"
+              class="button img-dl-btn"
+              aria-label="Download image"
+              title={
+                downloadName ? `Download ${downloadName}` : "Download image"
+              }
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z" />
+              </svg>
+            </button>
+          </span>
+        ) : hasLink ? (
+          <a
+            class="ri-link"
+            href={linkHref}
+            target={resolvedTarget}
+            rel={resolvedRel}
+          >
             <Image {...imgProps} data-zoomable={dataZoomable} />
           </a>
         ) : (
           <Image {...imgProps} data-zoomable={dataZoomable} />
-        )
-      )}
-      <figcaption>
-        {hasCaptionSlot ? (
-          <slot name="caption" />
-        ) : (
-          caption && <span set:html={caption} />
         )}
-      </figcaption>
-    </figure>
-  ) : (
-    dataDownloadable ? (
+        <figcaption>
+          {hasCaptionSlot ? (
+            <slot name="caption" />
+          ) : (
+            caption && <span set:html={caption} />
+          )}
+        </figcaption>
+      </figure>
+    ) : dataDownloadable ? (
       <span class="img-dl-wrap">
         {hasLink ? (
-          <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
-            <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+          <a
+            class="ri-link"
+            href={linkHref}
+            target={resolvedTarget}
+            rel={resolvedRel}
+          >
+            <Image
+              {...imgProps}
+              data-zoomable={dataZoomable}
+              data-downloadable={dataDownloadable}
+              data-download-name={downloadName}
+              data-download-src={downloadSrc}
+            />
           </a>
         ) : (
-          <Image {...imgProps} data-zoomable={dataZoomable} data-downloadable={dataDownloadable} data-download-name={downloadName} data-download-src={downloadSrc} />
+          <Image
+            {...imgProps}
+            data-zoomable={dataZoomable}
+            data-downloadable={dataDownloadable}
+            data-download-name={downloadName}
+            data-download-src={downloadSrc}
+          />
         )}
-        <button type="button" class="button button--ghost img-dl-btn" aria-label="Download image" title={downloadName ? `Download ${downloadName}` : 'Download image'}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z"/></svg>
+        <button
+          type="button"
+          class="button img-dl-btn"
+          aria-label="Download image"
+          title={downloadName ? `Download ${downloadName}` : "Download image"}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 16c-.26 0-.52-.11-.71-.29l-5-5a1 1 0 0 1 1.42-1.42L11 12.59V4a1 1 0 1 1 2 0v8.59l3.29-3.3a1 1 0 1 1 1.42 1.42l-5 5c-.19.18-.45.29-.71.29zM5 20a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2H5z" />
+          </svg>
         </button>
       </span>
-    ) : (
-      hasLink ? (
-        <a class="ri-link" href={linkHref} target={resolvedTarget} rel={resolvedRel}>
-          <Image {...imgProps} data-zoomable={dataZoomable} />
-        </a>
-      ) : (
+    ) : hasLink ? (
+      <a
+        class="ri-link"
+        href={linkHref}
+        target={resolvedTarget}
+        rel={resolvedRel}
+      >
         <Image {...imgProps} data-zoomable={dataZoomable} />
-      )
+      </a>
+    ) : (
+      <Image {...imgProps} data-zoomable={dataZoomable} />
     )
-  )}
+  }
 </div>
 
 <script is:inline>
   (() => {
+    console.log("ResponsiveImage script: Starting execution");
     const scriptEl = document.currentScript;
+    console.log("ResponsiveImage script: scriptEl =", scriptEl);
     const root = scriptEl ? scriptEl.previousElementSibling : null;
-    if (!root) return;
-    const img = (root.tagName === 'IMG' ? root : (root.querySelector ? root.querySelector('img') : null));
-    if (!img) return;
+    console.log("ResponsiveImage script: root =", root);
+    if (!root) {
+      console.log("ResponsiveImage script: No root element found, exiting");
+      return;
+    }
+    const img =
+      root.tagName === "IMG"
+        ? root
+        : root.querySelector
+          ? root.querySelector("img")
+          : null;
+    console.log("ResponsiveImage script: img =", img);
+    if (!img) {
+      console.log("ResponsiveImage script: No img element found, exiting");
+      return;
+    }
 
     // medium-zoom integration scoped to this image only
     const ensureMediumZoomReady = (cb) => {
@@ -112,99 +202,174 @@ const resolvedRel = hasLink ? (linkRel || 'noopener noreferrer') : undefined;
       if (window.mediumZoom) return cb();
       const retry = () => {
         // @ts-ignore
-        if (window.mediumZoom) cb(); else setTimeout(retry, 30);
+        if (window.mediumZoom) cb();
+        else setTimeout(retry, 30);
       };
       retry();
     };
 
     const initZoomIfNeeded = () => {
-      if (img.getAttribute('data-zoomable') !== '1') return;
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const background = isDark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)';
+      console.log("ResponsiveImage: checking zoom for", img);
+      console.log(
+        "ResponsiveImage: data-zoomable =",
+        img.getAttribute("data-zoomable"),
+      );
+      if (img.getAttribute("data-zoomable") !== "1") return;
+      console.log("ResponsiveImage: initializing zoom for", img);
+      const isDark =
+        document.documentElement.getAttribute("data-theme") === "dark";
+      const background = isDark ? "rgba(0,0,0,.9)" : "rgba(0,0,0,.85)";
       ensureMediumZoomReady(() => {
         // @ts-ignore
-        const instance = window.mediumZoom ? window.mediumZoom(img, { background, margin: 24, scrollOffset: 0 }) : null;
+        const instance = window.mediumZoom
+          ? window.mediumZoom(img, { background, margin: 24, scrollOffset: 0 })
+          : null;
+        console.log("ResponsiveImage: zoom instance created:", instance);
         if (!instance) return;
         let onScrollLike;
         const attachCloseOnScroll = () => {
           if (onScrollLike) return;
-          onScrollLike = () => { try { instance.close && instance.close(); } catch {} };
-          window.addEventListener('wheel', onScrollLike, { passive: true });
-          window.addEventListener('touchmove', onScrollLike, { passive: true });
-          window.addEventListener('scroll', onScrollLike, { passive: true });
+          onScrollLike = () => {
+            try {
+              instance.close && instance.close();
+            } catch {}
+          };
+          window.addEventListener("wheel", onScrollLike, { passive: true });
+          window.addEventListener("touchmove", onScrollLike, { passive: true });
+          window.addEventListener("scroll", onScrollLike, { passive: true });
         };
         const detachCloseOnScroll = () => {
           if (!onScrollLike) return;
-          window.removeEventListener('wheel', onScrollLike);
-          window.removeEventListener('touchmove', onScrollLike);
-          window.removeEventListener('scroll', onScrollLike);
+          window.removeEventListener("wheel", onScrollLike);
+          window.removeEventListener("touchmove", onScrollLike);
+          window.removeEventListener("scroll", onScrollLike);
           onScrollLike = null;
         };
-        try { instance.on && instance.on('open', attachCloseOnScroll); } catch {}
-        try { instance.on && instance.on('close', detachCloseOnScroll); } catch {}
+        try {
+          instance.on && instance.on("open", attachCloseOnScroll);
+        } catch {}
+        try {
+          instance.on && instance.on("close", detachCloseOnScroll);
+        } catch {}
         const themeObserver = new MutationObserver(() => {
-          const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-          try { instance.update && instance.update({ background: dark ? 'rgba(0,0,0,.9)' : 'rgba(0,0,0,.85)' }); } catch {}
+          const dark =
+            document.documentElement.getAttribute("data-theme") === "dark";
+          try {
+            instance.update &&
+              instance.update({
+                background: dark ? "rgba(0,0,0,.9)" : "rgba(0,0,0,.85)",
+              });
+          } catch {}
         });
-        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-theme"],
+        });
+      });
+    };
+
+    // Gestion zoom global pour masquer autres ResponsiveImage
+    const setupGlobalZoomBehavior = () => {
+      img.addEventListener("click", () => {
+        if (img.getAttribute("data-zoomable") === "1") {
+          // Enlever zoom-active de tous les autres ri-root
+          document
+            .querySelectorAll(".ri-root.zoom-active")
+            .forEach((el) => el.classList.remove("zoom-active"));
+
+          // Ajouter zoom-active à cet ri-root
+          root.classList.add("zoom-active");
+        }
       });
     };
 
     // Download button handler
-    const dlBtn = (root.querySelector ? root.querySelector('.img-dl-btn') : null);
+    const dlBtn = root.querySelector ? root.querySelector(".img-dl-btn") : null;
     if (dlBtn) {
-      dlBtn.addEventListener('click', async (ev) => {
+      dlBtn.addEventListener("click", async (ev) => {
         try {
           ev.preventDefault();
           ev.stopPropagation();
           const pickHrefAndName = () => {
-            const current = img.currentSrc || img.src || '';
-            let href = img.getAttribute('data-download-src') || current;
+            const current = img.currentSrc || img.src || "";
+            let href = img.getAttribute("data-download-src") || current;
             const deriveName = () => {
               try {
                 const u = new URL(current, location.href);
-                const rawHref = u.searchParams.get('href');
-                const candidate = rawHref ? decodeURIComponent(rawHref) : u.pathname;
-                const last = String(candidate).split('/').pop() || '';
-                const base = last.split('?')[0].split('#')[0];
-                const m = base.match(/^(.+?\.(?:png|jpe?g|webp|avif|gif|svg))(?:[._-].*)?$/i);
+                const rawHref = u.searchParams.get("href");
+                const candidate = rawHref
+                  ? decodeURIComponent(rawHref)
+                  : u.pathname;
+                const last = String(candidate).split("/").pop() || "";
+                const base = last.split("?")[0].split("#")[0];
+                const m = base.match(
+                  /^(.+?\.(?:png|jpe?g|webp|avif|gif|svg))(?:[._-].*)?$/i,
+                );
                 if (m && m[1]) return m[1];
-                return base || 'image';
-              } catch { return 'image'; }
+                return base || "image";
+              } catch {
+                return "image";
+              }
             };
-            const name = img.getAttribute('data-download-name') || deriveName();
+            const name = img.getAttribute("data-download-name") || deriveName();
             return { href, name };
           };
           const picked = pickHrefAndName();
-          const res = await fetch(picked.href, { credentials: 'same-origin' });
+          const res = await fetch(picked.href, { credentials: "same-origin" });
           const blob = await res.blob();
           const objectUrl = URL.createObjectURL(blob);
-          const tmp = document.createElement('a');
+          const tmp = document.createElement("a");
           tmp.href = objectUrl;
-          tmp.download = picked.name || 'image';
-          tmp.target = '_self';
-          tmp.rel = 'noopener';
-          tmp.style.display = 'none';
+          tmp.download = picked.name || "image";
+          tmp.target = "_self";
+          tmp.rel = "noopener";
+          tmp.style.display = "none";
           document.body.appendChild(tmp);
           tmp.click();
-          setTimeout(() => { URL.revokeObjectURL(objectUrl); tmp.remove(); }, 1000);
+          setTimeout(() => {
+            URL.revokeObjectURL(objectUrl);
+            tmp.remove();
+          }, 1000);
         } catch {}
       });
     }
 
-    if (document.readyState === 'complete') initZoomIfNeeded();
-    else window.addEventListener('load', initZoomIfNeeded, { once: true });
+    // Setup comportement zoom
+    setupGlobalZoomBehavior();
+
+    if (document.readyState === "complete") initZoomIfNeeded();
+    else window.addEventListener("load", initZoomIfNeeded, { once: true });
   })();
 </script>
 
-
 <style>
-
-  figure { margin: var(--block-spacing-y) 0; }
-  figcaption { text-align: left; font-size: 0.9rem; color: var(--muted-color); margin-top: 6px; }
-  figcaption { background: var(--page-bg); position: relative; z-index: var(--z-elevated); display: block; width: 100%; }
-  .image-credit { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-color); }
-  .image-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  figure {
+    margin: var(--block-spacing-y) 0;
+  }
+  figcaption {
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--muted-color);
+    margin-top: 6px;
+  }
+  figcaption {
+    background: var(--page-bg);
+    position: relative;
+    z-index: var(--z-elevated);
+    display: block;
+    width: 100%;
+  }
+  .image-credit {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+  .image-credit a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 
   /* Zoomable overlay container (if used by any lightbox implementation) */
   [data-zoom-overlay],
@@ -215,16 +380,30 @@ const resolvedRel = hasLink ? (linkRel || 'noopener noreferrer') : undefined;
   }
 
   /* Download link inside figures */
-  figure .download-link { position: relative; z-index: var(--z-elevated); }
+  figure .download-link {
+    position: relative;
+    z-index: var(--z-elevated);
+  }
 
-    /* Opt-in zoomable images */
-  img[data-zoomable] { cursor: zoom-in; }
-  .medium-zoom--opened img[data-zoomable] { cursor: zoom-out; }
+  /* Opt-in zoomable images */
+  img[data-zoomable] {
+    cursor: zoom-in;
+  }
+  .medium-zoom--opened img[data-zoomable] {
+    cursor: zoom-out;
+  }
 
   /* Download button for img[data-downloadable] */
-  figure.has-dl-btn { position: relative; }
-  .dl-host { position: relative; }
-  .img-dl-wrap { position: relative; display: inline-block; }
+  figure.has-dl-btn {
+    position: relative;
+  }
+  .dl-host {
+    position: relative;
+  }
+  .img-dl-wrap {
+    position: relative;
+    display: inline-block;
+  }
   .img-dl-btn {
     position: absolute;
     right: 8px;
@@ -236,12 +415,72 @@ const resolvedRel = hasLink ? (linkRel || 'noopener noreferrer') : undefined;
     border-radius: 6px;
     color: white;
     text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.25);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     z-index: var(--z-elevated);
     display: none;
+    background: var(--primary-color);
   }
-  .img-dl-btn svg { width: 18px; height: 18px; fill: currentColor; }
-  .img-dl-wrap:hover .img-dl-btn { display: inline-flex; }
-  [data-theme="dark"] .img-dl-btn { background: rgba(255,255,255,0.15); color: white; border-color: rgba(255,255,255,0.25); }
-  [data-theme="dark"] .img-dl-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* Quand une image est zoomée, cacher TOUS les ResponsiveImage de la page */
+  :global(.medium-zoom--opened) .ri-root {
+    opacity: 0;
+    z-index: calc(var(--z-base) - 1);
+    transition: opacity 0.3s ease;
+  }
+
+  /* L'image actuellement zoomée reste visible */
+  :global(.medium-zoom--opened) .ri-root:has(.medium-zoom--opened) {
+    opacity: 1;
+    z-index: var(--z-overlay);
+  }
+
+  /* Fallback pour navigateurs sans support :has() */
+  :global(.medium-zoom--opened) .ri-root.zoom-active {
+    opacity: 1 !important;
+    z-index: var(--z-overlay) !important;
+  }
+
+  /* Spécifiquement masquer bouton download et figcaption lors du zoom */
+  :global(.medium-zoom--opened) .img-dl-btn {
+    opacity: 0;
+    z-index: calc(var(--z-base) - 1);
+    transition: opacity 0.3s ease;
+  }
+
+  :global(.medium-zoom--opened) figcaption {
+    opacity: 0;
+    z-index: calc(var(--z-base) - 1);
+    transition: opacity 0.3s ease;
+  }
+
+  /* Même pour l'image zoomée active, masquer bouton et caption pour une expérience propre */
+  :global(.medium-zoom--opened) .ri-root.zoom-active .img-dl-btn {
+    opacity: 0;
+    z-index: calc(var(--z-base) - 1);
+  }
+
+  :global(.medium-zoom--opened) .ri-root.zoom-active figcaption {
+    opacity: 0;
+    z-index: calc(var(--z-base) - 1);
+  }
+  .img-dl-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+  }
+  .img-dl-wrap:hover .img-dl-btn {
+    display: inline-flex;
+  }
+  .img-dl-btn:hover {
+    background: var(--primary-color-hover);
+  }
+
+  [data-theme="dark"] .img-dl-btn {
+    background: var(--primary-color);
+    color: var(--on-primary);
+    border-color: var(--primary-color);
+  }
+  [data-theme="dark"] .img-dl-btn:hover {
+    background: var(--primary-color-hover);
+  }
 </style>

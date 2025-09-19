@@ -1,0 +1,342 @@
+---
+// @ts-ignore - types provided by Astro at runtime
+import ResponsiveImage from "./ResponsiveImage.astro";
+
+interface ImageItem {
+    /** Source image imported via astro:assets */
+    src: any;
+    /** Alt text for accessibility */
+    alt: string;
+    /** Individual caption for this image */
+    caption?: string;
+    /** Optional individual image ID for referencing */
+    id?: string;
+    /** Enable zoom on this specific image (defaults to parent zoomable setting) */
+    zoomable?: boolean;
+    /** Enable download on this specific image (defaults to parent downloadable setting) */
+    downloadable?: boolean;
+}
+
+interface Props {
+    /** Array of images to display */
+    images: ImageItem[];
+    /** Global caption for the entire figure */
+    caption?: string;
+    /** Layout mode: number of columns or 'auto' for responsive */
+    layout?: "2-column" | "3-column" | "4-column" | "auto";
+    /** Enable medium-zoom behavior on all images (can be overridden per image) */
+    zoomable?: boolean;
+    /** Show download buttons on all images (can be overridden per image) */
+    downloadable?: boolean;
+    /** Optional class to apply on the wrapper */
+    class?: string;
+    /** Optional global ID for the multi-image figure */
+    id?: string;
+}
+
+const {
+    images,
+    caption,
+    layout = "3-column",
+    zoomable = false,
+    downloadable = false,
+    class: className,
+    id,
+} = Astro.props as Props;
+
+const hasCaptionSlot = Astro.slots.has("caption");
+const hasCaption =
+    hasCaptionSlot || (typeof caption === "string" && caption.length > 0);
+const uid = `mi_${Math.random().toString(36).slice(2)}`;
+
+// Generate CSS grid columns based on layout
+const getGridColumns = () => {
+    switch (layout) {
+        case "2-column":
+            return "repeat(2, 1fr)";
+        case "3-column":
+            return "repeat(3, 1fr)";
+        case "4-column":
+            return "repeat(4, 1fr)";
+        case "auto":
+            return "repeat(auto-fit, minmax(200px, 1fr))";
+        default:
+            return "repeat(3, 1fr)";
+    }
+};
+
+const gridColumns = getGridColumns();
+---
+
+<div
+    class={`multi-image ${className || ""}`}
+    data-mi-root={uid}
+    data-layout={layout}
+    {id}
+>
+    {
+        hasCaption ? (
+            <figure class="multi-image-figure">
+                <div
+                    class="multi-image-grid"
+                    style={`grid-template-columns: ${gridColumns}`}
+                >
+                    {images.map((image, index) => (
+                        <div class="multi-image-item">
+                            <ResponsiveImage
+                                src={image.src}
+                                alt={image.alt}
+                                zoomable={image.zoomable ?? zoomable}
+                                downloadable={
+                                    image.downloadable ?? downloadable
+                                }
+                                class="multi-image-img"
+                            />
+                            {image.caption && (
+                                <div class="multi-image-subcaption">
+                                    {image.caption}
+                                </div>
+                            )}
+                            {image.id && (
+                                <span
+                                    id={image.id}
+                                    style="position: absolute;"
+                                />
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <figcaption class="multi-image-caption">
+                    {hasCaptionSlot ? (
+                        <slot name="caption" />
+                    ) : (
+                        caption && <span set:html={caption} />
+                    )}
+                </figcaption>
+            </figure>
+        ) : (
+            <div
+                class="multi-image-grid"
+                style={`grid-template-columns: ${gridColumns}`}
+            >
+                {images.map((image, index) => (
+                    <div class="multi-image-item">
+                        <ResponsiveImage
+                            src={image.src}
+                            alt={image.alt}
+                            zoomable={image.zoomable ?? zoomable}
+                            downloadable={image.downloadable ?? downloadable}
+                            class="multi-image-img"
+                        />
+                        {image.caption && (
+                            <div class="multi-image-subcaption">
+                                {image.caption}
+                            </div>
+                        )}
+                        {image.id && (
+                            <span id={image.id} style="position: absolute;" />
+                        )}
+                    </div>
+                ))}
+            </div>
+        )
+    }
+</div>
+
+<style>
+    .multi-image {
+        margin: var(--block-spacing-y) 0;
+    }
+
+    .multi-image-figure {
+        margin: 0;
+    }
+
+    .multi-image-grid {
+        display: grid;
+        gap: 1rem;
+        align-items: start;
+    }
+
+    .multi-image-item {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+        position: relative;
+        z-index: var(--z-content);
+        transition: z-index 0.3s ease;
+    }
+
+    /* Quand medium-zoom est actif, masquer temporairement les autres images du multi-image */
+    :global(.medium-zoom--opened) .multi-image-item {
+        opacity: 0;
+        z-index: calc(var(--z-base) - 1);
+        transition:
+            opacity 0.3s ease,
+            z-index 0.3s ease;
+    }
+
+    /* Masquer spécifiquement les captions pendant le zoom - approche radicale */
+    :global(.medium-zoom--opened) .multi-image-subcaption {
+        display: none !important;
+    }
+
+    /* Masquer complètement tous les éléments multi-image pendant le zoom */
+    :global(.medium-zoom--opened) .multi-image {
+        z-index: -1 !important;
+    }
+
+    /* Masquer tous les textes de l'ensemble des multi-images */
+    :global(.medium-zoom--opened) .multi-image-caption {
+        display: none !important;
+    }
+
+    /* L'image actuellement zoomée reste visible */
+    :global(.medium-zoom--opened)
+        .multi-image-item:has(:global(.medium-zoom--opened)) {
+        opacity: 1;
+        z-index: var(--z-overlay);
+    }
+
+    /* Fallback pour navigateurs sans support :has() */
+    :global(.medium-zoom--opened) .multi-image-item.zoom-active {
+        opacity: 1 !important;
+        z-index: var(--z-overlay) !important;
+    }
+
+    /* Garder la caption de l'image active visible */
+    :global(.medium-zoom--opened)
+        .multi-image-item.zoom-active
+        .multi-image-subcaption {
+        opacity: 1 !important;
+        z-index: var(--z-overlay) !important;
+    }
+
+    .multi-image-item :global(.ri-root) {
+        margin: 0;
+    }
+
+    .multi-image-item :global(figure) {
+        margin: 0;
+    }
+
+    .multi-image-img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+    }
+
+    .multi-image-subcaption {
+        font-size: 0.85rem;
+        color: var(--muted-color);
+        margin-top: 0.5rem;
+        line-height: 1.4;
+    }
+
+    .multi-image-caption {
+        text-align: left;
+        font-size: 0.9rem;
+        color: var(--muted-color);
+        margin-top: 1rem;
+        line-height: 1.4;
+    }
+
+    /* Responsive behavior */
+    @media (max-width: 768px) {
+        .multi-image-grid[style*="repeat(3, 1fr)"],
+        .multi-image-grid[style*="repeat(4, 1fr)"] {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem;
+        }
+
+        .multi-image-grid[style*="repeat(2, 1fr)"] {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem;
+        }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .multi-image-grid[style*="repeat(4, 1fr)"] {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+
+    /* Equal height images when desired */
+    .multi-image[data-layout*="column"] .multi-image-item :global(img) {
+        height: 200px;
+        object-fit: contain;
+    }
+
+    /* Auto layout gets flexible heights */
+    .multi-image[data-layout="auto"] .multi-image-item :global(img) {
+        height: auto;
+    }
+
+    /* Ensure images maintain aspect ratio */
+    .multi-image-item :global(img) {
+        max-width: 100%;
+        display: block;
+        margin: 0 auto;
+    }
+</style>
+
+<script>
+    // Enhanced medium-zoom integration for MultiImage
+    document.addEventListener("DOMContentLoaded", () => {
+        // Amélioration du comportement des MultiImage avec medium-zoom
+        const multiImages = document.querySelectorAll(".multi-image");
+
+        multiImages.forEach((multiImage) => {
+            const items = multiImage.querySelectorAll(".multi-image-item");
+            const zoomableImages = multiImage.querySelectorAll(
+                'img[data-zoomable="1"]',
+            );
+
+            zoomableImages.forEach((img) => {
+                img.addEventListener("click", () => {
+                    // Trouver l'item parent de l'image cliquée et le ri-root
+                    const activeItem = img.closest(".multi-image-item");
+                    const riRoot = img.closest(".ri-root");
+
+                    // Nettoyer TOUS les zoom-active (MultiImage items et ResponsiveImage)
+                    document
+                        .querySelectorAll(
+                            ".multi-image-item.zoom-active, .ri-root.zoom-active",
+                        )
+                        .forEach((el) => el.classList.remove("zoom-active"));
+
+                    // Ajouter zoom-active aux éléments actifs
+                    if (activeItem) {
+                        activeItem.classList.add("zoom-active");
+                    }
+                    if (riRoot) {
+                        riRoot.classList.add("zoom-active");
+                    }
+                });
+            });
+        });
+
+        // Nettoyer TOUTES les classes lors de la fermeture du zoom
+        document.addEventListener("click", (e) => {
+            if (e.target.classList.contains("medium-zoom-overlay")) {
+                // Zoom fermé, nettoyer toutes les classes zoom-active
+                document
+                    .querySelectorAll(
+                        ".multi-image-item.zoom-active, .ri-root.zoom-active",
+                    )
+                    .forEach((item) => item.classList.remove("zoom-active"));
+            }
+        });
+
+        // Écouter les événements clavier pour fermer le zoom
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                document
+                    .querySelectorAll(
+                        ".multi-image-item.zoom-active, .ri-root.zoom-active",
+                    )
+                    .forEach((item) => item.classList.remove("zoom-active"));
+            }
+        });
+    });
+</script>

@@ -56,11 +56,13 @@ export default defineConfig({
     rehypePlugins: [
       rehypeSlug,
       [rehypeAutolinkHeadings, { behavior: 'wrap' }],
-      rehypeKatex,
+      [rehypeKatex, {
+        trust: true,
+      }],
       [rehypeCitation, {
         bibliography: 'src/content/bibliography.bib',
         linkCitations: true,
-        csl: "apa"
+        csl: "apa",
       }],
       rehypeReferencesAndFootnotes,
       rehypeRestoreAtInCode,

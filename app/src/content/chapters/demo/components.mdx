@@ -1,35 +1,79 @@
 import { Image } from 'astro:assets';
-import placeholder from '../assets/image/placeholder.png';
-import audioDemo from '../assets/audio/audio-example.wav';
-import HtmlEmbed from '../../components/HtmlEmbed.astro';
-import Sidenote from '../../components/Sidenote.astro';
-import Wide from '../../components/Wide.astro';
-import Note from '../../components/Note.astro';
-import FullWidth from '../../components/FullWidth.astro';
-import Accordion from '../../components/Accordion.astro';
-import ResponsiveImage from '../../components/ResponsiveImage.astro';
+import placeholder from '../../assets/image/placeholder.png';
+import audioDemo from '../../assets/audio/audio-example.wav';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Sidenote from '../../../components/Sidenote.astro';
+import Wide from '../../../components/Wide.astro';
+import Note from '../../../components/Note.astro';
+import FullWidth from '../../../components/FullWidth.astro';
+import Accordion from '../../../components/Accordion.astro';
+import Figure from '../../../components/ResponsiveImage.astro';
+import SubFigures from '../../../components/MultiImage.astro';
+import Quote from '../../../components/Quote.astro';
 
 ## Components
 
 **All** the following **components** are available in the **article.mdx** file. You can also create your own **components** by creating a new file in the `/components` folder.
-You have to import them in the **.mdx** file you want to use them in.
 
-<br/>
-<div className="button-group">
-  <button className="button" href="#responsiveimage">ResponsiveImage</button>
-  <button className="button" href="#placement">Placement</button>
-  <button className="button" href="#accordion">Accordion</button>
-  <button className="button" href="#note">Note</button>
-  <button className="button" href="#htmlembed">HtmlEmbed</button>
-  <button className="button" href="#iframe">Iframe</button>
+### How to import components
+
+To use any component in your MDX file, add the import statement at the top:
+
+```mdx
+import Figure from '../components/ResponsiveImage.astro';
+import SubFigures from '../components/MultiImage.astro';
+import Note from '../components/Note.astro';
+
+# Your content
+
+<Figure src={myImage} alt="Description" />
+<Note>This is a note</Note>
+```
+
+Here are the components that are available:
+
+
+<div className="feature-grid">
+  <a href="#figure" className="feature-card">
+    <strong>Figure</strong>
+    <span>Optimized images</span>
+  </a>
+  <a href="#subfigures" className="feature-card">
+    <strong>SubFigures</strong>
+    <span>Multi-panel figures</span>
+  </a>
+  <a href="#placement" className="feature-card">
+    <strong>Placement</strong>
+    <span>Layout helpers</span>
+  </a>
+  <a href="#accordion" className="feature-card">
+    <strong>Accordion</strong>
+    <span>Collapsible content</span>
+  </a>
+  <a href="#note" className="feature-card">
+    <strong>Note</strong>
+    <span>Contextual callouts</span>
+  </a>
+  <a href="#quote" className="feature-card">
+    <strong>Quote</strong>
+    <span>Elegant citations</span>
+  </a>
+  <a href="#htmlembed" className="feature-card">
+    <strong>HtmlEmbed</strong>
+    <span>External content</span>
+  </a>
+  <a href="#iframe" className="feature-card">
+    <strong>Iframe</strong>
+    <span>Web embeds</span>
+  </a>
 </div>
 
-### ResponsiveImage
+### Figure
 
-**Responsive images** automatically generate an optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
+**Figures** automatically generate optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
 
 
-<ResponsiveImage
+<Figure
   src={placeholder}
   zoomable
   downloadable
@@ -50,12 +94,12 @@ You have to import them in the **.mdx** file you want to use them in.
 
 <Accordion title="Code example">
 ```mdx
-import ResponsiveImage from '../components/ResponsiveImage.astro'
+import Figure from '../../../components/ResponsiveImage.astro'
 import myImage from './assets/image/placeholder.jpg'
 
-<ResponsiveImage src={myImage} alt="Responsive, optimized example image" />
+<Figure src={myImage} alt="Optimized figure with caption" />
 
-<ResponsiveImage
+<Figure
   src={myImage}
   layout="fixed"
   zoomable
@@ -67,6 +111,40 @@ import myImage from './assets/image/placeholder.jpg'
 ```
 </Accordion>
 
+### SubFigures
+
+**Display multiple figures** in a grid layout with customizable columns and captions. Perfect for **multi-panel figures**, **comparisons**, and **step-by-step visualizations** — just like LaTeX's `subfigure` environment.
+
+<SubFigures
+  images={[
+    { src: placeholder, alt: "Image 1", caption: "First image with caption" },
+    { src: placeholder, alt: "Image 2", caption: "Second image" },
+    { src: placeholder, alt: "Image 3", caption: "Third image description" }
+  ]}
+  layout="3-column"
+  caption="Gallery of three images with individual captions"
+  zoomable={true}
+/>
+
+<Accordion title="Code example">
+```mdx
+import placeholder from '../assets/image/placeholder.png';
+
+<SubFigures
+  images={[
+    { src: placeholder, alt: "Panel A", caption: "(a) First panel" },
+    { src: placeholder, alt: "Panel B", caption: "(b) Second panel" },
+    { src: placeholder, alt: "Panel C", caption: "(c) Third panel" }
+  ]}
+  layout="3-column"
+  caption="Figure 1: Multi-panel comparison showing different conditions"
+  zoomable={true}
+/>
+```
+</Accordion>
+
+**Layout options:** `2-column`, `3-column`, `4-column`, `auto`  
+**Features:** Individual subcaptions (a), (b), (c), zoom functionality, responsive design
 
 ### Placement
 
@@ -74,21 +152,18 @@ Use these helpers when you need to step outside the main content flow: **Sidenot
 
 #### Sidenotes
 
+This paragraph presents a **key idea** concisely.
+
 <Sidenote>
-  This paragraph presents a **key idea** concisely.
-  <Fragment slot="aside">
-    **Side note** for brief context or a definition.
-  </Fragment>
-  </Sidenote>
+  **Side note** for brief context or a definition.
+</Sidenote>
 
 <Accordion title="Code example">
 ```mdx
-import Sidenote from '../components/Sidenote.astro'
+import Sidenote from '../../../components/Sidenote.astro'
 
-<Sidenote>
-  Main paragraph with the core idea.
-  <Fragment slot="aside">Short side note.</Fragment>
-</Sidenote>
+Main paragraph with the core idea.
+<Sidenote>Short side note.</Sidenote>
 ```
 </Accordion>
 
@@ -101,7 +176,7 @@ import Sidenote from '../components/Sidenote.astro'
 
 <Accordion title="Code example">
 ```mdx
-import Wide from '../components/Wide.astro'
+import Wide from '../../../components/Wide.astro'
 
 <Wide>
   Your content here...
@@ -117,7 +192,7 @@ import Wide from '../components/Wide.astro'
 
 <Accordion title="Code example">
 ```mdx
-import FullWidth from '../components/FullWidth.astro'
+import FullWidth from '../../../components/FullWidth.astro'
 
 <FullWidth>
   Your content here...
@@ -151,7 +226,7 @@ Can be used like this `<Accordion>some content</Accordion>`. You can pass any ch
 
 <Accordion title="Code example">
 ````mdx
-import Accordion from '../components/Accordion.astro'
+import Accordion from '../../../components/Accordion.astro'
 
 <Accordion title="Accordion title" open>
   <p>Free content with <strong>markdown</strong> and MDX components.</p>
@@ -209,7 +284,7 @@ Small contextual callout for tips, caveats, or emphasis.
 
 <Accordion title="Code example">
 ```mdx
-import Note from '../../components/Note.astro'
+import Note from '../../../components/Note.astro'
 
 <Note title="Heads‑up" emoji="💡" variant="info">
   Use notes to surface context without breaking reading flow.
@@ -229,6 +304,28 @@ import Note from '../../components/Note.astro'
 ```
 </Accordion>
 
+### Quote
+
+Elegant quotes with optional author attribution.
+
+<Quote author="Geoffrey Hinton">
+  The brain has about 10^14 synapses and we only live for about 10^9 seconds. So we have a lot more parameters than data. This motivates the idea that we must do a lot of unsupervised learning since labeled examples are so limited.
+</Quote>
+
+| Prop     | Required | Type   | Description                    |
+|----------|----------|--------|--------------------------------|
+| `author` | No       | string | Author of the quote           |
+| `source` | No       | string | Source publication or context |
+
+<Accordion title="Code example">
+```mdx
+import Quote from '../../../components/Quote.astro'
+
+<Quote author="Geoffrey Hinton">
+  The brain has about 10^14 synapses and we only live for about 10^9 seconds. So we have a lot more parameters than data. This motivates the idea that we must do a lot of unsupervised learning since labeled examples are so limited.
+</Quote>
+```
+</Accordion>
 
 ### Iframes
 
@@ -274,7 +371,7 @@ For researchers who want to stay in **Python** while targeting **D3**, the [d3bl
 
 <Accordion title="Code example">
 ```mdx
-import HtmlEmbed from '../components/HtmlEmbed.astro'
+import HtmlEmbed from '../../../components/HtmlEmbed.astro'
 
 <HtmlEmbed src="d3-line.html" title="This is a chart title" desc="Some chart description <br/>Credit: <a href='https://example.com' target='_blank'>Example</a>" />
 
