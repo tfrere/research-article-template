@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Script de synchronisation avec le template de base research-article-template
+ * Template synchronization script for research-article-template
  * 
- * Ce script :
- * 1. Clone ou update le repo template dans un dossier temporaire
- * 2. Copie tous les fichiers SAUF ceux dans ./src/content qui contiennent le contenu spécifique
- * 3. Préserve les fichiers de configuration locaux importants
- * 4. Fait un backup des fichiers qui vont être écrasés
+ * This script:
+ * 1. Clones or updates the template repo in a temporary directory
+ * 2. Copies all files EXCEPT those in ./src/content which contain specific content
+ * 3. Preserves important local configuration files
+ * 4. Creates backups of files that will be overwritten
  * 
  * Usage: npm run sync:template [--dry-run] [--backup] [--force]
  */
@@ -23,26 +23,26 @@ const PROJECT_ROOT = path.resolve(APP_ROOT, '..');
 const TEMP_DIR = path.join(PROJECT_ROOT, '.temp-template-sync');
 const TEMPLATE_REPO = 'https://huggingface.co/spaces/tfrere/research-article-template';
 
-// Fichiers et dossiers à PRÉSERVER (ne pas écraser)
+// Files and directories to PRESERVE (do not overwrite)
 const PRESERVE_PATHS = [
-    // Contenu spécifique au projet SmolLM
+    // Project-specific content
     'app/src/content',
 
-    // Données publiques (lien symbolique vers nos données)
+    // Public data (symlink to our data)
     'app/public/data',
 
-    // Configuration locale
+    // Local configuration
     'app/package-lock.json',
     'app/node_modules',
 
-    // Scripts spécifiques (préserver notre script de sync)
+    // Project-specific scripts (preserve our sync script)
     'app/scripts/sync-template.mjs',
 
-    // Fichiers de configuration du projet
+    // Project configuration files
     'README.md',
     'tools',
 
-    // Fichiers de backup et temporaires
+    // Backup and temporary files
     '.backup-*',
     '.temp-*',
 
@@ -51,7 +51,7 @@ const PRESERVE_PATHS = [
     '.gitignore'
 ];
 
-// Fichiers à traiter avec précaution (demander confirmation)
+// Files to handle with caution (require confirmation)
 const SENSITIVE_FILES = [
     'app/package.json',
     'app/astro.config.mjs',
@@ -61,15 +61,15 @@ const SENSITIVE_FILES = [
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
-const shouldBackup = args.includes('--backup'); // Désactivé par défaut, utiliser --backup pour l'activer
+const shouldBackup = args.includes('--backup'); // Disabled by default, use --backup to enable
 const isForce = args.includes('--force');
 
-console.log('🔄 Script de synchronisation avec le template research-article-template');
-console.log(`📁 Répertoire de travail: ${PROJECT_ROOT}`);
+console.log('🔄 Template synchronization script for research-article-template');
+console.log(`📁 Working directory: ${PROJECT_ROOT}`);
 console.log(`🎯 Template source: ${TEMPLATE_REPO}`);
-if (isDryRun) console.log('🔍 Mode DRY-RUN activé - aucun fichier ne sera modifié');
-if (shouldBackup) console.log('💾 Backup activé');
-if (!shouldBackup) console.log('🚫 Backup désactivé (utilisez --backup pour l\'activer)');
+if (isDryRun) console.log('🔍 DRY-RUN mode enabled - no files will be modified');
+if (shouldBackup) console.log('💾 Backup enabled');
+if (!shouldBackup) console.log('🚫 Backup disabled (use --backup to enable)');
 console.log('');
 
 async function executeCommand(command, options = {}) {
@@ -86,7 +86,7 @@ async function executeCommand(command, options = {}) {
         });
         return result;
     } catch (error) {
-        console.error(`❌ Erreur lors de l'exécution: ${command}`);
+        console.error(`❌ Error during execution: ${command}`);
         console.error(error.message);
         throw error;
     }
@@ -116,28 +116,28 @@ async function createBackup(filePath) {
 
     try {
         await fs.copyFile(filePath, backupPath);
-        console.log(`💾 Backup créé: ${path.relative(PROJECT_ROOT, backupPath)}`);
+        console.log(`💾 Backup created: ${path.relative(PROJECT_ROOT, backupPath)}`);
     } catch (error) {
-        console.warn(`⚠️  Impossible de créer le backup de ${filePath}: ${error.message}`);
+        console.warn(`⚠️  Unable to create backup for ${filePath}: ${error.message}`);
     }
 }
 
 async function syncFile(sourcePath, targetPath) {
     const relativeTarget = path.relative(PROJECT_ROOT, targetPath);
 
-    // Vérifier si le fichier doit être préservé
+    // Check if the file should be preserved
     if (await isPathPreserved(relativeTarget)) {
-        console.log(`🔒 PRÉSERVÉ: ${relativeTarget}`);
+        console.log(`🔒 PRESERVED: ${relativeTarget}`);
         return;
     }
 
-    // Vérifier si c'est un fichier sensible
+    // Check if it's a sensitive file
     if (SENSITIVE_FILES.includes(relativeTarget)) {
         if (!isForce) {
-            console.log(`⚠️  SENSIBLE (ignoré): ${relativeTarget} (utilisez --force pour écraser)`);
+            console.log(`⚠️  SENSITIVE (ignored): ${relativeTarget} (use --force to overwrite)`);
             return;
         } else {
-            console.log(`⚠️  SENSIBLE (forcé): ${relativeTarget}`);
+            console.log(`⚠️  SENSITIVE (forced): ${relativeTarget}`);
         }
     }
 
@@ -154,7 +154,7 @@ async function syncFile(sourcePath, targetPath) {
     }
 
     if (isDryRun) {
-        console.log(`[DRY-RUN] COPIE: ${relativeTarget}`);
+        console.log(`[DRY-RUN] COPY: ${relativeTarget}`);
         return;
     }
 
@@ -165,11 +165,11 @@ async function syncFile(sourcePath, targetPath) {
     try {
         const sourceStats = await fs.lstat(sourcePath);
         if (sourceStats.isSymbolicLink()) {
-            console.log(`🔗 LIEN SYMBOLIQUE (ignoré): ${relativeTarget}`);
+            console.log(`🔗 SYMLINK (ignored): ${relativeTarget}`);
             return;
         }
     } catch (error) {
-        console.warn(`⚠️  Impossible de vérifier la source ${sourcePath}: ${error.message}`);
+        console.warn(`⚠️  Unable to check source ${sourcePath}: ${error.message}`);
         return;
     }
 
@@ -180,7 +180,7 @@ async function syncFile(sourcePath, targetPath) {
 
     // Copier le fichier
     await fs.copyFile(sourcePath, targetPath);
-    console.log(`✅ COPIÉ: ${relativeTarget}`);
+    console.log(`✅ COPIED: ${relativeTarget}`);
 }
 
 async function syncDirectory(sourceDir, targetDir) {
@@ -208,7 +208,7 @@ async function syncDirectory(sourceDir, targetDir) {
 }
 
 async function cloneOrUpdateTemplate() {
-    console.log('📥 Récupération du template...');
+    console.log('📥 Fetching template...');
 
     // Nettoyer le dossier temporaire s'il existe
     if (await pathExists(TEMP_DIR)) {
@@ -226,10 +226,10 @@ async function cloneOrUpdateTemplate() {
 }
 
 async function showSummary(templateDir) {
-    console.log('\n📊 RÉSUMÉ DE LA SYNCHRONISATION');
+    console.log('\n📊 SYNCHRONIZATION SUMMARY');
     console.log('================================');
 
-    console.log('\n🔒 Fichiers/dossiers préservés:');
+    console.log('\n🔒 Preserved files/directories:');
     for (const preserve of PRESERVE_PATHS) {
         const fullPath = path.join(PROJECT_ROOT, preserve);
         if (await pathExists(fullPath)) {
@@ -239,7 +239,7 @@ async function showSummary(templateDir) {
         }
     }
 
-    console.log('\n⚠️  Fichiers sensibles (nécessitent --force):');
+    console.log('\n⚠️  Sensitive files (require --force):');
     for (const sensitive of SENSITIVE_FILES) {
         const fullPath = path.join(PROJECT_ROOT, sensitive);
         if (await pathExists(fullPath)) {
@@ -248,18 +248,18 @@ async function showSummary(templateDir) {
     }
 
     if (isDryRun) {
-        console.log('\n🔍 Pour exécuter réellement: npm run sync:template');
-        console.log('🔧 Pour forcer les fichiers sensibles: npm run sync:template -- --force');
+        console.log('\n🔍 To execute for real: npm run sync:template');
+        console.log('🔧 To force sensitive files: npm run sync:template -- --force');
     }
 }
 
 async function cleanup() {
-    console.log('\n🧹 Nettoyage...');
+    console.log('\n🧹 Cleaning up...');
     if (await pathExists(TEMP_DIR)) {
         if (!isDryRun) {
             await fs.rm(TEMP_DIR, { recursive: true, force: true });
         }
-        console.log(`🗑️  Dossier temporaire supprimé: ${TEMP_DIR}`);
+        console.log(`🗑️  Temporary directory removed: ${TEMP_DIR}`);
     }
 }
 
@@ -281,10 +281,10 @@ async function main() {
         // Afficher le résumé
         await showSummary(templateDir);
 
-        console.log('\n✅ Synchronisation terminée !');
+        console.log('\n✅ Synchronization completed!');
 
     } catch (error) {
-        console.error('\n❌ Erreur durant la synchronisation:');
+        console.error('\n❌ Error during synchronization:');
         console.error(error.message);
         process.exit(1);
     } finally {
@@ -294,13 +294,13 @@ async function main() {
 
 // Gestion des signaux pour nettoyer en cas d'interruption
 process.on('SIGINT', async () => {
-    console.log('\n\n⚠️  Interruption détectée, nettoyage...');
+    console.log('\n\n⚠️  Interruption detected, cleaning up...');
     await cleanup();
     process.exit(1);
 });
 
 process.on('SIGTERM', async () => {
-    console.log('\n\n⚠️  Arrêt demandé, nettoyage...');
+    console.log('\n\n⚠️  Shutdown requested, cleaning up...');
     await cleanup();
     process.exit(1);
 });
