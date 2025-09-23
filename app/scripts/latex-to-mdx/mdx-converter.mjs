@@ -124,12 +124,12 @@ function addComponentImports(content) {
 
 
 /**
- * Convert grouped figures (subfigures) to MultiImage components
+ * Convert grouped figures (subfigures) to MultiFigure components
  * @param {string} content - MDX content
- * @returns {string} - Content with MultiImage components for grouped figures
+ * @returns {string} - Content with MultiFigure components for grouped figures
  */
-function convertSubfiguresToMultiImage(content) {
-    console.log('  🖼️✨ Converting subfigures to MultiImage components...');
+function convertSubfiguresToMultiFigure(content) {
+    console.log('  🖼️✨ Converting subfigures to MultiFigure components...');
 
     let convertedCount = 0;
 
@@ -187,8 +187,8 @@ function convertSubfiguresToMultiImage(content) {
             .replace(/'/g, "\\'")
             .trim();
 
-        // Mark MultiImage component as used
-        usedComponents.add('MultiImage');
+        // Mark MultiFigure component as used
+        usedComponents.add('MultiFigure');
 
         // Determine layout based on number of images
         let layout = 'auto';
@@ -196,12 +196,12 @@ function convertSubfiguresToMultiImage(content) {
         else if (images.length === 3) layout = '3-column';
         else if (images.length === 4) layout = '4-column';
 
-        // Generate MultiImage component
+        // Generate MultiFigure component
         const imagesJson = images.map(img =>
             `    {\n      src: ${img.src},\n      alt: "${img.alt}",\n      caption: "${img.caption}",\n      id: "${img.id}"\n    }`
         ).join(',\n');
 
-        return `<MultiImage
+        return `<MultiFigure
   images={[
 ${imagesJson}
   ]}
@@ -213,7 +213,7 @@ ${imagesJson}
     });
 
     if (convertedCount > 0) {
-        console.log(`    ✅ Converted ${convertedCount} subfigure group(s) to MultiImage component(s)`);
+        console.log(`    ✅ Converted ${convertedCount} subfigure group(s) to MultiFigure component(s)`);
     } else {
         console.log('    ℹ️  No subfigure groups found');
     }
@@ -222,23 +222,23 @@ ${imagesJson}
 }
 
 /**
- * Transform images to ResponsiveImage components
+ * Transform images to Figure components
  * @param {string} content - MDX content
- * @returns {string} - Content with ResponsiveImage components
+ * @returns {string} - Content with Figure components
  */
 /**
- * Create ResponsiveImage component with import
+ * Create Figure component with import
  * @param {string} src - Clean image source
  * @param {string} alt - Alt text  
  * @param {string} id - Element ID
  * @param {string} caption - Figure caption
  * @param {string} width - Optional width
- * @returns {string} - ResponsiveImage component markup
+ * @returns {string} - Figure component markup
  */
-function createResponsiveImageComponent(src, alt = '', id = '', caption = '', width = '') {
+function createFigureComponent(src, alt = '', id = '', caption = '', width = '') {
     const varName = generateImageVarName(src);
     imageImports.set(src, varName);
-    usedComponents.add('ResponsiveImage');
+    usedComponents.add('Figure');
 
     const props = [];
     props.push(`src={${varName}}`);
@@ -249,11 +249,11 @@ function createResponsiveImageComponent(src, alt = '', id = '', caption = '', wi
     if (alt) props.push(`alt="${alt}"`);
     if (caption) props.push(`caption={'${caption}'}`);
 
-    return `<ResponsiveImage\n  ${props.join('\n  ')}\n/>`;
+    return `<Figure\n  ${props.join('\n  ')}\n/>`;
 }
 
 function transformImages(content) {
-    console.log('  🖼️  Transforming images to ResponsiveImage components with imports...');
+    console.log('  🖼️  Transforming images to Figure components with imports...');
 
     let hasImages = false;
 
@@ -297,7 +297,7 @@ function transformImages(content) {
             const altText = cleanAltText(cleanCap);
             hasImages = true;
 
-            return createResponsiveImageComponent(cleanSrc, altText, id, cleanCap);
+            return createFigureComponent(cleanSrc, altText, id, cleanCap);
         }
     );
 
@@ -309,7 +309,7 @@ function transformImages(content) {
             const cleanAlt = cleanAltText(alt || 'Figure');
             hasImages = true;
 
-            return createResponsiveImageComponent(cleanSrc, cleanAlt);
+            return createFigureComponent(cleanSrc, cleanAlt);
         }
     );
 
@@ -320,7 +320,7 @@ function transformImages(content) {
             const cleanSrc = cleanSrcPath(src);
             hasImages = true;
 
-            return createResponsiveImageComponent(cleanSrc, 'Figure');
+            return createFigureComponent(cleanSrc, 'Figure');
         }
     );
 
@@ -333,7 +333,7 @@ function transformImages(content) {
             const altText = cleanAltText(cleanCap);
             hasImages = true;
 
-            return createResponsiveImageComponent(cleanSrc, altText, id, cleanCap);
+            return createFigureComponent(cleanSrc, altText, id, cleanCap);
         }
     );
 
@@ -346,7 +346,7 @@ function transformImages(content) {
             const altText = cleanAltText(cleanCap);
             hasImages = true;
 
-            return createResponsiveImageComponent(cleanSrc, altText, id, cleanCap);
+            return createFigureComponent(cleanSrc, altText, id, cleanCap);
         }
     );
 
@@ -364,12 +364,12 @@ function transformImages(content) {
                 if (idMatch) id = idMatch[1];
             }
 
-            return createResponsiveImageComponent(cleanSrc, cleanAlt, id);
+            return createFigureComponent(cleanSrc, cleanAlt, id);
         }
     );
 
     if (hasImages) {
-        console.log('    ✅ ResponsiveImage components with imports will be created');
+        console.log('    ✅ Figure components with imports will be created');
     }
 
     return content;
@@ -822,7 +822,7 @@ function processMdxContent(content, latexContent = '') {
     processedContent = formatDisplayMathBlocks(processedContent);
     processedContent = removeHtmlComments(processedContent);
     processedContent = cleanMdxSyntax(processedContent);
-    processedContent = convertSubfiguresToMultiImage(processedContent);
+    processedContent = convertSubfiguresToMultiFigure(processedContent);
     processedContent = transformImages(processedContent);
     processedContent = transformStyledSpans(processedContent);
     processedContent = transformReferenceLinks(processedContent);

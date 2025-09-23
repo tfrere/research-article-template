@@ -11,7 +11,7 @@
   --default-font-family: Source Sans Pro, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   /* Brand (OKLCH base + derived states) */
-  --primary-base: oklch(0.75 0.12 340);
+  --primary-base: oklch(0.75 0.12 337);
   --primary-color: var(--primary-base);
   --primary-color-hover: oklch(from var(--primary-color) calc(l - 0.05) c h);
   --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
@@ -109,7 +109,7 @@
   --grid-color: rgba(255, 255, 255, .10);
 
   /* Primary (lower L in dark) */
-  --primary-color: oklch(from var(--primary-base) calc(l - 0.08) c h);
+  --primary-color: oklch(from var(--primary-base) calc(l - 0.08) c 100);
   --primary-color-hover: oklch(from var(--primary-color) calc(l - 0.05) c h);
   --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
   --on-primary: #0f1115;

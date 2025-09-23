@@ -7,8 +7,8 @@ import Wide from '../../../components/Wide.astro';
 import Note from '../../../components/Note.astro';
 import FullWidth from '../../../components/FullWidth.astro';
 import Accordion from '../../../components/Accordion.astro';
-import Figure from '../../../components/ResponsiveImage.astro';
-import SubFigures from '../../../components/MultiImage.astro';
+import Figure from '../../../components/Figure.astro';
+import SubFigures from '../../../components/MultiFigure.astro';
 import Quote from '../../../components/Quote.astro';
 
 ## Components
@@ -20,8 +20,8 @@ import Quote from '../../../components/Quote.astro';
 To use any component in your MDX file, add the import statement at the top:
 
 ```mdx
-import Figure from '../components/ResponsiveImage.astro';
-import SubFigures from '../components/MultiImage.astro';
+import Figure from '../components/Figure.astro';
+import SubFigures from '../components/MultiFigure.astro';
 import Note from '../components/Note.astro';
 
 # Your content
@@ -94,7 +94,7 @@ Here are the components that are available:
 
 <Accordion title="Code example">
 ```mdx
-import Figure from '../../../components/ResponsiveImage.astro'
+import Figure from '../../../components/Figure.astro'
 import myImage from './assets/image/placeholder.jpg'
 
 <Figure src={myImage} alt="Optimized figure with caption" />
@@ -304,8 +304,8 @@ import Note from '../../../components/Note.astro'
 
 Elegant quotes with optional source attribution.
 
-<Quote source="Geoffrey Hinton, <a href='https://list-quotes.com/quotes/geoffrey-hinton-300077/'>Interview on Brain Complexity</a>">
-  In the brain, you have connections between the neurons called synapses, and they can change. All your knowledge is stored in those synapses. You have about 1,000-trillion synapses - 10 to the 15, it's a very big number.
+<Quote source="Geoffrey Hinton, <a href='https://www.nature.com/articles/323533a0'>Learning representations by back-propagating errors</a>">
+  Backpropagation allows neural networks to discover their own internal representations of data.
 </Quote>
 
 | Prop     | Required | Type   | Description                    |
@@ -316,8 +316,8 @@ Elegant quotes with optional source attribution.
 ```mdx
 import Quote from '../../../components/Quote.astro'
 
-<Quote source="Geoffrey Hinton, <a href='https://list-quotes.com/quotes/geoffrey-hinton-300077/'>Interview on Brain Complexity</a>">
-  In the brain, you have connections between the neurons called synapses, and they can change. All your knowledge is stored in those synapses. You have about 1,000-trillion synapses - 10 to the 15, it's a very big number.
+<Quote source="Geoffrey Hinton, <a href='https://www.nature.com/articles/323533a0'>Learning representations by back-propagating errors</a>">
+  Backpropagation allows neural networks to discover their own internal representations of data.
 </Quote>
 ```
 </Accordion>

@@ -1,6 +1,6 @@
 ---
 // @ts-ignore - types provided by Astro at runtime
-import ResponsiveImage from "./ResponsiveImage.astro";
+import Figure from "./Figure.astro";
 
 interface ImageItem {
     /** Source image imported via astro:assets */
@@ -83,7 +83,7 @@ const gridColumns = getGridColumns();
                 >
                     {images.map((image, index) => (
                         <div class="multi-image-item">
-                            <ResponsiveImage
+                            <Figure
                                 src={image.src}
                                 alt={image.alt}
                                 zoomable={image.zoomable ?? zoomable}
@@ -121,7 +121,7 @@ const gridColumns = getGridColumns();
             >
                 {images.map((image, index) => (
                     <div class="multi-image-item">
-                        <ResponsiveImage
+                        <Figure
                             src={image.src}
                             alt={image.alt}
                             zoomable={image.zoomable ?? zoomable}
@@ -198,7 +198,7 @@ const gridColumns = getGridColumns();
         z-index: var(--z-overlay);
     }
 
-    /* Fallback pour navigateurs sans support :has() */
+    /* Fallback for browsers without :has() support */
     :global(.medium-zoom--opened) .multi-image-item.zoom-active {
         opacity: 1 !important;
         z-index: var(--z-overlay) !important;
@@ -261,9 +261,9 @@ const gridColumns = getGridColumns();
         }
     }
 
-    /* Equal height images when desired */
+    /* Images maintain natural aspect ratio */
     .multi-image[data-layout*="column"] .multi-image-item :global(img) {
-        height: 200px;
+        height: auto;
         object-fit: contain;
     }
 
@@ -281,9 +281,9 @@ const gridColumns = getGridColumns();
 </style>
 
 <script>
-    // Enhanced medium-zoom integration for MultiImage
+    // Enhanced medium-zoom integration for MultiFigure
     document.addEventListener("DOMContentLoaded", () => {
-        // Amélioration du comportement des MultiImage avec medium-zoom
+        // Improve MultiFigure behavior with medium-zoom
         const multiImages = document.querySelectorAll(".multi-image");
 
         multiImages.forEach((multiImage) => {
@@ -298,7 +298,7 @@ const gridColumns = getGridColumns();
                     const activeItem = img.closest(".multi-image-item");
                     const riRoot = img.closest(".ri-root");
 
-                    // Nettoyer TOUS les zoom-active (MultiImage items et ResponsiveImage)
+                    // Nettoyer TOUS les zoom-active (MultiFigure items et Figure)
                     document
                         .querySelectorAll(
                             ".multi-image-item.zoom-active, .ri-root.zoom-active",
@@ -328,7 +328,7 @@ const gridColumns = getGridColumns();
             }
         });
 
-        // Écouter les événements clavier pour fermer le zoom
+        // Listen for keyboard events to close zoom
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
                 document

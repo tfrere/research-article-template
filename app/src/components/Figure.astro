@@ -175,13 +175,10 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
 
 <script is:inline>
   (() => {
-    console.log("ResponsiveImage script: Starting execution");
     const scriptEl = document.currentScript;
-    console.log("ResponsiveImage script: scriptEl =", scriptEl);
     const root = scriptEl ? scriptEl.previousElementSibling : null;
-    console.log("ResponsiveImage script: root =", root);
     if (!root) {
-      console.log("ResponsiveImage script: No root element found, exiting");
+      console.log("Figure script: No root element found, exiting");
       return;
     }
     const img =
@@ -190,9 +187,8 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
         : root.querySelector
           ? root.querySelector("img")
           : null;
-    console.log("ResponsiveImage script: img =", img);
     if (!img) {
-      console.log("ResponsiveImage script: No img element found, exiting");
+      console.log("Figure script: No img element found, exiting");
       return;
     }
 
@@ -209,13 +205,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
     };
 
     const initZoomIfNeeded = () => {
-      console.log("ResponsiveImage: checking zoom for", img);
-      console.log(
-        "ResponsiveImage: data-zoomable =",
-        img.getAttribute("data-zoomable"),
-      );
       if (img.getAttribute("data-zoomable") !== "1") return;
-      console.log("ResponsiveImage: initializing zoom for", img);
       const isDark =
         document.documentElement.getAttribute("data-theme") === "dark";
       const background = isDark ? "rgba(0,0,0,.9)" : "rgba(0,0,0,.85)";
@@ -224,7 +214,6 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
         const instance = window.mediumZoom
           ? window.mediumZoom(img, { background, margin: 24, scrollOffset: 0 })
           : null;
-        console.log("ResponsiveImage: zoom instance created:", instance);
         if (!instance) return;
         let onScrollLike;
         const attachCloseOnScroll = () => {
@@ -268,7 +257,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
       });
     };
 
-    // Gestion zoom global pour masquer autres ResponsiveImage
+    // Global zoom management to hide other Figures
     const setupGlobalZoomBehavior = () => {
       img.addEventListener("click", () => {
         if (img.getAttribute("data-zoomable") === "1") {
@@ -277,7 +266,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
             .querySelectorAll(".ri-root.zoom-active")
             .forEach((el) => el.classList.remove("zoom-active"));
 
-          // Ajouter zoom-active à cet ri-root
+          // Add zoom-active to this ri-root
           root.classList.add("zoom-active");
         }
       });
@@ -421,26 +410,26 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
     background: var(--primary-color);
   }
 
-  /* Quand une image est zoomée, cacher TOUS les ResponsiveImage de la page */
+  /* When an image is zoomed, hide ALL Figures on the page */
   :global(.medium-zoom--opened) .ri-root {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);
     transition: opacity 0.3s ease;
   }
 
-  /* L'image actuellement zoomée reste visible */
+  /* The currently zoomed image remains visible */
   :global(.medium-zoom--opened) .ri-root:has(.medium-zoom--opened) {
     opacity: 1;
     z-index: var(--z-overlay);
   }
 
-  /* Fallback pour navigateurs sans support :has() */
+  /* Fallback for browsers without :has() support */
   :global(.medium-zoom--opened) .ri-root.zoom-active {
     opacity: 1 !important;
     z-index: var(--z-overlay) !important;
   }
 
-  /* Spécifiquement masquer bouton download et figcaption lors du zoom */
+  /* Specifically hide download button and figcaption during zoom */
   :global(.medium-zoom--opened) .img-dl-btn {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);
@@ -453,7 +442,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
     transition: opacity 0.3s ease;
   }
 
-  /* Même pour l'image zoomée active, masquer bouton et caption pour une expérience propre */
+  /* Even for active zoomed image, hide button and caption for clean experience */
   :global(.medium-zoom--opened) .ri-root.zoom-active .img-dl-btn {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);

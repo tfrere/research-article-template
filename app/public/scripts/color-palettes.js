@@ -46,63 +46,95 @@
     return { r, g, b: b3 };
   };
   const oklchToOklab = (L, C, hDeg) => { const h = (hDeg * Math.PI) / 180; return { L, a: C * Math.cos(h), b: C * Math.sin(h) }; };
-  const oklabToOklch = (L, a, b) => { const C = Math.sqrt(a*a + b*b); let h = Math.atan2(b, a) * 180 / Math.PI; if (h < 0) h += 360; return { L, C, h }; };
+  const oklabToOklch = (L, a, b) => { const C = Math.sqrt(a * a + b * b); let h = Math.atan2(b, a) * 180 / Math.PI; if (h < 0) h += 360; return { L, C, h }; };
   const clamp01 = (x) => Math.min(1, Math.max(0, x));
   const isInGamut = ({ r, g, b }) => r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1;
-  const toHex = ({ r, g, b }) => { const R = Math.round(clamp01(r)*255), G = Math.round(clamp01(g)*255), B = Math.round(clamp01(b)*255); const h = (n) => n.toString(16).padStart(2,'0'); return `#${h(R)}${h(G)}${h(B)}`.toUpperCase(); };
-  const oklchToHexSafe = (L, C, h) => { let c = C; for (let i=0;i<12;i++){ const { a, b } = oklchToOklab(L,c,h); const rgb = oklabToRgb(L,a,b); if (isInGamut(rgb)) return toHex(rgb); c = Math.max(0, c-0.02);} return toHex(oklabToRgb(L,0,0)); };
-  const parseCssColorToRgb = (css) => { try { const el = document.createElement('span'); el.style.color = css; document.body.appendChild(el); const cs = getComputedStyle(el).color; document.body.removeChild(el); const m = cs.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i); if (!m) return null; return { r: Number(m[1])/255, g: Number(m[2])/255, b: Number(m[3])/255 }; } catch { return null; } };
+  const toHex = ({ r, g, b }) => {
+    const R = Math.round(clamp01(r) * 255), G = Math.round(clamp01(g) * 255), B = Math.round(clamp01(b) * 255);
+    const h = (n) => n.toString(16).padStart(2, '0');
+    return `#${h(R)}${h(G)}${h(B)}`.toUpperCase();
+  };
+  const oklchToHexSafe = (L, C, h) => { let c = C; for (let i = 0; i < 12; i++) { const { a, b } = oklchToOklab(L, c, h); const rgb = oklabToRgb(L, a, b); if (isInGamut(rgb)) return toHex(rgb); c = Math.max(0, c - 0.02); } return toHex(oklabToRgb(L, 0, 0)); };
+  const parseCssColorToRgb = (css) => { try { const el = document.createElement('span'); el.style.color = css; document.body.appendChild(el); const cs = getComputedStyle(el).color; document.body.removeChild(el); const m = cs.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i); if (!m) return null; return { r: Number(m[1]) / 255, g: Number(m[2]) / 255, b: Number(m[3]) / 255 }; } catch { return null; } };
 
-  const getPrimaryHex = () => {
+  // Get primary color in OKLCH format to preserve precision
+  const getPrimaryOKLCH = () => {
     const css = getCssVar('--primary-color');
-    if (!css) return '#E889AB';
-    if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(css)) return css.toUpperCase();
+    if (!css) return null;
+
+    // For OKLCH colors, return the exact values without conversion
+    if (css.includes('oklch')) {
+      const oklchMatch = css.match(/oklch\(([^)]+)\)/);
+      if (oklchMatch) {
+        const values = oklchMatch[1].split(/\s+/).map(v => parseFloat(v.trim()));
+        if (values.length >= 3) {
+          const [L, C, h] = values;
+          return { L, C, h };
+        }
+      }
+    }
+
+    // For non-OKLCH colors, convert to OKLCH for consistency
     const rgb = parseCssColorToRgb(css);
-    if (rgb) return toHex(rgb);
-    return '#E889AB';
+    if (rgb) {
+      const { L, a, b } = rgbToOklab(rgb.r, rgb.g, rgb.b);
+      const { C, h } = oklabToOklch(L, a, b);
+      return { L, C, h };
+    }
+    return null;
+  };
+
+  // Keep getPrimaryHex for backward compatibility, but now it converts from OKLCH
+  const getPrimaryHex = () => {
+    const oklch = getPrimaryOKLCH();
+    if (!oklch) return null;
+
+    const { a, b } = oklchToOklab(oklch.L, oklch.C, oklch.h);
+    const rgb = oklabToRgb(oklch.L, a, b);
+    return toHex(rgb);
   };
   // No count management via CSS anymore; counts are passed directly to the API
 
   const generators = {
-    categorical: (baseHex, count) => {
-      const parseHex = (h) => { const s = h.replace('#',''); const v = s.length===3 ? s.split('').map(ch=>ch+ch).join('') : s; return { r: parseInt(v.slice(0,2),16)/255, g: parseInt(v.slice(2,4),16)/255, b: parseInt(v.slice(4,6),16)/255 }; };
-      const { r, g, b } = parseHex(baseHex);
-      const { L, a, b: bb } = rgbToOklab(r,g,b);
-      const { C, h } = oklabToOklch(L,a,bb);
+    categorical: (baseOKLCH, count) => {
+      const { L, C, h } = baseOKLCH;
       const L0 = Math.min(0.85, Math.max(0.4, L));
       const C0 = Math.min(0.35, Math.max(0.1, C || 0.2));
       const total = Math.max(1, Math.min(12, count || 8));
       const hueStep = 360 / total;
       const results = [];
-      for (let i=0;i<total;i++) { const hDeg = (h + i*hueStep) % 360; const lVar = ((i % 3) - 1) * 0.04; results.push(oklchToHexSafe(Math.max(0.4, Math.min(0.85, L0 + lVar)), C0, hDeg)); }
+      for (let i = 0; i < total; i++) {
+        const hDeg = (h + i * hueStep) % 360;
+        const lVar = ((i % 3) - 1) * 0.04;
+        results.push(oklchToHexSafe(Math.max(0.4, Math.min(0.85, L0 + lVar)), C0, hDeg));
+      }
       return results;
     },
-    sequential: (baseHex, count) => {
-      const parseHex = (h) => { const s = h.replace('#',''); const v = s.length===3 ? s.split('').map(ch=>ch+ch).join('') : s; return { r: parseInt(v.slice(0,2),16)/255, g: parseInt(v.slice(2,4),16)/255, b: parseInt(v.slice(4,6),16)/255 }; };
-      const { r, g, b } = parseHex(baseHex);
-      const { L, a, b: bb } = rgbToOklab(r,g,b);
-      const { C, h } = oklabToOklch(L,a,bb);
+    sequential: (baseOKLCH, count) => {
+      const { L, C, h } = baseOKLCH;
       const total = Math.max(1, Math.min(12, count || 8));
       const startL = Math.max(0.25, L - 0.18);
       const endL = Math.min(0.92, L + 0.18);
       const cBase = Math.min(0.33, Math.max(0.08, C * 0.9 + 0.06));
       const out = [];
-      for (let i=0;i<total;i++) { const t = total===1 ? 0 : i/(total-1); const lNow = startL*(1-t)+endL*t; const cNow = cBase*(0.85 + 0.15*(1 - Math.abs(0.5 - t)*2)); out.push(oklchToHexSafe(lNow, cNow, h)); }
+      for (let i = 0; i < total; i++) {
+        const t = total === 1 ? 0 : i / (total - 1);
+        const lNow = startL * (1 - t) + endL * t;
+        const cNow = cBase * (0.85 + 0.15 * (1 - Math.abs(0.5 - t) * 2));
+        out.push(oklchToHexSafe(lNow, cNow, h));
+      }
       return out;
     },
-    diverging: (baseHex, count) => {
-      const parseHex = (h) => { const s = h.replace('#',''); const v = s.length===3 ? s.split('').map(ch=>ch+ch).join('') : s; return { r: parseInt(v.slice(0,2),16)/255, g: parseInt(v.slice(2,4),16)/255, b: parseInt(v.slice(4,6),16)/255 }; };
-      const { r, g, b } = parseHex(baseHex);
-      const baseLab = rgbToOklab(r,g,b);
-      const baseLch = oklabToOklch(baseLab.L, baseLab.a, baseLab.b);
+    diverging: (baseOKLCH, count) => {
+      const { L, C, h } = baseOKLCH;
       const total = Math.max(1, Math.min(12, count || 8));
 
       // Left endpoint: EXACT primary color (no darkening)
-      const leftLab = baseLab;
+      const leftLab = oklchToOklab(L, C, h);
       // Right endpoint: complement with same L and similar C (clamped safe)
-      const compH = (baseLch.h + 180) % 360;
-      const cSafe = Math.min(0.35, Math.max(0.08, baseLch.C));
-      const rightLab = oklchToOklab(baseLab.L, cSafe, compH);
+      const compH = (h + 180) % 360;
+      const cSafe = Math.min(0.35, Math.max(0.08, C));
+      const rightLab = oklchToOklab(L, cSafe, compH);
       const whiteLab = { L: 0.98, a: 0, b: 0 }; // center near‑white
 
       const hexFromOKLab = (L, a, b) => toHex(oklabToRgb(L, a, b));
@@ -152,18 +184,22 @@
   let lastSignature = '';
 
   const updatePalettes = () => {
-    const primary = getPrimaryHex();
-    const signature = `${primary}`;
+    const primaryOKLCH = getPrimaryOKLCH();
+    const primaryHex = getPrimaryHex();
+    const signature = `${primaryOKLCH?.L},${primaryOKLCH?.C},${primaryOKLCH?.h}`;
     if (signature === lastSignature) return;
     lastSignature = signature;
-    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary } })); } catch {}
+    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH } })); } catch { }
   };
 
   const bootstrap = () => {
+    // Initial setup - only run once on page load
     updatePalettes();
+
+    // Observer will handle all subsequent changes
     const mo = new MutationObserver(() => updatePalettes());
     mo.observe(MODE.cssRoot, { attributes: true, attributeFilter: ['style', 'data-theme'] });
-    setInterval(updatePalettes, 400);
+
     // Utility: choose high-contrast (or softened) text style against an arbitrary background color
     const pickTextStyleForBackground = (bgCss, opts = {}) => {
       const cssRoot = document.documentElement;
@@ -175,13 +211,13 @@
         if (!rgb) return null;
         return rgb; // already 0..1
       };
-      const mixRgb01 = (a, b, t) => ({ r: a.r*(1-t)+b.r*t, g: a.g*(1-t)+b.g*t, b: a.b*(1-t)+b.b*t });
+      const mixRgb01 = (a, b, t) => ({ r: a.r * (1 - t) + b.r * t, g: a.g * (1 - t) + b.g * t, b: a.b * (1 - t) + b.b * t });
       const relLum = (rgb) => {
         const f = (u) => srgbToLinear(u);
-        return 0.2126*f(rgb.r) + 0.7152*f(rgb.g) + 0.0722*f(rgb.b);
+        return 0.2126 * f(rgb.r) + 0.7152 * f(rgb.g) + 0.0722 * f(rgb.b);
       };
       const contrast = (fg, bg) => {
-        const L1 = relLum(fg), L2 = relLum(bg); const a = Math.max(L1,L2), b = Math.min(L1,L2);
+        const L1 = relLum(fg), L2 = relLum(bg); const a = Math.max(L1, L2), b = Math.min(L1, L2);
         return (a + 0.05) / (b + 0.05);
       };
       try {
@@ -193,7 +229,7 @@
           .filter(x => !!x.rgb);
         // Pick the max contrast
         let best = candidates[0]; let bestCR = contrast(best.rgb, bg);
-        for (let i=1;i<candidates.length;i++){
+        for (let i = 1; i < candidates.length; i++) {
           const cr = contrast(candidates[i].rgb, bg);
           if (cr > bestCR) { best = candidates[i]; bestCR = cr; }
         }
@@ -206,7 +242,7 @@
           finalRgb = mixRgb01(best.rgb, mutedRgb, blend);
         }
         const haloStrength = Math.min(1, Math.max(0, Number(opts.haloStrength == null ? 0.5 : opts.haloStrength)));
-        const stroke = (best.css === '#000' || best.css.toLowerCase() === 'black') ? `rgba(255,255,255,${0.30 + 0.40*haloStrength})` : `rgba(0,0,0,${0.30 + 0.30*haloStrength})`;
+        const stroke = (best.css === '#000' || best.css.toLowerCase() === 'black') ? `rgba(255,255,255,${0.30 + 0.40 * haloStrength})` : `rgba(0,0,0,${0.30 + 0.30 * haloStrength})`;
         return { fill: toHex(finalRgb), stroke, strokeWidth: (opts.haloWidth == null ? 1 : Number(opts.haloWidth)) };
       } catch {
         return { fill: getCssVar('--text-color') || '#000', stroke: 'var(--transparent-page-contrast)', strokeWidth: 1 };
@@ -214,14 +250,16 @@
     };
     window.ColorPalettes = {
       refresh: updatePalettes,
-      notify: () => { try { const primary = getPrimaryHex(); document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary } })); } catch {} },
+      notify: () => { try { const primaryOKLCH = getPrimaryOKLCH(); const primaryHex = getPrimaryHex(); document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH } })); } catch { } },
       getPrimary: () => getPrimaryHex(),
+      getPrimaryOKLCH: () => getPrimaryOKLCH(),
       getColors: (key, count = 6) => {
-        const primary = getPrimaryHex();
+        const primaryOKLCH = getPrimaryOKLCH();
+        if (!primaryOKLCH) return [];
         const total = Math.max(1, Math.min(12, Number(count) || 6));
-        if (key === 'categorical') return generators.categorical(primary, total);
-        if (key === 'sequential') return generators.sequential(primary, total);
-        if (key === 'diverging') return generators.diverging(primary, total);
+        if (key === 'categorical') return generators.categorical(primaryOKLCH, total);
+        if (key === 'sequential') return generators.sequential(primaryOKLCH, total);
+        if (key === 'diverging') return generators.diverging(primaryOKLCH, total);
         return [];
       },
       getTextStyleForBackground: (bgCss, opts) => pickTextStyleForBackground(bgCss, opts || {}),

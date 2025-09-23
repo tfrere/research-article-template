@@ -13,27 +13,27 @@
     const containers = document.querySelectorAll(".sidenote-container");
 
     containers.forEach((container) => {
-      // Trouve l'élément précédent (frère juste avant)
+      // Find the previous element (sibling just before)
       const previousElement = container.previousElementSibling;
 
       if (previousElement) {
-        // Rend le conteneur de la sidenote relatif à l'élément précédent
+        // Make the sidenote container relative to the previous element
         previousElement.style.position = "relative";
 
-        // Déplace le conteneur de la sidenote comme enfant de l'élément précédent
+        // Move the sidenote container as child of the previous element
         previousElement.appendChild(container);
 
-        // Style le conteneur pour qu'il se positionne correctement
+        // Style the container so it positions correctly
         container.style.position = "absolute";
         container.style.top = "0";
         container.style.right = "-292px"; // 260px width + 32px gap
         container.style.width = "260px";
 
-        // Affiche le container avec un fade-in
+        // Display the container with a fade-in
         container.style.display = "block";
         container.style.opacity = "0";
 
-        // Fade-in avec transition
+        // Fade-in with transition
         setTimeout(() => {
           container.style.opacity = "1";
         }, 10);
@@ -46,8 +46,8 @@
   .sidenote-container {
     /* Caché par défaut, sera affiché par JS */
     display: none;
-    margin: 12px 0;
-    /* Transition pour le fade-in */
+    margin: 0 ;
+    /* Transition for fade-in */
     transition: opacity 0.3s ease-in-out;
   }
 

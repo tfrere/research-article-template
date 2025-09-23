@@ -206,21 +206,16 @@ const licence =
       src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"
     ></script>
     <script>
-      // Debug et initialisation globale du zoom
-      console.log("Global script: Starting zoom initialization");
+      // Debug and global zoom initialization
 
       function initializeZoom() {
-        console.log("Global script: Looking for zoomable images");
         const zoomableImages = document.querySelectorAll(
           'img[data-zoomable="1"]',
         );
-        console.log("Global script: Found images:", zoomableImages.length);
 
         if (window.mediumZoom && zoomableImages.length > 0) {
           zoomableImages.forEach((img, index) => {
-            console.log(`Global script: Processing image ${index}:`, img);
-
-            // Vérifier si déjà initialisé
+            // Check if already initialized
             if (!img.classList.contains("medium-zoom-image")) {
               try {
                 const instance = window.mediumZoom(img, {
@@ -228,10 +223,6 @@ const licence =
                   margin: 24,
                   scrollOffset: 0,
                 });
-                console.log(
-                  `Global script: Zoom initialized for image ${index}:`,
-                  instance,
-                );
               } catch (error) {
                 console.error(
                   `Global script: Error initializing zoom for image ${index}:`,
@@ -249,14 +240,14 @@ const licence =
         }
       }
 
-      // Essayer d'initialiser immédiatement
+      // Try to initialize immediately
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initializeZoom);
       } else {
         initializeZoom();
       }
 
-      // Aussi essayer après le chargement complet
+      // Also try after complete loading
       window.addEventListener("load", () => {
         setTimeout(initializeZoom, 100);
       });

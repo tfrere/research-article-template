@@ -15,15 +15,15 @@
     "sync:template": "node ./scripts/sync-template.mjs",
     "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
     "sync:template:force": "node ./scripts/sync-template.mjs --force",
-    "latex:convert": "cd scripts/latex-to-mdx && node index.mjs"
+    "latex:convert": "cd scripts/latex-to-mdx && node index.mjs",
+    "generate:font-svgs": "node ./scripts/generate-font-svgs.mjs"
   },
   "devDependencies": {
-    "@astrojs/svelte": "^5.5.0",
     "@astrojs/mdx": "^3.1.9",
+    "@astrojs/svelte": "^5.5.0",
     "astro": "^4.10.0",
     "astro-compressor": "^0.4.1",
     "astro-mermaid": "^1.0.4",
-    "svelte": "^4.2.19",
     "mermaid": "^11.10.1",
     "playwright": "^1.55.0",
     "postcss": "^8.5.6",
@@ -34,10 +34,11 @@
     "rehype-katex": "^7.0.1",
     "rehype-pretty-code": "^0.14.1",
     "rehype-slug": "^6.0.0",
+    "remark-directive": "^3.0.0",
     "remark-footnotes": "^4.0.1",
     "remark-math": "^6.0.0",
-    "remark-directive": "^3.0.0",
-    "remark-toc": "^9.0.0"
+    "remark-toc": "^9.0.0",
+    "svelte": "^4.2.19"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -45,7 +46,9 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "d3": "^7.9.0",
+    "fonteditor-core": "^2.6.3",
     "katex": "^0.16.22",
+    "opentype.js": "^1.3.4",
     "plotly.js-dist-min": "^3.1.0",
     "prism-themes": "^1.9.0",
     "stream-browserify": "^3.0.0"

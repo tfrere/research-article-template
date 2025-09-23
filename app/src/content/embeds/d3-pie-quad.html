@@ -21,7 +21,7 @@
   .d3-pie-quad.hovering .slice.ghost {
     opacity: .25;
   }
-  /* Layout HTML (pas JS) pour la grille et les cellules */
+  /* HTML layout (not JS) for grid and cells */
   .d3-pie-quad .plots-grid {
     display: flex;
     flex-wrap: wrap;
@@ -33,21 +33,21 @@
     margin-right: auto;
     width: 100%;
   }
-  /* Par défaut (flux ~1280): 2 colonnes centrées */
+  /* Default (flow ~1280): 2 centered columns */
   .content-grid .d3-pie-quad .plots-grid { width: 100%; }
   .content-grid .d3-pie-quad .pie-cell { flex: 0 0 calc((100% - 20px)/2); }
-  /* En wrappers larges: viser 4 colonnes si l'espace le permet */
+  /* In wide wrappers: aim for 4 columns if space allows */
   .wide .d3-pie-quad .plots-grid,
   .full-width .d3-pie-quad .plots-grid { width: 100%; }
   .wide .d3-pie-quad .pie-cell,
   .full-width .d3-pie-quad .pie-cell { flex: 0 0 calc((100% - 60px)/4); }
-  /* Forcer 2 colonnes dans le flux lorsque le parent ~1280px */
+  /* Force 2 columns in flow when parent ~1280px */
   .content-grid .d3-pie-quad .plots-grid { width: min(740px, 100%); }
   .d3-pie-quad .pie-cell {
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex: 0 0 360px; /* 2 colonnes fixes dans le flux à 1280px */
+    flex: 0 0 360px; /* 2 fixed columns in flow at 1280px */
   }
   /* 4/2/1 colonnes en fonction de la largeur du parent */
   /* @container (min-width: 740px) {
@@ -179,10 +179,10 @@
       const CAPTION_GAP = 36;   // espace entre titre et donut
       const GAP_X = 20;         // espace entre colonnes
       const GAP_Y = 12;         // espace entre lignes
-      const TOP_OFFSET = 4;     // décalage vertical supplémentaire pour aérer le haut
+      const TOP_OFFSET = 4;     // additional vertical offset to air out the top
       const DONUT_INNER_RATIO = 0.58; // ratio du trou central (0 = pie plein, 0.5 = moitié)
       // LEGEND_GAP supprimé: l'espacement est désormais géré en CSS via .d3-pie-quad .legend { margin-bottom }
-      const SVG_VPAD = 16;      // padding vertical supplémentaire à l'intérieur des SVG pour éviter la coupe
+      const SVG_VPAD = 16;      // additional vertical padding inside SVGs to avoid cropping
       
       const updateSize = () => {
         width = container.clientWidth || 800;
@@ -199,7 +199,7 @@
       function drawPies(rows){
         const { innerWidth } = updateSize();
 
-        // Catégories (triées) + échelle de couleurs harmonisée avec banner.html
+        // Categories (sorted) + color scale harmonized with banner.html
         const categories = Array.from(new Set(rows.map(r => r.eagle_cathegory || 'Unknown'))).sort();
         const getCatColors = (n) => {
           try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(_) {}

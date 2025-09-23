@@ -49,7 +49,7 @@ latex-to-mdx/
 ### 🎨 **Automatic Styling**  
 - **Highlights**: `\highlight{text}` → `<span class="highlight">text</span>`
 - **Auto cleanup**: Removal of numbering `(1)`, `(2)`, etc.
-- **Astro components**: Images → `ResponsiveImage` with automatic imports
+- **Astro components**: Images → `Figure` with automatic imports
 
 ### 🔧 **Robust Pipeline**
 - **LaTeX preprocessor**: Reference cleanup before Pandoc
@@ -83,7 +83,7 @@ title: "Your Article Title"
 description: "Generated from LaTeX"
 ---
 
-import ResponsiveImage from '../components/ResponsiveImage.astro';
+import Figure from '../components/Figure.astro';
 import figure1 from '../assets/image/figure1.png';
 
 ## Section with invisible anchor
@@ -96,7 +96,7 @@ Reference to an interactive [equation](#equation-name).
 Equation with KaTeX ID:
 $$\htmlId{equation-name}{E = mc^2}$$
 
-<ResponsiveImage src={figure1} alt="Description" />
+<Figure src={figure1} alt="Description" />
 ```
 
 ## ⚙️ Required Astro Configuration
@@ -141,7 +141,7 @@ export default defineConfig({
    - Code snippet injection
 
 4. **MDX Conversion** (`mdx-converter.mjs`)
-   - Images transformation → `ResponsiveImage`
+   - Images transformation → `Figure`
    - HTML span escaping correction
    - Automatic imports generation
    - MDX frontmatter

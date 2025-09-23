@@ -80,7 +80,7 @@
       function getDotStrokeColor(fillColor = null){ 
         if (!fillColor) return 'var(--muted-color)';
         
-        // Résoudre les variables CSS en couleurs réelles
+        // Resolve CSS variables to actual colors
         let resolvedColor = fillColor;
         if (fillColor.startsWith('var(')) {
           const tempEl = document.createElement('div');

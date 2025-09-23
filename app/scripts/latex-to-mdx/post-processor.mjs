@@ -263,7 +263,7 @@ function fixAllAttributes(content) {
         return `data-reference="${before}-${after}"`;
     });
 
-    // Fix id attributes containing colons (like in ResponsiveImage components)
+    // Fix id attributes containing colons (like in Figure components)
     content = content.replace(/id="([^"]*):([^"]*)"/g, (match, before, after) => {
         fixedCount++;
         return `id="${before}-${after}"`;

@@ -7,24 +7,24 @@
 export class AdaptiveSampler {
   constructor(options = {}) {
     this.options = {
-      maxPoints: 400,           // Seuil pour déclencher le sampling
-      targetPoints: 200,        // Nombre cible de points après sampling
-      preserveFeatures: true,   // Préserver les pics/vallées importantes
+      maxPoints: 400,           // Threshold to trigger sampling
+      targetPoints: 200,        // Target number of points after sampling
+      preserveFeatures: true,   // Preserve important peaks/valleys
       adaptiveStrategy: 'smart', // 'uniform', 'smart', 'lod'
-      smoothingWindow: 3,       // Fenêtre pour détection des features
+      smoothingWindow: 3,       // Window for feature detection
       ...options
     };
   }
 
   /**
-   * Détermine si le sampling est nécessaire
+   * Determine if sampling is necessary
    */
   needsSampling(dataLength) {
     return dataLength > this.options.maxPoints;
   }
 
   /**
-   * Point d'entrée principal pour le sampling
+   * Main entry point for sampling
    */
   sampleSeries(data, strategy = null) {
     if (!Array.isArray(data) || data.length === 0) {
@@ -234,11 +234,11 @@ export class AdaptiveSampler {
       const index = Math.floor(logProgress * (totalLength - 1));
       indices.push(Math.max(1, Math.min(totalLength - 2, index)));
     }
-    return [...new Set(indices)]; // Supprimer les doublons
+    return [...new Set(indices)]; // Remove duplicates
   }
 
   /**
-   * Échantillonnage basé sur la variation locale
+   * Sampling based on local variation
    */
   sampleByVariation(data, targetPoints) {
     const variations = [];
@@ -290,7 +290,7 @@ export class AdaptiveSampler {
    * Reconstruit les données complètes pour une zone spécifique (pour le zoom)
    */
   getFullDataForRange(originalData, samplingInfo, startStep, endStep) {
-    // Cette méthode permettrait de récupérer plus de détails
+    // This method would allow recovering more details
     // quand l'utilisateur zoom sur une zone spécifique
     const startIdx = originalData.findIndex(d => d.step >= startStep);
     const endIdx = originalData.findIndex(d => d.step > endStep);

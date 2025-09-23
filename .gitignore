@@ -19,7 +19,8 @@ node_modules/
 *.env
 *.cache
 
-app/scripts/latex-converter/output/
+app/scripts/latex-to-mdx/output/
+app/src/content/embeds/typography/generated
 
 # PDF export
 app/public/*.pdf

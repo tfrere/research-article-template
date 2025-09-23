@@ -28,7 +28,7 @@ const PRESERVE_PATHS = [
     // Project-specific content
     'app/src/content',
 
-    // Public data (symlink to our data)
+    // Public data (symlink to our data) - CRITICAL: preserve this symlink
     'app/public/data',
 
     // Local configuration
@@ -75,7 +75,7 @@ console.log('');
 async function executeCommand(command, options = {}) {
     try {
         if (isDryRun && !options.allowInDryRun) {
-            console.log(`[DRY-RUN] Commande: ${command}`);
+            console.log(`[DRY-RUN] Command: ${command}`);
             return '';
         }
         console.log(`$ ${command}`);
@@ -141,7 +141,20 @@ async function syncFile(sourcePath, targetPath) {
         }
     }
 
-    // Créer un backup si le fichier existe déjà (et que ce n'est pas un lien symbolique)
+    // Check if target file is a symbolic link to preserve
+    if (await pathExists(targetPath)) {
+        try {
+            const targetStats = await fs.lstat(targetPath);
+            if (targetStats.isSymbolicLink()) {
+                console.log(`🔗 SYMLINK TARGET (preserved): ${relativeTarget}`);
+                return;
+            }
+        } catch (error) {
+            console.warn(`⚠️  Impossible de vérifier ${targetPath}: ${error.message}`);
+        }
+    }
+
+    // Create backup if file already exists (and is not a symbolic link)
     if (await pathExists(targetPath)) {
         try {
             const stats = await fs.lstat(targetPath);
@@ -161,11 +174,11 @@ async function syncFile(sourcePath, targetPath) {
     // Assurer que le répertoire parent existe
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
 
-    // Vérifier si la source est un lien symbolique
+    // Check if source is a symbolic link
     try {
         const sourceStats = await fs.lstat(sourcePath);
         if (sourceStats.isSymbolicLink()) {
-            console.log(`🔗 SYMLINK (ignored): ${relativeTarget}`);
+            console.log(`🔗 SYMLINK SOURCE (ignored): ${relativeTarget}`);
             return;
         }
     } catch (error) {
@@ -173,7 +186,7 @@ async function syncFile(sourcePath, targetPath) {
         return;
     }
 
-    // Supprimer le fichier cible s'il existe (pour gérer les liens symboliques)
+    // Remove target file if it exists (to handle symbolic links)
     if (await pathExists(targetPath)) {
         await fs.rm(targetPath, { recursive: true, force: true });
     }
@@ -212,17 +225,53 @@ async function cloneOrUpdateTemplate() {
 
     // Nettoyer le dossier temporaire s'il existe
     if (await pathExists(TEMP_DIR)) {
-        if (!isDryRun) {
-            await fs.rm(TEMP_DIR, { recursive: true, force: true });
-        } else {
+        await fs.rm(TEMP_DIR, { recursive: true, force: true });
+        if (isDryRun) {
             console.log(`[DRY-RUN] Suppression: ${TEMP_DIR}`);
         }
     }
 
-    // Cloner le repo template (même en dry-run pour pouvoir comparer)
+    // Clone template repo (even in dry-run to be able to compare)
     await executeCommand(`git clone ${TEMPLATE_REPO} "${TEMP_DIR}"`, { allowInDryRun: true });
 
     return TEMP_DIR;
+}
+
+async function ensureDataSymlink() {
+    const dataSymlinkPath = path.join(APP_ROOT, 'public', 'data');
+    const dataSourcePath = path.join(APP_ROOT, 'src', 'content', 'assets', 'data');
+
+    // Check if symlink exists and is correct
+    if (await pathExists(dataSymlinkPath)) {
+        try {
+            const stats = await fs.lstat(dataSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                const target = await fs.readlink(dataSymlinkPath);
+                const expectedTarget = path.relative(path.dirname(dataSymlinkPath), dataSourcePath);
+                if (target === expectedTarget) {
+                    console.log('🔗 Data symlink is correct');
+                    return;
+                } else {
+                    console.log(`⚠️  Data symlink points to wrong target: ${target} (expected: ${expectedTarget})`);
+                }
+            } else {
+                console.log('⚠️  app/public/data exists but is not a symlink');
+            }
+        } catch (error) {
+            console.log(`⚠️  Error checking symlink: ${error.message}`);
+        }
+    }
+
+    // Recreate symlink
+    if (!isDryRun) {
+        if (await pathExists(dataSymlinkPath)) {
+            await fs.rm(dataSymlinkPath, { recursive: true, force: true });
+        }
+        await fs.symlink(path.relative(path.dirname(dataSymlinkPath), dataSourcePath), dataSymlinkPath);
+        console.log('✅ Data symlink recreated');
+    } else {
+        console.log('[DRY-RUN] Would recreate data symlink');
+    }
 }
 
 async function showSummary(templateDir) {
@@ -265,18 +314,22 @@ async function cleanup() {
 
 async function main() {
     try {
-        // Vérifier qu'on est dans le bon répertoire
+        // Verify we're in the correct directory
         const packageJsonPath = path.join(APP_ROOT, 'package.json');
         if (!(await pathExists(packageJsonPath))) {
-            throw new Error(`Package.json non trouvé dans ${APP_ROOT}. Êtes-vous dans le bon répertoire ?`);
+            throw new Error(`Package.json not found in ${APP_ROOT}. Are you in the correct directory?`);
         }
 
-        // Cloner le template
+        // Clone the template
         const templateDir = await cloneOrUpdateTemplate();
 
         // Synchroniser
         console.log('\n🔄 Synchronisation en cours...');
         await syncDirectory(templateDir, PROJECT_ROOT);
+
+        // S'assurer que le lien symbolique des données est correct
+        console.log('\n🔗 Vérification du lien symbolique des données...');
+        await ensureDataSymlink();
 
         // Afficher le résumé
         await showSummary(templateDir);
@@ -292,7 +345,7 @@ async function main() {
     }
 }
 
-// Gestion des signaux pour nettoyer en cas d'interruption
+// Signal handling to clean up on interruption
 process.on('SIGINT', async () => {
     console.log('\n\n⚠️  Interruption detected, cleaning up...');
     await cleanup();

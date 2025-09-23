@@ -1,12 +1,15 @@
 ---
 // TrackioWrapper.astro
-import Trackio from './trackio/Trackio.svelte';
+import Trackio from "./Trackio.svelte";
 ---
 
 <!-- Ensure Roboto Mono is loaded for Oblivion theme -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&display=swap"
+  rel="stylesheet"
+/>
 
 <div class="trackio-wrapper">
   <div class="trackio-controls">
@@ -20,11 +23,11 @@ import Trackio from './trackio/Trackio.svelte';
       </div>
       <div class="scale-controls">
         <label>
-          <input type="checkbox" id="log-scale-x" checked>
+          <input type="checkbox" id="log-scale-x" checked />
           Log Scale X
         </label>
         <label>
-          <input type="checkbox" id="smooth-data" checked>
+          <input type="checkbox" id="smooth-data" checked />
           Smooth
         </label>
       </div>
@@ -33,15 +36,24 @@ import Trackio from './trackio/Trackio.svelte';
       <button class="button button--ghost" type="button" id="randomize-btn">
         Randomize Data
       </button>
-      <button class="button button--primary" type="button" id="start-simulation-btn">
+      <button
+        class="button button--primary"
+        type="button"
+        id="start-simulation-btn"
+      >
         Live Run
       </button>
-      <button class="button button--danger" type="button" id="stop-simulation-btn" style="display: none;">
+      <button
+        class="button button--danger"
+        type="button"
+        id="stop-simulation-btn"
+        style="display: none;"
+      >
         Stop
       </button>
     </div>
   </div>
-  
+
   <div class="trackio-container">
     <Trackio client:load variant="classic" logScaleX={true} smoothing={true} />
   </div>
@@ -49,245 +61,284 @@ import Trackio from './trackio/Trackio.svelte';
 
 <script>
   // @ts-nocheck
-  document.addEventListener('DOMContentLoaded', async () => {
-    const themeSelect = document.getElementById('theme-select');
-    const randomizeBtn = document.getElementById('randomize-btn');
-    const startSimulationBtn = document.getElementById('start-simulation-btn');
-    const stopSimulationBtn = document.getElementById('stop-simulation-btn');
-    const logScaleXCheckbox = document.getElementById('log-scale-x');
-    const smoothDataCheckbox = document.getElementById('smooth-data');
-    const trackioContainer = document.querySelector('.trackio-container');
-    
-    if (!themeSelect || !randomizeBtn || !startSimulationBtn || !stopSimulationBtn || 
-        !logScaleXCheckbox || !smoothDataCheckbox || !trackioContainer) return;
-        
-    // Variables pour la simulation
+  document.addEventListener("DOMContentLoaded", async () => {
+    const themeSelect = document.getElementById("theme-select");
+    const randomizeBtn = document.getElementById("randomize-btn");
+    const startSimulationBtn = document.getElementById("start-simulation-btn");
+    const stopSimulationBtn = document.getElementById("stop-simulation-btn");
+    const logScaleXCheckbox = document.getElementById("log-scale-x");
+    const smoothDataCheckbox = document.getElementById("smooth-data");
+    const trackioContainer = document.querySelector(".trackio-container");
+
+    if (
+      !themeSelect ||
+      !randomizeBtn ||
+      !startSimulationBtn ||
+      !stopSimulationBtn ||
+      !logScaleXCheckbox ||
+      !smoothDataCheckbox ||
+      !trackioContainer
+    )
+      return;
+
+    // Variables for simulation
     let simulationInterval = null;
     let currentSimulationRun = null;
     let currentStep = 0;
-    
+
     // Import the store function
-    const { triggerJitter } = await import('./trackio/core/store.js');
-    
+    const { triggerJitter } = await import("./core/store.js");
+
     // Theme change handler
-    themeSelect.addEventListener('change', (e) => {
+    themeSelect.addEventListener("change", (e) => {
       const target = e.target;
-      if (!target || !('value' in target)) return;
-      
+      if (!target || !("value" in target)) return;
+
       const newVariant = target.value;
       console.log(`Theme changed to: ${newVariant}`); // Debug log
-      
+
       // Find the trackio element and call setTheme on the Svelte instance
       const trackioEl = debugTrackioState();
       if (trackioEl && trackioEl.__trackioInstance) {
-        console.log('✅ Calling setTheme on Trackio instance');
+        console.log("✅ Calling setTheme on Trackio instance");
         trackioEl.__trackioInstance.setTheme(newVariant);
       } else {
-        console.warn('❌ No Trackio instance found for theme change');
+        console.warn("❌ No Trackio instance found for theme change");
       }
     });
 
     // Log scale X change handler
-    logScaleXCheckbox.addEventListener('change', (e) => {
+    logScaleXCheckbox.addEventListener("change", (e) => {
       const target = e.target;
-      if (!target || !('checked' in target)) return;
-      
+      if (!target || !("checked" in target)) return;
+
       const isLogScale = target.checked;
       console.log(`Log scale X changed to: ${isLogScale}`); // Debug log
-      
+
       // Find the trackio element and call setLogScaleX on the Svelte instance
       const trackioEl = debugTrackioState();
       if (trackioEl && trackioEl.__trackioInstance) {
-        console.log('✅ Calling setLogScaleX on Trackio instance');
+        console.log("✅ Calling setLogScaleX on Trackio instance");
         trackioEl.__trackioInstance.setLogScaleX(isLogScale);
       } else {
-        console.warn('❌ Trackio instance not found for log scale change');
+        console.warn("❌ Trackio instance not found for log scale change");
       }
     });
 
     // Smooth data change handler
-    smoothDataCheckbox.addEventListener('change', (e) => {
+    smoothDataCheckbox.addEventListener("change", (e) => {
       const target = e.target;
-      if (!target || !('checked' in target)) return;
-      
+      if (!target || !("checked" in target)) return;
+
       const isSmooth = target.checked;
       console.log(`Smooth data changed to: ${isSmooth}`); // Debug log
-      
+
       // Find the trackio element and call setSmoothing on the Svelte instance
       const trackioEl = debugTrackioState();
       if (trackioEl && trackioEl.__trackioInstance) {
-        console.log('✅ Calling setSmoothing on Trackio instance');
+        console.log("✅ Calling setSmoothing on Trackio instance");
         trackioEl.__trackioInstance.setSmoothing(isSmooth);
       } else {
-        console.warn('❌ Trackio instance not found for smooth change');
+        console.warn("❌ Trackio instance not found for smooth change");
       }
     });
-    
+
     // Debug function to check trackio state
     function debugTrackioState() {
-      const trackioEl = trackioContainer.querySelector('.trackio');
-      console.log('🔍 Debug Trackio state:', {
+      const trackioEl = trackioContainer.querySelector(".trackio");
+      console.log("🔍 Debug Trackio state:", {
         container: !!trackioContainer,
         trackioEl: !!trackioEl,
         hasInstance: !!(trackioEl && trackioEl.__trackioInstance),
-        availableMethods: trackioEl && trackioEl.__trackioInstance ? Object.keys(trackioEl.__trackioInstance) : 'none',
-        windowInstance: !!window.trackioInstance
+        availableMethods:
+          trackioEl && trackioEl.__trackioInstance
+            ? Object.keys(trackioEl.__trackioInstance)
+            : "none",
+        windowInstance: !!window.trackioInstance,
       });
       return trackioEl;
     }
-    
+
     // Initialize with default checked states - increased delay and retry logic
     function initializeTrackio(attempt = 1) {
       console.log(`🚀 Initializing Trackio (attempt ${attempt})`);
-      
+
       const trackioEl = debugTrackioState();
-      
+
       if (trackioEl && trackioEl.__trackioInstance) {
-        console.log('✅ Trackio instance found, applying initial settings');
-        
+        console.log("✅ Trackio instance found, applying initial settings");
+
         if (logScaleXCheckbox.checked) {
-          console.log('Initializing with log scale X enabled');
+          console.log("Initializing with log scale X enabled");
           trackioEl.__trackioInstance.setLogScaleX(true);
         }
-        
+
         if (smoothDataCheckbox.checked) {
-          console.log('Initializing with smoothing enabled');
+          console.log("Initializing with smoothing enabled");
           trackioEl.__trackioInstance.setSmoothing(true);
         }
       } else {
-        console.log('❌ Trackio instance not ready yet');
+        console.log("❌ Trackio instance not ready yet");
         if (attempt < 10) {
           setTimeout(() => initializeTrackio(attempt + 1), 200 * attempt);
         } else {
-          console.error('Failed to initialize Trackio after 10 attempts');
+          console.error("Failed to initialize Trackio after 10 attempts");
         }
       }
     }
-    
+
     // Start initialization
     setTimeout(() => initializeTrackio(), 100);
-    
-    // Fonction pour générer une nouvelle valeur de métrique simulée
+
+    // Function to generate a new simulated metric value
     function generateSimulatedValue(step, metric) {
       const baseProgress = Math.min(1, step / 100); // Normalise sur 100 steps
-      
-      if (metric === 'loss') {
-        // Loss qui décroit avec du bruit
+
+      if (metric === "loss") {
+        // Loss that decreases with noise
         const baseLoss = 2.0 * Math.exp(-0.05 * step);
         const noise = (Math.random() - 0.5) * 0.2;
         return Math.max(0.01, baseLoss + noise);
-      } else if (metric === 'accuracy') {
-        // Accuracy qui augmente avec du bruit
+      } else if (metric === "accuracy") {
+        // Accuracy that increases with noise
         const baseAcc = 0.1 + 0.8 * (1 - Math.exp(-0.04 * step));
         const noise = (Math.random() - 0.5) * 0.05;
         return Math.max(0, Math.min(1, baseAcc + noise));
       }
       return Math.random();
     }
-    
-    // Gestionnaire pour démarrer la simulation
+
+    // Handler to start simulation
     function startSimulation() {
       if (simulationInterval) {
         clearInterval(simulationInterval);
       }
-      
+
       // Générer un nouveau nom de run
-      const adjectives = ['live', 'real-time', 'streaming', 'dynamic', 'active', 'running'];
-      const nouns = ['experiment', 'trial', 'session', 'training', 'run', 'test'];
-      const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
+      const adjectives = [
+        "live",
+        "real-time",
+        "streaming",
+        "dynamic",
+        "active",
+        "running",
+      ];
+      const nouns = [
+        "experiment",
+        "trial",
+        "session",
+        "training",
+        "run",
+        "test",
+      ];
+      const randomAdj =
+        adjectives[Math.floor(Math.random() * adjectives.length)];
       const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
       currentSimulationRun = `${randomAdj}-${randomNoun}-${Date.now().toString().slice(-4)}`;
       currentStep = 1; // Commencer à step 1
-      
+
       console.log(`Starting simulation for run: ${currentSimulationRun}`);
-      
+
       // Interface UI
-      startSimulationBtn.style.display = 'none';
-      stopSimulationBtn.style.display = 'inline-flex';
+      startSimulationBtn.style.display = "none";
+      stopSimulationBtn.style.display = "inline-flex";
       startSimulationBtn.disabled = true;
-      
+
       // Ajouter le premier point
       addSimulationStep();
-      
+
       // Continuer chaque seconde
       simulationInterval = setInterval(() => {
         currentStep++;
         addSimulationStep();
-        
-        // Arrêter après 200 steps pour éviter l'infini
+
+        // Stop after 200 steps to avoid infinity
         if (currentStep > 200) {
           stopSimulation();
         }
       }, 1000); // Chaque seconde
     }
-    
-    // Fonction pour ajouter un nouveau point de données
+
+    // Function to add a new data point
     function addSimulationStep() {
-      const trackioEl = trackioContainer.querySelector('.trackio');
+      const trackioEl = trackioContainer.querySelector(".trackio");
       if (trackioEl && trackioEl.__trackioInstance) {
         const newDataPoint = {
           step: currentStep,
-          loss: generateSimulatedValue(currentStep, 'loss'),
-          accuracy: generateSimulatedValue(currentStep, 'accuracy')
+          loss: generateSimulatedValue(currentStep, "loss"),
+          accuracy: generateSimulatedValue(currentStep, "accuracy"),
         };
-        
-        console.log(`Adding simulation step ${currentStep} for run ${currentSimulationRun}:`, newDataPoint);
-        
+
+        console.log(
+          `Adding simulation step ${currentStep} for run ${currentSimulationRun}:`,
+          newDataPoint,
+        );
+
         // Ajouter le point via l'instance Trackio
-        if (typeof trackioEl.__trackioInstance.addLiveDataPoint === 'function') {
-          trackioEl.__trackioInstance.addLiveDataPoint(currentSimulationRun, newDataPoint);
+        if (
+          typeof trackioEl.__trackioInstance.addLiveDataPoint === "function"
+        ) {
+          trackioEl.__trackioInstance.addLiveDataPoint(
+            currentSimulationRun,
+            newDataPoint,
+          );
         } else {
-          console.warn('addLiveDataPoint method not found on Trackio instance');
+          console.warn("addLiveDataPoint method not found on Trackio instance");
         }
       }
     }
-    
-    // Gestionnaire pour arrêter la simulation  
+
+    // Handler to stop simulation
     function stopSimulation() {
       if (simulationInterval) {
         clearInterval(simulationInterval);
         simulationInterval = null;
       }
-      
+
       console.log(`Stopping simulation for run: ${currentSimulationRun}`);
-      
+
       // Interface UI
-      startSimulationBtn.style.display = 'inline-flex';
-      stopSimulationBtn.style.display = 'none';
+      startSimulationBtn.style.display = "inline-flex";
+      stopSimulationBtn.style.display = "none";
       startSimulationBtn.disabled = false;
-      
+
       currentSimulationRun = null;
       currentStep = 0;
     }
-    
-    // Event listeners pour les boutons de simulation
-    startSimulationBtn.addEventListener('click', startSimulation);
-    stopSimulationBtn.addEventListener('click', stopSimulation);
-    
+
+    // Event listeners for simulation buttons
+    startSimulationBtn.addEventListener("click", startSimulation);
+    stopSimulationBtn.addEventListener("click", stopSimulation);
+
     // Arrêter la simulation si l'utilisateur quitte la page
-    window.addEventListener('beforeunload', stopSimulation);
-    
+    window.addEventListener("beforeunload", stopSimulation);
+
     // Randomize data handler - now uses the store
-    randomizeBtn.addEventListener('click', () => {
-      console.log('Randomize button clicked - triggering jitter via store'); // Debug log
-      
+    randomizeBtn.addEventListener("click", () => {
+      console.log("Randomize button clicked - triggering jitter via store"); // Debug log
+
       // Arrêter la simulation en cours si elle tourne
       if (simulationInterval) {
         stopSimulation();
       }
-      
+
       // Add vibration animation
-      randomizeBtn.classList.add('vibrating');
+      randomizeBtn.classList.add("vibrating");
       setTimeout(() => {
-        randomizeBtn.classList.remove('vibrating');
+        randomizeBtn.classList.remove("vibrating");
       }, 600);
-      
+
       // Test direct window approach as well
-      if (window.trackioInstance && typeof window.trackioInstance.jitterData === 'function') {
-        console.log('Found window.trackioInstance, calling jitterData directly'); // Debug log
+      if (
+        window.trackioInstance &&
+        typeof window.trackioInstance.jitterData === "function"
+      ) {
+        console.log(
+          "Found window.trackioInstance, calling jitterData directly",
+        ); // Debug log
         window.trackioInstance.jitterData();
       } else {
-        console.log('No window.trackioInstance found, using store trigger'); // Debug log
+        console.log("No window.trackioInstance found, using store trigger"); // Debug log
         triggerJitter();
       }
     });
@@ -299,7 +350,7 @@ import Trackio from './trackio/Trackio.svelte';
     width: 100%;
     margin: 0px 0 20px 0;
   }
-  
+
   .trackio-controls {
     display: flex;
     justify-content: space-between;
@@ -310,21 +361,21 @@ import Trackio from './trackio/Trackio.svelte';
     gap: 16px;
     flex-wrap: nowrap;
   }
-  
+
   .controls-left {
     display: flex;
     align-items: center;
     gap: 24px;
     flex-wrap: wrap;
   }
-  
+
   .controls-right {
     display: flex;
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
   }
-  
+
   .btn-randomize {
     display: inline-flex;
     align-items: center;
@@ -339,16 +390,16 @@ import Trackio from './trackio/Trackio.svelte';
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  
+
   .btn-randomize:hover {
     background: var(--accent-hover, #005a9e);
     transform: translateY(-1px);
   }
-  
+
   .btn-randomize:active {
     transform: translateY(0);
   }
-  
+
   .theme-selector {
     display: flex;
     align-items: center;
@@ -357,12 +408,12 @@ import Trackio from './trackio/Trackio.svelte';
     flex-shrink: 0;
     white-space: nowrap;
   }
-  
+
   .theme-selector label {
     font-weight: 500;
     color: var(--text-color);
   }
-  
+
   .theme-select {
     padding: 6px 12px;
     border: 1px solid var(--border-color);
@@ -373,12 +424,12 @@ import Trackio from './trackio/Trackio.svelte';
     cursor: pointer;
     transition: border-color 0.15s ease;
   }
-  
+
   .theme-select:focus {
     outline: none;
     border-color: var(--accent-color, #007acc);
   }
-  
+
   .scale-controls {
     display: flex;
     align-items: center;
@@ -386,51 +437,72 @@ import Trackio from './trackio/Trackio.svelte';
     flex-shrink: 0;
     white-space: nowrap;
   }
-  
-  /* Animation de vibration pour le bouton */
+
+  /* Vibration animation for button */
   @keyframes vibrate {
-    0% { transform: translateX(0); }
-    10% { transform: translateX(-2px) rotate(-1deg); }
-    20% { transform: translateX(2px) rotate(1deg); }
-    30% { transform: translateX(-2px) rotate(-1deg); }
-    40% { transform: translateX(2px) rotate(1deg); }
-    50% { transform: translateX(-1px) rotate(-0.5deg); }
-    60% { transform: translateX(1px) rotate(0.5deg); }
-    70% { transform: translateX(-1px) rotate(-0.5deg); }
-    80% { transform: translateX(1px) rotate(0.5deg); }
-    90% { transform: translateX(-0.5px) rotate(-0.25deg); }
-    100% { transform: translateX(0) rotate(0); }
+    0% {
+      transform: translateX(0);
+    }
+    10% {
+      transform: translateX(-2px) rotate(-1deg);
+    }
+    20% {
+      transform: translateX(2px) rotate(1deg);
+    }
+    30% {
+      transform: translateX(-2px) rotate(-1deg);
+    }
+    40% {
+      transform: translateX(2px) rotate(1deg);
+    }
+    50% {
+      transform: translateX(-1px) rotate(-0.5deg);
+    }
+    60% {
+      transform: translateX(1px) rotate(0.5deg);
+    }
+    70% {
+      transform: translateX(-1px) rotate(-0.5deg);
+    }
+    80% {
+      transform: translateX(1px) rotate(0.5deg);
+    }
+    90% {
+      transform: translateX(-0.5px) rotate(-0.25deg);
+    }
+    100% {
+      transform: translateX(0) rotate(0);
+    }
   }
-  
+
   .button.vibrating {
     animation: vibrate 0.6s ease-in-out;
   }
-  
+
   .trackio-container {
     width: 100%;
     margin-top: 10px;
     border: 1px solid var(--border-color);
     padding: 24px 12px;
-
   }
-  
+
   @media (max-width: 768px) {
     .trackio-controls {
       flex-direction: column;
       align-items: stretch;
       gap: 12px;
     }
-    
+
     .controls-left {
       flex-direction: column;
       align-items: stretch;
       gap: 12px;
     }
-    
+
     .theme-selector {
       justify-content: space-between;
     }
-    
+
     .scale-controls {
       justify-content: space-between;
     }
