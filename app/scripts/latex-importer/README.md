@@ -1,6 +1,6 @@
-# LaTeX to MDX Toolkit
+# LaTeX Importer
 
-Complete LaTeX to MDX (Markdown + JSX) conversion optimized for Astro with advanced support for references, interactive equations, and components.
+Complete LaTeX to MDX (Markdown + JSX) importer optimized for Astro with advanced support for references, interactive equations, and components.
 
 ## 🚀 Quick Start
 
@@ -16,7 +16,7 @@ node mdx-converter.mjs      # Markdown → MDX
 ## 📁 Structure
 
 ```
-latex-to-mdx/
+latex-importer/
 ├── index.mjs                    # Complete LaTeX → MDX pipeline
 ├── latex-converter.mjs          # LaTeX → Markdown with Pandoc
 ├── mdx-converter.mjs           # Markdown → MDX with Astro components

@@ -41,7 +41,7 @@
     "sync:template": "node ./scripts/sync-template.mjs",
     "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
     "sync:template:force": "node ./scripts/sync-template.mjs --force",
-    "latex:convert": "cd scripts/latex-to-mdx && node index.mjs",
+    "latex:convert": "cd scripts/latex-importer && node index.mjs",
     "generate:font-svgs": "node ./scripts/generate-font-svgs.mjs",
     "release:patch": "node ../scripts/release.mjs patch",
     "release:minor": "node ../scripts/release.mjs minor",

@@ -1,6 +1,6 @@
-# Notion to MDX Toolkit
+# Notion Importer
 
-Complete Notion to MDX (Markdown + JSX) conversion optimized for Astro with advanced media handling, interactive components, and seamless integration.
+Complete Notion to MDX (Markdown + JSX) importer optimized for Astro with advanced media handling, interactive components, and seamless integration.
 
 ## 🚀 Quick Start
 
@@ -23,7 +23,7 @@ node mdx-converter.mjs       # Markdown → MDX
 ## 📁 Structure
 
 ```
-notion-to-mdx/
+notion-importer/
 ├── index.mjs                    # Complete Notion → MDX pipeline
 ├── notion-converter.mjs         # Notion → Markdown with notion-to-md v4
 ├── mdx-converter.mjs           # Markdown → MDX with Astro components

@@ -26,10 +26,10 @@ COPY app/ .
 # Conditionally convert LaTeX to MDX if ENABLE_LATEX_CONVERSION=true
 ARG ENABLE_LATEX_CONVERSION=false
 RUN if [ "$ENABLE_LATEX_CONVERSION" = "true" ]; then \
-    echo "🔄 LaTeX conversion enabled - running latex:convert..."; \
+    echo "🔄 LaTeX importer enabled - running latex:convert..."; \
     npm run latex:convert; \
     else \
-    echo "⏭️  LaTeX conversion disabled - skipping..."; \
+    echo "⏭️  LaTeX importer disabled - skipping..."; \
     fi
 
 # Ensure `public/data` is a real directory with real files (not a symlink)
