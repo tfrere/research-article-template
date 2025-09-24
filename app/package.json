@@ -1,7 +1,33 @@
 {
-  "name": "astro-site",
-  "version": "0.0.1",
-  "private": true,
+  "name": "research-article-template",
+  "version": "1.0.0",
+  "description": "A modern, interactive template for scientific writing that brings papers to life with web-native features",
+  "keywords": [
+    "research",
+    "scientific-writing",
+    "template",
+    "markdown",
+    "mdx",
+    "astro",
+    "interactive",
+    "academic",
+    "distill",
+    "web-native"
+  ],
+  "homepage": "https://huggingface.co/spaces/tfrere/research-article-template",
+  "repository": {
+    "type": "git",
+    "url": "https://huggingface.co/spaces/tfrere/research-article-template"
+  },
+  "bugs": {
+    "url": "https://huggingface.co/spaces/tfrere/research-article-template/discussions"
+  },
+  "author": {
+    "name": "Thibaud Frere",
+    "url": "https://huggingface.co/tfrere"
+  },
+  "license": "CC-BY-4.0",
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -16,7 +42,10 @@
     "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
     "sync:template:force": "node ./scripts/sync-template.mjs --force",
     "latex:convert": "cd scripts/latex-to-mdx && node index.mjs",
-    "generate:font-svgs": "node ./scripts/generate-font-svgs.mjs"
+    "generate:font-svgs": "node ./scripts/generate-font-svgs.mjs",
+    "release:patch": "node ../scripts/release.mjs patch",
+    "release:minor": "node ../scripts/release.mjs minor",
+    "release:major": "node ../scripts/release.mjs major"
   },
   "devDependencies": {
     "@astrojs/mdx": "^3.1.9",
