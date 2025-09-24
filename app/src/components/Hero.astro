@@ -5,26 +5,49 @@ interface Props {
   title: string; // may contain HTML (e.g., <br/>)
   titleRaw?: string; // plain title for slug/PDF (optional)
   description?: string;
-  authors?: Array<string | { name: string; url?: string; affiliationIndices?: number[] }>;
+  authors?: Array<
+    string | { name: string; url?: string; affiliationIndices?: number[] }
+  >;
   affiliations?: Array<{ id: number; name: string; url?: string }>;
   affiliation?: string; // legacy single affiliation
   published?: string;
   doi?: string;
 }
 
-const { title, titleRaw, description, authors = [], affiliations = [], affiliation, published, doi } = Astro.props as Props;
+const {
+  title,
+  titleRaw,
+  description,
+  authors = [],
+  affiliations = [],
+  affiliation,
+  published,
+  doi,
+} = Astro.props as Props;
 
 type Author = { name: string; url?: string; affiliationIndices?: number[] };
 
-function normalizeAuthors(input: Array<string | { name?: string; url?: string; link?: string; affiliationIndices?: number[] }>): Author[] {
+function normalizeAuthors(
+  input: Array<
+    | string
+    | {
+        name?: string;
+        url?: string;
+        link?: string;
+        affiliationIndices?: number[];
+      }
+  >,
+): Author[] {
   return (Array.isArray(input) ? input : [])
     .map((a) => {
-      if (typeof a === 'string') {
+      if (typeof a === "string") {
         return { name: a } as Author;
       }
-      const name = (a?.name ?? '').toString();
+      const name = (a?.name ?? "").toString();
       const url = (a?.url ?? a?.link) as string | undefined;
-      const affiliationIndices = Array.isArray((a as any)?.affiliationIndices) ? (a as any).affiliationIndices : undefined;
+      const affiliationIndices = Array.isArray((a as any)?.affiliationIndices)
+        ? (a as any).affiliationIndices
+        : undefined;
       return { name, url, affiliationIndices } as Author;
     })
     .filter((a) => a.name && a.name.trim().length > 0);
@@ -35,35 +58,41 @@ const normalizedAuthors: Author[] = normalizeAuthors(authors as any);
 // Determine if affiliation superscripts should be shown (only when there are multiple distinct affiliations referenced by authors)
 const authorAffiliationIndexSet = new Set<number>();
 for (const author of normalizedAuthors) {
-  const indices = Array.isArray(author.affiliationIndices) ? author.affiliationIndices : [];
+  const indices = Array.isArray(author.affiliationIndices)
+    ? author.affiliationIndices
+    : [];
   for (const idx of indices) {
-    if (typeof idx === 'number') {
+    if (typeof idx === "number") {
       authorAffiliationIndexSet.add(idx);
     }
   }
 }
 const shouldShowAffiliationSupers = authorAffiliationIndexSet.size > 1;
-const hasMultipleAffiliations = Array.isArray(affiliations) && affiliations.length > 1;
+const hasMultipleAffiliations =
+  Array.isArray(affiliations) && affiliations.length > 1;
 
 function stripHtml(text: string): string {
-  return String(text || '').replace(/<[^>]*>/g, '');
+  return String(text || "").replace(/<[^>]*>/g, "");
 }
 
 function slugify(text: string): string {
-  return String(text || '')
-    .normalize('NFKD')
-    .replace(/\p{Diacritic}+/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 120) || 'article';
+  return (
+    String(text || "")
+      .normalize("NFKD")
+      .replace(/\p{Diacritic}+/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120) || "article"
+  );
 }
 
 const pdfBase = titleRaw ? stripHtml(titleRaw) : stripHtml(title);
 const pdfFilename = `${slugify(pdfBase)}.pdf`;
 ---
+
 <section class="hero">
-  <h1 class="hero-title" set:html={title}></h1>
+  <h1 class="hero-title" set:html={title} />
   <div class="hero-banner">
     <HtmlEmbed src="banner.html" frameless />
     {description && <p class="hero-desc">{description}</p>}
@@ -72,53 +101,82 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
 
 <header class="meta" aria-label="Article meta information">
   <div class="meta-container">
-    {normalizedAuthors.length > 0 && (
-      <div class="meta-container-cell">
-        <h3>Author{normalizedAuthors.length > 1 ? 's' : ''}</h3>
-        <ul class="authors">
-          {normalizedAuthors.map((a, i) => {
-            const supers = shouldShowAffiliationSupers && Array.isArray(a.affiliationIndices) && a.affiliationIndices.length
-              ? <sup>{a.affiliationIndices.join(',')}</sup>
-              : null;
-            return (
-              <li>
-                {a.url ? <a href={a.url}>{a.name}</a> : a.name}{supers}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    )}
-    {(Array.isArray(affiliations) && affiliations.length > 0) && (
-      <div class="meta-container-cell">
-        <h3>Affiliation{affiliations.length > 1 ? 's' : ''}</h3>
-        {hasMultipleAffiliations ? (
-          <ol class="affiliations">
-            {affiliations.map((af) => (
-              <li value={af.id}>{af.url ? <a href={af.url} target="_blank" rel="noopener noreferrer">{af.name}</a> : af.name}</li>
-            ))}
-          </ol>
-        ) : (
-          <p>
-            {affiliations[0]?.url 
-              ? <a href={affiliations[0].url} target="_blank" rel="noopener noreferrer">{affiliations[0].name}</a> 
-              : affiliations[0]?.name}
-          </p>
-        )}
-      </div>
-    )}
-    {(!affiliations || affiliations.length === 0) && affiliation && (
-      <div class="meta-container-cell">
-        <h3>Affiliation</h3>
-        <p>{affiliation}</p>
-      </div>
-    )}
-    {published && (
-      <div class="meta-container-cell meta-container-cell--published">
-        <h3>Published</h3>
-        <p>{published}</p>
-      </div>
-    )}
+    {
+      normalizedAuthors.length > 0 && (
+        <div class="meta-container-cell">
+          <h3>Author{normalizedAuthors.length > 1 ? "s" : ""}</h3>
+          <ul class="authors">
+            {normalizedAuthors.map((a, i) => {
+              const supers =
+                shouldShowAffiliationSupers &&
+                Array.isArray(a.affiliationIndices) &&
+                a.affiliationIndices.length ? (
+                  <sup>{a.affiliationIndices.join(",")}</sup>
+                ) : null;
+              return (
+                <li>
+                  {a.url ? <a href={a.url}>{a.name}</a> : a.name}
+                  {supers}
+                  {i < normalizedAuthors.length - 1 && ", "}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )
+    }
+    {
+      Array.isArray(affiliations) && affiliations.length > 0 && (
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation{affiliations.length > 1 ? "s" : ""}</h3>
+          {hasMultipleAffiliations ? (
+            <ol class="affiliations">
+              {affiliations.map((af) => (
+                <li value={af.id}>
+                  {af.url ? (
+                    <a href={af.url} target="_blank" rel="noopener noreferrer">
+                      {af.name}
+                    </a>
+                  ) : (
+                    af.name
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>
+              {affiliations[0]?.url ? (
+                <a
+                  href={affiliations[0].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {affiliations[0].name}
+                </a>
+              ) : (
+                affiliations[0]?.name
+              )}
+            </p>
+          )}
+        </div>
+      )
+    }
+    {
+      (!affiliations || affiliations.length === 0) && affiliation && (
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation</h3>
+          <p>{affiliation}</p>
+        </div>
+      )
+    }
+    {
+      published && (
+        <div class="meta-container-cell meta-container-cell--published">
+          <h3>Published</h3>
+          <p>{published}</p>
+        </div>
+      )
+    }
     <!-- {doi && (
       <div class="meta-container-cell">
         <h3>DOI</h3>
@@ -128,14 +186,18 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     <div class="meta-container-cell meta-container-cell--pdf">
       <h3>PDF</h3>
       <p>
-        <a class="button" href={`/${pdfFilename}`} download={pdfFilename} aria-label={`Download PDF ${pdfFilename}`}>
+        <a
+          class="button"
+          href={`/${pdfFilename}`}
+          download={pdfFilename}
+          aria-label={`Download PDF ${pdfFilename}`}
+        >
           Download PDF
         </a>
       </p>
     </div>
   </div>
 </header>
-
 
 <style>
   /* Hero (full-width) */
@@ -185,7 +247,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     text-underline-offset: 2px;
     text-decoration-thickness: 0.06em;
     text-decoration-color: var(--link-underline);
-    transition: text-decoration-color .15s ease-in-out;
+    transition: text-decoration-color 0.15s ease-in-out;
   }
   .meta-container a:hover {
     text-decoration-color: var(--link-underline-hover);
@@ -198,6 +260,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-width: 250px;
   }
   .meta-container-cell h3 {
     margin: 0;
@@ -205,15 +268,21 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     font-weight: 400;
     color: var(--muted-color);
     text-transform: uppercase;
-    letter-spacing: .02em;
+    letter-spacing: 0.02em;
   }
   .meta-container-cell p {
     margin: 0;
-  } 
+  }
   .authors {
     margin: 0;
     list-style-type: none;
     padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .authors li {
+    white-space: nowrap;
+    margin-right: 4px;
   }
   .affiliations {
     margin: 0;
@@ -227,12 +296,17 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     flex-wrap: wrap;
     row-gap: 12px;
   }
-  
+
+  @media (max-width: 768px) {
+    .meta-container-cell--affiliations,
+    .meta-container-cell--pdf {
+      text-align: right;
+    }
+  }
+
   @media print {
     .meta-container-cell--pdf {
       display: none !important;
     }
   }
 </style>
-
-

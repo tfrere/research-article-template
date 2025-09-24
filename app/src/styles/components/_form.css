@@ -5,7 +5,7 @@
 /* Select styling with modern chevron */
 select {
   background-color: var(--page-bg);
-  border: 1px solid var(--border-color);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 50%, var(--border-color));
   border-radius: var(--button-radius);
   padding: var(--button-padding-y) var(--button-padding-x) var(--button-padding-y) var(--button-padding-x);
   font-family: var(--default-font-family);
@@ -13,13 +13,18 @@ select {
   color: var(--text-color);
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8.825L1.175 4 2.35 2.825 6 6.475 9.65 2.825 10.825 4z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right calc(var(--button-padding-x) + 14px) center;
+  background-position: right calc(var(--button-padding-x) + 2px) center;
   background-size: 12px;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
-select:hover, select:focus, select:active {
+select:hover,
+select:focus,
+select:active {
   border-color: var(--primary-color);
 }
 

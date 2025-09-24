@@ -14,28 +14,38 @@
 
     containers.forEach((container) => {
       // Find the previous element (sibling just before)
-      const previousElement = container.previousElementSibling;
+      const previousElement = container.previousElementSibling as HTMLElement;
 
-      if (previousElement) {
-        // Make the sidenote container relative to the previous element
-        previousElement.style.position = "relative";
+      if (previousElement && previousElement.parentNode) {
+        // Create a wrapper div that will contain both the previous element and the sidenote
+        const wrapper = document.createElement("div");
+        wrapper.className = "sidenote-wrapper";
 
-        // Move the sidenote container as child of the previous element
-        previousElement.appendChild(container);
+        // Insert the wrapper before the previous element
+        previousElement.parentNode.insertBefore(wrapper, previousElement);
 
-        // Style the container so it positions correctly
-        container.style.position = "absolute";
-        container.style.top = "0";
-        container.style.right = "-292px"; // 260px width + 32px gap
-        container.style.width = "260px";
+        // Move both the previous element and the sidenote container into the wrapper
+        wrapper.appendChild(previousElement);
+        wrapper.appendChild(container);
+
+        // Style the wrapper to create the layout
+        wrapper.style.position = "relative";
+        wrapper.style.display = "block";
+
+        // Style the sidenote container so it positions correctly
+        const sidenoteContainer = container as HTMLElement;
+        sidenoteContainer.style.position = "absolute";
+        sidenoteContainer.style.top = "0";
+        sidenoteContainer.style.right = "-292px"; // 260px width + 32px gap
+        sidenoteContainer.style.width = "260px";
 
         // Display the container with a fade-in
-        container.style.display = "block";
-        container.style.opacity = "0";
+        sidenoteContainer.style.display = "block";
+        sidenoteContainer.style.opacity = "0";
 
         // Fade-in with transition
         setTimeout(() => {
-          container.style.opacity = "1";
+          sidenoteContainer.style.opacity = "1";
         }, 10);
       }
     });
@@ -43,10 +53,16 @@
 </script>
 
 <style is:global>
+  .sidenote-wrapper {
+    /* Le wrapper contient l'élément original et le sidenote */
+    position: relative;
+    display: block;
+  }
+
   .sidenote-container {
     /* Caché par défaut, sera affiché par JS */
     display: none;
-    margin: 0 ;
+    margin: 0;
     /* Transition for fade-in */
     transition: opacity 0.3s ease-in-out;
   }
@@ -60,6 +76,11 @@
   }
 
   @media (--bp-content-collapse) {
+    .sidenote-wrapper {
+      /* Sur mobile, le wrapper n'a pas besoin de position relative */
+      position: static !important;
+    }
+
     .sidenote-container {
       position: static !important;
       width: auto !important;

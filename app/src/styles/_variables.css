@@ -109,11 +109,10 @@
   --grid-color: rgba(255, 255, 255, .10);
 
   /* Primary (lower L in dark) */
-  --primary-color: oklch(from var(--primary-base) calc(l - 0.08) c 100);
   --primary-color-hover: oklch(from var(--primary-color) calc(l - 0.05) c h);
   --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
   --on-primary: #0f1115;
 
   color-scheme: dark;
-  background: #0f1115;
+  background: var(--page-bg);
 }
