@@ -1,6 +1,7 @@
+
 <div align="center">
 
-# 📝 Research Article Template
+# Research Article Template
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -8,9 +9,9 @@
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tfrere/research-article-template)
 
 
-**A modern, interactive template for scientific writing** that brings papers to life with web-native features, minimal setup, and maximum impact.
+**A modern, interactive template for scientific writing** that brings papers to life with web-native features. The web offers what static PDFs can't: **interactive diagrams**, **progressive notation**, and **exploratory views** that show how ideas behave. This template treats interactive artifacts—figures, math, code, and inspectable experiments—as **first-class** alongside prose, helping readers **build intuition** instead of skimming results—all with **minimal setup** and no web knowledge required.
  
-**[Try the live demo →](https://huggingface.co/spaces/tfrere/research-article-template)**
+**[Try the live demo & documentation →](https://huggingface.co/spaces/tfrere/research-article-template)**
 
 </div>
 
@@ -54,13 +55,6 @@ npm run dev
 
 Visit `http://localhost:4321` to see your site!
 
-## 📖 Documentation
-
-- **[Getting Started Guide](https://huggingface.co/spaces/tfrere/research-article-template)** - Complete setup instructions
-- **[Writing Best Practices](https://huggingface.co/spaces/tfrere/research-article-template)** - Tips for effective scientific writing
-- **[Component Reference](https://huggingface.co/spaces/tfrere/research-article-template)** - Available blocks and features
-- **[LaTeX Conversion](https://huggingface.co/spaces/tfrere/research-article-template)** - Import existing papers
-
 ## 🎯 Who This Is For
 
 - **Scientists** writing modern, web-native research papers
@@ -81,11 +75,11 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### Ways to Contribute
 
-- 🐛 **Report bugs** - Open an issue with detailed information
-- 💡 **Suggest features** - Share ideas for improvements
-- 📝 **Improve documentation** - Help others get started
-- 🔧 **Submit code** - Fix bugs or add features
-- 💬 **Join discussions** - Share feedback and ideas
+- **Report bugs** - Open an issue with detailed information
+- **Suggest features** - Share ideas for improvements
+- **Improve documentation** - Help others get started
+- **Submit code** - Fix bugs or add features
+- **Join discussions** - Share feedback and ideas
 
 ## 📄 License
 
@@ -103,9 +97,9 @@ This project is licensed under the [Creative Commons Attribution 4.0 Internation
 
 ## 📞 Support
 
-- 💬 **[Community Discussions](https://huggingface.co/spaces/tfrere/research-article-template/discussions)** - Ask questions and share ideas
-- 🐛 **[Report Issues](https://huggingface.co/spaces/tfrere/research-article-template/discussions?status=open&type=issue)** - Bug reports and feature requests
-- 📧 **Contact**: [@tfrere](https://huggingface.co/tfrere) on Hugging Face
+- **[Community Discussions](https://huggingface.co/spaces/tfrere/research-article-template/discussions)** - Ask questions and share ideas
+- **[Report Issues](https://huggingface.co/spaces/tfrere/research-article-template/discussions?status=open&type=issue)** - Bug reports and feature requests
+- **Contact**: [@tfrere](https://huggingface.co/tfrere) on Hugging Face
 
 ---
 
