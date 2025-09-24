@@ -12,7 +12,7 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 
 <div align="center">
 
-# 📝 Research Article Template
+<h1> Research Article Template</h1>
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
@@ -21,11 +21,13 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 
 </div>
 
+# 
+
 > **A modern, interactive template for scientific writing** that brings papers to life with web-native features, minimal setup, and maximum impact.
 
 ## ✨ Features
 
-`🎯 Markdown-based` `🧮 KaTeX math` `🎨 Syntax highlighting` `📚 Academic citations` `📝 Footnotes & sidenotes` `📋 Table of contents` `📊 Interactive diagrams` `🎭 HTML embeds` `🤖 Gradio app embeds` `🎨 Dataviz color palettes` `🖼️ Optimized images` `⚡ Lightweight bundle` `🔍 SEO friendly` `🏗️ Automatic build` `📄 PDF export` `🌙 Dark theme` `📱 Mobile friendly` `📥 LaTeX import` `🔄 Template updates`
+`Markdown-based` `KaTeX math` `Syntax highlighting` `Academic citations` `Footnotes & sidenotes` `Table of contents` `Interactive diagrams` `HTML embeds` `Gradio app embeds` `Dataviz color palettes` `Optimized images` `Lightweight bundle` `SEO friendly` `Automatic build` `PDF export` `Dark theme` `Mobile friendly` `LaTeX import` `Template updates`
 
 ## 🚀 Quick Start
 
