@@ -7,11 +7,12 @@
 [![Astro](https://img.shields.io/badge/Astro-4.10.0-orange.svg)](https://astro.build/)
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tfrere/research-article-template)
 
-</div>
 
-> **A modern, interactive template for scientific writing** that brings papers to life with web-native features, minimal setup, and maximum impact.
-> 
-> 🎯 **[Try the live demo →](https://huggingface.co/spaces/tfrere/research-article-template)**
+**A modern, interactive template for scientific writing** that brings papers to life with web-native features, minimal setup, and maximum impact.
+ 
+**[Try the live demo →](https://huggingface.co/spaces/tfrere/research-article-template)**
+
+</div>
 
 ## 🚀 Quick Start
 
