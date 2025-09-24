@@ -1,164 +1,74 @@
 import Note from '../../../components/Note.astro';
-import Accordion from '../../../components/Accordion.astro';
 
-## Import from LaTeX or Notion
+## Import from LaTeX
 
 <Note variant="warning">
-⚠️ **Experimental Features** — These conversion toolkits are in active development and may not work perfectly with all source documents. Results may vary depending on your content structure and complexity.
+⚠️ **Experimental** — May not work with all LaTeX documents.
 </Note>
 
-Convert your existing content directly to this template using our built-in conversion toolkits. Two powerful systems transform different source formats into fully interactive web articles with all template features.
+Transform LaTeX papers into interactive web articles.
 
-### Available Converters
-
-**LaTeX importer** — Transform academic LaTeX papers into interactive web articles
-
-**Notion importerX** — Convert Notion pages with media and components
-
-Both systems preserve your content while adding modern web features: dark mode, responsive design, optimized figures, and live references.
-
-### LaTeX importer
-
-Perfect for academic papers, research documents, and scientific content with equations and references.
-
-#### Quick Start
+### Quick Start
 
 ```bash
-# Navigate to the LaTeX importer
 cd app/scripts/latex-importer/
-
-# Place your LaTeX files in input/
 cp your-paper.tex input/main.tex
 cp your-paper.bib input/main.bib
-cp -r your-figures/ input/figures/
-
-# Run the complete conversion
 node index.mjs
-
-# Your converted article is ready!
-# → output/main.mdx (ready for the template)
-# → assets/image/ (processed figures)
 ```
 
-#### What Gets Converted
+### What Gets Converted
 
-**Mathematical content:**
-- `\label{eq:name}` → Interactive equations with `\htmlId{name}`
-- `\ref{eq:name}` → Clickable equation links
-- Complex math preserved with KaTeX
-
-**References and citations:**
-- `\label{sec:intro}` → Invisible anchors `<span id="intro">`
-- `\ref{sec:intro}` → Working internal links
+- `\label{eq:name}` → Interactive equations
+- `\ref{eq:name}` → Clickable links
+- `\includegraphics{}` → `<Figure>` components
 - Bibliography integration
 
-**Visual elements:**
-- `\includegraphics{}` → `<Figure>` components with zoom
-- `\highlight{text}` → `<mark>` styling  
-- Figure captions and numbering
+### Prerequisites
 
-#### Prerequisites
-
-- **Pandoc** installed (`brew install pandoc`)
-- LaTeX source files and bibliography
-- Figures in supported formats (PNG, JPG, PDF)
-
-### Notion importer
-
-Ideal for collaborative content, documentation, and pages with rich media and interactive elements.
-
-#### Quick Start
-
-```bash
-# Navigate to the Notion importer
-cd app/scripts/notion-importer/
-
-# Install dependencies
-npm install
-
-# Setup environment variables
-cp env.example .env
-# Edit .env with your Notion token
-
-# Configure pages to convert
-# Edit input/pages.json with your page IDs
-
-# Run the complete conversion
-node index.mjs
-
-# Your converted content is ready!
-# → output/*.mdx (ready for the template)
-# → output/media/ (downloaded images and files)
-```
-
-#### What Gets Converted
-
-**Media handling:**
-- Images, files, PDFs automatically downloaded
-- Smart path conversion for web accessibility
-- Figure components with zoom/download functionality
-
-**Interactive components:**
-- Callouts → Astro `Note` components
-- Enhanced tables with styled containers
-- Code blocks with copy functionality
-
-**Smart formatting:**
-- Notion internal links → relative links
-- Artifact cleanup and optimization
-- Automatic frontmatter generation
-
-#### Prerequisites
-
-- **Node.js** with ESM support
-- **Notion Integration**: Set up an integration in your Notion workspace
-- **Notion Token**: Copy the "Internal Integration Token"
-- **Shared Pages**: Share the specific Notion page(s) with your integration
-
-<Accordion title="Advanced conversion options">
-
-**LaTeX importer:**
-```bash
-# Step-by-step conversion
-node latex-converter.mjs    # LaTeX → Markdown  
-node mdx-converter.mjs      # Markdown → MDX
-
-# Bibliography only
-node index.mjs --bib-only
-
-# Clean output before conversion
-node index.mjs --clean
-```
-
-**Notion importer:**
-```bash
-# Full workflow with token
-NOTION_TOKEN=your_token node index.mjs --clean
-
-# Notion to Markdown only
-node index.mjs --notion-only
-
-# Markdown to MDX only  
-node index.mjs --mdx-only
-```
-
-<Note variant="info">
-💡 **Hugging Face Spaces** — When deploying on Hugging Face Spaces, add your `NOTION_TOKEN` to the Space secrets for secure access during the build process.
-</Note>
-
-</Accordion>
+- **Pandoc** (`brew install pandoc`)
+- LaTeX source files and figures
 
 ### Docker Deployment
 
-When deploying on Hugging Face Spaces, you can enable automatic conversion during the build process:
+Set `ENABLE_LATEX_CONVERSION=true` in your Hugging Face Space to enable automatic conversion during build.
 
-- **LaTeX**: Set `ENABLE_LATEX_CONVERSION=true`
-- **Notion**: Set `ENABLE_NOTION_CONVERSION=true`
+## Import from Notion
 
-If these variables are configured in your Space, the build process will automatically execute the conversion, transforming your source content into the final blog post format.
+<Note variant="warning">
+⚠️ **Experimental** — May not work with all Notion pages.
+</Note>
 
-This allows you to maintain source files in your repository while automatically generating the MDX content for production deployment.
+Convert Notion pages into interactive web articles.
 
-### Result
+### Quick Start
 
-Both conversion systems produce fully interactive articles that preserve your original content while gaining all template benefits: responsive design, interactive equations, zoomable figures, and modern web features.
+```bash
+cd app/scripts/notion-importer/
+npm install
+cp env.example .env
+# Edit .env with your Notion token
+# Edit input/pages.json with your page IDs
+node index.mjs
+```
+
+### What Gets Converted
+
+- Images
+- Callouts → `<Sidenote>` components
+- Enhanced tables and code blocks
+- Smart link conversion
+
+### Prerequisites
+
+- **Node.js** with ESM support
+- **Notion Integration** with token
+- **Shared Pages** with your integration
+
+<Note variant="info">
+💡 **Hugging Face Spaces** — Add your `NOTION_TOKEN` to Space secrets for secure access.
+</Note>
+
+### Docker Deployment
+
+Set `ENABLE_NOTION_CONVERSION=true` in your Hugging Face Space to enable automatic conversion during build.
