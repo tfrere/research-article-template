@@ -27,7 +27,25 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 
 ## ✨ Features
 
-`Markdown-based` `KaTeX math` `Syntax highlighting` `Academic citations` `Footnotes & sidenotes` `Table of contents` `Interactive diagrams` `HTML embeds` `Gradio app embeds` `Dataviz color palettes` `Optimized images` `Lightweight bundle` `SEO friendly` `Automatic build` `PDF export` `Dark theme` `Mobile friendly` `LaTeX import` `Template updates`
+![Markdown](https://img.shields.io/badge/Markdown-based-000000?style=flat-square&logo=markdown&logoColor=white)
+![KaTeX](https://img.shields.io/badge/KaTeX%20Math-0081CB?style=flat-square&logo=latex&logoColor=white)
+![Syntax](https://img.shields.io/badge/Syntax%20Highlighting-FF6B6B?style=flat-square&logo=prism&logoColor=white)
+![Citations](https://img.shields.io/badge/Academic%20Citations-4ECDC4?style=flat-square&logo=readthedocs&logoColor=white)
+![Footnotes](https://img.shields.io/badge/Footnotes%20%26%20Sidenotes-45B7D1?style=flat-square&logo=gitbook&logoColor=white)
+![TOC](https://img.shields.io/badge/Table%20of%20Contents-96CEB4?style=flat-square&logo=gitbook&logoColor=white)
+![Diagrams](https://img.shields.io/badge/Interactive%20Diagrams-FFEAA7?style=flat-square&logo=mermaid&logoColor=black)
+![HTML](https://img.shields.io/badge/HTML%20Embeds-F39C12?style=flat-square&logo=html5&logoColor=white)
+![Gradio](https://img.shields.io/badge/Gradio%20Apps-FF6B6B?style=flat-square&logo=gradio&logoColor=white)
+![Colors](https://img.shields.io/badge/Dataviz%20Palettes-6C5CE7?style=flat-square&logo=palette&logoColor=white)
+![Images](https://img.shields.io/badge/Optimized%20Images-00B894?style=flat-square&logo=image&logoColor=white)
+![Bundle](https://img.shields.io/badge/Lightweight%20Bundle-00CEC9?style=flat-square&logo=webpack&logoColor=white)
+![SEO](https://img.shields.io/badge/SEO%20Friendly-6C5CE7?style=flat-square&logo=seo&logoColor=white)
+![Build](https://img.shields.io/badge/Automatic%20Build-00B894?style=flat-square&logo=github-actions&logoColor=white)
+![PDF](https://img.shields.io/badge/PDF%20Export-E17055?style=flat-square&logo=adobe-acrobat-reader&logoColor=white)
+![Dark](https://img.shields.io/badge/Dark%20Theme-2D3436?style=flat-square&logo=moon&logoColor=white)
+![Mobile](https://img.shields.io/badge/Mobile%20Friendly-74B9FF?style=flat-square&logo=mobile&logoColor=white)
+![LaTeX](https://img.shields.io/badge/LaTeX%20Import-0081CB?style=flat-square&logo=latex&logoColor=white)
+![Updates](https://img.shields.io/badge/Template%20Updates-00B894?style=flat-square&logo=git&logoColor=white)
 
 ## 🚀 Quick Start
 
