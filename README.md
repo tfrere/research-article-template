@@ -10,6 +10,8 @@ app_port: 8080
 thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jpg
 ---
 
+<div align="center">
+
 # 📝 Research Article Template
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
@@ -17,29 +19,13 @@ thumbnail: https://huggingface.co/spaces/tfrere/research-paper-template/thumb.jp
 [![Astro](https://img.shields.io/badge/Astro-4.10.0-orange.svg)](https://astro.build/)
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tfrere/research-article-template)
 
+</div>
+
 > **A modern, interactive template for scientific writing** that brings papers to life with web-native features, minimal setup, and maximum impact.
 
 ## ✨ Features
 
-- 🎯 **Markdown-based** - Write in familiar Markdown/MDX
-- 🧮 **KaTeX math** - Beautiful mathematical notation
-- 🎨 **Syntax highlighting** - Code blocks with proper highlighting
-- 📚 **Academic citations** - BibTeX integration
-- 📝 **Footnotes & sidenotes** - Rich annotation system
-- 📋 **Table of contents** - Auto-generated navigation
-- 📊 **Interactive diagrams** - Mermaid, Plotly, D3.js ready
-- 🎭 **HTML embeds** - Include any web content
-- 🤖 **Gradio app embeds** - Interactive ML demos
-- 🎨 **Dataviz color palettes** - Consistent visual design
-- 🖼️ **Optimized images** - Automatic optimization
-- ⚡ **Lightweight bundle** - Fast loading
-- 🔍 **SEO friendly** - Search engine optimized
-- 🏗️ **Automatic build** - CI/CD ready
-- 📄 **PDF export** - Generate publication-ready PDFs
-- 🌙 **Dark theme** - Modern UI with theme toggle
-- 📱 **Mobile friendly** - Responsive design
-- 📥 **LaTeX import** - Convert existing papers
-- 🔄 **Template updates** - Stay current with improvements
+`🎯 Markdown-based` `🧮 KaTeX math` `🎨 Syntax highlighting` `📚 Academic citations` `📝 Footnotes & sidenotes` `📋 Table of contents` `📊 Interactive diagrams` `🎭 HTML embeds` `🤖 Gradio app embeds` `🎨 Dataviz color palettes` `🖼️ Optimized images` `⚡ Lightweight bundle` `🔍 SEO friendly` `🏗️ Automatic build` `📄 PDF export` `🌙 Dark theme` `📱 Mobile friendly` `📥 LaTeX import` `🔄 Template updates`
 
 ## 🚀 Quick Start
 
