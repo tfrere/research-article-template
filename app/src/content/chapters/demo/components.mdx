@@ -1,4 +1,4 @@
-import { Image } from 'astro:assets';
+import { Image as AstroImage } from 'astro:assets';
 import placeholder from '../../assets/image/placeholder.png';
 import audioDemo from '../../assets/audio/audio-example.wav';
 import HtmlEmbed from '../../../components/HtmlEmbed.astro';
@@ -7,9 +7,10 @@ import Wide from '../../../components/Wide.astro';
 import Note from '../../../components/Note.astro';
 import FullWidth from '../../../components/FullWidth.astro';
 import Accordion from '../../../components/Accordion.astro';
-import Figure from '../../../components/Figure.astro';
-import SubFigures from '../../../components/MultiFigure.astro';
+import Image from '../../../components/Image.astro';
+import MultiImage from '../../../components/MultiImage.astro';
 import Quote from '../../../components/Quote.astro';
+import Reference from '../../../components/Reference.astro';
 
 ## Components
 
@@ -20,13 +21,13 @@ import Quote from '../../../components/Quote.astro';
 To use any component in your MDX file, add the import statement at the top:
 
 ```mdx
-import Figure from '../components/Figure.astro';
-import SubFigures from '../components/MultiFigure.astro';
+import Image from '../components/Image.astro';
+import MultiImage from '../components/MultiImage.astro';
 import Note from '../components/Note.astro';
 
 # Your content
 
-<Figure src={myImage} alt="Description" />
+<Image src={myImage} alt="Description" />
 <Note>This is a note</Note>
 ```
 
@@ -34,13 +35,13 @@ Here are the components that are available:
 
 
 <div className="feature-grid">
-  <a href="#figure" className="feature-card">
-    <strong>Figure</strong>
+  <a href="#image" className="feature-card">
+    <strong>Image</strong>
     <span>Optimized images</span>
   </a>
-  <a href="#subfigures" className="feature-card">
-    <strong>SubFigures</strong>
-    <span>Multi-panel figures</span>
+  <a href="#multiimage" className="feature-card">
+    <strong>MultiImage</strong>
+    <span>Multi-panel images</span>
   </a>
   <a href="#placement" className="feature-card">
     <strong>Placement</strong>
@@ -62,18 +63,22 @@ Here are the components that are available:
     <strong>HtmlEmbed</strong>
     <span>External content</span>
   </a>
+  <a href="#reference" className="feature-card">
+    <strong>Reference</strong>
+    <span>Flexible content wrapper</span>
+  </a>
   <a href="#iframe" className="feature-card">
     <strong>Iframe</strong>
     <span>Web embeds</span>
   </a>
 </div>
 
-### Figure
+### Image
 
-**Figures** automatically generate optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
+**Images** automatically generate optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
 
 
-<Figure
+<Image
   src={placeholder}
   zoomable
   downloadable
@@ -94,12 +99,12 @@ Here are the components that are available:
 
 <Accordion title="Code example">
 ```mdx
-import Figure from '../../../components/Figure.astro'
+import Image from '../../../components/Image.astro'
 import myImage from './assets/image/placeholder.jpg'
 
-<Figure src={myImage} alt="Optimized figure with caption" />
+<Image src={myImage} alt="Optimized image with caption" />
 
-<Figure
+<Image
   src={myImage}
   layout="fixed"
   zoomable
@@ -111,11 +116,11 @@ import myImage from './assets/image/placeholder.jpg'
 ```
 </Accordion>
 
-### SubFigures
+### MultiImage
 
-**Display multiple figures** in a grid layout with customizable columns and captions. Perfect for **multi-panel figures**, **comparisons**, and **step-by-step visualizations** — just like LaTeX's `subfigure` environment.
+**Display multiple images** in a grid layout with customizable columns and captions. Perfect for **multi-panel images**, **comparisons**, and **step-by-step visualizations** — just like LaTeX's `subfigure` environment.
 
-<SubFigures
+<MultiImage
   images={[
     { src: placeholder, alt: "Image 1", caption: "First image with caption" },
     { src: placeholder, alt: "Image 2", caption: "Second image" },
@@ -130,7 +135,7 @@ import myImage from './assets/image/placeholder.jpg'
 ```mdx
 import placeholder from '../assets/image/placeholder.png';
 
-<SubFigures
+<MultiImage
   images={[
     { src: placeholder, alt: "Panel A", caption: "(a) First panel" },
     { src: placeholder, alt: "Panel B", caption: "(b) Second panel" },
@@ -143,8 +148,15 @@ import placeholder from '../assets/image/placeholder.png';
 ```
 </Accordion>
 
-**Layout options:** `2-column`, `3-column`, `4-column`, `auto`  
-**Features:** Individual subcaptions (a), (b), (c), zoom functionality, responsive design
+| Prop                   | Required | Type                                                                  | Description                                                                                                         
+|------------------------|----------|-----------------------------------------------------------------------|-------------------------------------------------------
+| `images`               | Yes      | `ImageItem[]`                                                         | Array of image objects with `src`, `alt`, and optional `caption`, `id`, `zoomable`, `downloadable` properties                                                                             
+| `layout`               | No       | `"2-column" \| "3-column" \| "4-column" \| "auto"`                    | Grid layout for the images (default: "3-column")                                                                                               
+| `caption`              | No       | `string`                                                               | Global caption for the entire multi-image figure                                                                                          
+| `zoomable`             | No       | `boolean`                                                              | Enable zoom functionality on all images (can be overridden per image)                                                                                               
+| `downloadable`         | No       | `boolean`                                                              | Show download buttons on all images (can be overridden per image)                                                                                               
+| `class`                | No       | `string`                                                               | Additional CSS classes to apply to the wrapper                                                                                          
+| `id`                   | No       | `string`                                                               | Global ID for the multi-image figure (for deep-linking and cross-references)                                                                                          
 
 ### Placement
 
@@ -199,6 +211,53 @@ import FullWidth from '../../../components/FullWidth.astro'
 </FullWidth>
 ```
 </Accordion>
+
+
+### Reference
+
+The **Reference** component provides a flexible wrapper for any content with an ID and HTML caption. It's perfect for creating **numbered references**, **cross-references**, or **any content that needs to be referenced** throughout your article.
+
+<Note emoji="💡" variant="info">
+  **Note:** The `Image` and `HtmlEmbed` components also support the same `id` and `caption` props for consistent referencing across your article.
+</Note>
+
+<Reference id="example-reference" caption="<strong>Figure 1:</strong> Example reference with HTML caption and <em>styling</em>">
+  you content here...
+</Reference>
+
+| Prop     | Required | Type   | Description                    |
+|----------|----------|--------|--------------------------------|
+| `id`     | Yes      | string | Unique identifier for the reference (used for deep-linking) |
+| `caption`| Yes      | string | HTML caption displayed below the content (supports HTML tags) |
+
+<Accordion title="Code example">
+```mdx
+import Reference from '../../../components/Reference.astro'
+
+<Reference id="my-reference" caption="<strong>Reference 1:</strong> This is a <em>flexible</em> content wrapper">
+  <p>Any content can go here...</p>
+  <img src={myImage} alt="Description" />
+  <div>Even complex HTML structures!</div>
+</Reference>
+
+<Reference id="another-ref" caption="<strong>Table 1:</strong> Data comparison with <a href='#'>source link</a>">
+  <table>
+    <thead>
+      <tr><th>Column 1</th><th>Column 2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Data 1</td><td>Data 2</td></tr>
+    </tbody>
+  </table>
+</Reference>
+```
+</Accordion>
+
+**Use cases:**
+- **Numbered figures** with custom content
+- **Cross-references** that can be linked to from anywhere in the article
+- **Flexible content blocks** that need consistent styling and captioning
+- **Tables, charts, or any content** that requires an ID and description
 
 
 ### Accordion
@@ -276,7 +335,7 @@ Small contextual callout for tips, caveats, or emphasis.
 | `title`  | No       | string                       | Short title displayed in header     |
 | `emoji`  | No       | string                       | Emoji displayed before the title    |
 | `class`  | No       | string                       | Extra classes for custom styling    |
-| `variant`| No       | 'info' | 'success' | 'danger' | Visual intent of the note          |
+| `variant`| No       | 'neutral' | 'info' | 'success' | 'danger' | Visual intent of the note          |
 
 <Accordion title="Code example">
 ```mdx

@@ -1,6 +1,6 @@
 ---
 // @ts-ignore - types provided by Astro at runtime
-import { Image } from "astro:assets";
+import { Image as AstroImage } from "astro:assets";
 
 interface Props {
   /** Source image imported via astro:assets */
@@ -25,7 +25,7 @@ interface Props {
   linkTarget?: string;
   /** Optional rel for the link (default: noopener noreferrer when linkHref provided) */
   linkRel?: string;
-  /** Any additional attributes should be forwarded to the underlying <Image> */
+  /** Any additional attributes should be forwarded to the underlying <AstroImage> */
   [key: string]: any;
 }
 
@@ -71,7 +71,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
                 target={resolvedTarget}
                 rel={resolvedRel}
               >
-                <Image
+                <AstroImage
                   {...imgProps}
                   data-zoomable={dataZoomable}
                   data-downloadable={dataDownloadable}
@@ -80,7 +80,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
                 />
               </a>
             ) : (
-              <Image
+              <AstroImage
                 {...imgProps}
                 data-zoomable={dataZoomable}
                 data-downloadable={dataDownloadable}
@@ -108,10 +108,10 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
             target={resolvedTarget}
             rel={resolvedRel}
           >
-            <Image {...imgProps} data-zoomable={dataZoomable} />
+            <AstroImage {...imgProps} data-zoomable={dataZoomable} />
           </a>
         ) : (
-          <Image {...imgProps} data-zoomable={dataZoomable} />
+          <AstroImage {...imgProps} data-zoomable={dataZoomable} />
         )}
         <figcaption>
           {hasCaptionSlot ? (
@@ -130,7 +130,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
             target={resolvedTarget}
             rel={resolvedRel}
           >
-            <Image
+            <AstroImage
               {...imgProps}
               data-zoomable={dataZoomable}
               data-downloadable={dataDownloadable}
@@ -139,7 +139,7 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
             />
           </a>
         ) : (
-          <Image
+          <AstroImage
             {...imgProps}
             data-zoomable={dataZoomable}
             data-downloadable={dataDownloadable}
@@ -165,10 +165,10 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
         target={resolvedTarget}
         rel={resolvedRel}
       >
-        <Image {...imgProps} data-zoomable={dataZoomable} />
+        <AstroImage {...imgProps} data-zoomable={dataZoomable} />
       </a>
     ) : (
-      <Image {...imgProps} data-zoomable={dataZoomable} />
+      <AstroImage {...imgProps} data-zoomable={dataZoomable} />
     )
   }
 </div>

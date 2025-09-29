@@ -1,6 +1,6 @@
 ---
 // @ts-ignore - types provided by Astro at runtime
-import Figure from "./Figure.astro";
+import Image from "./Image.astro";
 
 interface ImageItem {
     /** Source image imported via astro:assets */
@@ -83,7 +83,7 @@ const gridColumns = getGridColumns();
                 >
                     {images.map((image, index) => (
                         <div class="multi-image-item">
-                            <Figure
+                            <Image
                                 src={image.src}
                                 alt={image.alt}
                                 zoomable={image.zoomable ?? zoomable}
@@ -121,7 +121,7 @@ const gridColumns = getGridColumns();
             >
                 {images.map((image, index) => (
                     <div class="multi-image-item">
-                        <Figure
+                        <Image
                             src={image.src}
                             alt={image.alt}
                             zoomable={image.zoomable ?? zoomable}

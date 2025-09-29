@@ -8,18 +8,12 @@
 .content-grid main td {
   border-bottom: 1px solid var(--border-color);
   padding: 6px 8px;
-  text-align: left;
   font-size: 15px;
   white-space: nowrap;
   /* prevent squashing; allow horizontal scroll instead */
   word-break: auto-phrase;
   white-space: break-spaces;
   vertical-align: top;
-}
-
-.content-grid main th:last-child,
-.content-grid main td:last-child {
-  text-align: right;
 }
 
 .content-grid main thead th {

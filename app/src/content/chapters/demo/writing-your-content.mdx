@@ -1,5 +1,5 @@
 {/* IMPORTS */}
-import { Image } from 'astro:assets';
+import { Image as AstroImage } from 'astro:assets';
 import placeholder from '../../assets/image/placeholder.png';
 import Sidenote from '../../../components/Sidenote.astro';
 import Wide from '../../../components/Wide.astro';
@@ -87,7 +87,7 @@ Your story. Write your content here.
 <small className="muted">**Content** in app/src/content/article.mdx</small>
 ```mdx
 import placeholder from '../../assets/image/placeholder.png'
-import Figure from '../../../components/Figure.astro'
+import Image from '../../../components/Image.astro'
 import Sidenote from '../../../components/Sidenote.astro'
 
 This paragraph is written in Markdown.
@@ -95,7 +95,7 @@ This paragraph is written in Markdown.
 <Sidenote>
   A short callout inserted via a component.
 </Sidenote>
-<Figure src={placeholder} alt="Sample image with optimization" />
+<Image src={placeholder} alt="Sample image with optimization" />
 
 This paragraph is also written in Markdown. 
 ```

@@ -6,7 +6,7 @@ import Wide from '../../../components/Wide.astro';
 import Note from '../../../components/Note.astro';
 import FullWidth from '../../../components/FullWidth.astro';
 import Accordion from '../../../components/Accordion.astro';
-import Figure from '../../../components/Figure.astro';
+import Image from '../../../components/Image.astro';
 
 ## Markdown
 
@@ -284,6 +284,7 @@ The **citation keys** come from `app/src/content/bibliography.bib`.
 
 In research articles, you may have to make references to anything. They are basically html anchors. They can be used internally in the article or externally in other articles.
 
+
 1. **Title**<br/>
   Each title is automatically generated with a slugged version  from the citation key. ( slugged title from the citation key )
   like for example, the id `#mermaid-diagrams` is generated from the `Mermaid diagrams` title.
@@ -293,6 +294,10 @@ In research articles, you may have to make references to anything. They are basi
   You can make a link to an image or a chart by adding an ID on it.<br/>`<HtmlEmbed id="neural-network-mnist-like"/>` then you can link to it with a link like `<a href="#neural-network-mnist-like">Fig 1</a>`.
   <br/><br/>**Example** [Chart 1](#neural-network-mnist-like) or [Fig 1](#placeholder-image)
 
+<Note emoji="💡" variant="info">
+  **Available with:** `Reference`, `Image`, and `HtmlEmbed` components all support the `id` prop for creating referenceable anchors.
+</Note>
+
 <Accordion title="Code example">
 ```mdx
   #### Mermaid diagrams
@@ -301,7 +306,7 @@ In research articles, you may have to make references to anything. They are basi
   <HtmlEmbed id="neural-network-mnist-like"/>
   [Chart 1](#neural-network-mnist-like)
 
-  <Figure id="placeholder-image" src="..."/>
+  <Image id="placeholder-image" src="..."/>
   [Fig 1](#placeholder-image)
 ```
 </Accordion>
@@ -400,19 +405,23 @@ Next section begins here.
 
 ### Table
 
-Use pipe tables like `| Column |` with header separator `| --- |`.
+Use pipe tables like `| Column |` with header separator `| --- |`. You can control alignment with `:---` (left), `:---:` (center), and `---:` (right).
 
-| Method | Score |
-|---|---|
-| A | 0.78 |
-| B | 0.86 |
+| Model | Accuracy | F1-Score | Training Time | Status |
+|:---|:---:|:---:|---:|:---:|
+| **BERT-base** | 0.89 | 0.89 | 2.5h | ✅ |
+| **RoBERTa-large** | 0.92 | 0.92 | 4.2h | ✅ |
+| **DeBERTa-v3** | 0.94 | 0.94 | 5.8h | ✅ |
+| **GPT-3.5-turbo** | 0.91 | 0.91 | 0.1h | ✅ |
 
 <Accordion title="Code example">
 ```mdx
-| Method | Score |
-| --- | --- |
-| A | 0.78 |
-| B | 0.86 |
+| Model | Accuracy | F1-Score | Training Time | Status |
+|:---|:---:|:---:|---:|:---:|
+| **BERT-base** | 0.89 | 0.89 | 2.5h | ✅ |
+| **RoBERTa-large** | 0.92 | 0.92 | 4.2h | ✅ |
+| **DeBERTa-v3** | 0.94 | 0.94 | 5.8h | ✅ |
+| **GPT-3.5-turbo** | 0.91 | 0.91 | 0.1h | ✅ |
 ```
 </Accordion>
 
