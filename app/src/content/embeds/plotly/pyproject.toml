@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "blogpost-fine-tasks-python"
+version = "0.1.0"
+description = "Plotly fragment generation scripts and HTML/Markdown conversions for the blogpost."
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+Markdown = "^3.6"
+requests = "^2.32.3"
+numpy = "^2.0.0"
+pandas = "^2.2.2"
+plotly = "^5.24.0"
+
+[tool.poetry.scripts]
+html-to-md = "convert_to_md:main"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"
