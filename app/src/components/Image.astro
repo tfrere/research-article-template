@@ -25,6 +25,8 @@ interface Props {
   linkTarget?: string;
   /** Optional rel for the link (default: noopener noreferrer when linkHref provided) */
   linkRel?: string;
+  /** Make the image span full width */
+  fullWidth?: boolean;
   /** Any additional attributes should be forwarded to the underlying <AstroImage> */
   [key: string]: any;
 }
@@ -39,11 +41,13 @@ const {
   linkHref,
   linkTarget,
   linkRel,
+  fullWidth,
   ...imgProps
 } = Astro.props as Props;
 const hasCaptionSlot = Astro.slots.has("caption");
 const hasCaption =
   hasCaptionSlot || (typeof caption === "string" && caption.length > 0);
+const hasTitle = Astro.slots.has("title");
 const uid = `ri_${Math.random().toString(36).slice(2)}`;
 const dataZoomable =
   zoomable === true || (imgProps as any)["data-zoomable"] ? "1" : undefined;
@@ -56,7 +60,12 @@ const resolvedTarget = hasLink ? linkTarget || "_blank" : undefined;
 const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
 ---
 
-<div class="ri-root" data-ri-root={uid}>
+<div
+  class={`ri-root`}
+  data-ri-root={uid}
+  data-has-title={hasTitle}
+  data-has-caption={hasCaption}
+>
   {
     hasCaption ? (
       <figure
@@ -165,10 +174,18 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
         target={resolvedTarget}
         rel={resolvedRel}
       >
-        <AstroImage {...imgProps} data-zoomable={dataZoomable} />
+        <AstroImage
+          {...imgProps}
+          data-zoomable={dataZoomable}
+          class={fullWidth ? "full" : ""}
+        />
       </a>
     ) : (
-      <AstroImage {...imgProps} data-zoomable={dataZoomable} />
+      <AstroImage
+        {...imgProps}
+        data-zoomable={dataZoomable}
+        class={fullWidth ? "full" : ""}
+      />
     )
   }
 </div>
@@ -471,5 +488,21 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
   }
   [data-theme="dark"] .img-dl-btn:hover {
     background: var(--primary-color-hover);
+  }
+
+  /* Conditional margins based on title and caption presence */
+  .ri-root:not([data-has-title="true"]) {
+    margin-top: 20px;
+  }
+
+  .ri-root:not([data-has-caption="true"]) {
+    margin-bottom: 20px;
+  }
+
+  /* full image styles */
+  img.full {
+    width: 100% !important;
+    min-width: 100%;
+    max-width: 100%;
   }
 </style>
