@@ -91,58 +91,33 @@ const pdfBase = titleRaw ? stripHtml(titleRaw) : stripHtml(title);
 const pdfFilename = `${slugify(pdfBase)}.pdf`;
 ---
 
-<section class="w-full pt-12 pb-4 px-4 text-center">
-  <h1
-    class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight m-0 mb-2 max-w-full mx-auto"
-    set:html={title}
-  />
-  <div class="max-w-4xl mx-auto">
+<section class="hero">
+  <h1 class="hero-title" set:html={title} />
+  <div class="hero-banner">
     <HtmlEmbed src="banner.html" frameless />
-    {
-      description && (
-        <p class="text-gray-500 dark:text-gray-400 italic m-0 mb-4">
-          {description}
-        </p>
-      )
-    }
+    {description && <p class="hero-desc">{description}</p>}
   </div>
 </section>
 
-<header
-  class="border-t border-b border-gray-200 dark:border-gray-700 py-4 text-sm"
-  aria-label="Article meta information"
->
-  <div
-    class="max-w-4xl mx-auto flex flex-row justify-between px-4 gap-2 md:flex md:gap-2 max-md:flex-wrap"
-  >
+<header class="meta" aria-label="Article meta information">
+  <div class="meta-container">
     {
       normalizedAuthors.length > 0 && (
-        <div class="meta-cell flex flex-col gap-2 max-w-64 md:min-w-0 max-xs:text-center">
-          <h3 class="m-0 text-xs font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Author{normalizedAuthors.length > 1 ? "s" : ""}
-          </h3>
-          <ul class="m-0 list-none p-0 flex flex-wrap">
+        <div class="meta-container-cell">
+          <h3>Author{normalizedAuthors.length > 1 ? "s" : ""}</h3>
+          <ul class="authors">
             {normalizedAuthors.map((a, i) => {
               const supers =
                 shouldShowAffiliationSupers &&
                 Array.isArray(a.affiliationIndices) &&
                 a.affiliationIndices.length ? (
-                  <sup>{a.affiliationIndices.join(",")}</sup>
+                  <sup>{a.affiliationIndices.join(", ")}</sup>
                 ) : null;
               return (
-                <li class="whitespace-nowrap mr-1">
-                  {a.url ? (
-                    <a
-                      href={a.url}
-                      class="text-blue-600 dark:text-blue-400 underline underline-offset-2 decoration-1 decoration-blue-300 dark:decoration-blue-500 hover:decoration-blue-500 dark:hover:decoration-blue-400 transition-colors duration-150"
-                    >
-                      {a.name}
-                    </a>
-                  ) : (
-                    a.name
-                  )}
+                <li>
+                  {a.url ? <a href={a.url}>{a.name}</a> : a.name}
                   {supers}
-                  {i < normalizedAuthors.length - 1 && ", "}
+                  {i < normalizedAuthors.length - 1 && <span set:html=",&nbsp;" />}
                 </li>
               );
             })}
@@ -152,21 +127,14 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     }
     {
       Array.isArray(affiliations) && affiliations.length > 0 && (
-        <div class="meta-cell flex flex-col gap-2 max-w-64 max-md:text-right md:min-w-0 max-xs:text-center">
-          <h3 class="m-0 text-xs font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Affiliation{affiliations.length > 1 ? "s" : ""}
-          </h3>
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation{affiliations.length > 1 ? "s" : ""}</h3>
           {hasMultipleAffiliations ? (
-            <ol class="m-0 pl-5 max-xs:list-inside max-xs:pl-0 max-xs:ml-0">
+            <ol class="affiliations">
               {affiliations.map((af) => (
-                <li value={af.id} class="m-0 max-xs:text-center">
+                <li value={af.id}>
                   {af.url ? (
-                    <a
-                      href={af.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-blue-600 dark:text-blue-400 underline underline-offset-2 decoration-1 decoration-blue-300 dark:decoration-blue-500 hover:decoration-blue-500 dark:hover:decoration-blue-400 transition-colors duration-150"
-                    >
+                    <a href={af.url} target="_blank" rel="noopener noreferrer">
                       {af.name}
                     </a>
                   ) : (
@@ -176,13 +144,12 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
               ))}
             </ol>
           ) : (
-            <p class="m-0">
+            <p>
               {affiliations[0]?.url ? (
                 <a
                   href={affiliations[0].url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-blue-600 dark:text-blue-400 underline underline-offset-2 decoration-1 decoration-blue-300 dark:decoration-blue-500 hover:decoration-blue-500 dark:hover:decoration-blue-400 transition-colors duration-150"
                 >
                   {affiliations[0].name}
                 </a>
@@ -196,21 +163,17 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     }
     {
       (!affiliations || affiliations.length === 0) && affiliation && (
-        <div class="meta-cell flex flex-col gap-2 max-w-64 max-md:text-right md:min-w-0 max-xs:text-center">
-          <h3 class="m-0 text-xs font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Affiliation
-          </h3>
-          <p class="m-0">{affiliation}</p>
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation</h3>
+          <p>{affiliation}</p>
         </div>
       )
     }
     {
       published && (
-        <div class="meta-cell flex flex-col gap-2 max-w-64 md:min-w-0 max-xs:text-center">
-          <h3 class="m-0 text-xs font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Published
-          </h3>
-          <p class="m-0">{published}</p>
+        <div class="meta-container-cell meta-container-cell--published">
+          <h3>Published</h3>
+          <p>{published}</p>
         </div>
       )
     }
@@ -220,17 +183,11 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
         <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
       </div>
     )} -->
-    <div
-      class="meta-cell flex flex-col gap-2 max-w-64 max-md:text-right md:min-w-0 max-xs:text-center"
-    >
-      <h3
-        class="m-0 text-xs font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-      >
-        PDF
-      </h3>
-      <p class="m-0">
+    <div class="meta-container-cell meta-container-cell--pdf">
+      <h3>PDF</h3>
+      <p>
         <a
-          class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150 no-underline"
+          class="button"
           href={`/${pdfFilename}`}
           download={pdfFilename}
           aria-label={`Download PDF ${pdfFilename}`}
@@ -243,18 +200,112 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
 </header>
 
 <style>
-  /* Flex behavior for meta cells */
-  .meta-cell {
-    flex: 1 1 calc(50% - 8px);
+  /* Hero (full-width) */
+  .hero {
+    width: 100%;
+    padding: 48px 16px 16px;
+    text-align: center;
+  }
+  .hero-title {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    max-width: 100%;
+    margin: auto;
+  }
+  .hero-banner {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .hero-desc {
+    color: var(--muted-color);
+    font-style: italic;
+    margin: 0 0 16px 0;
   }
 
-  .meta-cell.max-xs\:flex-1 {
-    flex: 1 1 100% !important;
+  /* Meta (byline-like header) */
+  .meta {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .meta-container {
+    max-width: 760px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 0 auto;
+    padding: 0 var(--content-padding-x);
+    gap: 8px;
+  }
+  /* Subtle underline for links in meta; keep buttons without underline */
+  .meta-container a:not(.button) {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 0.06em;
+    text-decoration-color: var(--link-underline);
+    transition: text-decoration-color 0.15s ease-in-out;
+  }
+  .meta-container a:hover {
+    text-decoration-color: var(--link-underline-hover);
+  }
+  .meta-container a.button,
+  .meta-container .button {
+    text-decoration: none;
+  }
+  .meta-container-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 250px;
+  }
+  .meta-container-cell h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted-color);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .meta-container-cell p {
+    margin: 0;
+  }
+  .authors {
+    margin: 0;
+    list-style-type: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .authors li {
+    white-space: nowrap;
+  }
+  .affiliations {
+    margin: 0;
+    padding-left: 1.25em;
+  }
+  .affiliations li {
+    margin: 0;
+  }
+
+  header.meta .meta-container {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .meta-container-cell--affiliations,
+    .meta-container-cell--pdf {
+      text-align: right;
+    }
   }
 
   @media print {
-    .max-md\\:text-right {
-      @apply hidden;
+    .meta-container-cell--pdf {
+      display: none !important;
     }
   }
 </style>

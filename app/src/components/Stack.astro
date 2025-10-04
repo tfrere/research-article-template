@@ -87,7 +87,7 @@ const gapSize = getGapSize();
     }
 
     .stack[data-layout="auto"] {
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
 
     /* Default layout (2-column) */
@@ -139,6 +139,7 @@ const gapSize = getGapSize();
         .stack[data-layout="3-column"],
         .stack[data-layout="4-column"],
         .stack[data-layout="2-column"],
+        .stack[data-layout="auto"],
         .stack:not([data-layout]) {
             grid-template-columns: 1fr !important;
         }
@@ -146,7 +147,8 @@ const gapSize = getGapSize();
 
     @media (min-width: 769px) and (max-width: 1100px) {
         .stack[data-layout="3-column"],
-        .stack[data-layout="4-column"] {
+        .stack[data-layout="4-column"],
+        .stack[data-layout="auto"] {
             grid-template-columns: repeat(2, 1fr) !important;
         }
     }
