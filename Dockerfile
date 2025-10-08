@@ -36,6 +36,9 @@ RUN if [ "$ENABLE_LATEX_CONVERSION" = "true" ]; then \
 ARG ENABLE_NOTION_IMPORT=false
 ARG NOTION_TOKEN
 ARG NOTION_PAGE_ID
+# Convert ARG to ENV so they're available to Node.js
+ENV NOTION_TOKEN=$NOTION_TOKEN
+ENV NOTION_PAGE_ID=$NOTION_PAGE_ID
 RUN if [ "$ENABLE_NOTION_IMPORT" = "true" ]; then \
     echo "🔄 Notion importer enabled - running notion:import..."; \
     npm run notion:import; \
