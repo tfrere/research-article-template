@@ -1,5 +1,5 @@
 ---
-title: 'Bringing paper to life: A modern template for scientific writing'
+title: 'Smollm blogpost - notion import'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo
