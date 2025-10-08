@@ -8,8 +8,8 @@ import { convertNotionToMarkdown } from './notion-converter.mjs';
 import { convertToMdx } from './mdx-converter.mjs';
 import { Client } from '@notionhq/client';
 
-// Load environment variables from .env file
-config();
+// Load environment variables from .env file (but don't override existing ones)
+config({ override: false });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

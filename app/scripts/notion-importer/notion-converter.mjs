@@ -10,8 +10,8 @@ import { fileURLToPath } from 'url';
 import { postProcessMarkdown } from './post-processor.mjs';
 import { createCustomCodeRenderer } from './custom-code-renderer.mjs';
 
-// Load environment variables from .env file
-config();
+// Load environment variables from .env file (but don't override existing ones)
+config({ override: false });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
