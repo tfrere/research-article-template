@@ -45,13 +45,7 @@ RUN set -e; \
     mkdir -p public/data; \
     cp -a src/content/assets/data/. public/data/
 
-# Build the application
-RUN echo "🔍 Debug: Checking if article.mdx exists..." && \
-    ls -lh src/content/article.mdx && \
-    echo "🔍 Debug: Checking if Figure component exists..." && \
-    ls -lh src/components/Figure.astro && \
-    echo "🔍 Debug: First 20 lines of article.mdx:" && \
-    head -20 src/content/article.mdx
+# Build the application (with minimal placeholder content)
 RUN npm run build
 
 # Generate the PDF (light theme, full wait)

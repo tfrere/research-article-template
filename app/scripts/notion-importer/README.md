@@ -73,7 +73,7 @@ notion-importer/
 ### 🎯 **Advanced Media Handling**
 - **Local download**: Automatic download of all Notion media (images, files, PDFs)
 - **Path transformation**: Smart path conversion for web accessibility
-- **Figure components**: Automatic conversion to Astro `Figure` components with zoom/download
+- **Image components**: Automatic conversion to Astro `Image` components with zoom/download
 - **Media organization**: Structured media storage by page ID
 
 ### 🧮 **Interactive Components**
@@ -121,7 +121,7 @@ published: "2024-01-15"
 tableOfContentsAutoCollapse: true
 ---
 
-import Figure from '../components/Figure.astro';
+import Image from '../components/Image.astro';
 import Note from '../components/Note.astro';
 import gettingStartedImage from './media/getting-started/image1.png';
 

@@ -122,12 +122,12 @@ function addComponentImports(content) {
 }
 
 /**
- * Transform Notion images to Figure components
+ * Transform Notion images to Image components
  * @param {string} content - MDX content
- * @returns {string} - Content with Figure components
+ * @returns {string} - Content with Image components
  */
 function transformImages(content) {
-    console.log('  🖼️  Transforming images to Figure components...');
+    console.log('  🖼️  Transforming images to Image components...');
 
     let hasImages = false;
 
@@ -163,8 +163,8 @@ function transformImages(content) {
             : cleaned;
     };
 
-    // Create Figure component with import
-    const createFigureComponent = (src, alt = '', caption = '') => {
+    // Create Image component with import
+    const createImageComponent = (src, alt = '', caption = '') => {
         const cleanSrc = cleanSrcPath(src);
 
         // Skip PDF URLs and external URLs - they should remain as links only
@@ -177,7 +177,7 @@ function transformImages(content) {
 
         const varName = generateImageVarName(cleanSrc);
         imageImports.set(cleanSrc, varName);
-        usedComponents.add('Figure');
+        usedComponents.add('Image');
 
         const props = [];
         props.push(`src={${varName}}`);
@@ -187,30 +187,30 @@ function transformImages(content) {
         if (alt) props.push(`alt="${alt}"`);
         if (caption) props.push(`caption={'${caption}'}`);
 
-        return `<Figure\n  ${props.join('\n  ')}\n/>`;
+        return `<Image\n  ${props.join('\n  ')}\n/>`;
     };
 
     // Transform markdown images: ![alt](src)
     content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
         const cleanSrc = cleanSrcPath(src);
-        const cleanAlt = cleanAltText(alt || 'Figure');
+        const cleanAlt = cleanAltText(alt || 'Image');
         hasImages = true;
 
-        return createFigureComponent(cleanSrc, cleanAlt);
+        return createImageComponent(cleanSrc, cleanAlt);
     });
 
     // Transform images with captions (Notion sometimes adds captions as separate text)
     content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*\n\s*([^\n]+)/g, (match, alt, src, caption) => {
         const cleanSrc = cleanSrcPath(src);
-        const cleanAlt = cleanAltText(alt || 'Figure');
+        const cleanAlt = cleanAltText(alt || 'Image');
         const cleanCap = cleanCaption(caption);
         hasImages = true;
 
-        return createFigureComponent(cleanSrc, cleanAlt, cleanCap);
+        return createImageComponent(cleanSrc, cleanAlt, cleanCap);
     });
 
     if (hasImages) {
-        console.log('    ✅ Figure components with imports will be created');
+        console.log('    ✅ Image components with imports will be created');
     }
 
     return content;
