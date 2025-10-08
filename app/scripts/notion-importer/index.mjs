@@ -188,7 +188,9 @@ function copyToAstroContent(outputDir) {
         const mdxFiles = files.filter(file => file.endsWith('.mdx'));
         if (mdxFiles.length > 0) {
             const mdxFile = join(outputDir, mdxFiles[0]); // Take the first MDX file
-            copyFileSync(mdxFile, ASTRO_CONTENT_PATH);
+            // Read and write instead of copy to avoid EPERM issues
+            const mdxContent = readFileSync(mdxFile, 'utf8');
+            writeFileSync(ASTRO_CONTENT_PATH, mdxContent);
             console.log(`    ✅ Copied MDX to ${ASTRO_CONTENT_PATH}`);
         }
 
