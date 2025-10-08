@@ -12,3 +12,6 @@
 # the package and package lock should not be tracked
 package.json -filter -diff -merge text
 package-lock.json -filter -diff -merge text
+# Notion imported images should NOT be in LFS (needed for Docker build)
+app/src/content/assets/image/image_27877f1c*.png -filter -diff -merge text
+app/scripts/notion-importer/output/** -filter -diff -merge text
