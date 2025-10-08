@@ -1,0 +1,592 @@
+---
+import HtmlEmbed from "./HtmlEmbed.astro";
+
+interface Props {
+  title: string; // may contain HTML (e.g., <br/>)
+  titleRaw?: string; // plain title for slug/PDF (optional)
+  description?: string;
+  authors?: Array<
+    string | { name: string; url?: string; affiliationIndices?: number[] }
+  >;
+  affiliations?: Array<{ id: number; name: string; url?: string }>;
+  affiliation?: string; // legacy single affiliation
+  published?: string;
+  doi?: string;
+  pdfProOnly?: boolean; // Gate PDF download to Pro users only
+}
+
+const {
+  title,
+  titleRaw,
+  description,
+  authors = [],
+  affiliations = [],
+  affiliation,
+  published,
+  doi,
+  pdfProOnly = false,
+} = Astro.props as Props;
+
+type Author = { name: string; url?: string; affiliationIndices?: number[] };
+
+function normalizeAuthors(
+  input: Array<
+    | string
+    | {
+        name?: string;
+        url?: string;
+        link?: string;
+        affiliationIndices?: number[];
+      }
+  >,
+): Author[] {
+  return (Array.isArray(input) ? input : [])
+    .map((a) => {
+      if (typeof a === "string") {
+        return { name: a } as Author;
+      }
+      const name = (a?.name ?? "").toString();
+      const url = (a?.url ?? a?.link) as string | undefined;
+      const affiliationIndices = Array.isArray((a as any)?.affiliationIndices)
+        ? (a as any).affiliationIndices
+        : undefined;
+      return { name, url, affiliationIndices } as Author;
+    })
+    .filter((a) => a.name && a.name.trim().length > 0);
+}
+
+const normalizedAuthors: Author[] = normalizeAuthors(authors as any);
+
+// Determine if affiliation superscripts should be shown (only when there are multiple distinct affiliations referenced by authors)
+const authorAffiliationIndexSet = new Set<number>();
+for (const author of normalizedAuthors) {
+  const indices = Array.isArray(author.affiliationIndices)
+    ? author.affiliationIndices
+    : [];
+  for (const idx of indices) {
+    if (typeof idx === "number") {
+      authorAffiliationIndexSet.add(idx);
+    }
+  }
+}
+const shouldShowAffiliationSupers = authorAffiliationIndexSet.size > 1;
+const hasMultipleAffiliations =
+  Array.isArray(affiliations) && affiliations.length > 1;
+
+function stripHtml(text: string): string {
+  return String(text || "").replace(/<[^>]*>/g, "");
+}
+
+function slugify(text: string): string {
+  return (
+    String(text || "")
+      .normalize("NFKD")
+      .replace(/\p{Diacritic}+/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120) || "article"
+  );
+}
+
+const pdfBase = titleRaw ? stripHtml(titleRaw) : stripHtml(title);
+const pdfFilename = `${slugify(pdfBase)}.pdf`;
+---
+
+<section class="hero">
+  <h1 class="hero-title" set:html={title} />
+  <div class="hero-banner">
+    <HtmlEmbed src="banner.html" frameless />
+    {description && <p class="hero-desc">{description}</p>}
+  </div>
+</section>
+
+<header class="meta" aria-label="Article meta information">
+  <div class="meta-container">
+    {
+      normalizedAuthors.length > 0 && (
+        <div class="meta-container-cell">
+          <h3>Author{normalizedAuthors.length > 1 ? "s" : ""}</h3>
+          <ul class="authors">
+            {normalizedAuthors.map((a, i) => {
+              const supers =
+                shouldShowAffiliationSupers &&
+                Array.isArray(a.affiliationIndices) &&
+                a.affiliationIndices.length ? (
+                  <sup>{a.affiliationIndices.join(", ")}</sup>
+                ) : null;
+              return (
+                <li>
+                  {a.url ? <a href={a.url}>{a.name}</a> : a.name}{supers}{i < normalizedAuthors.length - 1 && <span set:html=",&nbsp;" />}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )
+    }
+    {
+      Array.isArray(affiliations) && affiliations.length > 0 && (
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation{affiliations.length > 1 ? "s" : ""}</h3>
+          {hasMultipleAffiliations ? (
+            <ol class="affiliations">
+              {affiliations.map((af) => (
+                <li value={af.id}>
+                  {af.url ? (
+                    <a href={af.url} target="_blank" rel="noopener noreferrer">
+                      {af.name}
+                    </a>
+                  ) : (
+                    af.name
+                  )}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>
+              {affiliations[0]?.url ? (
+                <a
+                  href={affiliations[0].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {affiliations[0].name}
+                </a>
+              ) : (
+                affiliations[0]?.name
+              )}
+            </p>
+          )}
+        </div>
+      )
+    }
+    {
+      (!affiliations || affiliations.length === 0) && affiliation && (
+        <div class="meta-container-cell meta-container-cell--affiliations">
+          <h3>Affiliation</h3>
+          <p>{affiliation}</p>
+        </div>
+      )
+    }
+    {
+      published && (
+        <div class="meta-container-cell meta-container-cell--published">
+          <h3>Published</h3>
+          <p>{published}</p>
+        </div>
+      )
+    }
+    <!-- {doi && (
+      <div class="meta-container-cell">
+        <h3>DOI</h3>
+        <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
+      </div>
+    )} -->
+    <div class="meta-container-cell meta-container-cell--pdf">
+      <div class="pdf-header-wrapper">
+        <h3>PDF</h3>
+        <span class="pro-badge-wrapper" style="display: none;">
+          <span class="pro-badge-prefix">- you are</span>
+          <span class="pro-badge">PRO</span>
+        </span>
+        <span class="pro-only-label" style="display: none;">
+          <span class="pro-only-dash">-</span>
+          <span class="pro-only-text">pro only</span>
+          <svg class="pro-only-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </span>
+      </div>
+      <div id="pdf-download-container" data-pdf-pro-only={pdfProOnly.toString()}>
+        <p class="pdf-loading">Checking access...</p>
+        <p class="pdf-pro-only" style="display: none;">
+          <a
+            class="button"
+            href={`/${pdfFilename}`}
+            download={pdfFilename}
+            aria-label={`Download PDF ${pdfFilename}`}
+          >
+            Download PDF
+          </a>
+        </p>
+        <div class="pdf-locked" style="display: none;">
+          <a 
+            class="button button-locked" 
+            href="https://huggingface.co/subscribe/pro"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg class="lock-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" role="img" width="1em" height="1em" viewBox="0 0 12 12" fill="none">
+              <path d="M6.48 1.26c0 1.55.67 2.58 1.5 3.24.86.68 1.9 1 2.58 1.07v.86A5.3 5.3 0 0 0 7.99 7.5a3.95 3.95 0 0 0-1.51 3.24h-.96c0-1.55-.67-2.58-1.5-3.24a5.3 5.3 0 0 0-2.58-1.07v-.86A5.3 5.3 0 0 0 4.01 4.5a3.95 3.95 0 0 0 1.51-3.24h.96Z" fill="currentColor"></path>
+            </svg>
+            <span class="locked-title">Subscribe to Pro</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  // PDF access control for Pro users only
+  
+  // ⚙️ Configuration for local development
+  const LOCAL_IS_PRO = false; // Set to true to test Pro access locally
+  
+  const FALLBACK_TIMEOUT_MS = 3000;
+  let userPlanChecked = false;
+
+  // Check if PDF Pro gating is enabled
+  const pdfContainer = document.querySelector("#pdf-download-container") as HTMLElement;
+  const pdfProOnly = pdfContainer?.getAttribute("data-pdf-pro-only") === "true";
+
+  /**
+   * Check if user has Pro access
+   * Isolated logic for Pro user verification
+   * Expected plan structure: { user: "pro", org: "enterprise" }
+   */
+  function isProUser(plan: any): boolean {
+    if (!plan) return false;
+    
+    // Check if user property is "pro"
+    return plan.user === "pro";
+  }
+
+  /**
+   * Update UI based on user's Pro status
+   */
+  function updatePdfAccess(isPro: boolean) {
+    const loadingEl = document.querySelector(".pdf-loading") as HTMLElement;
+    const proOnlyEl = document.querySelector(".pdf-pro-only") as HTMLElement;
+    const lockedEl = document.querySelector(".pdf-locked") as HTMLElement;
+    const proOnlyLabel = document.querySelector(".pro-only-label") as HTMLElement;
+    const proBadgeWrapper = document.querySelector(".pro-badge-wrapper") as HTMLElement;
+    
+    // Hide loading state
+    if (loadingEl) loadingEl.style.display = "none";
+    
+    // If PDF Pro gating is disabled, just show the download button
+    if (!pdfProOnly) {
+      if (proOnlyEl) proOnlyEl.style.display = "block";
+      if (proOnlyLabel) proOnlyLabel.style.display = "none";
+      if (lockedEl) lockedEl.style.display = "none";
+      if (proBadgeWrapper) proBadgeWrapper.style.display = "none";
+      return;
+    }
+    
+    // Show appropriate state based on Pro status
+    if (isPro) {
+      if (proOnlyEl) proOnlyEl.style.display = "block";
+      if (proOnlyLabel) proOnlyLabel.style.display = "none";
+      if (lockedEl) lockedEl.style.display = "none";
+      if (proBadgeWrapper) proBadgeWrapper.style.display = "inline-flex";
+    } else {
+      if (proOnlyEl) proOnlyEl.style.display = "none";
+      if (proOnlyLabel) proOnlyLabel.style.display = "inline-flex";
+      if (lockedEl) lockedEl.style.display = "block";
+      if (proBadgeWrapper) proBadgeWrapper.style.display = "none";
+    }
+  }
+
+  /**
+   * Handle user plan response
+   */
+  function handleUserPlan(plan: any) {
+    userPlanChecked = true;
+    const isPro = isProUser(plan);
+    updatePdfAccess(isPro);
+    
+    // Optional: log for debugging
+    console.log("[PDF Access]", { plan, isPro });
+  }
+
+  /**
+   * Fallback behavior when no parent window responds
+   * Uses LOCAL_IS_PRO configuration for local development
+   */
+  function handleFallback() {
+    if (LOCAL_IS_PRO) {
+      handleUserPlan({ user: "pro" });
+    } else {
+      handleUserPlan({ user: "free" });
+    }
+  }
+
+  // If PDF Pro gating is disabled, show the download button immediately
+  if (!pdfProOnly) {
+    updatePdfAccess(true);
+  } else {
+    // Listen for messages from parent window (Hugging Face Spaces)
+    window.addEventListener("message", (event) => {
+      if (event.data.type === "USER_PLAN") {
+        handleUserPlan(event.data.plan);
+      }
+    });
+
+    // Request user plan on page load
+    if (window.parent && window.parent !== window) {
+      // We're in an iframe, request user plan
+      window.parent.postMessage({ type: "USER_PLAN_REQUEST" }, "*");
+      
+      // Fallback if no response after timeout
+      setTimeout(() => {
+        if (!userPlanChecked) {
+          handleFallback();
+        }
+      }, FALLBACK_TIMEOUT_MS);
+    } else {
+      // Not in iframe (local development), use fallback immediately
+      handleFallback();
+    }
+  }
+</script>
+
+<style>
+  /* Hero (full-width) */
+  .hero {
+    width: 100%;
+    padding: 48px 16px 16px;
+    text-align: center;
+  }
+  .hero-title {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 8px;
+    max-width: 100%;
+    margin: auto;
+  }
+  .hero-banner {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .hero-desc {
+    color: var(--muted-color);
+    font-style: italic;
+    margin: 0 0 16px 0;
+  }
+
+  /* Meta (byline-like header) */
+  .meta {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .meta-container {
+    max-width: 760px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 0 auto;
+    padding: 0 var(--content-padding-x);
+    gap: 8px;
+  }
+  /* Subtle underline for links in meta; keep buttons without underline */
+  .meta-container a:not(.button) {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 0.06em;
+    text-decoration-color: var(--link-underline);
+    transition: text-decoration-color 0.15s ease-in-out;
+  }
+  .meta-container a:hover {
+    text-decoration-color: var(--link-underline-hover);
+  }
+  .meta-container a.button,
+  .meta-container .button {
+    text-decoration: none;
+  }
+  .meta-container-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 250px;
+  }
+  .meta-container-cell h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted-color);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .meta-container-cell p {
+    margin: 0;
+  }
+  .authors {
+    margin: 0;
+    list-style-type: none;
+    padding-left: 0;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .authors li {
+    white-space: nowrap;
+    padding:0;
+  }
+  .affiliations {
+    margin: 0;
+    padding-left: 1.25em;
+  }
+  .affiliations li {
+    margin: 0;
+  }
+
+  header.meta .meta-container {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .meta-container-cell--affiliations,
+    .meta-container-cell--pdf {
+      text-align: right;
+    }
+  }
+
+  @media print {
+    .meta-container-cell--pdf {
+      display: none !important;
+    }
+  }
+
+  /* PDF access control styles */
+  .pdf-header-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+  }
+
+  .pdf-header-wrapper h3 {
+    line-height: 1;
+  }
+
+  .pdf-loading {
+    color: var(--muted-color);
+    font-size: 0.9em;
+  }
+
+  .pdf-pro-only {
+    margin: 0;
+  }
+
+  .pro-badge-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-style: normal;
+  }
+
+  .pro-badge-prefix {
+    font-size: 0.85em;
+    opacity: 0.5;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  .pro-badge {
+    display: inline-block;
+    border: 1px solid rgba(0, 0, 0, 0.025);
+    background: linear-gradient(to bottom right, #f9a8d4, #86efac, #fde047);
+    color: black;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.5rem;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  /* Dark mode pro badge */
+  :global(.dark) .pro-badge,
+  :global([data-theme="dark"]) .pro-badge {
+    background: linear-gradient(to bottom right, #ec4899, #22c55e, #eab308);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .pro-only-label {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85em;
+    opacity: 0.5;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .pro-only-dash {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .pro-only-icon {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .pro-only-text {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  .pdf-locked {
+    display: block;
+  }
+
+  .button-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, 
+                  var(--primary-color) 0%, 
+                  oklch(from var(--primary-color) calc(l - 0.1) calc(c + 0.05) calc(h - 60)) 100%);
+    border-radius: var(--button-radius);
+    padding: var(--button-padding-y) var(--button-padding-x);
+    font-size: var(--button-font-size);
+    line-height: 1;
+    color: var(--on-primary);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: normal;
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  .button-locked:active {
+    transform: translateY(0);
+  }
+
+  .lock-icon {
+    font-size: 1em;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .locked-title {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Dark mode locked button - inherits from light mode variables */
+
+  @media (max-width: 768px) {
+    .meta-container-cell--pdf {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+  }
+</style>

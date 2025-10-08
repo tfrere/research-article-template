@@ -1,0 +1,104 @@
+import Sidenote from '../../../components/Sidenote.astro';
+import Note from '../../../components/Note.astro';
+
+## Getting Started
+
+### Installation
+
+The recommended way is to **duplicate this Space** on **Hugging Face** rather than cloning it directly:
+
+1. Open the Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)**<br/> and click `Duplicate this Space`.
+2. Give it a **name**, choose **visibility**, and keep the **free CPU instance**.
+3. **Clone** your new Space repository.
+```bash
+git clone git@hf.co:spaces/<your-username>/<your-space>
+cd <your-space>
+```
+<br/>
+4. Use **Node.js 20 or newer**. <br/>To manage versions, consider using **nvm**
+  - macOS/Linux: see [nvm-sh](https://github.com/nvm-sh/nvm)
+  - Windows: see [nvm-windows](https://github.com/coreybutler/nvm-windows)
+
+```bash
+nvm install 20
+nvm use 20
+node -v
+```
+
+5. Install lfs and pull files from the repository.
+```bash
+git lfs install
+git lfs pull
+```
+<Note emoji="⚠️" variant="danger">If you attempt to push binary files without Git LFS installed, you will encounter an error.</Note>
+
+
+6. Install dependencies.
+
+```bash
+cd app
+npm install
+```
+
+<Sidenote>
+  Alternatively, you can use **Yarn** as your package manager.
+</Sidenote>
+
+
+<br/>And that's it!
+
+**You're ready to go!** 🎉
+
+### Development
+
+```bash
+npm run dev
+```
+
+Once started, the dev server is available at `http://localhost:4321`.
+
+### Build
+
+```bash
+npm run build
+```
+
+
+### Deploy
+
+**Every push** automatically triggers a **build** and **deploy** on Spaces.
+```bash
+# Make edits locally, then:
+git add .
+git commit -m "Update content"
+git push
+```
+
+<Note>
+Serving the `dist/` directory on any static host is enough to deliver the site.
+</Note>
+<Note>
+A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder and point to them at `[domain]/public/thumb.jpg`.
+</Note>
+
+### Template Synchronization
+
+Keep your project up-to-date with the latest template improvements. The sync system fetches the most recent changes from the official template repository at `https://huggingface.co/spaces/tfrere/research-article-template` and copies them to your project.
+
+```bash
+# Preview what would be updated
+npm run sync:template -- --dry-run
+
+# Update template files (preserves your content)
+npm run sync:template
+```
+
+**What gets preserved:**
+- Your content in `/src/content/`
+
+**What gets updated:**
+- All template files (components, styles, configuration)
+- Dockerfile and deployment configuration
+- Dependencies and build system
+
+

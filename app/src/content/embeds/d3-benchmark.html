@@ -1,0 +1,434 @@
+<div class="d3-benchmark"></div>
+<style>
+  .d3-benchmark { position: relative; }
+  .d3-benchmark .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .d3-benchmark .controls label {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+  .d3-benchmark .controls select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    font-size: 13px;
+    line-height: 1.2;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.41 1.59L6 6.17l4.59-4.58L12 3 6 9 0 3z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .d3-benchmark .controls select:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  .d3-benchmark .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 0 0 0;
+  }
+  .d3-benchmark .legend .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-benchmark .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-benchmark .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted-color);
+    cursor: pointer;
+  }
+  .d3-benchmark .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-benchmark .ghost { opacity: .25; }
+  .d3-benchmark .d3-tooltip {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    text-align: left;
+  }
+  .d3-benchmark .chart-card {
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-benchmark'))){
+        const cs = Array.from(document.querySelectorAll('.d3-benchmark')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // header below chart
+      const header = document.createElement('div'); header.className = 'chart-header';
+
+      const makeLegend = (series, colorBySeries) => {
+        let legend = header.querySelector('.legend');
+        if (!legend) { legend = document.createElement('div'); legend.className = 'legend'; header.appendChild(legend); }
+        // Ensure title
+        let title = legend.querySelector('.legend-title');
+        if (!title) { title = document.createElement('div'); title.className = 'legend-title'; title.textContent = 'Legend'; legend.appendChild(title); }
+        // Ensure items container
+        let items = legend.querySelector('.items');
+        if (!items) { items = document.createElement('div'); items.className = 'items'; legend.appendChild(items); }
+        items.innerHTML = '';
+        series.forEach(name => {
+          const item = document.createElement('div'); item.className = 'item';
+          const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = colorBySeries(name);
+          const txt = document.createElement('span'); txt.textContent = name;
+          item.appendChild(sw); item.appendChild(txt); items.appendChild(item);
+          item.addEventListener('mouseenter', () => { state.highlightModel = name; updateHighlight(); });
+          item.addEventListener('mouseleave', () => { state.highlightModel = null; updateHighlight(); });
+        });
+      };
+
+      // SVG scaffolding inside a card wrapper, then header appended after
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      container.appendChild(header);
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+
+      // No controls (fixed scale mode)
+
+      // Public-first data loading with inline fallback
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const res = await fetch(p, { cache:'no-cache' });
+            if (!res.ok) throw new Error('HTTP '+res.status);
+            const text = await res.text();
+            // Try JSON first; if CSV, parse with d3.csvParse
+            try { return JSON.parse(text); } catch(e) {}
+            if (window.d3 && d3.csvParse) { return d3.csvParse(text); }
+          } catch (e) { /* keep trying */ }
+        }
+        return null;
+      };
+
+      // Inline fallback dataset (scores in % where applicable)
+      const inlineData = [
+        { benchmark:'MMLU',       model:'GPT-4o',      score: 88 },
+        { benchmark:'MMLU',       model:'Llama 3 70B', score: 80 },
+        { benchmark:'MMLU',       model:'Mixtral 8x7B',score: 73 },
+        { benchmark:'MMLU',       model:'Gemma 2 27B', score: 76 },
+        { benchmark:'GSM8K',      model:'GPT-4o',      score: 94 },
+        { benchmark:'GSM8K',      model:'Llama 3 70B', score: 83 },
+        { benchmark:'GSM8K',      model:'Mixtral 8x7B',score: 79 },
+        { benchmark:'GSM8K',      model:'Gemma 2 27B', score: 81 },
+        { benchmark:'HellaSwag',  model:'GPT-4o',      score: 95 },
+        { benchmark:'HellaSwag',  model:'Llama 3 70B', score: 89 },
+        { benchmark:'HellaSwag',  model:'Mixtral 8x7B',score: 86 },
+        { benchmark:'HellaSwag',  model:'Gemma 2 27B', score: 87 },
+        { benchmark:'TruthfulQA', model:'GPT-4o',      score: 64 },
+        { benchmark:'TruthfulQA', model:'Llama 3 70B', score: 56 },
+        { benchmark:'TruthfulQA', model:'Mixtral 8x7B',score: 51 },
+        { benchmark:'TruthfulQA', model:'Gemma 2 27B', score: 53 },
+        { benchmark:'ARC-C',      model:'GPT-4o',      score: 79 },
+        { benchmark:'ARC-C',      model:'Llama 3 70B', score: 72 },
+        { benchmark:'ARC-C',      model:'Mixtral 8x7B',score: 68 },
+        { benchmark:'ARC-C',      model:'Gemma 2 27B', score: 70 }
+      ];
+
+      const state = {
+        data: inlineData,
+        colorsByModel: null,
+        highlightModel: null,
+      };
+
+      const margin = { top: 12, right: 28, bottom: 24, left: 56 };
+      let width = 800, height = 360;
+      const x0 = d3.scaleBand().paddingInner(0.2).paddingOuter(0.05); // group: benchmark
+      const x1 = d3.scaleBand().padding(0.12); // series: model per benchmark
+      const y = d3.scaleLinear();
+      const xAxis = d3.axisBottom(x0).tickSizeOuter(0);
+      const yAxis = d3.axisLeft(y).ticks(6).tickSizeOuter(0);
+      const yTopPadding = 2; // avoid bars touching top at max
+
+      function getPrimaryColor(){
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getPrimary === 'function') return window.ColorPalettes.getPrimary(); } catch(e) {}
+        return getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#6D4AFF';
+      }
+      function getCategoricalColors(n){
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(e) {}
+        // Fallback: generate hues around the primary color (simple fallback)
+        const base = getPrimaryColor();
+        const colors = [];
+        for (let i=0;i<n;i++) {
+          const hue = Math.round((360/n)*i);
+          colors.push(`hsl(${hue}, 60%, 55%)`);
+        }
+        return colors;
+      }
+
+      function computeSeriesColors(models){
+        const palette = getCategoricalColors(models.length);
+        const map = new Map(models.map((m, i) => [m, palette[i % palette.length]]));
+        return (model) => map.get(model) || getPrimaryColor();
+      }
+
+      function getModels(data){
+        return Array.from(new Set(data.map(d => d.model)));
+      }
+      function getBenchmarks(data){
+        return Array.from(new Set(data.map(d => d.benchmark)));
+      }
+
+      function updateSize(){
+        width = container.clientWidth || 800;
+        height = Math.max(240, Math.round(width / 3.4));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+      }
+
+      function showTip(html, x, y){
+        tip.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+        tip.style.opacity = '1';
+        const inner = tip.querySelector('.d3-tooltip__inner') || tip;
+        inner.innerHTML = html;
+      }
+      function hideTip(){
+        tip.style.opacity = '0';
+        tip.style.transform = 'translate(-9999px, -9999px)';
+      }
+
+      function updateHighlight(){
+        const model = state.highlightModel;
+        const bars = gRoot.selectAll('rect.bar');
+        const labels = gRoot.selectAll('text.value');
+        if (model) {
+          bars.classed('ghost', d => d.model !== model);
+          labels.classed('ghost', d => d.model !== model);
+          const items = container.querySelectorAll('.legend .item');
+          items.forEach((el) => {
+            const name = el.textContent.trim();
+            if (name !== model) el.classList.add('ghost'); else el.classList.remove('ghost');
+          });
+        } else {
+          bars.classed('ghost', false);
+          labels.classed('ghost', false);
+          container.querySelectorAll('.legend .item').forEach(el => el.classList.remove('ghost'));
+        }
+      }
+
+      function render(){
+        const { innerWidth, innerHeight } = updateSize();
+        const models = getModels(state.data);
+        if (!state.colorsByModel) state.colorsByModel = computeSeriesColors(models);
+        makeLegend(models, state.colorsByModel);
+
+        x0.domain(getBenchmarks(state.data)).range([0, innerWidth]);
+        x1.domain(models).range([0, x0.bandwidth()]);
+
+        const yMaxRaw = 100;
+        const yMax = yMaxRaw + yTopPadding;
+        y.domain([0, yMax]).range([innerHeight, 0]).nice();
+
+        // Axes (standardized colors)
+        gRoot
+          .selectAll('.axis-x')
+          .data([0])
+          .join('g')
+          .attr('class','axis-x')
+          .attr('transform',`translate(0,${innerHeight})`)
+          .call(xAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+          });
+        gRoot
+          .selectAll('.axis-y')
+          .data([0])
+          .join('g')
+          .attr('class','axis-y')
+          .call(yAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+          });
+
+        // Gridlines (y) standardized color
+        gRoot
+          .selectAll('.grid-y')
+          .data([0])
+          .join('g')
+          .attr('class','grid-y')
+          .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
+          .call(g => g.select('.domain').remove())
+          .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)').attr('stroke-opacity',1))
+          .call(g => g.selectAll('.tick').filter((d, i, nodes) => i === nodes.length - 1).select('line').attr('stroke-opacity', 0));
+
+        // Groups per benchmark
+        const groups = gRoot.selectAll('.group').data(getBenchmarks(state.data), d => d);
+        const groupsEnter = groups.enter().append('g').attr('class','group');
+        groupsEnter.merge(groups).attr('transform', d => `translate(${x0(d)},0)`);
+        groups.exit().remove();
+
+        // Bars per model
+        const nested = d3.group(state.data, d => d.benchmark);
+        groupsEnter.each(function(bench){ d3.select(this).selectAll('rect.bar').data([]).join('rect'); });
+        const allGroups = gRoot.selectAll('.group');
+        allGroups.each(function(bench){
+          const dataForBench = nested.get(bench) || [];
+          const bars = d3.select(this).selectAll('rect.bar').data(models.map(m => ({ bench, model:m, score:(dataForBench.find(dd=>dd.model===m)||{score:0}).score })) , d => d.model);
+          bars.join(
+            enter => enter.append('rect')
+              .attr('class','bar')
+              .attr('x', d => x1(d.model))
+              .attr('y', innerHeight)
+              .attr('width', x1.bandwidth())
+              .attr('height', 0)
+              .attr('fill', d => state.colorsByModel(d.model))
+              .on('mouseenter', (event, d) => { state.highlightModel = d.model; updateHighlight(); })
+              .on('mousemove', (event, d) => {
+                const [mx, my] = d3.pointer(event, container);
+                showTip(`<strong>${d.model}</strong><br/>${d.bench}: <strong>${d.score}</strong>`, mx, my);
+              })
+              .on('mouseleave', () => { hideTip(); state.highlightModel = null; updateHighlight(); })
+              .transition().duration(160)
+              .attr('y', d => y(d.score))
+              .attr('height', d => Math.max(0, innerHeight - y(d.score))),
+            update => update
+              .on('mouseenter', (event, d) => { state.highlightModel = d.model; updateHighlight(); })
+              .on('mousemove', (event, d) => {
+                const [mx, my] = d3.pointer(event, container);
+                showTip(`<strong>${d.model}</strong><br/>${d.bench}: <strong>${d.score}</strong>`, mx, my);
+              })
+              .on('mouseleave', () => { hideTip(); state.highlightModel = null; updateHighlight(); })
+              .transition().duration(160)
+              .attr('x', d => x1(d.model))
+              .attr('y', d => y(d.score))
+              .attr('width', x1.bandwidth())
+              .attr('height', d => Math.max(0, innerHeight - y(d.score)))
+              .attr('fill', d => state.colorsByModel(d.model)),
+            exit => exit.transition().duration(120).attr('y', innerHeight).attr('height', 0).remove()
+          );
+
+          // Value labels centered above bars (small, darker)
+          const labels = d3.select(this).selectAll('text.value').data(models.map(m => ({ bench, model:m, score:(dataForBench.find(dd=>dd.model===m)||{score:0}).score })) , d => d.model);
+          labels.join(
+            enter => enter.append('text')
+              .attr('class','value')
+              .attr('x', d => x1(d.model) + x1.bandwidth()/2)
+              .attr('y', d => y(d.score) - 4)
+              .attr('text-anchor','middle')
+              .attr('fill','var(--text-color)')
+              .attr('opacity',0.9)
+              .attr('font-size',10)
+              .text(d => d.score),
+            update => update
+              .transition().duration(160)
+              .attr('x', d => x1(d.model) + x1.bandwidth()/2)
+              .attr('y', d => y(d.score) - 4)
+              .text(d => d.score),
+            exit => exit.remove()
+          );
+        });
+
+        // Axis labels
+        gRoot.selectAll('.y-label').data([0]).join('text').attr('class','y-label')
+          .attr('transform', `rotate(-90)`) 
+          .attr('x', -innerHeight / 2)
+          .attr('y', -margin.left + 24)
+          .attr('text-anchor','middle')
+          .attr('fill','var(--text-color)')
+          .attr('font-size',12)
+          .attr('font-weight',700)
+          .text('score');
+      }
+
+      // Initial render + resize handling
+      render();
+      const rerender = () => render();
+      if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); }
+      else { window.addEventListener('resize', rerender); }
+
+      // Attempt to load external data (public-first). Expect either JSON array with {benchmark, model, score}
+      (async () => {
+        const maybe = await fetchFirstAvailable([
+          '/data/llm_benchmarks.json',
+          './assets/data/llm_benchmarks.json',
+          '../assets/data/llm_benchmarks.json'
+        ]);
+        if (Array.isArray(maybe) && maybe.length && maybe[0].benchmark && maybe[0].model && (typeof maybe[0].score === 'number')) {
+          state.data = maybe;
+          state.colorsByModel = null; // recompute in case of different model set
+          render();
+        } else if (maybe && maybe.columns) {
+          // CSV parsed via d3.csvParse -> convert fields
+          const parsed = maybe.map(r => ({ benchmark: r.benchmark, model: r.model, score: +r.score }));
+          if (parsed.length) { state.data = parsed; state.colorsByModel = null; render(); }
+        }
+      })().catch(() => {
+        // Graceful failure: inline fallback already rendered
+      });
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); }
+    else { ensureD3(bootstrap); }
+  })();
+</script>
+
+

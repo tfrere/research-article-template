@@ -1,0 +1,37 @@
+import Accordion from '../../../components/Accordion.astro';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Image from '../../../components/Image.astro';
+import Wide from '../../../components/Wide.astro';
+import FullWidth from '../../../components/FullWidth.astro';
+import Note from '../../../components/Note.astro';
+
+| Prop                   | Required |
+|------------------------|----------|
+| `zoomable`        | No       |
+| `downloadable`    | No       |
+| `loading="lazy"`       | No       |
+| `caption`              | No       |
+
+<Accordion title="table">
+  | Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+</Accordion>
+
+
+<Accordion title="simple">
+  <p>Simple example</p>
+</Accordion>
+
+<Accordion title="code">
+  ```mdx
+  import HtmlEmbed from '../../../components/HtmlEmbed.astro'
+
+  <HtmlEmbed src="plotly-line.html" title="Plotly Line" desc="Some chart description" />
+  <HtmlEmbed src="d3-line-example.html" title="D3 Line" desc="Some chart description" />
+  ```
+</Accordion>

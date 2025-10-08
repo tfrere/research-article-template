@@ -1,0 +1,383 @@
+---
+export interface Props { tableOfContentAutoCollapse?: boolean }
+const { tableOfContentAutoCollapse = false } = Astro.props as Props;
+---
+<nav class="table-of-contents" aria-label="Table of Contents" data-auto-collapse={tableOfContentAutoCollapse ? '1' : '0'}>
+  <div class="title">Table of Contents</div>
+  <div id="article-toc-placeholder"></div>
+</nav>
+<details class="table-of-contents-mobile">
+  <summary>Table of Contents</summary>
+  <div id="article-toc-mobile-placeholder"></div>
+</details>
+
+<script is:inline>
+  // Build TOC from article headings (h2/h3/h4) and render into the sticky aside
+  const buildTOC = () => {
+    const holder = document.getElementById('article-toc-placeholder');
+    const holderMobile = document.getElementById('article-toc-mobile-placeholder');
+    // Always rebuild TOC to avoid stale entries
+    if (holder) holder.innerHTML = '';
+    if (holderMobile) holderMobile.innerHTML = '';
+    const articleRoot = document.querySelector('section.content-grid main');
+    if (!articleRoot) return;
+    const headings = articleRoot.querySelectorAll('h2, h3, h4');
+    if (!headings.length) return;
+
+    // Inclure tous les titres H2/H3/H4 sans filtrer "Table of contents"
+    const headingsArr = Array.from(headings);
+    if (!headingsArr.length) return;
+
+    // Ensure unique ids for headings (deduplicate duplicates)
+    const usedIds = new Set();
+    const slugify = (s) => String(s || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_\-]/g, '');
+    headingsArr.forEach((h) => {
+      let id = (h.id || '').trim();
+      if (!id) {
+        const base = slugify(h.textContent || '');
+        id = base || 'section';
+      }
+      let candidate = id;
+      let n = 2;
+      while (usedIds.has(candidate)) {
+        candidate = `${id}-${n++}`;
+      }
+      if (h.id !== candidate) h.id = candidate;
+      usedIds.add(candidate);
+    });
+
+    const nav = document.createElement('nav');
+    let ulStack = [document.createElement('ul')];
+    nav.appendChild(ulStack[0]);
+
+    const levelOf = (tag) => tag === 'H2' ? 2 : tag === 'H3' ? 3 : 4;
+    let prev = 2;
+    let h2Count = -1;
+    const h2List = headingsArr.filter(h => h.tagName === 'H2');
+    headingsArr.forEach((h) => {
+      const lvl = levelOf(h.tagName);
+      // adjust depth
+      while (lvl > prev) { const ul = document.createElement('ul'); ulStack[ulStack.length-1].lastElementChild?.appendChild(ul); ulStack.push(ul); prev++; }
+      while (lvl < prev) { ulStack.pop(); prev--; }
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent; a.target = '_self';
+      li.appendChild(a);
+      if (lvl === 2) {
+        h2Count += 1;
+        li.setAttribute('data-h2-idx', String(h2Count));
+      }
+      ulStack[ulStack.length-1].appendChild(li);
+    });
+
+    if (holder) holder.appendChild(nav);
+    const navClone = nav.cloneNode(true);
+    if (holderMobile) holderMobile.appendChild(navClone);
+
+    // active link on scroll
+    const links = [
+      ...(holder ? holder.querySelectorAll('a') : []),
+      ...(holderMobile ? holderMobile.querySelectorAll('a') : [])
+    ];
+    // Read breakpoint from CSS var and set autoCollapse only on desktop (disabled on mobile)
+    const getCollapsePx = () => {
+      const root = document.documentElement;
+      const raw = getComputedStyle(root).getPropertyValue('--bp-content-collapse').trim();
+      return raw || '1100px';
+    };
+    const mq = window.matchMedia(`(max-width: ${getCollapsePx()})`);
+    const attrEnabled = (document.querySelector('.table-of-contents')?.getAttribute('data-auto-collapse') === '1');
+    let autoCollapse = attrEnabled && !mq.matches;
+
+    // Inject styles for collapsible & animation
+    const ensureStyles = () => {
+      if (document.getElementById('toc-collapse-style')) return;
+      const style = document.createElement('style');
+      style.id = 'toc-collapse-style';
+      style.textContent = `
+        .table-of-contents nav.table-of-contents-collapsible > ul > li > ul,
+        details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li > ul { overflow: hidden; transition: height 200ms ease; }
+        .table-of-contents nav.table-of-contents-collapsible > ul > li.collapsed > ul,
+        details.table-of-contents-mobile nav.table-of-contents-collapsible > ul > li.collapsed > ul { display: block; }
+      `;
+      document.head.appendChild(style);
+    };
+    ensureStyles();
+
+    const getTopLevelItems = () => {
+      const sideNav = holder ? holder.querySelector('nav') : null;
+      const mobileNav = holderMobile ? holderMobile.querySelector('nav') : null;
+      const q = (navEl) => navEl ? Array.from(navEl.querySelectorAll(':scope > ul > li[data-h2-idx]')) : [];
+      return { sideNav, mobileNav, sideTop: q(sideNav), mobileTop: q(mobileNav) };
+    };
+
+    const setNavCollapsible = () => {
+      const sideNav = holder ? holder.querySelector('nav') : null;
+      const mobileNav = holderMobile ? holderMobile.querySelector('nav') : null;
+      if (sideNav) sideNav.classList.add('table-of-contents-collapsible');
+      if (mobileNav) mobileNav.classList.add('table-of-contents-collapsible');
+    };
+
+    const measure = (el) => {
+      if (!el) return 0;
+      // Temporarily set height to auto to measure scrollHeight reliably
+      const prev = el.style.height;
+      el.style.height = 'auto';
+      const h = el.scrollHeight;
+      el.style.height = prev || '';
+      return h;
+    };
+
+    const animateTo = (el, target) => {
+      if (!el) return;
+      const current = parseFloat(getComputedStyle(el).height) || 0;
+      if (Math.abs(current - target) < 1) {
+        el.style.height = target ? 'auto' : '0px';
+        return;
+      }
+      el.style.height = current + 'px';
+      // Force reflow
+      void el.offsetHeight;
+      el.style.height = target + 'px';
+      const onEnd = (e) => {
+        if (e.propertyName !== 'height') return;
+        el.removeEventListener('transitionend', onEnd);
+        if (target > 0) el.style.height = 'auto';
+      };
+      el.addEventListener('transitionend', onEnd);
+    };
+
+    let prevActiveIdx = -1;
+    const setCollapsedState = (activeIdx) => {
+      if (!autoCollapse) return;
+      if (activeIdx == null || activeIdx < 0) activeIdx = 0;
+      const { sideTop, mobileTop } = getTopLevelItems();
+      const update = (items) => items.forEach((li) => {
+        const idx = Number(li.getAttribute('data-h2-idx') || '-1');
+        const sub = li.querySelector(':scope > ul');
+        if (!sub) return;
+        if (idx === activeIdx) {
+          li.classList.remove('collapsed');
+          const target = measure(sub);
+          animateTo(sub, target);
+        } else {
+          li.classList.add('collapsed');
+          animateTo(sub, 0);
+        }
+      });
+      update(sideTop);
+      update(mobileTop);
+      setNavCollapsible();
+      prevActiveIdx = activeIdx;
+    };
+
+    // When switching between desktop/mobile, refresh autoCollapse and expand all on mobile
+    const expandAll = () => {
+      const { sideTop, mobileTop } = getTopLevelItems();
+      const expand = (items) => items.forEach((li) => {
+        li.classList.remove('collapsed');
+        const sub = li.querySelector(':scope > ul');
+        if (sub) sub.style.height = 'auto';
+      });
+      expand(sideTop);
+      expand(mobileTop);
+    };
+
+    const onMqChange = () => {
+      autoCollapse = attrEnabled && !mq.matches;
+      if (!autoCollapse) {
+        expandAll();
+      } else {
+        setCollapsedState(prevActiveIdx);
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onMqChange);
+    else if (mq.addListener) mq.addListener(onMqChange);
+
+    const onScroll = () => {
+      // active link highlight
+      let activeIdx = -1;
+      for (let i = headingsArr.length - 1; i >= 0; i--) {
+        const top = headingsArr[i].getBoundingClientRect().top;
+        if (top - 60 <= 0) {
+          links.forEach(l => l.classList.remove('active'));
+          const id = '#' + headingsArr[i].id;
+          const actives = Array.from(links).filter(l => l.getAttribute('href') === id);
+          actives.forEach(a => a.classList.add('active'));
+          if (headingsArr[i].tagName === 'H2') {
+            activeIdx = h2List.indexOf(headingsArr[i]);
+          } else {
+            for (let j = i; j >= 0; j--) {
+              if (headingsArr[j].tagName === 'H2') { activeIdx = h2List.indexOf(headingsArr[j]); break; }
+            }
+          }
+          break;
+        }
+      }
+      if (activeIdx !== prevActiveIdx) setCollapsedState(activeIdx);
+    };
+
+    // If auto-collapse, collapse immediately (expand first section) before any scroll
+    if (autoCollapse) setCollapsedState(0);
+
+    window.addEventListener('scroll', onScroll);
+    // Initialize state
+    onScroll();
+
+    // Close mobile accordion when a link inside it is clicked
+    if (holderMobile) {
+      const details = holderMobile.closest('details');
+      holderMobile.addEventListener('click', (ev) => {
+        const target = ev.target;
+        const anchor = target && 'closest' in target ? target.closest('a') : null;
+        if (anchor instanceof HTMLAnchorElement && details && details.open) {
+          details.open = false;
+        }
+      });
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', buildTOC, { once: true });
+  } else { buildTOC(); }
+</script>
+
+<style is:global>
+  /* Sticky aside */
+  .table-of-contents {
+    position: sticky;
+    top: 32px;
+    margin-top: 12px;
+  }
+
+  .table-of-contents nav {
+    border-left: 1px solid var(--border-color);
+    padding-left: 16px;
+    font-size: 13px;
+  }
+
+  .table-of-contents .title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  /* Look & feel */
+  .table-of-contents nav ul {
+    margin: 0 0 6px;
+    padding-left: 1em;
+  }
+
+  .table-of-contents nav li {
+    list-style: none;
+    margin: .25em 0;
+  }
+
+  .table-of-contents nav a,
+  .table-of-contents nav a:link,
+  .table-of-contents nav a:visited {
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  .table-of-contents nav > ul > li > a {
+    font-weight: 700;
+  }
+
+  .table-of-contents nav a:hover {
+    text-decoration: underline solid var(--muted-color);
+  }
+
+  .table-of-contents nav a.active {
+    text-decoration: underline;
+  }
+
+  /* Mobile accordion */
+  .table-of-contents-mobile {
+    display: none;
+    margin: 8px 0 16px;
+  }
+
+  .table-of-contents-mobile > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: var(--spacing-3) var(--spacing-4);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    position: relative;
+  }
+
+  .table-of-contents-mobile[open] > summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /* Disclosure arrow for mobile summary */
+  .table-of-contents-mobile > summary::after {
+    content: '';
+    position: absolute;
+    right: var(--spacing-4);
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform 150ms ease;
+    opacity: .7;
+  }
+
+  .table-of-contents-mobile[open] > summary::after {
+    transform: translateY(-30%) rotate(-135deg);
+  }
+
+  .table-of-contents-mobile nav {
+    border-left: none;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+
+  .table-of-contents-mobile nav ul {
+    margin: 0 0 6px;
+    padding-left: 1em;
+  }
+
+  .table-of-contents-mobile nav li {
+    list-style: none;
+    margin: .25em 0;
+  }
+
+  .table-of-contents-mobile nav a,
+  .table-of-contents-mobile nav a:link,
+  .table-of-contents-mobile nav a:visited {
+    color: var(--text-color);
+    text-decoration: none;
+    border-bottom: none;
+  }
+
+  .table-of-contents-mobile nav > ul > li > a {
+    font-weight: 700;
+  }
+
+  .table-of-contents-mobile nav a:hover {
+    text-decoration: underline solid var(--muted-color);
+  }
+
+  .table-of-contents-mobile nav a.active {
+    text-decoration: underline;
+  }
+
+
+
+</style>

@@ -1,0 +1,175 @@
+{/* IMPORTS */}
+import { Image as AstroImage } from 'astro:assets';
+import placeholder from '../../assets/image/placeholder.png';
+import Sidenote from '../../../components/Sidenote.astro';
+import Wide from '../../../components/Wide.astro';
+import Note from '../../../components/Note.astro';
+import FullWidth from '../../../components/FullWidth.astro';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import ColorPicker from '../../../components/demo/ColorPicker.astro';
+import Palettes from '../../../components/demo/Palettes.astro';
+import audioDemo from '../../assets/audio/audio-example.wav';
+import Accordion from '../../../components/Accordion.astro';
+
+## Writing your content
+
+Once you have set up your project and started the development server, you can start writing your article.
+
+### Content structure
+
+Your **article** lives in **one and unique place**. The `content` folder.
+
+<HtmlEmbed frameless src="demo/content-structure.html" /> 
+
+### Article.mdx
+
+The `article.mdx` file is the **main entry point** of your article which contains **2 main parts**.
+
+<Note emoji="💡" variant="info">**MDX** is a mix of **Markdown** and **HTML/JSX**: write regular <a href="#markdown" >Markdown</a> and <a href="#components" >Components</a> when needed. We’ll describe the available options you can use later in this guide.</Note>
+
+
+#### **Frontmatter**
+
+Metadata and options for the article. Each of them is described in the table below.
+
+<small className="muted">**Frontmatter** in app/src/content/article.mdx</small>
+```mdx
+---
+title: "This is the main title"
+subtitle: "This will be displayed just below the banner"
+description: "A modern, MDX-first research article template with math, citations, and interactive figures."
+published: "Feb 19, 2025"
+tags:
+  - research
+  - template
+authors:
+  - name: "Thibaud Frere"
+    url: "https://huggingface.co/tfrere"
+    affiliations: [1]
+  - name: "Alice Martin"
+    url: "https://example.com/~alice"
+    affiliations: [1, 2]
+  - name: "Robert Brown"
+    url: "https://example.com/~bob"
+    affiliations: [2]
+affiliations:
+  - name: "Hugging Face"
+    url: "https://huggingface.co"
+  - name: "Example University"
+    url: "https://example.edu"
+doi: 10.1234/abcd.efgh
+licence: Diagrams and text are licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC‑BY 4.0</a> with the source available on <a href="https://huggingface.co/spaces/stfrere/research-article-template">Hugging Face</a>, unless noted otherwise. Figures reused from other sources are excluded and marked in their captions ("Figure from …").
+seoThumbImage: "https://example.com/thumb.png"
+tableOfContentsAutoCollapse: true
+pdfProOnly: false
+---
+```
+
+<Accordion title="Frontmatter fields">
+| Field | Required | Notes | Type |
+| --- | --- | --- | --- |
+| title | Yes | Main title; supports line breaks with "\n" (falls back to "Untitled article") | string |
+| subtitle | Yes | Shown just below the title | string |
+| description | Yes | Used for SEO/meta description | string |
+| published | Yes | e.g., "2025-02-19" or readable date | string/date |
+| tags | No | List of keywords | string[] |
+| authors | No | Affiliation indices refer to the `affiliations` list | `string[] or { name, url?, affiliations? }[]` |
+| affiliations | No | Alias: `affiliation` (single or array) | `{ name, url? }[]` |
+| doi | No | DOI identifier | string |
+| licence | No | Rendered in footer; HTML supported | string (HTML allowed) |
+| seoThumbImage | No | Overrides default OpenGraph image | string (URL) |
+| tableOfContentsAutoCollapse | No | Controls TOC auto-collapse | boolean |
+| pdfProOnly | No | Gate PDF download to Pro users only. Shows "Subscribe to Pro" button for non-Pro users | boolean |
+</Accordion>
+
+#### **Content**
+
+Your story. Write your content here.
+
+<small className="muted">**Content** in app/src/content/article.mdx</small>
+```mdx
+import placeholder from '../../assets/image/placeholder.png'
+import Image from '../../../components/Image.astro'
+import Sidenote from '../../../components/Sidenote.astro'
+
+This paragraph is written in Markdown.
+
+<Sidenote>
+  A short callout inserted via a component.
+</Sidenote>
+<Image src={placeholder} alt="Sample image with optimization" />
+
+This paragraph is also written in Markdown. 
+```
+
+#### Chapters
+
+**If** your article becomes **too long** for one file, you can **organize** it into **separate chapters**.
+
+Simply **create a new file** in the `app/src/content/chapters` **directory**.  
+Then, **include** your new chapter in the main `article.mdx` like below.
+
+
+<small className="muted">Example</small>
+```mdx
+import MyChapter from './chapters/my-chapter.mdx';
+
+<MyChapter />
+```
+<small className="muted">You can see a living example here <a target="_blank" href="https://huggingface.co/spaces/tfrere/research-article-template/blob/main/app/src/content/chapters/best-pratices.mdx">app/src/content/chapters/best-pratices.mdx</a>.</small>
+
+### **Table of contents**
+ 
+The **Table of contents** is generated **automatically** from your **H2–H4** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**.
+
+<Note variant="info" emoji="💡">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the <a href="#frontmatter">frontmatter</a>. Which is `true` by default.</Note>
+
+### Theme
+
+All **interactive elements** (buttons, inputs, cards, etc.) are themed with the **primary color** you choose.
+
+You can **update this main color** to match your brand by changing the `--primary-color` variable in the `app/src/styles/_variables.css` file.
+
+Use the **color picker** below to see how the primary color affects the theme.
+
+#### Brand color
+
+<ColorPicker />
+
+<Sidenote>
+  You can use the color picker to select the right color.
+  
+  Here is an example of an <a href="#">interactive element</a>.
+</Sidenote>
+
+#### Color palettes
+
+Here is a suggestion of **color palettes** for your **data visualizations** that align with your **brand identity**. These palettes are generated from your `--primary-color`.
+
+
+<Palettes />
+<br/>
+**Use color with care.**
+Color should rarely be the only channel of meaning.
+Always pair it with text, icons, shape or position. The simulation helps you spot palettes and states that become indistinguishable for people with color‑vision deficiencies.
+
+#### Using the palettes
+
+You can copy them manually from the palette viewer just above, or fetch colors via `window.ColorPalettes.getColors(key, count)` where `key` is one of `'categorical'`, `'sequential'`, `'diverging'`, and `count` is the desired number of colors (defaults to 6).
+
+<Accordion title="Code example">
+  ```js
+// Usage (with explicit counts)
+const cat = window.ColorPalettes.getColors('categorical', 8);
+const seq = window.ColorPalettes.getColors('sequential', 8);
+const div = window.ColorPalettes.getColors('diverging', 7);
+
+// For current primary color string
+const primaryHex = window.ColorPalettes.getPrimary();
+
+// If you change --primary-color dynamically, call refresh to notify listeners
+document.documentElement.style.setProperty('--primary-color', '#6D4AFF');
+window.ColorPalettes.refresh();
+```
+</Accordion>
+

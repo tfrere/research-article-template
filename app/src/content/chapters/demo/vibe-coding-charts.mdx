@@ -1,0 +1,126 @@
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Note from '../../../components/Note.astro';
+import TrackioWrapper from '../../../components/trackio/TrackioWrapper.astro';
+import Sidenote from '../../../components/Sidenote.astro';
+
+## Vibe coding charts
+
+<Note emoji="⚠️" variant="danger">This is a work in progress. It may change quickly.</Note>
+
+### Prompt
+
+This page explains how to use the directives to author D3 charts as self‑contained HTML fragments.
+Using claude code works better.
+
+The goal is to make **responsive**, **accessible**, **interactive** and **dark mode ready** charts.
+
+1. Use this ref a a baseprompt: `app/src/content/embeds/vibe-code-d3-embeds-directives.md`.
+2. Opt: use an already existing chart as a starting point.
+3. Ask claude to code the chart. Here's a typical prompt:
+
+```markdown
+I want you to code a new d3 chart named `yourchart`.
+I have one CSV file called `yourdata.csv` in the data folder.
+The csv has the following columns: `x`, `y`, `z`.
+I want you to code a d3 chart that visualizes the data.
+```
+
+4. Once the chart created, iterate with littles adjustments to make it better.
+5. And that's it! 🎉
+
+### Base examples
+
+These are fundamental chart types that serve as building blocks for more complex visualizations. You can find all the source code in `app/src/content/embeds`.
+
+<HtmlEmbed
+  id="fig1"
+  title="d3-benchmark: LLM Benchmark"
+  src="d3-benchmark.html" desc={`Figure 1: Grouped bar chart comparing model scores across benchmarks (MMLU, GSM8K, HellaSwag, TruthfulQA, ARC‑C). Each group is a benchmark; colors encode models; values are accuracy/score (higher is better).`}  />
+<Sidenote> Example of <a href="#color-palettes" target="_blank">categorical color palette</a> </Sidenote>
+
+---
+<HtmlEmbed
+  id="fig2"
+  src="d3-line.html"
+  title="d3-line: Average Ranking of Models"
+  desc='Figure 2: Average Ranking of Models trained with internally deduplicated / merged samples. No clear benefit in merging can be seen with respect to model performance.<br/> Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>'
+  data="internal_deduplication.csv"
+  config={{
+    defaultMetric: ['average_rank']
+  }}
+/>
+
+---
+<HtmlEmbed id="fig4" src="d3-pie.html" title="d3-pie: Simple pie chart" frameless desc={'Figure 4: Simple pie chart showing data distribution across categories.<br/>Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>'} />
+
+
+---
+<HtmlEmbed
+  id="fig3"
+  src="d3-matrix.html"
+  title="d3-matrix: Baseline and Δ (Improved − Baseline)"
+  frameless
+  desc={`<p>
+Figure 3: Left: baseline matrix (row-normalized, sequential palette).
+Right: Δ (Improved − Baseline) in percentage points, using a diverging palette centered at 0 to highlight improvements vs degradations.
+</p>`}
+/>
+<Sidenote> Example of <a href="#color-palettes" target="_blank">sequential</a> and <a href="#color-palettes" target="_blank">diverging color palette</a> </Sidenote>
+
+---
+
+<HtmlEmbed 
+  id="fig8"
+  src="d3-equation-editor.html" 
+  frameless
+  title="Interactive Mathematical Function Plotter" 
+  desc={`Figure 8: Interactive <strong>equation editor</strong> with real-time function plotting. Edit mathematical expressions and see their graphs update instantly. Supports common functions (sin, cos, exp, etc.) with customizable domain range.`} 
+/>
+
+
+### Advanced examples
+
+These are more complex, interactive visualizations that demonstrate advanced D3 capabilities and real-world applications.
+
+<HtmlEmbed
+  id="fig5"
+  src="d3-neural-network.html"
+  id="neural-network-mnist-like"
+  frameless
+  title="MNIST-like Neural Network"
+  desc={`Figure 5: Interactive MNIST-like neural network. Draw a digit on the left canvas; activations propagate through hidden layers (node size/opacity reflect activation). The right side displays class probabilities (0–9) with the top class emphasized.`}
+/>
+---
+
+<HtmlEmbed 
+  id="fig6"
+  src="arxiv/arxiv.html" 
+  title="arXiv: Research Paper Clustering" 
+  desc={`Figure 6: Interactive visualization of ~8k recent arXiv submissions via UMAP dimensionality reduction. Each point represents a research paper positioned by semantic similarity. Colors indicate academic categories (cs.AI, cs.LG, cs.CV, etc.).`} 
+  data="data.json"
+  frameless 
+  align="center" 
+/>
+
+<Sidenote> 
+  Recent arXiv publications (~8k papers from last month) via TF-IDF embeddings projected to 2D via UMAP.
+</Sidenote>
+---
+
+<HtmlEmbed 
+  id="fig7"
+  src="d3-umap-typography.html" 
+  title="Visual Similarity of Typefaces" 
+  desc={`Figure 7: Interactive 2D visualization of 382 <strong>Google Fonts</strong> clustered by visual similarity via <strong>UMAP</strong>. Each point represents a typeface positioned based on pixel-level differences computed from font matrices.`} 
+  frameless 
+  align="center" 
+/>
+
+---
+
+
+<HtmlEmbed id="fig9" src="d3-pie-quad.html" title="d3-pie-quad: Quad donuts by metric" align="center" frameless desc={'Figure 9: Quad view: Answer Tokens, Number of Samples, Number of Turns, Number of Images.<br/>Credit: <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank">FineVision</a>'} />
+
+{/* ### Trackio redesign experiment
+<TrackioWrapper /> */}
+

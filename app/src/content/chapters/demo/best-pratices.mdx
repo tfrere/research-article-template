@@ -1,0 +1,52 @@
+
+import visualPoster from '../../assets/image/visual-vocabulary-poster.png';
+import Note from '../../../components/Note.astro';
+import Image from '../../../components/Image.astro';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Sidenote from '../../../components/Sidenote.astro';
+
+
+## Writing Tips
+
+Simple guidelines to make your research writing clear, engaging, and effective. Focus on what matters most: helping readers understand your ideas quickly and completely.
+
+### Short sections
+Break content into **small, purpose‑driven sections**. Each section should answer a **single question** or support one idea. This improves **scanability**, helps readers navigate with the TOC, and makes later edits safer.
+
+### Clear, minimal annotations
+Favor **concise captions** and callouts that clarify what to look at and why it matters. In code, **highlight just the lines** that carry the idea; avoid verbose commentary. **Precision beats volume**.
+
+### Explain math notation
+**Introduce symbols and variables** the first time they appear, and prefer **well‑known identities** over custom shorthand. When formulas carry the message, add one sentence of **plain‑language interpretation** right after.
+
+
+<div className="note-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; align-items: start;">
+  <Note>
+    For example, in linear regression with features $x \in \mathbb{R}^d$, weights $w \in \mathbb{R}^d$, and bias $b$, the prediction is:
+
+    $$
+    \hat{y} = w^\top x + b
+    $$
+
+    A common training objective is the mean squared error over $N$ samples:
+
+    $$
+    \mathcal{L}(w,b) = \frac{1}{N} \sum_{i=1}^{N} (w^\top x_i + b - y_i)^2
+    $$
+
+    Interpretation: the model fits a hyperplane that minimizes the average squared prediction error.
+  </Note>
+
+  
+</div>
+
+### Use the right chart
+
+Picking the right visualization depends on your goal (compare values, show distribution, part-to-whole, trends, relationships, etc.). The Visual Vocabulary poster below provides a concise mapping from **analytical task** to **chart types**.
+
+<Image
+  src={visualPoster}
+  alt="Visual Vocabulary: choosing the right chart by task"
+  linkHref="https://raw.githubusercontent.com/Financial-Times/chart-doctor/refs/heads/main/visual-vocabulary/poster.png"
+  caption={'Credits <a href="https://www.ft.com/" target="_blank" rel="noopener noreferrer">Financial-Times</a> <br/>A handy reference to select chart types by purpose — click to enlarge.'}
+/>

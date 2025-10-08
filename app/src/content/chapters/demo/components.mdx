@@ -1,0 +1,536 @@
+import { Image as AstroImage } from 'astro:assets';
+import placeholder from '../../assets/image/placeholder.png';
+import audioDemo from '../../assets/audio/audio-example.wav';
+import HtmlEmbed from '../../../components/HtmlEmbed.astro';
+import Sidenote from '../../../components/Sidenote.astro';
+import Wide from '../../../components/Wide.astro';
+import Note from '../../../components/Note.astro';
+import FullWidth from '../../../components/FullWidth.astro';
+import Accordion from '../../../components/Accordion.astro';
+import Image from '../../../components/Image.astro';
+import Quote from '../../../components/Quote.astro';
+import Reference from '../../../components/Reference.astro';
+import Glossary from '../../../components/Glossary.astro';
+import Stack from '../../../components/Stack.astro';
+
+## Components
+
+**All** the following **components** are available in the **article.mdx** file. You can also create your own **components** by creating a new file in the `/components` folder.
+
+### How to import components
+
+To use any component in your MDX file, add the import statement at the top:
+
+```mdx
+import Image from '../components/Image.astro';
+import Note from '../components/Note.astro';
+
+# Your content
+
+<Image src={myImage} alt="Description" />
+<Note>This is a note</Note>
+```
+
+Here are the components that are available:
+
+
+<div className="feature-grid">
+  <a href="#image" className="feature-card">
+    <strong>Image</strong>
+    <span>Optimized images</span>
+  </a>
+  <a href="#placement" className="feature-card">
+    <strong>Placement</strong>
+    <span>Layout helpers</span>
+  </a>
+  <a href="#accordion" className="feature-card">
+    <strong>Accordion</strong>
+    <span>Collapsible content</span>
+  </a>
+  <a href="#note" className="feature-card">
+    <strong>Note</strong>
+    <span>Contextual callouts</span>
+  </a>
+  <a href="#quote" className="feature-card">
+    <strong>Quote</strong>
+    <span>Elegant citations</span>
+  </a>
+  <a href="#htmlembed" className="feature-card">
+    <strong>HtmlEmbed</strong>
+    <span>External content</span>
+  </a>
+  <a href="#reference" className="feature-card">
+    <strong>Reference</strong>
+    <span>Flexible content wrapper</span>
+  </a>
+  <a href="#iframe" className="feature-card">
+    <strong>Iframe</strong>
+    <span>Web embeds</span>
+  </a>
+  <a href="#glossary" className="feature-card">
+    <strong>Glossary</strong>
+    <span>Interactive term definitions</span>
+  </a>
+  <a href="#stack" className="feature-card">
+    <strong>Stack</strong>
+    <span>Flexible grid layouts</span>
+  </a>
+</div>
+
+### Image
+
+**Images** automatically generate optimized `srcset` and `sizes` so the browser downloads the most appropriate file for the current viewport and DPR. You can also request multiple output formats (e.g., **AVIF**, **WebP**, fallback **PNG/JPEG**) and control **lazy loading/decoding** for better **performance**.
+
+
+<Image
+  src={placeholder}
+  zoomable
+  downloadable
+  id="placeholder-image"
+  layout="fixed"
+  alt="A placeholder image alt text"
+  caption={'A placeholder image description<br/> Credit: <a target="_blank" href="https://commons.wikimedia.org/wiki/File:RCA_Indian_Head_Test_Pattern.svg">RCA Indian Head Test Pattern</a>'}
+/>
+
+| Prop                   | Required | Description                                                                                                         
+|------------------------|----------|-------------------------------------------------------
+| `zoomable`        | No       | Adds a zoomable lightbox (Medium-like).                                                                             
+| `downloadable`    | No       | Adds a download button to fetch the image file.                                                               
+| `loading="lazy"`       | No       | Lazy loads the image.                                                                                               
+| `caption`              | No       | Adds a caption and credit.                                                                                          
+| `id`              | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                                                                                          
+
+
+<Accordion title="Code example">
+```mdx
+import Image from '../../../components/Image.astro'
+import myImage from './assets/image/placeholder.jpg'
+
+<Image src={myImage} alt="Optimized image with caption" />
+
+<Image
+  src={myImage}
+  layout="fixed"
+  zoomable
+  downloadable
+  loading="lazy"
+  alt="Example with caption and credit"
+  caption={'Optimized image with a descriptive caption. <span class="image-credit">Credit: Photo by <a href="https://example.com">Author</a></span>'}
+/>
+```
+</Accordion>
+
+### Placement
+
+Use these helpers when you need to step outside the main content flow: **Sidenotes** for contextual side notes, **Wide** to extend beyond the main column, and **Full-width** for full-width, immersive sections.
+
+#### Sidenotes
+
+This paragraph presents a **key idea** concisely.
+
+<Sidenote>
+  **Side note** for brief context or a definition.
+</Sidenote>
+
+<Accordion title="Code example">
+```mdx
+import Sidenote from '../../../components/Sidenote.astro'
+
+Main paragraph with the core idea.
+<Sidenote>Short side note.</Sidenote>
+```
+</Accordion>
+
+
+#### Wide example
+
+<Wide>
+  <div className="demo-wide">demo wide</div>
+</Wide>
+
+<Accordion title="Code example">
+```mdx
+import Wide from '../../../components/Wide.astro'
+
+<Wide>
+  Your content here...
+</Wide>
+```
+</Accordion>
+
+#### Full-width example
+
+<FullWidth>
+  <div className="demo-full-width">demo full-width</div>
+</FullWidth>
+
+<Accordion title="Code example">
+```mdx
+import FullWidth from '../../../components/FullWidth.astro'
+
+<FullWidth>
+  Your content here...
+</FullWidth>
+```
+</Accordion>
+
+
+### Reference
+
+The **Reference** component provides a flexible wrapper for any content with an ID and HTML caption. It's perfect for creating **numbered references**, **cross-references**, or **any content that needs to be referenced** throughout your article.
+
+<Note emoji="💡" variant="info">
+  **Note:** The `Image` and `HtmlEmbed` components also support the same `id` and `caption` props for consistent referencing across your article.
+</Note>
+
+<Reference id="example-reference" caption="<strong>Figure 1:</strong> Example reference with HTML caption and <em>styling</em>">
+  you content here...
+</Reference>
+
+| Prop     | Required | Type   | Description                    |
+|----------|----------|--------|--------------------------------|
+| `id`     | Yes      | string | Unique identifier for the reference (used for deep-linking) |
+| `caption`| Yes      | string | HTML caption displayed below the content (supports HTML tags) |
+
+<Accordion title="Code example">
+```mdx
+import Reference from '../../../components/Reference.astro'
+
+<Reference id="my-reference" caption="<strong>Reference 1:</strong> This is a <em>flexible</em> content wrapper">
+  <p>Any content can go here...</p>
+  <img src={myImage} alt="Description" />
+  <div>Even complex HTML structures!</div>
+</Reference>
+
+<Reference id="another-ref" caption="<strong>Table 1:</strong> Data comparison with <a href='#'>source link</a>">
+  <table>
+    <thead>
+      <tr><th>Column 1</th><th>Column 2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Data 1</td><td>Data 2</td></tr>
+    </tbody>
+  </table>
+</Reference>
+```
+</Accordion>
+
+**Use cases:**
+- **Numbered figures** with custom content
+- **Cross-references** that can be linked to from anywhere in the article
+- **Flexible content blocks** that need consistent styling and captioning
+- **Tables, charts, or any content** that requires an ID and description
+
+
+### Accordion
+
+Can be used like this `<Accordion>some content</Accordion>`. You can pass any children content.
+
+<Accordion title="What is an accordion?" open>
+  The accordion component provides a collapsible content area that helps organize information efficiently. It's perfect for creating expandable sections, FAQ entries, or any content that benefits from progressive disclosure. Users can click the title to toggle the visibility of the content inside.
+</Accordion>
+
+<Accordion title="A table inside an accordion">
+  | Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
+</Accordion>
+
+<Accordion title="Code example">
+````mdx
+import Accordion from '../../../components/Accordion.astro'
+
+<Accordion title="Accordion title" open>
+  <p>Free content with <strong>markdown</strong> and MDX components.</p>
+</Accordion>
+
+<Accordion title="A table inside an accordion">
+  | Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
+</Accordion>
+
+<Accordion title="Code example">
+```ts
+function greet(name: string) {
+  console.log(`Hello, ${name}`);
+}
+
+greet("Astro");
+```
+</Accordion>
+````
+</Accordion>
+
+### Note
+
+Small contextual callout for tips, caveats, or emphasis.
+
+<Note title="Heads‑up" emoji="💡" variant="info">
+  Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note variant="success">
+  Operation completed successfully.
+</Note>
+
+<Note variant="danger">
+  Be careful: this action cannot be undone.
+</Note>
+
+<Note>
+  Plain note without header. Useful for short clarifications.
+</Note>
+
+| Prop     | Required | Type                         | Description                         |
+|----------|----------|------------------------------|-------------------------------------|
+| `title`  | No       | string                       | Short title displayed in header     |
+| `emoji`  | No       | string                       | Emoji displayed before the title    |
+| `class`  | No       | string                       | Extra classes for custom styling    |
+| `variant`| No       | 'neutral' | 'info' | 'success' | 'danger' | Visual intent of the note          |
+
+<Accordion title="Code example">
+```mdx
+import Note from '../../../components/Note.astro'
+
+<Note title="Heads‑up" emoji="💡" variant="info">
+  Use notes to surface context without breaking reading flow.
+</Note>
+
+<Note variant="success">
+  Operation completed successfully.
+</Note>
+
+<Note variant="danger">
+  Be careful: this action cannot be undone.
+</Note>
+
+<Note>
+  Plain note without header. Useful for short clarifications.
+</Note>
+```
+</Accordion>
+
+### Quote
+
+Elegant quotes with optional source attribution.
+
+<Quote source="Geoffrey Hinton, <a href='https://www.nature.com/articles/323533a0'>Learning representations by back-propagating errors</a>">
+  Backpropagation allows neural networks to discover their own internal representations of data.
+</Quote>
+
+| Prop     | Required | Type   | Description                    |
+|----------|----------|--------|--------------------------------|
+| `source` | No       | HTML   | Quote source/author (supports HTML links) |
+
+<Accordion title="Code example">
+```mdx
+import Quote from '../../../components/Quote.astro'
+
+<Quote source="Geoffrey Hinton, <a href='https://www.nature.com/articles/323533a0'>Learning representations by back-propagating errors</a>">
+  Backpropagation allows neural networks to discover their own internal representations of data.
+</Quote>
+```
+</Accordion>
+
+
+### Glossary
+
+The **Glossary** component creates interactive term definitions with hover tooltips. Perfect for **technical terms**, **acronyms**, and **concepts** that need explanation without breaking the reading flow.
+
+<Glossary term="Machine Learning" definition="A subset of artificial intelligence that enables computers to learn and improve from experience without being explicitly programmed." />
+
+<Glossary term="Neural Network" definition="A computing system inspired by biological neural networks, consisting of interconnected nodes (neurons) that process information." position="bottom" />
+
+<Glossary term="API" definition="Application Programming Interface - a set of protocols and tools for building software applications." position="right" disableOnMobile={true} />
+<br/><br/>
+
+| Prop              | Required | Type                                    | Description                                                                                                         
+|-------------------|----------|-----------------------------------------|-------------------------------------------------------
+| `term`            | Yes      | `string`                                | The word or term to define                                                                             
+| `definition`      | Yes      | `string`                                | The definition of the term                                                                             
+| `class`           | No       | `string`                                | Optional CSS class to apply to the term                                                                             
+| `style`           | No       | `string`                                | Optional inline style to apply to the term                                                                             
+| `position`        | No       | `'top' \| 'bottom' \| 'left' \| 'right'` | Tooltip position (default: 'top')                                                                             
+| `delay`           | No       | `number`                                | Delay before showing tooltip in ms (default: 300)                                                                             
+| `disableOnMobile` | No       | `boolean`                               | Disable tooltip on mobile devices (default: false)                                                                             
+
+<Accordion title="Code example">
+```mdx
+import Glossary from '../../../components/Glossary.astro'
+
+<Glossary term="Machine Learning" definition="A subset of artificial intelligence that enables computers to learn and improve from experience." />
+
+<Glossary 
+  term="Deep Learning" 
+  definition="A subset of machine learning that uses neural networks with multiple layers to model and understand complex patterns in data."
+  position="bottom"
+  delay={500}
+/>
+
+<Glossary 
+  term="API" 
+  definition="Application Programming Interface - a set of protocols and tools for building software applications."
+  disableOnMobile={true}
+/>
+
+
+```
+</Accordion>
+
+**Use cases:**
+- **Technical terms** that need explanation
+- **Acronyms** and abbreviations
+- **Domain-specific concepts** for broader audiences
+- **Interactive glossaries** for educational content
+
+### Stack
+
+The **Stack** component provides flexible grid layouts for organizing content. Perfect for **comparisons**, **side-by-side examples**, **multi-column layouts**, and **responsive content organization**.
+
+<Stack layout="auto" gap="large">
+  <div>
+    <h4>Auto Layout</h4>
+    <p>This layout automatically adjusts based on content and available space.</p>
+  </div>
+  <div>
+    <h4>Responsive</h4>
+    <p>Items will wrap to new lines as needed, with a minimum width of 300px.</p>
+  </div>
+  <div>
+    <h4>Flexible</h4>
+    <p>Perfect for varying content lengths and dynamic layouts.</p>
+  </div>
+</Stack>
+
+<Stack layout="2-column" gap="medium">
+  <Image
+    src={placeholder}
+    alt="First image in stack"
+    caption="Image 1: Example of using Image component within Stack"
+    zoomable
+  />
+  <Image
+    src={placeholder}
+    alt="Second image in stack"
+    caption="Image 2: Side-by-side comparison layout"
+    zoomable
+  />
+</Stack>
+
+| Prop     | Required | Type                                                                  | Description                                                                                                         
+|----------|----------|-----------------------------------------------------------------------|-------------------------------------------------------
+| `layout` | No       | `"2-column" \| "3-column" \| "4-column" \| "auto"`                    | Grid layout for the content (default: "2-column")                                                                                               
+| `gap`    | No       | `"small" \| "medium" \| "large" \| string`                            | Gap between items - predefined size or custom value (e.g., "2rem", "20px")                                                                                               
+| `class`  | No       | `string`                                                               | Optional CSS class to apply to the wrapper                                                                                          
+| `id`     | No       | `string`                                                               | Optional ID for the stack                                                                                          
+
+<Accordion title="Code example">
+```mdx
+import Stack from '../../../components/Stack.astro'
+
+<Stack layout="auto" gap="large">
+  <div>
+    <h4>Auto Layout</h4>
+    <p>This layout automatically adjusts based on content and available space.</p>
+  </div>
+  <div>
+    <h4>Responsive</h4>
+    <p>Items will wrap to new lines as needed, with a minimum width of 300px.</p>
+  </div>
+  <div>
+    <h4>Flexible</h4>
+    <p>Perfect for varying content lengths and dynamic layouts.</p>
+  </div>
+</Stack>
+
+<Stack layout="2-column" gap="medium">
+  <Image
+    src={placeholder}
+    alt="First image in stack"
+    caption="Image 1: Example of using Image component within Stack"
+    zoomable
+  />
+  <Image
+    src={placeholder}
+    alt="Second image in stack"
+    caption="Image 2: Side-by-side comparison layout"
+    zoomable
+  />
+</Stack>
+```
+</Accordion>
+
+
+### Iframes
+
+You can embed external content in your article using **iframes**. For example, **TrackIO**, **Gradio** or even **Github code embeds** can be used this way.
+
+<small className="muted">Trackio embed example</small>
+<div className="card">
+<iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="630" frameborder="0"></iframe>
+</div>
+<Accordion title="Code example">
+```mdx
+<iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
+<iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
+<iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
+```
+</Accordion>
+
+
+### HtmlEmbed
+
+The main purpose of the ```HtmlEmbed``` component is to **embed** a **Plotly** or **D3.js** chart in your article. **Libraries** are already imported in the template.
+
+They exist in the `app/src/content/embeds` folder.
+
+For researchers who want to stay in **Python** while targeting **D3**, the [d3blocks](https://github.com/d3blocks/d3blocks) library lets you create interactive D3 charts with only a few lines of code. In **2025**, **D3** often provides more flexibility and a more web‑native rendering than **Plotly** for custom visualizations.
+
+
+<HtmlEmbed src="d3-line.html" title="This is a chart title" desc="Figure X: Some chart description<br/>Credit: <a href='https://example.com' target='_blank'>Example</a>" />
+
+| Prop        | Required | Description                                                                                      
+|-------------|----------|----------------------------------------------------------------------------------
+| `src`       | Yes      | Path to the embed file in the `embeds` folder.                                                   
+| `title`     | No       | Short title displayed above the card.                                                            
+| `desc`      | No       | Short description displayed below the card. Supports inline HTML (e.g., links).                  
+| `frameless` | No       | Removes the card background and border for seamless embeds.                                      
+| `align`     | No       | Aligns the title/description text. One of `left` (default), `center`, `right`.                  
+| `id`        | No       | Adds an `id` to the outer figure for deep-linking and cross-references.                        
+| `data`      | No       | Path (string) or array of paths (string[]) to data file(s) consumed by the embed.              
+| `config`    | No       | Optional object for embed options (e.g., `{ defaultMetric: 'average_rank' }`).                
+
+<Accordion title="Code example">
+```mdx
+import HtmlEmbed from '../../../components/HtmlEmbed.astro'
+
+<HtmlEmbed src="d3-line.html" title="This is a chart title" desc="Some chart description <br/>Credit: <a href='https://example.com' target='_blank'>Example</a>" />
+
+<HtmlEmbed
+  src="d3-line.html"
+  title="Comparison A vs B"
+  data={[ 'formatting_filters.csv', 'relevance_filters.csv' ]}
+  config={{ defaultMetric: 'average_rank' }}
+/>
+```
+</Accordion>
+
+
+#### Data
+
+If you need to link your **HTML embeds** to **data files**, there is an **`assets/data`** folder for this.
+As long as your files are there, they will be served from the **`public/data`** folder.
+You can fetch them with this address: **`[domain]/data/your-data.ext`**
+
+<Note emoji="⚠️" variant="danger"><b>Be careful</b>, unlike images, <b>data files are not optimized</b> by Astro. You need to optimize them manually.</Note>

@@ -1,0 +1,458 @@
+<div class="d3-line-simple"></div>
+<style>
+  .d3-line-simple { position: relative; }
+  .d3-line-simple .controls {
+    margin-top: 0;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    width: auto;
+    flex-wrap: wrap;
+  }
+  .d3-line-simple .controls label {
+    font-size: 12px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+  .d3-line-simple .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; background-size: 12px;
+    -webkit-appearance: none; appearance: none; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-theme="dark"] .d3-line-simple .controls select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .d3-line-simple .controls select:hover { border-color: var(--primary-color); }
+  .d3-line-simple .controls select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
+  .d3-line-simple .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  .d3-line-simple .axes path, .d3-line-simple .axes line { stroke: var(--axis-color); }
+  .d3-line-simple .axes text { fill: var(--tick-color); }
+  .d3-line-simple .grid line { stroke: var(--grid-color); }
+  .d3-line-simple .legend { font-size: 12px; color: var(--text-color);padding-left: 6px; }
+  .d3-line-simple .legend .items { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+  .d3-line-simple .legend .item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .d3-line-simple .legend .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
+  /* Ghosting on hover */
+  .d3-line-simple.hovering .legend-bottom .item.ghost { opacity: .35; }
+  .d3-line-simple.hovering .lines path.ghost { opacity: .25; }
+  .d3-line-simple.hovering .points circle.ghost { opacity: .25; }
+  .d3-line-simple.hovering .areas path.ghost { opacity: .08; }
+  .d3-line-simple .chart-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin: 0 0 8px 0; flex-wrap: wrap; }
+  .d3-line-simple .legend-bottom { display:flex; align-items:center; justify-content:flex-start; font-size:12px; color: var(--text-color); }
+  .d3-line-simple .legend-bottom .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .d3-line-simple .legend-bottom .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .d3-line-simple .legend-bottom .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
+  .d3-line-simple .lines path.active { stroke-width: 3; }
+  /* Layout tweaks: stack label above select, add legend title above items */
+  .d3-line-simple .controls .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-line-simple .legend-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-line-simple .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  /* Tooltip styling aligned with filters-quad */
+  .d3-line-simple .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .d3-line-simple .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; }
+  .d3-line-simple .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .d3-line-simple .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .d3-line-simple .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--border-color); }
+  .d3-line-simple .d3-tooltip__color-dot { display:inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+  /* Chart card only around the SVG */
+  .d3-line-simple .chart-card { background: var(--surface-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; }
+  /* Place header below chart and align start */
+  .d3-line-simple .chart-header { display:flex; align-items:flex-start; justify-content:flex-start; gap:12px; margin: 8px 0 0 0; flex-wrap: wrap; }
+</style>
+<script>
+  (() => {
+    // Pretty label mapping for metric keys (aligned with filters-quad)
+    const prettyMetricLabel = (key) => {
+      if (!key) return '';
+      const table = {
+        'ai2d_exact_match': 'AI2D Exact Match',
+        'average_rank': 'Average Rank',
+      };
+      if (table[key]) return table[key];
+      const cleaned = String(key).replace(/[_-]+/g, ' ').trim();
+      return cleaned.split(/\s+/).map(w => {
+        if (/^(ai2d|umap|id|auc|f1)$/i.test(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+    };
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-line-simple'))){
+        const cs = Array.from(document.querySelectorAll('.d3-line-simple')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      // Controls (we will place them in a footer below the chart)
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+      const controlGroup = document.createElement('div');
+      controlGroup.className = 'control-group';
+      const labelMetric = document.createElement('label');
+      labelMetric.textContent = 'Metric';
+      const selectMetric = document.createElement('select');
+      // Associate label and select with a unique id
+      const uniqueId = Math.random().toString(36).slice(2, 9);
+      selectMetric.id = `metric-select-${uniqueId}`;
+      labelMetric.setAttribute('for', selectMetric.id);
+      controlGroup.appendChild(labelMetric);
+      controlGroup.appendChild(selectMetric);
+      controls.appendChild(controlGroup);
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
+          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Header (legend + controls) placed after the chart
+      const header = document.createElement('div'); header.className = 'chart-header';
+      const legendBottom = document.createElement('div'); legendBottom.className = 'legend-bottom'; header.appendChild(legendBottom);
+      header.appendChild(controls);
+
+      // Chart card (SVG)
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      container.appendChild(header);
+      // SVG
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gAreas = gRoot.append('g').attr('class','areas');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      // (legend removed from inside SVG)
+      const overlay = gRoot.append('rect').attr('fill','transparent').style('cursor','crosshair');
+      const hoverLine = gRoot.append('line').attr('stroke-width',1).style('display','none');
+
+      // State/data
+      let width = 800, height = 480; const margin = { top: 16, right: 32, bottom: 44, left: 56 };
+      const xScale = d3.scaleLinear();
+      const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
+      const dataByMetric = new Map();
+      let runOrder = [];
+
+      // Colors
+      function getRunColors(count){
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', count); } catch(_){}
+        return d3.schemeTableau10 ? d3.schemeTableau10.slice(0, count) : ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ab'].slice(0, count);
+      }
+      // Format helper for thousands (5000 -> 5k, 1500 -> 1.5k)
+      function formatK(v){
+        const abs = Math.abs(v);
+        if (abs >= 1000) {
+          const n = v / 1000;
+          const s = d3.format('.1f')(n);
+          return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k';
+        }
+        return d3.format('d')(v);
+      }
+
+      // CSV: prefer public path, fallback to relative
+      // Data file(s) from HtmlEmbed attribute (string or JSON array), else default cascade
+      // Find the HtmlEmbed wrapper that carries data-datafiles
+      let mountEl = container;
+      while (mountEl && !mountEl.getAttribute?.('data-datafiles') && !mountEl.getAttribute?.('data-config')) {
+        mountEl = mountEl.parentElement;
+      }
+      let providedData = null;
+      let providedConfig = null;
+      try {
+        const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null;
+        if (attr && attr.trim()) {
+          providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
+        }
+      } catch(_) {}
+      try {
+        const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+        if (cfg && cfg.trim()) {
+          providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+        }
+      } catch(_) {}
+      const DEFAULT_CSV = '/data/formatting_filters.csv';
+      // Normalize: if a provided path has no slash, assume it lives under /data/
+      const ensureDataPrefix = (p) => {
+        if (typeof p !== 'string' || !p) return p;
+        return p.includes('/') ? p : `/data/${p}`;
+      };
+      const normalizeInput = (inp) => Array.isArray(inp) ? inp.map(ensureDataPrefix) : (typeof inp === 'string' ? [ ensureDataPrefix(inp) ] : null);
+      const CSV_PATHS = Array.isArray(providedData)
+        ? normalizeInput(providedData)
+        : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
+            DEFAULT_CSV,
+            './assets/data/formatting_filters.csv',
+            '../assets/data/formatting_filters.csv',
+            '../../assets/data/formatting_filters.csv'
+          ]);
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) { try { const r = await fetch(p, { cache: 'no-cache' }); if (r.ok) return await r.text(); } catch(_){} }
+        throw new Error('CSV not found: formatting_filters.csv');
+      };
+
+      function updateLayout(){
+        const axisColor = getComputedStyle(container).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
+        width = container.clientWidth || 800;
+        height = Math.max(280, Math.round(width / 3));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        overlay.attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        hoverLine.attr('y1',0).attr('y2', innerHeight).attr('stroke', axisColor);
+        return { innerWidth, innerHeight };
+      }
+
+      function render(metricKey){
+        const { innerWidth, innerHeight } = updateLayout();
+        const map = dataByMetric.get(metricKey) || {};
+        const runs = runOrder;
+        // domains
+        let minStep = Infinity, maxStep = -Infinity, minV = Infinity, maxV = -Infinity;
+        runs.forEach(r => { (map[r]||[]).forEach(pt => { minStep = Math.min(minStep, pt.step); maxStep = Math.max(maxStep, pt.step); minV = Math.min(minV, pt.value); maxV = Math.max(maxV, pt.value); }); });
+        if (!isFinite(minStep) || !isFinite(maxStep)) return;
+        xScale.domain([minStep, maxStep]).range([0, innerWidth]);
+        yScale.domain([minV, maxV]).nice().range([innerHeight, 0]);
+
+        // grid
+        gGrid.selectAll('*').remove();
+        gGrid.selectAll('line').data(yScale.ticks(6)).join('line')
+          .attr('x1',0).attr('x2', innerWidth).attr('y1', d=>yScale(d)).attr('y2', d=>yScale(d))
+          .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // axes
+        gAxes.selectAll('*').remove();
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(xScale).ticks(8).tickFormat(formatK)).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','12px'); });
+        gAxes.append('g').call(d3.axisLeft(yScale).ticks(6)).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','12px'); });
+        gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('x', innerWidth/2).attr('y', innerHeight + 38).text('Step');
+        gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('transform', `translate(${-44}, ${innerHeight/2}) rotate(-90)`).text('Value');
+
+        // shaded areas (stderr or min/max if provided)
+        gAreas.selectAll('*').remove();
+        const areaGenClosed = d3.line().x(d=>d[0]).y(d=>d[1]).curve(d3.curveLinearClosed);
+        // Colors (needed for both areas and lines)
+        const colors = getRunColors(runs.length);
+        const seriesForAreas = [];
+        runs.forEach((r, i) => {
+          const vals = (map[r]||[]).slice().sort((a,b)=>a.step-b.step);
+          const withBounds = vals.map(v => {
+            let lo = null, hi = null;
+            if (v.stderr != null && isFinite(v.stderr) && v.stderr > 0) { lo = v.value - v.stderr; hi = v.value + v.stderr; }
+            if (v.min != null && isFinite(v.min)) lo = (lo==null) ? v.min : lo;
+            if (v.max != null && isFinite(v.max)) hi = (hi==null) ? v.max : hi;
+            return { step: v.step, lo, hi };
+          }).filter(v => v.lo != null && v.hi != null && isFinite(v.lo) && isFinite(v.hi));
+          if (withBounds.length > 0) {
+            seriesForAreas.push({ run: r, color: colors[i % colors.length], bounds: withBounds });
+          }
+        });
+        seriesForAreas.forEach(s => {
+          const upper = s.bounds.map(d => [ xScale(d.step), yScale(d.hi) ]);
+          const lower = s.bounds.slice().reverse().map(d => [ xScale(d.step), yScale(d.lo) ]);
+          const coords = upper.concat(lower);
+          gAreas.append('path')
+            .attr('class','area')
+            .attr('data-run', s.run)
+            .attr('d', areaGenClosed(coords))
+            .attr('fill', s.color)
+            .attr('opacity', 0.15)
+            .attr('stroke','none');
+        });
+
+        // lines
+        const series = runs.map((r, i) => ({ run:r, color: colors[i % colors.length], values: (map[r]||[]).slice().sort((a,b)=>a.step-b.step) }));
+        const paths = gLines.selectAll('path.run').data(series, d=>d.run);
+        const pathsEnter = paths.enter().append('path').attr('class','run').attr('fill','none').attr('stroke-width',2).attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
+        pathsEnter.merge(paths).transition().duration(200).attr('stroke', d=>d.color).attr('d', d=>lineGen(d.values));
+        paths.exit().remove();
+
+        // Hover capture paths (wider invisible stroke for easy hover)
+        const captures = gLines.selectAll('path.run-hover').data(series, d=>`cap-${d.run}`);
+        captures.enter().append('path').attr('class','run-hover').attr('fill','none').attr('stroke','transparent').attr('stroke-width', 12).style('pointer-events','stroke')
+          .attr('d', d=>lineGen(d.values))
+          .merge(captures)
+          .attr('d', d=>lineGen(d.values))
+          .on('mouseenter', function(ev, d){
+            container.classList.add('hovering');
+            // ghost non hovered lines and points
+            gLines.selectAll('path.run').classed('ghost', s => s.run !== d.run);
+            gPoints.selectAll('circle.pt').classed('ghost', p => p.run !== d.run);
+            gAreas.selectAll('path.area').classed('ghost', a => a && a.getAttribute && a.getAttribute('data-run') !== d.run);
+            // ghost legend items
+            try {
+              const legendNode = legendBottom;
+              if (legendNode) {
+                legendNode.querySelectorAll('.item').forEach(el => {
+                  const name = el.getAttribute('data-run');
+                  el.classList.toggle('ghost', name !== d.run);
+                });
+              }
+            } catch {}
+          })
+          .on('mouseleave', function(){
+            container.classList.remove('hovering');
+            gLines.selectAll('path.run').classed('ghost', false);
+            gPoints.selectAll('circle.pt').classed('ghost', false);
+            gAreas.selectAll('path.area').classed('ghost', false);
+            try { const legendNode = legendBottom; if (legendNode) legendNode.querySelectorAll('.item').forEach(el => el.classList.remove('ghost')); } catch {}
+          });
+        captures.exit().remove();
+
+        // point markers (subtle)
+        const allPts = series.flatMap(s => s.values.map(v => ({ run:s.run, color:s.color, step:v.step, value:v.value })));
+        const ptsSel = gPoints.selectAll('circle.pt').data(allPts, d=>`${d.run}-${d.step}`);
+        ptsSel.enter().append('circle').attr('class','pt').attr('r', 2).attr('fill', d=>d.color).attr('fill-opacity', 0.6)
+          .attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value))
+          .merge(ptsSel).transition().duration(150).attr('cx', d=>xScale(d.step)).attr('cy', d=>yScale(d.value));
+        ptsSel.exit().remove();
+
+        // legend (HTML below, left) with title above items
+        legendBottom.innerHTML = `<div class="legend-title">Legend</div><div class="items">${series.map(s => `<span class="item" data-run="${s.run}"><span class="swatch" style="background:${s.color}"></span><span>${s.run}</span></span>`).join('')}</div>`;
+        // Legend hover → ghost lines/points
+        try {
+          const legendNode = legendBottom;
+          legendNode.querySelectorAll('.item').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+              const run = el.getAttribute('data-run'); if (!run) return;
+              container.classList.add('hovering');
+              gLines.selectAll('path.run').classed('ghost', s => s.run !== run);
+              gPoints.selectAll('circle.pt').classed('ghost', p => p.run !== run);
+              gAreas.selectAll('path.area').classed('ghost', a => a && a.getAttribute && a.getAttribute('data-run') !== run);
+              legendNode.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
+            });
+            el.addEventListener('mouseleave', () => {
+              container.classList.remove('hovering');
+              gLines.selectAll('path.run').classed('ghost', false);
+              gPoints.selectAll('circle.pt').classed('ghost', false);
+              gAreas.selectAll('path.area').classed('ghost', false);
+              legendNode.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+            });
+          });
+        } catch {}
+
+        // hover
+        function onMove(ev){
+          const [mx, my] = d3.pointer(ev, overlay.node());
+          const sx = xScale.invert(mx);
+          // nearest integer step if steps are integers; else nearest by distance
+          const steps = Array.from(new Set(allPts.map(p=>p.step))).sort((a,b)=>a-b);
+          const nearest = steps.reduce((best, s) => Math.abs(s - sx) < Math.abs(best - sx) ? s : best, steps[0]);
+          const xpx = xScale(nearest);
+          hoverLine.style('display', null).attr('x1', xpx).attr('x2', xpx);
+          // tooltip content (styled)
+          let html = `<div style=\"font-weight:800;letter-spacing:.1px;\">${metricKey}</div><div style=\"font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;\">Step ${formatK(nearest)}</div>`;
+          const entries = series.map(s => {
+            const m = new Map(s.values.map(v=>[v.step, v.value]));
+            const val = m.get(nearest);
+            return { run: s.run, color: s.color, val };
+          }).filter(e => e.val != null);
+          entries.sort((a, b) => a.val - b.val);
+          entries.forEach(e => {
+            html += `<div style=\"display:flex;align-items:center;gap:6px;white-space:nowrap;\"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;\">${(+e.val).toFixed(4)}</span></div>`;
+          });
+          tipInner.innerHTML = html; tip.style.opacity = '1'; tip.style.transform = `translate(${Math.round(mx + margin.left + 12)}px, ${Math.round(my + margin.top + 12)}px)`;
+        }
+        function onLeave(){ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      // load CSV and init
+      (async () => {
+        try {
+          const text = await fetchFirstAvailable(CSV_PATHS);
+          const rows = d3.csvParse(text, d => ({
+            run:(d.run||'').trim(),
+            step:+d.step,
+            metric:(d.metric||'').trim(),
+            value:+d.value,
+            // Optional bounds: stderr or [min,max] or [lower,upper]
+            stderr: (d.stderr!=null && d.stderr!=='') ? +d.stderr : null,
+            min: (d.min!=null && d.min!=='') ? +d.min : (d.lower!=null && d.lower!=='') ? +d.lower : null,
+            max: (d.max!=null && d.max!=='') ? +d.max : (d.upper!=null && d.upper!=='') ? +d.upper : null
+          }));
+          const metrics = Array.from(new Set(rows.map(r=>r.metric))).sort();
+          runOrder = Array.from(new Set(rows.map(r=>r.run))).sort();
+          metrics.forEach(m => {
+            const map = {}; runOrder.forEach(r => map[r] = []);
+            rows.filter(r=>r.metric===m).forEach(r => {
+              if (!isNaN(r.step) && !isNaN(r.value)) map[r.run].push({ step:r.step, value:r.value, stderr: r.stderr, min: r.min, max: r.max });
+            });
+            dataByMetric.set(m, map);
+          });
+          // populate metric select (pretty labels) or hide if single-file with single metric
+          const isSingleFile = !Array.isArray(providedData) && typeof providedData === 'string';
+          metrics.forEach(m => { const o = document.createElement('option'); o.value=m; o.textContent=prettyMetricLabel(m); selectMetric.appendChild(o); });
+          // default metric selection via config.defaultMetric (match raw key or pretty label, case-insensitive)
+          if (metrics.length) {
+            let initial = metrics[0];
+            const desired = providedConfig && typeof providedConfig === 'object' && providedConfig.defaultMetric ? String(providedConfig.defaultMetric) : null;
+            if (desired) {
+              const lcDesired = desired.toLowerCase();
+              const byKey = metrics.find(m => m.toLowerCase() === lcDesired);
+              const byPretty = metrics.find(m => prettyMetricLabel(m).toLowerCase() === lcDesired);
+              initial = byKey || byPretty || initial;
+            }
+            selectMetric.value = initial;
+          }
+          if (isSingleFile && metrics.length <= 1) {
+            controls.style.display = 'none';
+          }
+
+          render(selectMetric.value);
+          selectMetric.addEventListener('change', () => render(selectMetric.value));
+          const rerender = () => render(selectMetric.value);
+          if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; container.appendChild(pre);
+        }
+      })();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>
+
+

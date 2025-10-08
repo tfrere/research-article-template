@@ -1,0 +1,244 @@
+---
+interface Props {
+  citationText: string;
+  bibtex: string;
+  licence?: string;
+  doi?: string;
+}
+const { citationText, bibtex, licence, doi } = Astro.props as Props;
+---
+<footer class="footer">
+  <div class="footer-inner">
+    <section class="citation-block">
+      <h3>Citation</h3>
+      <p>For attribution in academic contexts, please cite this work as</p>
+      <pre class="citation short">{citationText}</pre>
+
+      <p>BibTeX citation</p>
+      <pre class="citation long">{bibtex}</pre>
+    </section>
+    {doi && (
+      <section class="doi-block">
+        <h3>DOI</h3>
+        <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
+      </section>
+    )}
+    {licence && (
+      <section class="reuse-block">
+        <h3>Reuse</h3>
+        <p set:html={licence}></p>
+      </section>
+    )}
+    <section class="references-block">
+      <slot />
+    </section>
+  </div>
+</footer>
+
+
+<script is:inline>
+  (() => {
+    const getFooter = () => document.currentScript?.closest('footer') || document.querySelector('footer.footer');
+    const footer = getFooter();
+    if (!footer) return;
+    const target = footer.querySelector('.references-block');
+    if (!target) return;
+
+    const contentRoot = document.querySelector('section.content-grid main') || document.querySelector('main') || document.body;
+
+    const ensureHeading = (text) => {
+      const exists = Array.from(target.children).some((c) => c.tagName === 'H3' && c.textContent.trim().toLowerCase() === text.toLowerCase());
+      if (!exists) {
+        const h = document.createElement('h3');
+        h.textContent = text;
+        target.appendChild(h);
+      }
+    };
+
+    const moveIntoFooter = (element, headingText) => {
+      if (!element) return false;
+      // Remove an eventual heading already included inside the block (avoid duplicates)
+      const firstHeading = element.querySelector(':scope > h1, :scope > h2, :scope > h3');
+      if (firstHeading) {
+        const txt = (firstHeading.textContent || '').trim().toLowerCase();
+        const targetTxt = headingText.trim().toLowerCase();
+        if (txt === targetTxt || txt.includes('reference') || txt.includes('bibliograph')) {
+          firstHeading.remove();
+        }
+      }
+      ensureHeading(headingText);
+      target.appendChild(element);
+      return true;
+    };
+    const run = () => {
+      const findFirstOutsideFooter = (selectors) => {
+        for (const sel of selectors) {
+          const el = contentRoot.querySelector(sel);
+          if (el && !footer.contains(el)) return el;
+        }
+        return null;
+      };
+
+      const referencesEl = findFirstOutsideFooter(['#references', '.references', '.bibliography']);
+      const footnotesEl = findFirstOutsideFooter(['.footnotes']);
+
+      const movedRefs = moveIntoFooter(referencesEl, 'References');
+      const movedNotes = moveIntoFooter(footnotesEl, 'Footnotes');
+      return movedRefs || movedNotes;
+    };
+
+    // Try now; if not found yet, try again on DOM ready
+    const done = run();
+    if (!done) {
+      const onReady = () => run();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', onReady, { once: true });
+      } else {
+        setTimeout(onReady, 0);
+      }
+    }
+
+    // Resize on window changes (e.g., fonts, layout)
+    // No textarea auto-resize needed for <pre> blocks
+  })();
+</script>
+
+
+<style is:global>
+  .footer {
+    contain: layout style;
+    font-size: 0.8em;
+    line-height: 1.7em;
+    margin-top: 60px;
+    margin-bottom: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 60px 16px 48px;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 680px) 260px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* Use the parent grid (3 columns like .content-grid) */
+  .citation-block,
+  .references-block,
+  .reuse-block,
+  .doi-block {
+    display: contents;
+  }
+
+  .citation-block > h3,
+  .references-block > h3,
+  .reuse-block > h3,
+  .doi-block > h3 {
+    grid-column: 1;
+    font-size: 15px;
+    margin: 0;
+    text-align: right;
+    padding-right: 30px;
+  }
+
+  .citation-block > :not(h3),
+  .references-block > :not(h3),
+  .reuse-block > :not(h3),
+  .doi-block > :not(h3) {
+    grid-column: 2;
+  }
+
+
+  .citation-block h3 {
+    margin: 0 0 8px;
+  }
+
+  .citation-block h4 {
+    margin: 16px 0 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--muted-color);
+  }
+
+  .citation-block p,
+  .reuse-block p,
+  .doi-block p,
+  .footnotes ol,
+  .footnotes ol p,
+  .references {
+    margin-top: 0;
+  }
+
+  /* Distill-like appendix citation styling */
+  .citation {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    line-height: 15px;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+    padding-left: 18px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(0, 0, 0, 0.02);
+    padding: 10px 18px;
+    border-radius: 3px;
+    color: rgba(150, 150, 150, 1);
+    overflow: hidden;
+    margin-top: -12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .citation a {
+    color: rgba(0, 0, 0, 0.6);
+    text-decoration: underline;
+  }
+
+  .citation.short {
+    margin-top: -4px;
+  }
+
+  .references-block h3 {
+    margin: 0;
+  }
+
+  /* Distill-like list styling for references/footnotes */
+  .references-block ol {
+    padding: 0 0 0 15px;
+  }
+
+  @media (min-width: 768px) {
+    .references-block ol {
+      padding: 0 0 0 30px;
+      margin-left: -30px;
+    }
+  }
+
+  .references-block li {
+    margin-bottom: 1em;
+  }
+
+  .references-block a {
+    color: var(--text-color);
+  }
+
+  [data-theme="dark"] .footer { border-top-color: rgba(255,255,255,.15); color: rgba(200,200,200,.8); }
+  [data-theme="dark"] .citation { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,.15); color: rgba(200,200,200,1); }
+[data-theme="dark"] .citation a { color: rgba(255,255,255,0.75); }
+
+
+  /* Footer links: use primary color consistently */
+  .footer a {
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--link-underline);
+    text-decoration: none;
+  }
+  .footer a:hover {
+    color: var(--primary-color-hover);
+    border-bottom-color: var(--link-underline-hover);
+  }
+  [data-theme="dark"] .footer a {
+    color: var(--primary-color);
+  }
+</style>

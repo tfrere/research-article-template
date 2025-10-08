@@ -1,0 +1,68 @@
+
+/* ============================================================================ */
+/* Print styles */
+/* ========================================================================= */
+@media print {
+    html, body { background: #fff; }
+    /* Margins handled by Playwright; avoid extra global margins */
+    body { margin: 0; }
+  
+    /* Keep the banner (hero), hide non-essential UI elements */
+    #theme-toggle { display: none !important; }
+  
+    /* Links: remove underline */
+    .content-grid main a { text-decoration: none; border-bottom: 1px solid rgba(0,0,0,.2); }
+  
+    /* Avoid breaks inside complex blocks */
+    .content-grid main pre,
+    .content-grid main blockquote,
+    .content-grid main table,
+    .content-grid main figure { break-inside: avoid; page-break-inside: avoid; }
+  
+    /* Soft page breaks around main headings */
+    .content-grid main h2 { page-break-before: auto; page-break-after: avoid; break-after: avoid-page; }
+  
+    /* Small icon labels not needed when printing */
+    .code-lang-chip { display: none !important; }
+  
+    /* Adjust more contrasty colors for print */
+    :root {
+      --border-color: rgba(0,0,0,.2);
+      --link-underline: rgba(0,0,0,.3);
+      --link-underline-hover: rgba(0,0,0,.4);
+    }
+  
+    /* Force single column to reduce widows/orphans and awkward breaks */
+    .content-grid { grid-template-columns: 1fr !important; }
+    .table-of-contents, .right-aside, .table-of-contents-mobile { display: none !important; }
+    main > nav:first-of-type { display: none !important; }
+  
+    /* Avoid page breaks inside complex visual blocks */
+    .hero,
+    .hero-banner,
+    .d3-banner,
+    .d3-banner svg,
+    .html-embed__card,
+    .html-embed__card,
+    .js-plotly-plot,
+    figure,
+    pre,
+    table,
+    blockquote,
+    .wide,
+    .full-width {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* Prefer keeping header+lead together */
+    .hero { page-break-after: avoid; }
+  }
+
+    
+  @media print {
+    .meta-container-cell--pdf {
+      display: none !important;
+    }
+  }
+  
+  

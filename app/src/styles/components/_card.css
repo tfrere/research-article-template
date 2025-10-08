@@ -1,0 +1,9 @@
+.card {
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: var(--spacing-2);
+    z-index: calc(var(--z-elevated) + 1);
+    position: relative;
+    margin-bottom: var(--block-spacing-y);
+}

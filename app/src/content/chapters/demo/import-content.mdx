@@ -1,0 +1,74 @@
+import Note from '../../../components/Note.astro';
+
+## Import from LaTeX
+
+<Note variant="warning">
+⚠️ **Experimental** — May not work with all LaTeX documents.
+</Note>
+
+Transform LaTeX papers into interactive web articles.
+
+### Quick Start
+
+```bash
+cd app/scripts/latex-importer/
+cp your-paper.tex input/main.tex
+cp your-paper.bib input/main.bib
+node index.mjs
+```
+
+### What Gets Converted
+
+- `\label{eq:name}` → Interactive equations
+- `\ref{eq:name}` → Clickable links
+- `\includegraphics{}` → `<Image>` components
+- Bibliography integration
+
+### Prerequisites
+
+- **Pandoc** (`brew install pandoc`)
+- LaTeX source files and figures
+
+### Docker Deployment
+
+Set `ENABLE_LATEX_CONVERSION=true` in your Hugging Face Space to enable automatic conversion during build.
+
+## Import from Notion
+
+<Note variant="warning">
+⚠️ **Experimental** — May not work with all Notion pages.
+</Note>
+
+Convert Notion pages into interactive web articles.
+
+### Quick Start
+
+```bash
+cd app/scripts/notion-importer/
+npm install
+cp env.example .env
+# Edit .env with your Notion token
+# Edit input/pages.json with your page IDs
+node index.mjs
+```
+
+### What Gets Converted
+
+- Images
+- Callouts → `<Sidenote>` components
+- Enhanced tables and code blocks
+- Smart link conversion
+
+### Prerequisites
+
+- **Node.js** with ESM support
+- **Notion Integration** with token
+- **Shared Pages** with your integration
+
+<Note variant="info">
+💡 **Hugging Face Spaces** — Add your `NOTION_TOKEN` to Space secrets for secure access.
+</Note>
+
+### Docker Deployment
+
+Set `ENABLE_NOTION_CONVERSION=true` in your Hugging Face Space to enable automatic conversion during build.

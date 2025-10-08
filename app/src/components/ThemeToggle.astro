@@ -1,0 +1,85 @@
+<button id="theme-toggle" aria-label="Toggle color theme">
+  <svg class="icon light" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"></circle>
+    <line x1="12" y1="1" x2="12" y2="4"></line>
+    <line x1="12" y1="20" x2="12" y2="23"></line>
+    <line x1="1" y1="12" x2="4" y2="12"></line>
+    <line x1="20" y1="12" x2="23" y2="12"></line>
+    <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
+    <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
+    <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
+    <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
+  </svg>
+  <svg class="icon dark" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+  </svg>
+  <script>
+    const btn = document.getElementById('theme-toggle');
+    const media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    const prefersDark = media && media.matches;
+    const saved = localStorage.getItem('theme'); // 'light' | 'dark' | null
+
+    const apply = (mode) => {
+      document.documentElement.dataset.theme = mode;
+    };
+
+    // Initial mode: default to light, then use localStorage, else system
+    apply(saved || (prefersDark ? 'dark' : 'light'));
+
+    // If user hasn't chosen manually, follow system changes
+    if (!saved && media) {
+      const syncWithSystem = (e) => apply(e.matches ? 'dark' : 'light');
+      if (media.addEventListener) media.addEventListener('change', syncWithSystem);
+      else if (media.addListener) media.addListener(syncWithSystem);
+    }
+
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const next = (document.documentElement.dataset.theme === 'dark') ? 'light' : 'dark';
+        localStorage.setItem('theme', next);
+        apply(next);
+      });
+    }
+
+    // Adjust offset for Hugging Face Spaces tiny header (production)
+    // Sets CSS var --hf-spaces-topbar used in _layout.css for sticky placement
+    const computeSpacesTopbarOffset = () => {
+      try {
+        const host = window.location.hostname || '';
+        const isSpaces = /\.hf\.space$/.test(host) || host.endsWith('huggingface.co');
+        let topbar = 0;
+        if (isSpaces) {
+          // Scan fixed elements anchored to top to estimate tiny header height
+          const nodes = Array.from(document.querySelectorAll('*'));
+          for (const el of nodes) {
+            const cs = window.getComputedStyle(el);
+            if (cs.position === 'fixed' && cs.top === '0px') {
+              const rect = el.getBoundingClientRect();
+              if (rect.top <= 1 && rect.height > 0 && rect.height <= 80) {
+                topbar = Math.max(topbar, Math.ceil(rect.bottom));
+              }
+            }
+          }
+          // Fallback reasonable tiny header height
+          if (!topbar) topbar = 60;
+        }
+        document.documentElement.style.setProperty('--hf-spaces-topbar', `${topbar}px`);
+      } catch (_) {
+        // No-op
+      }
+    };
+    window.addEventListener('load', computeSpacesTopbarOffset);
+    window.addEventListener('resize', computeSpacesTopbarOffset);
+    // Re-run shortly after load to catch late-mounted headers
+    setTimeout(computeSpacesTopbarOffset, 800);
+  </script>
+</button>
+
+
+<style>
+  #theme-toggle { display: inline-flex; align-items: center; gap: 8px; border: none; background: transparent; padding: 6px 10px; border-radius: 8px; cursor: pointer; color: var(--text-color) !important; }
+#theme-toggle .icon.dark { display: none; }
+[data-theme="dark"] #theme-toggle .icon.light { display: none; }
+[data-theme="dark"] #theme-toggle .icon.dark { display: inline; }
+#theme-toggle .icon { filter: none !important; }
+</style>
