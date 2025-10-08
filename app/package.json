@@ -39,7 +39,7 @@
     "sync:template:dry": "node ./scripts/sync-template.mjs --dry-run",
     "sync:template:force": "node ./scripts/sync-template.mjs --force",
     "latex:convert": "cd scripts/latex-importer && node index.mjs",
-    "notion:import": "cd scripts/notion-importer && npm install && node index.mjs",
+    "notion:import": "cd scripts/notion-importer && node index.mjs",
     "release:patch": "node ../scripts/release.mjs patch",
     "release:minor": "node ../scripts/release.mjs minor",
     "release:major": "node ../scripts/release.mjs major"

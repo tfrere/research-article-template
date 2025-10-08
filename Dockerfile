@@ -32,8 +32,9 @@ RUN if [ "$ENABLE_LATEX_CONVERSION" = "true" ]; then \
     echo "⏭️  LaTeX importer disabled - skipping..."; \
     fi
 
+# Pre-install notion-importer dependencies (for runtime import)
 # Note: Notion import is done at RUNTIME (not build time) to access secrets
-# See entrypoint.sh for the import logic
+RUN cd scripts/notion-importer && npm install && cd ../..
 
 # Ensure `public/data` is a real directory with real files (not a symlink)
 # This handles the case where `public/data` is a symlink in the repo, which
@@ -61,10 +62,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create necessary directories and set permissions for nginx
-RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
-    chmod -R 777 /var/cache/nginx /var/run /var/log/nginx /etc/nginx/nginx.conf && \
-    chmod -R 755 /app/dist
+# Create necessary directories and set permissions
+RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx /var/lib/nginx/body && \
+    chmod -R 777 /var/cache/nginx /var/run /var/log/nginx /var/lib/nginx /etc/nginx/nginx.conf && \
+    chmod -R 777 /app
 
 # Expose port 8080
 EXPOSE 8080
