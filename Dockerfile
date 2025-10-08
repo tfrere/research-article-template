@@ -32,23 +32,8 @@ RUN if [ "$ENABLE_LATEX_CONVERSION" = "true" ]; then \
     echo "⏭️  LaTeX importer disabled - skipping..."; \
     fi
 
-# Conditionally import from Notion if ENABLE_NOTION_IMPORT=true
-ARG ENABLE_NOTION_IMPORT=false
-ARG NOTION_TOKEN
-ARG NOTION_PAGE_ID
-# Convert ARG to ENV so they're available to Node.js
-ENV NOTION_TOKEN=$NOTION_TOKEN
-ENV NOTION_PAGE_ID=$NOTION_PAGE_ID
-# Debug: show if variables are set
-RUN echo "🔍 Debug: ENABLE_NOTION_IMPORT=$ENABLE_NOTION_IMPORT"
-RUN echo "🔍 Debug: NOTION_TOKEN=${NOTION_TOKEN:+SET (${#NOTION_TOKEN} chars)}${NOTION_TOKEN:-NOT SET}"
-RUN echo "🔍 Debug: NOTION_PAGE_ID=${NOTION_PAGE_ID:+SET}${NOTION_PAGE_ID:-NOT SET}"
-RUN if [ "$ENABLE_NOTION_IMPORT" = "true" ]; then \
-    echo "🔄 Notion importer enabled - running notion:import..."; \
-    npm run notion:import; \
-    else \
-    echo "⏭️  Notion importer disabled - skipping..."; \
-    fi
+# Note: Notion import is done at RUNTIME (not build time) to access secrets
+# See entrypoint.sh for the import logic
 
 # Ensure `public/data` is a real directory with real files (not a symlink)
 # This handles the case where `public/data` is a symlink in the repo, which
@@ -66,24 +51,23 @@ RUN npm run build
 # Generate the PDF (light theme, full wait)
 RUN npm run export:pdf -- --theme=light --wait=full
 
-# Use an official Nginx runtime as the base image for serving the application
-FROM nginx:alpine
+# Install nginx in the build stage (we'll use this image as final to keep Node.js)
+RUN apt-get update && apt-get install -y nginx && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy the built application from the build stage
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copy a custom Nginx configuration file
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Create necessary directories and set permissions
-RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
-    chmod -R 777 /var/cache/nginx /var/run /var/log/nginx /etc/nginx/nginx.conf
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Switch to non-root user
-USER nginx
+# Create necessary directories and set permissions for nginx
+RUN mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
+    chmod -R 777 /var/cache/nginx /var/run /var/log/nginx /etc/nginx/nginx.conf && \
+    chmod -R 755 /app/dist
 
 # Expose port 8080
 EXPOSE 8080
 
-# Command to run the application
-CMD ["nginx", "-g", "daemon off;"]
+# Use entrypoint script that handles Notion import if enabled
+ENTRYPOINT ["/entrypoint.sh"]
