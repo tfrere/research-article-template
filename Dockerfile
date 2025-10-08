@@ -39,6 +39,10 @@ ARG NOTION_PAGE_ID
 # Convert ARG to ENV so they're available to Node.js
 ENV NOTION_TOKEN=$NOTION_TOKEN
 ENV NOTION_PAGE_ID=$NOTION_PAGE_ID
+# Debug: show if variables are set
+RUN echo "🔍 Debug: ENABLE_NOTION_IMPORT=$ENABLE_NOTION_IMPORT"
+RUN echo "🔍 Debug: NOTION_TOKEN=${NOTION_TOKEN:+SET (${#NOTION_TOKEN} chars)}${NOTION_TOKEN:-NOT SET}"
+RUN echo "🔍 Debug: NOTION_PAGE_ID=${NOTION_PAGE_ID:+SET}${NOTION_PAGE_ID:-NOT SET}"
 RUN if [ "$ENABLE_NOTION_IMPORT" = "true" ]; then \
     echo "🔄 Notion importer enabled - running notion:import..."; \
     npm run notion:import; \
