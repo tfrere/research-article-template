@@ -52,6 +52,9 @@ RUN npm run build
 # Generate the PDF (light theme, full wait)
 RUN npm run export:pdf -- --theme=light --wait=full
 
+# Generate LaTeX export
+RUN npm run export:latex
+
 # Install nginx in the build stage (we'll use this image as final to keep Node.js)
 RUN apt-get update && apt-get install -y nginx && apt-get clean && rm -rf /var/lib/apt/lists/*
 

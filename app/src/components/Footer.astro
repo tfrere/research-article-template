@@ -7,6 +7,7 @@ interface Props {
 }
 const { citationText, bibtex, licence, doi } = Astro.props as Props;
 ---
+
 <footer class="footer">
   <div class="footer-inner">
     <section class="citation-block">
@@ -17,39 +18,68 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
       <p>BibTeX citation</p>
       <pre class="citation long">{bibtex}</pre>
     </section>
-    {doi && (
-      <section class="doi-block">
-        <h3>DOI</h3>
-        <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
-      </section>
-    )}
-    {licence && (
-      <section class="reuse-block">
-        <h3>Reuse</h3>
-        <p set:html={licence}></p>
-      </section>
-    )}
+    {
+      doi && (
+        <section class="doi-block">
+          <h3>DOI</h3>
+          <p>
+            <a
+              href={`https://doi.org/${doi}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {doi}
+            </a>
+          </p>
+        </section>
+      )
+    }
+    {
+      licence && (
+        <section class="reuse-block">
+          <h3>Reuse</h3>
+          <p set:html={licence} />
+        </section>
+      )
+    }
     <section class="references-block">
       <slot />
     </section>
+    <div class="template-credit">
+      <p>
+        made with love with <a
+          href="https://huggingface.co/spaces/tfrere/research-article-template"
+          target="_blank"
+          rel="noopener noreferrer">research article template</a
+        >
+      </p>
+    </div>
   </div>
 </footer>
 
-
 <script is:inline>
   (() => {
-    const getFooter = () => document.currentScript?.closest('footer') || document.querySelector('footer.footer');
+    const getFooter = () =>
+      document.currentScript?.closest("footer") ||
+      document.querySelector("footer.footer");
     const footer = getFooter();
     if (!footer) return;
-    const target = footer.querySelector('.references-block');
+    const target = footer.querySelector(".references-block");
     if (!target) return;
 
-    const contentRoot = document.querySelector('section.content-grid main') || document.querySelector('main') || document.body;
+    const contentRoot =
+      document.querySelector("section.content-grid main") ||
+      document.querySelector("main") ||
+      document.body;
 
     const ensureHeading = (text) => {
-      const exists = Array.from(target.children).some((c) => c.tagName === 'H3' && c.textContent.trim().toLowerCase() === text.toLowerCase());
+      const exists = Array.from(target.children).some(
+        (c) =>
+          c.tagName === "H3" &&
+          c.textContent.trim().toLowerCase() === text.toLowerCase(),
+      );
       if (!exists) {
-        const h = document.createElement('h3');
+        const h = document.createElement("h3");
         h.textContent = text;
         target.appendChild(h);
       }
@@ -58,11 +88,17 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     const moveIntoFooter = (element, headingText) => {
       if (!element) return false;
       // Remove an eventual heading already included inside the block (avoid duplicates)
-      const firstHeading = element.querySelector(':scope > h1, :scope > h2, :scope > h3');
+      const firstHeading = element.querySelector(
+        ":scope > h1, :scope > h2, :scope > h3",
+      );
       if (firstHeading) {
-        const txt = (firstHeading.textContent || '').trim().toLowerCase();
+        const txt = (firstHeading.textContent || "").trim().toLowerCase();
         const targetTxt = headingText.trim().toLowerCase();
-        if (txt === targetTxt || txt.includes('reference') || txt.includes('bibliograph')) {
+        if (
+          txt === targetTxt ||
+          txt.includes("reference") ||
+          txt.includes("bibliograph")
+        ) {
           firstHeading.remove();
         }
       }
@@ -79,11 +115,15 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
         return null;
       };
 
-      const referencesEl = findFirstOutsideFooter(['#references', '.references', '.bibliography']);
-      const footnotesEl = findFirstOutsideFooter(['.footnotes']);
+      const referencesEl = findFirstOutsideFooter([
+        "#references",
+        ".references",
+        ".bibliography",
+      ]);
+      const footnotesEl = findFirstOutsideFooter([".footnotes"]);
 
-      const movedRefs = moveIntoFooter(referencesEl, 'References');
-      const movedNotes = moveIntoFooter(footnotesEl, 'Footnotes');
+      const movedRefs = moveIntoFooter(referencesEl, "References");
+      const movedNotes = moveIntoFooter(footnotesEl, "Footnotes");
       return movedRefs || movedNotes;
     };
 
@@ -91,8 +131,8 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     const done = run();
     if (!done) {
       const onReady = () => run();
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', onReady, { once: true });
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", onReady, { once: true });
       } else {
         setTimeout(onReady, 0);
       }
@@ -102,7 +142,6 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     // No textarea auto-resize needed for <pre> blocks
   })();
 </script>
-
 
 <style is:global>
   .footer {
@@ -151,7 +190,6 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     grid-column: 2;
   }
 
-
   .citation-block h3 {
     margin: 0 0 8px;
   }
@@ -174,12 +212,13 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
 
   /* Distill-like appendix citation styling */
   .citation {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
     font-size: 11px;
     line-height: 15px;
     border-left: 1px solid rgba(0, 0, 0, 0.1);
     padding-left: 18px;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     background: rgba(0, 0, 0, 0.02);
     padding: 10px 18px;
     border-radius: 3px;
@@ -223,10 +262,18 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     color: var(--text-color);
   }
 
-  [data-theme="dark"] .footer { border-top-color: rgba(255,255,255,.15); color: rgba(200,200,200,.8); }
-  [data-theme="dark"] .citation { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,.15); color: rgba(200,200,200,1); }
-[data-theme="dark"] .citation a { color: rgba(255,255,255,0.75); }
-
+  [data-theme="dark"] .footer {
+    border-top-color: rgba(255, 255, 255, 0.15);
+    color: rgba(200, 200, 200, 0.8);
+  }
+  [data-theme="dark"] .citation {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(200, 200, 200, 1);
+  }
+  [data-theme="dark"] .citation a {
+    color: rgba(255, 255, 255, 0.75);
+  }
 
   /* Footer links: use primary color consistently */
   .footer a {
@@ -240,5 +287,41 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
   }
   [data-theme="dark"] .footer a {
     color: var(--primary-color);
+  }
+
+  /* Template credit - discrete at the bottom */
+  .template-credit {
+    display: contents;
+  }
+
+  .template-credit p {
+    grid-column: 2;
+    margin: 24px 0 0 0;
+    font-size: 0.85em;
+    color: rgba(0, 0, 0, 0.5);
+  }
+
+  .template-credit a {
+    color: rgba(0, 0, 0, 0.6);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .template-credit a:hover {
+    color: rgba(0, 0, 0, 0.8);
+    border-bottom-color: rgba(0, 0, 0, 0.3);
+  }
+
+  [data-theme="dark"] .template-credit p {
+    color: rgba(200, 200, 200, 0.6);
+  }
+
+  [data-theme="dark"] .template-credit a {
+    color: rgba(200, 200, 200, 0.7);
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+  }
+
+  [data-theme="dark"] .template-credit a:hover {
+    color: rgba(200, 200, 200, 0.9);
+    border-bottom-color: rgba(255, 255, 255, 0.35);
   }
 </style>

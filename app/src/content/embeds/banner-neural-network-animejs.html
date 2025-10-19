@@ -1,0 +1,464 @@
+<div class="neural-flow"
+    style="width:100%;margin:10px 0;aspect-ratio:3/1;min-height:260px;position:relative;overflow:hidden;"></div>
+<script>
+    (() => {
+        const ensureAnime = (cb) => {
+            if (window.anime && typeof window.anime === 'function') return cb();
+            let s = document.getElementById('anime-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'anime-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.anime && typeof window.anime === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.anime) onReady();
+        };
+
+        const bootstrap = () => {
+            const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+            const container = (mount && mount.querySelector && mount.querySelector('.neural-flow')) || document.querySelector('.neural-flow');
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            container.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+
+            // Theme colors
+            const getColors = () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                return {
+                    node: isDark ? 'rgba(206, 192, 250, 0.85)' : 'rgba(138, 100, 220, 0.8)',
+                    nodeActive: isDark ? 'rgba(232, 137, 171, 1)' : 'rgba(220, 80, 130, 1)',
+                    nodeGlow: isDark ? 'rgba(206, 192, 250, 0.4)' : 'rgba(138, 100, 220, 0.3)',
+                    connection: isDark ? 'rgba(78, 165, 183, 0.08)' : 'rgba(78, 165, 183, 0.15)',
+                    connectionActive: isDark ? 'rgba(232, 137, 171, 0.6)' : 'rgba(220, 80, 130, 0.5)',
+                    accent: isDark ? 'rgba(78, 165, 183, 0.9)' : 'rgba(50, 130, 160, 0.85)',
+                    particle: isDark ? 'rgba(232, 137, 171, 1)' : 'rgba(220, 80, 130, 1)',
+                };
+            };
+
+            let colors = getColors();
+
+            // Watch for theme changes
+            const observer = new MutationObserver(() => {
+                colors = getColors();
+            });
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme']
+            });
+
+            // Neural network structure
+            const layers = [
+                { nodes: 6, name: 'input' },
+                { nodes: 10, name: 'hidden1' },
+                { nodes: 8, name: 'hidden2' },
+                { nodes: 4, name: 'output' }
+            ];
+
+            let nodes = [];
+            let connections = [];
+            let particles = [];
+            let width, height;
+
+            const resize = () => {
+                width = container.clientWidth || 800;
+                height = Math.max(260, Math.round(width / 3));
+                canvas.width = width;
+                canvas.height = height;
+                initNetwork();
+            };
+
+            const initNetwork = () => {
+                nodes = [];
+                connections = [];
+                particles = [];
+
+                const layerSpacing = width / (layers.length + 1);
+                const margin = height * 0.15;
+
+                // Create ALL nodes first
+                let nodeIndex = 0;
+                const layerStartIndices = [];
+
+                layers.forEach((layer, layerIdx) => {
+                    layerStartIndices.push(nodeIndex);
+                    const x = layerSpacing * (layerIdx + 1);
+                    const availableHeight = height - 2 * margin;
+                    const nodeSpacing = availableHeight / (layer.nodes + 1);
+
+                    for (let i = 0; i < layer.nodes; i++) {
+                        const y = margin + nodeSpacing * (i + 1);
+                        const node = {
+                            x,
+                            y,
+                            layer: layerIdx,
+                            index: i,
+                            radius: 0,
+                            targetRadius: 3.5 + Math.random() * 1.5,
+                            pulse: Math.random() * Math.PI * 2,
+                            activation: 0,
+                            baseActivity: Math.random() * 0.1
+                        };
+                        nodes.push(node);
+                        nodeIndex++;
+                    }
+                });
+
+                // Create FULLY CONNECTED network
+                layers.forEach((layer, layerIdx) => {
+                    if (layerIdx < layers.length - 1) {
+                        const currentLayerStart = layerStartIndices[layerIdx];
+                        const nextLayerStart = layerStartIndices[layerIdx + 1];
+                        const nextLayerNodes = layers[layerIdx + 1].nodes;
+
+                        for (let i = 0; i < layer.nodes; i++) {
+                            for (let j = 0; j < nextLayerNodes; j++) {
+                                connections.push({
+                                    from: currentLayerStart + i,
+                                    to: nextLayerStart + j,
+                                    weight: Math.random(),
+                                    opacity: 0,
+                                    activation: 0
+                                });
+                            }
+                        }
+                    }
+                });
+
+                // Initial animation - nodes appear (plus rapide)
+                nodes.forEach((node, i) => {
+                    anime({
+                        targets: node,
+                        radius: node.targetRadius,
+                        duration: 800,
+                        delay: i * 8,
+                        easing: 'easeOutElastic(1, .6)'
+                    });
+                });
+
+                // Connections fade in (plus rapide)
+                connections.forEach((conn, i) => {
+                    anime({
+                        targets: conn,
+                        opacity: 1,
+                        duration: 400,
+                        delay: 300 + i * 1,
+                        easing: 'easeOutQuad'
+                    });
+                });
+
+                // Start forward propagation cycles (plus rapide)
+                setTimeout(() => {
+                    startForwardPass();
+                    setInterval(startForwardPass, 2500 + Math.random() * 1000);
+                }, 1000);
+            };
+
+            // Différents patterns d'activation
+            const activationPatterns = [
+                // Pattern 1: Tous les inputs
+                (inputNodes) => inputNodes,
+
+                // Pattern 2: Un seul input (signal focal)
+                (inputNodes) => [inputNodes[Math.floor(Math.random() * inputNodes.length)]],
+
+                // Pattern 3: Moitié haute
+                (inputNodes) => inputNodes.slice(0, Math.ceil(inputNodes.length / 2)),
+
+                // Pattern 4: Moitié basse
+                (inputNodes) => inputNodes.slice(Math.floor(inputNodes.length / 2)),
+
+                // Pattern 5: Pattern alterné
+                (inputNodes) => inputNodes.filter((_, i) => i % 2 === 0),
+
+                // Pattern 6: 2-3 inputs aléatoires
+                (inputNodes) => {
+                    const num = 2 + Math.floor(Math.random() * 2);
+                    return [...inputNodes].sort(() => Math.random() - 0.5).slice(0, num);
+                },
+
+                // Pattern 7: Cascade (un par un avec délai)
+                (inputNodes) => inputNodes.slice(0, 3 + Math.floor(Math.random() * 3))
+            ];
+
+            const startForwardPass = () => {
+                const inputNodes = nodes.filter(n => n.layer === 0);
+
+                // Choisir un pattern aléatoire
+                const pattern = activationPatterns[Math.floor(Math.random() * activationPatterns.length)];
+                const activeInputs = pattern(inputNodes);
+
+                // Activer les inputs (plus rapide)
+                activeInputs.forEach((node, idx) => {
+                    anime({
+                        targets: node,
+                        activation: 0.8 + Math.random() * 0.2,
+                        duration: 200,
+                        delay: idx * 60,
+                        easing: 'easeOutQuad',
+                        complete: () => {
+                            anime({
+                                targets: node,
+                                activation: node.baseActivity,
+                                duration: 250,
+                                delay: 400,
+                                easing: 'easeInQuad'
+                            });
+                        }
+                    });
+                });
+
+                // Propager à travers TOUTES les couches (plus rapide)
+                for (let layerIdx = 0; layerIdx < layers.length - 1; layerIdx++) {
+                    setTimeout(() => {
+                        propagateLayer(layerIdx);
+                    }, 250 + layerIdx * 350);
+                }
+            };
+
+            const propagateLayer = (fromLayerIdx) => {
+                const fromNodes = nodes.filter(n => n.layer === fromLayerIdx);
+                const toNodes = nodes.filter(n => n.layer === fromLayerIdx + 1);
+
+                const layerConnections = connections.filter(c => {
+                    const fromNode = nodes[c.from];
+                    const toNode = nodes[c.to];
+                    return fromNode.layer === fromLayerIdx && toNode.layer === fromLayerIdx + 1;
+                });
+
+                // Activer connections et créer particules
+                layerConnections.forEach((conn, idx) => {
+                    const fromNode = nodes[conn.from];
+                    const activationStrength = fromNode.activation * conn.weight;
+
+                    if (activationStrength > 0.2) {
+                        anime({
+                            targets: conn,
+                            activation: activationStrength,
+                            duration: 300,
+                            delay: idx * 1,
+                            easing: 'easeOutQuad',
+                            complete: () => {
+                                anime({
+                                    targets: conn,
+                                    activation: 0,
+                                    duration: 250,
+                                    easing: 'easeInQuad'
+                                });
+                            }
+                        });
+
+                        // Créer particule qui voyage le long de la connexion
+                        if (Math.random() < 0.3) { // Pas sur toutes les connexions
+                            createParticle(conn, activationStrength);
+                        }
+                    }
+                });
+
+                // Activer les nœuds cibles (plus rapide)
+                setTimeout(() => {
+                    toNodes.forEach(toNode => {
+                        const toNodeIdx = nodes.indexOf(toNode);
+                        const incomingConns = layerConnections.filter(c => c.to === toNodeIdx);
+
+                        let sum = 0;
+                        incomingConns.forEach(conn => {
+                            const fromNode = nodes[conn.from];
+                            sum += fromNode.activation * conn.weight;
+                        });
+
+                        const activation = Math.min(1, sum / incomingConns.length * 1.5);
+
+                        if (activation > 0.25) {
+                            anime({
+                                targets: toNode,
+                                activation: activation,
+                                duration: 200,
+                                easing: 'easeOutQuad',
+                                complete: () => {
+                                    anime({
+                                        targets: toNode,
+                                        activation: toNode.baseActivity,
+                                        duration: 400,
+                                        delay: 300,
+                                        easing: 'easeInQuad'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }, 150);
+            };
+
+            const createParticle = (connection, strength) => {
+                const fromNode = nodes[connection.from];
+                const toNode = nodes[connection.to];
+                if (!fromNode || !toNode) return;
+
+                const particle = {
+                    fromX: fromNode.x,
+                    fromY: fromNode.y,
+                    toX: toNode.x,
+                    toY: toNode.y,
+                    progress: 0,
+                    strength: strength,
+                    size: 1.5 + strength * 1.5,
+                    trail: []
+                };
+
+                particles.push(particle);
+
+                anime({
+                    targets: particle,
+                    progress: 1,
+                    duration: 350,
+                    easing: 'easeInOutQuad',
+                    complete: () => {
+                        // Retirer la particule
+                        const idx = particles.indexOf(particle);
+                        if (idx > -1) particles.splice(idx, 1);
+                    }
+                });
+            };
+
+            const draw = () => {
+                // Pas de background - transparent
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw connections
+                connections.forEach(conn => {
+                    if (conn.opacity < 0.01) return;
+
+                    const fromNode = nodes[conn.from];
+                    const toNode = nodes[conn.to];
+                    if (!fromNode || !toNode) return;
+
+                    const baseOpacity = conn.opacity * conn.weight * 0.5;
+                    const activeOpacity = conn.activation;
+                    const totalOpacity = Math.max(baseOpacity, activeOpacity);
+
+                    if (totalOpacity < 0.01) return;
+
+                    const isActive = conn.activation > 0.1;
+                    const connectionColor = isActive ? colors.connectionActive : colors.connection;
+
+                    ctx.beginPath();
+                    ctx.moveTo(fromNode.x, fromNode.y);
+                    ctx.lineTo(toNode.x, toNode.y);
+
+                    const rgb = connectionColor.match(/[\d.]+/g);
+                    ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${totalOpacity})`;
+                    ctx.lineWidth = isActive ? 1.5 : 0.8;
+                    ctx.stroke();
+                });
+
+                // Draw particles
+                particles.forEach(particle => {
+                    const x = particle.fromX + (particle.toX - particle.fromX) * particle.progress;
+                    const y = particle.fromY + (particle.toY - particle.fromY) * particle.progress;
+
+                    // Trail
+                    particle.trail.push({ x, y });
+                    if (particle.trail.length > 5) particle.trail.shift();
+
+                    particle.trail.forEach((point, i) => {
+                        const alpha = (i / particle.trail.length) * particle.strength;
+                        const size = particle.size * alpha * 0.6;
+
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                        const rgb = colors.particle.match(/[\d.]+/g);
+                        ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha * 0.5})`;
+                        ctx.fill();
+                    });
+
+                    // Particle principale
+                    ctx.beginPath();
+                    ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+                    ctx.fillStyle = colors.particle;
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = colors.particle;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                });
+
+                // Draw nodes
+                nodes.forEach((node, i) => {
+                    if (node.radius < 0.1) return;
+
+                    node.pulse += 0.015;
+                    const pulseSize = 1 + Math.sin(node.pulse) * 0.08;
+                    const activationBoost = node.activation * 1.8;
+                    const finalRadius = node.radius * pulseSize + activationBoost;
+
+                    // Glow for active nodes
+                    if (node.activation > 0.15) {
+                        const glowRadius = finalRadius * 4;
+                        const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+                        const glowAlpha = node.activation * 0.5;
+                        gradient.addColorStop(0, colors.nodeGlow.replace(/[\d.]+\)$/, `${glowAlpha})`));
+                        gradient.addColorStop(1, colors.nodeGlow.replace(/[\d.]+\)$/, '0)'));
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                    }
+
+                    // Node color based on activation
+                    const t = Math.min(1, node.activation / 0.8);
+
+                    const baseRgb = colors.node.match(/[\d.]+/g);
+                    const activeRgb = colors.nodeActive.match(/[\d.]+/g);
+                    const r = parseFloat(baseRgb[0]) + (parseFloat(activeRgb[0]) - parseFloat(baseRgb[0])) * t;
+                    const g = parseFloat(baseRgb[1]) + (parseFloat(activeRgb[1]) - parseFloat(baseRgb[1])) * t;
+                    const b = parseFloat(baseRgb[2]) + (parseFloat(activeRgb[2]) - parseFloat(baseRgb[2])) * t;
+                    const a = parseFloat(baseRgb[3]) + (parseFloat(activeRgb[3]) - parseFloat(baseRgb[3])) * t;
+
+                    // Node
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, finalRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+                    ctx.fill();
+
+                    // Inner core for active nodes
+                    if (node.activation > 0.4) {
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, finalRadius * 0.4, 0, Math.PI * 2);
+                        ctx.fillStyle = colors.accent.replace(/[\d.]+\)$/, `${node.activation})`);
+                        ctx.fill();
+                    }
+                });
+
+                requestAnimationFrame(draw);
+            };
+
+            // Start
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(resize);
+                ro.observe(container);
+            } else {
+                window.addEventListener('resize', resize);
+            }
+
+            resize();
+            draw();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureAnime(bootstrap), { once: true });
+        } else {
+            ensureAnime(bootstrap);
+        }
+    })();
+</script>

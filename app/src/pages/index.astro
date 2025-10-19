@@ -148,8 +148,7 @@ const keyAuthor = (authorNames[0] || "article")
 const keyTitle = titleFlat
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, "_")
-  .replace(/^_|_$/g, "")
-  .slice(0, 24);
+  .replace(/^_|_$/g, "");
 const bibKey = `${keyAuthor}${year ?? ""}_${keyTitle}`;
 const doi = (ArticleMod as any)?.frontmatter?.doi
   ? String((ArticleMod as any).frontmatter.doi)

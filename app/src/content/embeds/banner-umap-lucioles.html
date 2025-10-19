@@ -1,0 +1,489 @@
+<div class="d3-latent-space"></div>
+<style>
+    .d3-latent-space {
+        width: 100%;
+        margin: 10px 0;
+        aspect-ratio: 3/1;
+        min-height: 260px;
+        overflow: hidden;
+        background: transparent;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .d3-latent-space canvas {
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .d3-latent-space .tp-dfwv {
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+    }
+
+    .d3-latent-space .d3-tooltip {
+        position: absolute;
+        background: color-mix(in srgb, var(--surface-bg) 95%, transparent);
+        backdrop-filter: blur(16px) saturate(1.2);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 14px 18px;
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.12);
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -120%);
+        transition: opacity 0.15s ease;
+        z-index: 10;
+        max-width: 400px;
+    }
+
+    .d3-latent-space .tooltip-category {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .d3-latent-space .tooltip-badge {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    .d3-latent-space .tooltip-question {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+
+    .d3-latent-space .tooltip-answer {
+        font-size: 11px;
+        color: var(--muted-color);
+        line-height: 1.4;
+        border-top: 1px solid var(--border-color);
+        padding-top: 8px;
+        margin-top: 6px;
+    }
+</style>
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.csvParse === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.d3 && typeof window.d3.csvParse === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const ensureAnime = (cb) => {
+            if (window.anime) return cb();
+            let s = document.getElementById('anime-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'anime-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.anime) cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.anime) onReady();
+        };
+
+        const ensureTweakpane = (cb) => {
+            if (window.Tweakpane) return cb();
+            let s = document.getElementById('tweakpane-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'tweakpane-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/tweakpane@3.1.10/dist/tweakpane.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.Tweakpane) cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.Tweakpane) onReady();
+        };
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('d3-latent-space'))) {
+                const candidates = Array.from(document.querySelectorAll('.d3-latent-space'))
+                    .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+                container = candidates[candidates.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Setup canvas
+            const canvas = document.createElement('canvas');
+            container.appendChild(canvas);
+            const ctx = canvas.getContext('2d');
+
+            // Tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'd3-tooltip';
+            container.appendChild(tooltip);
+
+            let width = container.clientWidth || 800;
+            let height = Math.max(260, Math.round(width / 3));
+            let points = [];
+            let categories = new Map();
+            let selectedCategory = null;
+            let animationFrame;
+            let time = 0;
+
+            // Tweakpane params
+            const params = {
+                baseSize: 2.5
+            };
+
+            const resizeCanvas = () => {
+                width = container.clientWidth || 800;
+                height = Math.max(260, Math.round(width / 3));
+                canvas.width = width * window.devicePixelRatio || 1;
+                canvas.height = height * window.devicePixelRatio || 1;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+                ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+            };
+
+            const getColors = () => {
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const colors = window.ColorPalettes
+                    ? window.ColorPalettes.getColors('categorical', 10)
+                    : ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#B983FF', '#FF85A2', '#5DADE2', '#52BE80'];
+                return { isDark, colors };
+            };
+
+            class Point {
+                constructor(data, color, index) {
+                    this.originalX = parseFloat(data.x);
+                    this.originalY = parseFloat(data.y);
+                    this.category = data.primary_category;
+                    this.title = data.title;
+                    this.authors = data.authors;
+                    this.year = data.year;
+                    this.abstract = data.abstract;
+                    this.color = color;
+                    this.index = index;
+
+                    // Animation properties
+                    this.x = this.originalX;
+                    this.y = this.originalY;
+                    this.displayX = 0;
+                    this.displayY = 0;
+                    this.opacity = 0;
+                    this.sizeVariation = 0.5 + Math.random() * 1;
+                    this.size = params.baseSize * this.sizeVariation;
+                    this.baseSize = this.size;
+                    this.glowIntensity = 0;
+                    this.phase = Math.random() * Math.PI * 2;
+                    this.speed = 0.3 + Math.random() * 0.4;
+                }
+
+                updateSize() {
+                    this.baseSize = params.baseSize * this.sizeVariation;
+                    if (!this.isHighlighted) {
+                        this.size = this.baseSize;
+                    }
+                }
+
+                update(time, selectedCat) {
+                    // Position statique - pas de mouvement
+                    this.x = this.originalX;
+                    this.y = this.originalY;
+
+                    // Highlight if selected or dim if other selected
+                    if (selectedCat === null) {
+                        this.glowIntensity = 0.8;
+                        this.isHighlighted = false;
+                        this.size = this.baseSize;
+                    } else if (this.category === selectedCat) {
+                        this.glowIntensity = 1;
+                        this.isHighlighted = true;
+                        this.size = this.baseSize * 1.4;
+                    } else {
+                        this.glowIntensity = 0.1;
+                        this.isHighlighted = true;
+                        this.size = this.baseSize * 0.6;
+                    }
+                }
+
+                draw(ctx, scaleX, scaleY, offsetX, offsetY) {
+                    this.displayX = this.x * scaleX + offsetX;
+                    this.displayY = this.y * scaleY + offsetY;
+
+                    const alpha = this.opacity * this.glowIntensity;
+
+                    // Outer glow
+                    if (this.glowIntensity > 0.3) {
+                        const gradient = ctx.createRadialGradient(
+                            this.displayX, this.displayY, 0,
+                            this.displayX, this.displayY, this.size * 4
+                        );
+                        gradient.addColorStop(0, this.color + Math.floor(alpha * 60).toString(16).padStart(2, '0'));
+                        gradient.addColorStop(0.5, this.color + Math.floor(alpha * 30).toString(16).padStart(2, '0'));
+                        gradient.addColorStop(1, this.color + '00');
+
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(this.displayX, this.displayY, this.size * 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Core point
+                    ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                    ctx.beginPath();
+                    ctx.arc(this.displayX, this.displayY, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                isNear(mx, my, threshold = 20) {
+                    const dx = this.displayX - mx;
+                    const dy = this.displayY - my;
+                    return Math.sqrt(dx * dx + dy * dy) < threshold;
+                }
+            }
+
+            const loadData = async () => {
+                try {
+                    console.log('Loading research papers data...');
+                    const response = await fetch('/data/data.json', { cache: 'no-cache' });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    console.log('Parsing JSON...');
+                    const rawData = await response.json();
+                    console.log(`Loaded ${rawData.length} papers`);
+
+                    // Sample data for performance (max 3000 points)
+                    const sampledData = rawData.length > 3000
+                        ? rawData.filter((_, i) => i % Math.ceil(rawData.length / 3000) === 0)
+                        : rawData;
+
+                    // Group by primary category
+                    sampledData.forEach(paper => {
+                        const cat = paper.primary_category || 'Unknown';
+                        if (!categories.has(cat)) {
+                            categories.set(cat, []);
+                        }
+                        categories.get(cat).push(paper);
+                    });
+
+                    // Create points with colors
+                    const { colors } = getColors();
+                    const categoryList = Array.from(categories.keys());
+
+                    categoryList.forEach((cat, i) => {
+                        const color = colors[i % colors.length];
+                        categories.get(cat).forEach((data, j) => {
+                            points.push(new Point(data, color, i * 100 + j));
+                        });
+                    });
+
+                    // Animate points in
+                    points.forEach((point, i) => {
+                        anime({
+                            targets: point,
+                            opacity: [0, 1],
+                            duration: 1500,
+                            delay: i * 2,
+                            easing: 'easeOutQuad'
+                        });
+                    });
+
+                    // Setup Tweakpane
+                    let pane;
+                    try {
+                        if (window.Tweakpane && window.Tweakpane.Pane) {
+                            pane = new window.Tweakpane.Pane({
+                                container: container,
+                                title: 'Controls'
+                            });
+                        } else if (window.Tweakpane) {
+                            pane = new window.Tweakpane({
+                                container: container,
+                                title: 'Controls'
+                            });
+                        }
+
+                        if (pane) {
+                            const input = pane.addInput ? pane.addInput(params, 'baseSize', {
+                                label: 'Point Size',
+                                min: 0.5,
+                                max: 8,
+                                step: 0.1
+                            }) : pane.addBinding ? pane.addBinding(params, 'baseSize', {
+                                label: 'Point Size',
+                                min: 0.5,
+                                max: 8,
+                                step: 0.1
+                            }) : null;
+
+                            if (input) {
+                                input.on('change', () => {
+                                    points.forEach(p => p.updateSize());
+                                });
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('Tweakpane initialization failed:', err);
+                        // Fallback to HTML slider
+                        const controls = document.createElement('div');
+                        controls.style.cssText = 'position:absolute;top:16px;right:16px;background:var(--surface-bg);border:1px solid var(--border-color);border-radius:8px;padding:12px;z-index:10;';
+                        controls.innerHTML = `
+              <label style="font-size:11px;font-weight:700;color:var(--text-color);display:block;margin-bottom:6px;">Point Size</label>
+              <input type="range" min="0.5" max="8" step="0.1" value="2.5" style="width:120px;">
+              <span style="font-size:11px;color:var(--muted-color);margin-left:8px;">2.5</span>
+            `;
+                        const slider = controls.querySelector('input');
+                        const label = controls.querySelector('span');
+                        slider.addEventListener('input', (e) => {
+                            params.baseSize = parseFloat(e.target.value);
+                            label.textContent = params.baseSize.toFixed(1);
+                            points.forEach(p => p.updateSize());
+                        });
+                        container.appendChild(controls);
+                    }
+
+                    console.log(`Created ${points.length} points from ${categoryList.length} categories`);
+                    render();
+
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    const errorMsg = error.message || error.toString();
+                    container.innerHTML = `<pre style="color:red;padding:20px;margin:0;font-size:12px;">Error: ${errorMsg}<br><br>Trying to load: /data/data.json<br>Check console for details.</pre>`;
+                }
+            };
+
+            const render = () => {
+                time += 16;
+                ctx.clearRect(0, 0, width, height);
+
+                if (points.length === 0) {
+                    animationFrame = requestAnimationFrame(render);
+                    return;
+                }
+
+                // Calculate bounds
+                const xValues = points.map(p => p.x);
+                const yValues = points.map(p => p.y);
+                const minX = Math.min(...xValues);
+                const maxX = Math.max(...xValues);
+                const minY = Math.min(...yValues);
+                const maxY = Math.max(...yValues);
+
+                const padding = 40;
+                const scaleX = (width - padding * 2) / (maxX - minX);
+                const scaleY = (height - padding * 2) / (maxY - minY);
+
+                const offsetX = padding - minX * scaleX;
+                const offsetY = padding - minY * scaleY;
+
+                // Update and draw points
+                points.forEach(point => {
+                    point.update(time, selectedCategory);
+                    point.draw(ctx, scaleX, scaleY, offsetX, offsetY);
+                });
+
+                animationFrame = requestAnimationFrame(render);
+            };
+
+            // Mouse interaction
+            let hoveredPoint = null;
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+
+                const closest = points.find(p => p.isNear(mx, my));
+
+                if (closest && closest !== hoveredPoint) {
+                    hoveredPoint = closest;
+                    const authorsStr = Array.isArray(closest.authors)
+                        ? (closest.authors.length > 3
+                            ? `${closest.authors.slice(0, 3).join(', ')} et al.`
+                            : closest.authors.join(', '))
+                        : closest.authors || 'Unknown';
+
+                    tooltip.innerHTML = `
+            <div class="tooltip-category">
+              <span class="tooltip-badge" style="background: ${closest.color}; color: ${closest.color}"></span>
+              ${closest.category} · ${closest.year}
+            </div>
+            <div class="tooltip-question">${closest.title.substring(0, 120)}${closest.title.length > 120 ? '...' : ''}</div>
+            <div class="tooltip-answer">${authorsStr}<br>${closest.abstract.substring(0, 180)}${closest.abstract.length > 180 ? '...' : ''}</div>
+          `;
+                    tooltip.style.left = mx + 'px';
+                    tooltip.style.top = my + 'px';
+                    tooltip.style.opacity = '1';
+                    canvas.style.cursor = 'pointer';
+                } else if (!closest) {
+                    hoveredPoint = null;
+                    tooltip.style.opacity = '0';
+                    canvas.style.cursor = 'crosshair';
+                }
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                hoveredPoint = null;
+                tooltip.style.opacity = '0';
+                canvas.style.cursor = 'crosshair';
+            });
+
+            // Resize handling
+            resizeCanvas();
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => resizeCanvas());
+                ro.observe(container);
+            } else {
+                window.addEventListener('resize', resizeCanvas);
+            }
+
+            // Theme observer
+            const observer = new MutationObserver(() => {
+                const { colors } = getColors();
+                const categoryList = Array.from(categories.keys());
+                points.forEach(point => {
+                    const catIndex = categoryList.indexOf(point.category);
+                    if (catIndex >= 0) {
+                        point.color = colors[catIndex % colors.length];
+                    }
+                });
+            });
+            observer.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-theme']
+            });
+
+            loadData();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(() => ensureAnime(() => ensureTweakpane(bootstrap))), { once: true });
+        } else {
+            ensureD3(() => ensureAnime(() => ensureTweakpane(bootstrap)));
+        }
+    })();
+</script>

@@ -1,0 +1,53 @@
+import Image from "../../../components/Image.astro";
+import Stack from "../../../components/Stack.astro";
+import maintainUnmaintainable from "../../assets/image/maintain-the-unmaintainable.png";
+import finevision from "../../assets/image/finevision.png";
+import smolTrainingGuide from "../../assets/image/smoll-training-guide.png";
+
+export const title = "Built with this";
+
+### Built with this template
+
+You can see how the template is used in the following examples.
+
+<Stack direction="horizontal" gap="medium" layout="2-column" >
+  <a href="https://huggingface.co/spaces/transformers-community/Transformers-tenets" target="_blank" rel="noopener noreferrer" class="card no-padding" style="flex: 1; min-width: 0; overflow: hidden;">
+    <Image 
+      src={maintainUnmaintainable} 
+      alt="Maintain the unmaintainable: 1M python loc, 400+ models"
+    />
+    <div class="card-title-container">
+      <h3 class="card-title">Maintain the unmaintainable: 1M python loc, 400+ models</h3>
+      <p class="card-subtitle">A peek into software engineering for the transformers library</p>
+    </div>
+  </a>
+  
+  <a href="https://huggingface.co/spaces/HuggingFaceM4/FineVision" target="_blank" rel="noopener noreferrer" class="card no-padding" style="flex: 1; min-width: 0; overflow: hidden;">
+    <Image 
+      src={finevision} 
+      alt="FineVision: Open Data Is All You Need"
+    />
+    <div class="card-title-container">
+      <h3 class="card-title">FineVision: Open Data Is All You Need</h3>
+      <p class="card-subtitle">A new open dataset for data-centric training of Vision Language Models</p>
+    </div>
+  </a>
+  
+  <a href="https://placeholder-url.com" target="_blank" rel="noopener noreferrer" class="card no-padding" style="flex: 1; min-width: 0; overflow: hidden;">
+    <Image 
+      src={smolTrainingGuide} 
+      alt="The Smol Training Guide: The Secrets to Building World-Class LLMs"
+    />
+    <div class="card-title-container">
+      <h3 class="card-title">The Smol Training Guide: The Secrets to Building World-Class LLMs</h3>
+      <p class="card-subtitle">A practical journey through the challenges, decisions, and messy reality behind training state-of-the-art language models</p>
+    </div>
+  </a>
+  
+  <div class="card card-cta">
+    <div class="card-cta-content">
+      <h3>Your article?</h3>
+      <p>Build your research paper with this template</p>
+    </div>
+  </div>
+</Stack>
