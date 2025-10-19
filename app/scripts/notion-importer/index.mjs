@@ -3,7 +3,7 @@
 import { config } from 'dotenv';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { convertNotionToMarkdown } from './notion-converter.mjs';
 import { convertToMdx } from './mdx-converter.mjs';
 import { Client } from '@notionhq/client';
@@ -211,22 +211,73 @@ function copyToAstroContent(outputDir) {
                     } else if (imageExtensions.some(ext => file.toLowerCase().endsWith(ext))) {
                         const filename = basename(filePath);
                         const destPath = join(ASTRO_ASSETS_PATH, filename);
-                        copyFileSync(filePath, destPath);
-                        imageCount++;
+
+                        try {
+                            // Validate image by checking file size and basic structure
+                            const stats = statSync(filePath);
+                            if (stats.size === 0) {
+                                console.log(`    ⚠️  Skipping empty image: ${filename}`);
+                                return;
+                            }
+
+                            // Try to copy and validate the result
+                            copyFileSync(filePath, destPath);
+
+                            // Additional validation - check if the copied file has reasonable size
+                            const destStats = statSync(destPath);
+                            if (destStats.size === 0) {
+                                console.log(`    ❌ Failed to copy corrupted image: ${filename}`);
+                                // Remove the empty file
+                                try {
+                                    unlinkSync(destPath);
+                                } catch (e) { }
+                                return;
+                            }
+
+                            console.log(`    ✅ Copied: ${filename} (${destStats.size} bytes)`);
+                            imageCount++;
+                        } catch (error) {
+                            console.log(`    ❌ Failed to copy ${filename}: ${error.message}`);
+                        }
                     }
                 }
             }
 
             copyImagesRecursively(mediaDir);
             console.log(`    ✅ Copied ${imageCount} image(s) to ${ASTRO_ASSETS_PATH}`);
+        }
 
-            // Update image paths in MDX file
+        // Always update image paths and filter problematic references in MDX file
+        if (existsSync(ASTRO_CONTENT_PATH)) {
             const mdxContent = readFileSync(ASTRO_CONTENT_PATH, 'utf8');
             let updatedContent = mdxContent.replace(/\.\/media\//g, './assets/image/');
             // Remove the subdirectory from image paths since we copy images directly to assets/image/
             updatedContent = updatedContent.replace(/\.\/assets\/image\/[^\/]+\//g, './assets/image/');
+
+            // Check which images actually exist and remove references to missing/corrupted ones
+            const imageReferences = updatedContent.match(/\.\/assets\/image\/[^\s\)]+/g) || [];
+            const existingImages = existsSync(ASTRO_ASSETS_PATH) ? readdirSync(ASTRO_ASSETS_PATH).filter(f =>
+                ['.png', '.jpg', '.jpeg', '.gif', '.svg'].some(ext => f.toLowerCase().endsWith(ext))
+            ) : [];
+
+            for (const imgRef of imageReferences) {
+                const filename = basename(imgRef);
+                if (!existingImages.includes(filename)) {
+                    console.log(`    ⚠️  Removing reference to missing/corrupted image: ${filename}`);
+                    // Remove the entire image reference (both Image component and markdown syntax)
+                    updatedContent = updatedContent.replace(
+                        new RegExp(`<Image[^>]*src=["']${imgRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*\/?>`, 'g'),
+                        ''
+                    );
+                    updatedContent = updatedContent.replace(
+                        new RegExp(`!\\[.*?\\]\\(${imgRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g'),
+                        ''
+                    );
+                }
+            }
+
             writeFileSync(ASTRO_CONTENT_PATH, updatedContent);
-            console.log(`    ✅ Updated image paths in MDX file`);
+            console.log(`    ✅ Updated image paths and filtered problematic references in MDX file`);
         }
 
         // Create empty bibliography.bib
