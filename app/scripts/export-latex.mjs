@@ -61,26 +61,53 @@ function extractFrontmatter(content) {
   const frontmatterText = frontmatterMatch[1];
   const contentWithoutFrontmatter = content.replace(frontmatterMatch[0], '');
 
-  // Simple YAML parsing for basic fields
+  // More robust YAML parsing that handles complex structures
   const frontmatter = {};
   const lines = frontmatterText.split('\n');
   let currentKey = null;
   let currentValue = '';
+  let inMultiLineValue = false;
+  let multiLineOperator = null; // '>' or '|'
 
   for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.includes(':') && !trimmed.startsWith('-')) {
+    // Check if this is a new key
+    if (line.match(/^[a-zA-Z_][a-zA-Z0-9_]*\s*:/) && !inMultiLineValue) {
+      // Save previous key if exists
       if (currentKey) {
         frontmatter[currentKey] = currentValue.trim();
       }
-      const [key, ...valueParts] = trimmed.split(':');
+
+      const [key, ...valueParts] = line.split(':');
       currentKey = key.trim();
       currentValue = valueParts.join(':').trim();
-    } else if (currentKey) {
-      currentValue += '\n' + trimmed;
+
+      // Check for multi-line operators
+      if (currentValue.endsWith('>') || currentValue.endsWith('|')) {
+        multiLineOperator = currentValue.slice(-1);
+        currentValue = currentValue.slice(0, -1).trim();
+        inMultiLineValue = true;
+      } else if (currentValue) {
+        inMultiLineValue = false;
+      } else {
+        inMultiLineValue = true;
+      }
+    } else if (currentKey && (inMultiLineValue || line.match(/^\s/))) {
+      // Continuation line or nested content
+      if (inMultiLineValue) {
+        if (line.trim() === '' && multiLineOperator === '>') {
+          // Empty line in folded style should become space
+          currentValue += ' ';
+        } else {
+          const lineContent = line.startsWith(' ') ? line : ' ' + line;
+          currentValue += lineContent;
+        }
+      } else {
+        currentValue += '\n' + line;
+      }
     }
   }
 
+  // Save the last key
   if (currentKey) {
     frontmatter[currentKey] = currentValue.trim();
   }
@@ -130,6 +157,11 @@ function cleanMdxToMarkdown(content) {
 
   // Clean up extra whitespace
   content = content.replace(/\n{3,}/g, '\n\n');
+
+  // Clean up characters that might cause YAML parsing issues
+  // Remove any potential YAML-style markers that might interfere
+  content = content.replace(/^---$/gm, '');
+  content = content.replace(/^\s*&\s+/gm, ''); // Remove YAML aliases
 
   return content.trim();
 }
@@ -254,9 +286,17 @@ async function main() {
   const title = frontmatter.title ? frontmatter.title.replace(/\n/g, ' ') : 'article';
   const outFileBase = args.filename ? String(args.filename).replace(/\.(tex|pdf)$/i, '') : slugify(title);
 
-  // Create temporary markdown file
+  // Create temporary markdown file (ensure it's pure markdown without YAML frontmatter)
   const tempMdFile = resolve(cwd, 'temp-article.md');
-  await fs.writeFile(tempMdFile, markdownContent);
+
+  // Clean the markdown content to ensure no YAML frontmatter remains
+  let cleanMarkdown = markdownContent;
+  // Remove any potential YAML frontmatter that might have leaked through
+  cleanMarkdown = cleanMarkdown.replace(/^---\n[\s\S]*?\n---\n/, '');
+  // Remove any standalone YAML blocks that might cause issues
+  cleanMarkdown = cleanMarkdown.replace(/^---\n([\s\S]*?)\n---$/gm, '');
+
+  await fs.writeFile(tempMdFile, cleanMarkdown);
 
 
   console.log('> Converting to LaTeX with Pandoc...');
@@ -269,7 +309,7 @@ async function main() {
   const pandocArgs = [
     tempMdFile,
     '-o', outputLatex,
-    '--from=markdown',
+    '--from=markdown-yaml_metadata_block', // Explicitly exclude YAML metadata parsing
     '--to=latex',
     '--standalone',
     '--toc',
