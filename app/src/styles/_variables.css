@@ -17,6 +17,11 @@
   --primary-color-active: oklch(from var(--primary-color) calc(l - 0.10) c h);
   --on-primary: #ffffff;
 
+  /* Semantic colors */
+  --danger-color: oklch(0.65 0.19 25);
+  --success-color: oklch(0.65 0.15 145);
+  --info-color: oklch(0.65 0.12 230);
+
   /* Text & Surfaces */
   --page-bg: #ffffff;
   --text-color: rgba(0, 0, 0, .85);

@@ -60,6 +60,9 @@ notion-importer/
 ├── post-processor.mjs          # Markdown post-processing
 ├── package.json                # Dependencies and scripts
 ├── env.example                 # Environment variables template
+├── static/                     # Static files injected at build time
+│   ├── frontmatter.mdx        # Static frontmatter (overrides all others)
+│   └── bibliography.bib       # Static bibliography
 ├── input/                      # Configuration
 │   └── pages.json             # Notion pages to convert
 └── output/                     # Results
@@ -85,7 +88,8 @@ notion-importer/
 ### 🎨 **Smart Formatting**  
 - **Link fixing**: Notion internal links converted to relative links
 - **Artifact cleanup**: Removal of Notion-specific formatting artifacts
-- **Frontmatter generation**: Automatic YAML frontmatter from Notion properties
+- **Static frontmatter**: Priority injection of custom frontmatter from `static/frontmatter.mdx`
+- **Static bibliography**: Automatic copying of `static/bibliography.bib`
 - **Astro compatibility**: Full compatibility with Astro MDX processing
 
 ### 🔧 **Robust Pipeline**
@@ -93,6 +97,45 @@ notion-importer/
 - **Post-processing**: Markdown cleanup and optimization
 - **MDX conversion**: Final transformation with Astro components
 - **Auto-copy**: Automatic copying to Astro content directory
+
+## 📄 Static Files Configuration
+
+The importer supports static files for consistent metadata and bibliography:
+
+### Frontmatter (`static/frontmatter.mdx`)
+Create this file to override frontmatter across all conversions:
+
+```yaml
+---
+title: "My Article Title"
+subtitle: "Optional subtitle"
+description: "Article description for SEO"
+authors:
+  - name: "Jane Doe"
+    url: "https://example.com"
+    affiliations:
+      - "Hugging Face"
+tags:
+  - AI
+  - Research
+doi: "10.1000/182"
+tableOfContentsAutoCollapse: true
+---
+```
+
+This static frontmatter takes **highest priority** over any Notion metadata or existing frontmatter.
+
+### Bibliography (`static/bibliography.bib`)
+Add your BibTeX entries to be copied to `src/content/bibliography.bib`:
+
+```bibtex
+@article{example2024,
+  title={Example Article},
+  author={Doe, Jane and Smith, John},
+  journal={Example Journal},
+  year={2024}
+}
+```
 
 ## 📊 Example Workflow
 

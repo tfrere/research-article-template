@@ -24,7 +24,7 @@ import rehypeWrapOutput from './plugins/rehype/wrap-outputs.mjs';
 export default defineConfig({
   output: 'static',
   integrations: [
-    mermaid({ theme: 'forest', autoTheme: true }),
+    mermaid({ theme: 'neutral', autoTheme: true }),
     mdx(),
     svelte(),
     // Precompress output with Gzip only (Brotli disabled due to server module mismatch)

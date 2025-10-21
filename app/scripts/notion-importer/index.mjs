@@ -20,6 +20,7 @@ const DEFAULT_OUTPUT = join(__dirname, 'output');
 const ASTRO_CONTENT_PATH = join(__dirname, '..', '..', 'src', 'content', 'article.mdx');
 const ASTRO_ASSETS_PATH = join(__dirname, '..', '..', 'src', 'content', 'assets', 'image');
 const ASTRO_BIB_PATH = join(__dirname, '..', '..', 'src', 'content', 'bibliography.bib');
+const STATIC_BIB_PATH = join(__dirname, 'static', 'bibliography.bib');
 
 function parseArgs() {
     const args = process.argv.slice(2);
@@ -175,6 +176,90 @@ async function createPagesConfigFromEnv(pageId, token, outputPath) {
     }
 }
 
+/**
+ * Final cleanup function to remove exclude tags and unused imports
+ * @param {string} content - MDX content
+ * @returns {string} - Cleaned content
+ */
+function cleanupExcludeTagsAndImports(content) {
+    let cleanedContent = content;
+    let removedCount = 0;
+    const removedImageVariables = new Set();
+
+    // First, extract image variable names from exclude blocks before removing them
+    const excludeBlocks = cleanedContent.match(/<exclude>[\s\S]*?<\/exclude>/g) || [];
+    excludeBlocks.forEach(match => {
+        const imageMatches = match.match(/src=\{([^}]+)\}/g);
+        if (imageMatches) {
+            imageMatches.forEach(imgMatch => {
+                const varName = imgMatch.match(/src=\{([^}]+)\}/)?.[1];
+                if (varName) {
+                    removedImageVariables.add(varName);
+                }
+            });
+        }
+    });
+
+    // Remove <exclude> tags and everything between them (including multiline)
+    cleanedContent = cleanedContent.replace(/<exclude>[\s\S]*?<\/exclude>/g, (match) => {
+        removedCount++;
+        return '';
+    });
+
+    // Remove unused image imports that were only used in exclude blocks
+    if (removedImageVariables.size > 0) {
+        removedImageVariables.forEach(varName => {
+            // Check if the variable is still used elsewhere in the content after removing exclude blocks
+            const remainingUsage = cleanedContent.includes(`{${varName}}`) || cleanedContent.includes(`src={${varName}}`);
+
+            if (!remainingUsage) {
+                // Remove import lines for unused image variables
+                // Pattern: import VarName from './assets/image/filename';
+                const importPattern = new RegExp(`import\\s+${varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+from\\s+['"][^'"]+['"];?\\s*`, 'g');
+                cleanedContent = cleanedContent.replace(importPattern, '');
+                console.log(`    🗑️  Removed unused import: ${varName}`);
+            }
+        });
+    }
+
+    if (removedCount > 0) {
+        console.log(`    🧹 Final cleanup: removed ${removedCount} exclude block(s) and ${removedImageVariables.size} unused import(s)`);
+    }
+
+    // Ensure there's always a blank line after imports before content starts
+    // Find the last import line and ensure there's a blank line before the next non-empty line
+    const lines = cleanedContent.split('\n');
+    let lastImportIndex = -1;
+
+    // Find the last import line
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().startsWith('import ') && lines[i].trim().endsWith(';')) {
+            lastImportIndex = i;
+        }
+    }
+
+    // If we found imports, ensure there's a blank line after the last one
+    if (lastImportIndex >= 0) {
+        // Find the next non-empty line after the last import
+        let nextNonEmptyIndex = lastImportIndex + 1;
+        while (nextNonEmptyIndex < lines.length && lines[nextNonEmptyIndex].trim() === '') {
+            nextNonEmptyIndex++;
+        }
+
+        // If there's no blank line between the last import and next content, add one
+        if (nextNonEmptyIndex > lastImportIndex + 1) {
+            // There are already blank lines, this is fine
+        } else {
+            // No blank line, add one
+            lines.splice(nextNonEmptyIndex, 0, '');
+        }
+
+        cleanedContent = lines.join('\n');
+    }
+
+    return cleanedContent;
+}
+
 function copyToAstroContent(outputDir) {
     console.log('📋 Copying MDX files to Astro content directory...');
 
@@ -189,9 +274,13 @@ function copyToAstroContent(outputDir) {
         if (mdxFiles.length > 0) {
             const mdxFile = join(outputDir, mdxFiles[0]); // Take the first MDX file
             // Read and write instead of copy to avoid EPERM issues
-            const mdxContent = readFileSync(mdxFile, 'utf8');
+            let mdxContent = readFileSync(mdxFile, 'utf8');
+
+            // Apply final cleanup to ensure no exclude tags or unused imports remain
+            mdxContent = cleanupExcludeTagsAndImports(mdxContent);
+
             writeFileSync(ASTRO_CONTENT_PATH, mdxContent);
-            console.log(`    ✅ Copied MDX to ${ASTRO_CONTENT_PATH}`);
+            console.log(`    ✅ Copied and cleaned MDX to ${ASTRO_CONTENT_PATH}`);
         }
 
         // Copy images
@@ -280,9 +369,15 @@ function copyToAstroContent(outputDir) {
             console.log(`    ✅ Updated image paths and filtered problematic references in MDX file`);
         }
 
-        // Create empty bibliography.bib
-        writeFileSync(ASTRO_BIB_PATH, '');
-        console.log(`    ✅ Created empty bibliography at ${ASTRO_BIB_PATH}`);
+        // Copy static bibliography.bib if it exists, otherwise create empty
+        if (existsSync(STATIC_BIB_PATH)) {
+            const bibContent = readFileSync(STATIC_BIB_PATH, 'utf8');
+            writeFileSync(ASTRO_BIB_PATH, bibContent);
+            console.log(`    ✅ Copied static bibliography from ${STATIC_BIB_PATH}`);
+        } else {
+            writeFileSync(ASTRO_BIB_PATH, '');
+            console.log(`    ✅ Created empty bibliography (no static file found)`);
+        }
 
     } catch (error) {
         console.warn(`    ⚠️  Failed to copy to Astro: ${error.message}`);

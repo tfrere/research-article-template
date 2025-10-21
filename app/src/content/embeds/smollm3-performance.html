@@ -1,0 +1,473 @@
+<div class="smollm3-performance"></div>
+<style>
+  .smollm3-performance { position: relative; }
+  .smollm3-performance .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .smollm3-performance .controls label {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+  .smollm3-performance .controls select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    font-size: 13px;
+    line-height: 1.2;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.41 1.59L6 6.17l4.59-4.58L12 3 6 9 0 3z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .smollm3-performance .controls select:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  .smollm3-performance .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 0 0 0;
+  }
+  .smollm3-performance .legend .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .smollm3-performance .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .smollm3-performance .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted-color);
+    cursor: pointer;
+  }
+  .smollm3-performance .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .smollm3-performance .ghost { opacity: .25; }
+  .smollm3-performance .d3-tooltip {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    text-align: left;
+    z-index: 1000;
+  }
+  .smollm3-performance .chart-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .smollm3-performance .charts-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .smollm3-performance .chart-wrapper {
+    min-width: 0;
+  }
+  .smollm3-performance .chart-title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  @media (max-width: 900px) {
+    .smollm3-performance .charts-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('smollm3-performance'))){
+        const cs = Array.from(document.querySelectorAll('.smollm3-performance')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Create charts container
+      const chartsContainer = document.createElement('div');
+      chartsContainer.className = 'charts-container';
+      container.appendChild(chartsContainer);
+
+      // Chart 1: v02.01 vs v04.01
+      const wrapper1 = document.createElement('div');
+      wrapper1.className = 'chart-wrapper';
+      const title1 = document.createElement('div');
+      title1.className = 'chart-title';
+      title1.textContent = 'v02.01 vs v04.01';
+      wrapper1.appendChild(title1);
+      const card1 = document.createElement('div');
+      card1.className = 'chart-card';
+      wrapper1.appendChild(card1);
+      chartsContainer.appendChild(wrapper1);
+      const svg1 = d3.select(card1).append('svg').attr('width','100%').style('display','block');
+      const gRoot1 = svg1.append('g');
+
+      // Chart 2: v03.01 vs v04.01
+      const wrapper2 = document.createElement('div');
+      wrapper2.className = 'chart-wrapper';
+      const title2 = document.createElement('div');
+      title2.className = 'chart-title';
+      title2.textContent = 'v03.01 vs v04.01';
+      wrapper2.appendChild(title2);
+      const card2 = document.createElement('div');
+      card2.className = 'chart-card';
+      wrapper2.appendChild(card2);
+      chartsContainer.appendChild(wrapper2);
+      const svg2 = d3.select(card2).append('svg').attr('width','100%').style('display','block');
+      const gRoot2 = svg2.append('g');
+
+      // Data for both charts
+      const data1 = [
+        { benchmark: 'aime24', model: 'v02.01', score: 2.14 },
+        { benchmark: 'aime24', model: 'v04.01', score: 1.04 },
+        { benchmark: 'gpqa_diamond', model: 'v02.01', score: 22.85 },
+        { benchmark: 'gpqa_diamond', model: 'v04.01', score: 10.29 },
+        { benchmark: 'lcb_v4', model: 'v02.01', score: 8.91 },
+        { benchmark: 'lcb_v4', model: 'v04.01', score: 6.93 },
+        { benchmark: 'ifeval_avg', model: 'v02.01', score: 67.89 },
+        { benchmark: 'ifeval_avg', model: 'v04.01', score: 61.97 }
+      ];
+
+      const data2 = [
+        { benchmark: 'aime24', model: 'v03.01', score: 3.18 },
+        { benchmark: 'aime24', model: 'v04.01', score: 3.75 },
+        { benchmark: 'gpqa_diamond', model: 'v03.01', score: 8.40 },
+        { benchmark: 'gpqa_diamond', model: 'v04.01', score: 9.72 },
+        { benchmark: 'lcb_v4', model: 'v03.01', score: 1.98 },
+        { benchmark: 'lcb_v4', model: 'v04.01', score: 6.93 },
+        { benchmark: 'ifeval_avg', model: 'v03.01', score: 62.28 },
+        { benchmark: 'ifeval_avg', model: 'v04.01', score: 62.96 }
+      ];
+
+      const state = {
+        data1: data1,
+        data2: data2,
+        colorsByModel: null,
+        highlightModel: null,
+      };
+
+      const margin = { top: 12, right: 28, bottom: 24, left: 56 };
+      let width = 800, height = 360;
+      const x0 = d3.scaleBand().paddingInner(0.2).paddingOuter(0.05); // group: benchmark
+      const x1 = d3.scaleBand().padding(0.12); // series: model per benchmark
+      const y = d3.scaleLinear();
+      const xAxis = d3.axisBottom(x0).tickSizeOuter(0);
+      const yAxis = d3.axisLeft(y).ticks(6).tickSizeOuter(0);
+      const yTopPadding = 2; // avoid bars touching top at max
+
+      function getPrimaryColor(){
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getPrimary === 'function') return window.ColorPalettes.getPrimary(); } catch(e) {}
+        return getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#6D4AFF';
+      }
+      function getCategoricalColors(n){
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(e) {}
+        // Fallback: generate hues around the primary color (simple fallback)
+        const base = getPrimaryColor();
+        const colors = [];
+        for (let i=0;i<n;i++) {
+          const hue = Math.round((360/n)*i);
+          colors.push(`hsl(${hue}, 60%, 55%)`);
+        }
+        return colors;
+      }
+
+      function computeSeriesColors(models){
+        const palette = getCategoricalColors(models.length);
+        const map = new Map(models.map((m, i) => [m, palette[i % palette.length]]));
+        return (model) => map.get(model) || getPrimaryColor();
+      }
+
+      // Format benchmark labels
+      function formatBenchmark(key) {
+        const benchmarkLabels = {
+          'aime24': 'AIME25',
+          'gpqa_diamond': 'GPQA-diamond',
+          'lcb_v4': 'LCBv4',
+          'ifeval_avg': 'IFEval'
+        };
+        return benchmarkLabels[key] || key;
+      }
+
+      function getModels(data){
+        return Array.from(new Set(data.map(d => d.model)));
+      }
+      function getBenchmarks(data){
+        return Array.from(new Set(data.map(d => d.benchmark)));
+      }
+
+      function updateSize(){
+        width = container.clientWidth || 800;
+        height = Math.max(240, Math.round(width / 3.4));
+        // With CSS grid, each chart wrapper takes its natural width
+        const chartWidth = wrapper1.clientWidth || Math.floor((width - 20) / 2);
+        svg1.attr('width', '100%').attr('height', height);
+        svg2.attr('width', '100%').attr('height', height);
+        gRoot1.attr('transform', `translate(${margin.left},${margin.top})`);
+        gRoot2.attr('transform', `translate(${margin.left},${margin.top})`);
+        return { innerWidth: chartWidth - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+      }
+
+      function showTip(html, x, y){
+        tip.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+        tip.style.opacity = '1';
+        const inner = tip.querySelector('.d3-tooltip__inner') || tip;
+        inner.innerHTML = html;
+      }
+      function hideTip(){
+        tip.style.opacity = '0';
+        tip.style.transform = 'translate(-9999px, -9999px)';
+      }
+
+      function updateHighlight(){
+        const model = state.highlightModel;
+        const bars1 = gRoot1.selectAll('rect.bar');
+        const bars2 = gRoot2.selectAll('rect.bar');
+        const labels1 = gRoot1.selectAll('text.value');
+        const labels2 = gRoot2.selectAll('text.value');
+        if (model) {
+          bars1.classed('ghost', d => d.model !== model);
+          bars2.classed('ghost', d => d.model !== model);
+          labels1.classed('ghost', d => d.model !== model);
+          labels2.classed('ghost', d => d.model !== model);
+          const items = container.querySelectorAll('.legend .item');
+          items.forEach((el) => {
+            const name = el.textContent.trim();
+            if (name !== model) el.classList.add('ghost'); else el.classList.remove('ghost');
+          });
+        } else {
+          bars1.classed('ghost', false);
+          bars2.classed('ghost', false);
+          labels1.classed('ghost', false);
+          labels2.classed('ghost', false);
+          container.querySelectorAll('.legend .item').forEach(el => el.classList.remove('ghost'));
+        }
+      }
+
+      function makeLegend(series, colorBySeries) {
+        let legend = container.querySelector('.legend');
+        if (!legend) { legend = document.createElement('div'); legend.className = 'legend'; container.appendChild(legend); }
+        // Ensure title
+        let title = legend.querySelector('.legend-title');
+        if (!title) { title = document.createElement('div'); title.className = 'legend-title'; title.textContent = 'Models'; legend.appendChild(title); }
+        // Ensure items container
+        let items = legend.querySelector('.items');
+        if (!items) { items = document.createElement('div'); items.className = 'items'; legend.appendChild(items); }
+        items.innerHTML = '';
+        series.forEach(name => {
+          const item = document.createElement('div'); item.className = 'item';
+          const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = colorBySeries(name);
+          const txt = document.createElement('span'); txt.textContent = name;
+          item.appendChild(sw); item.appendChild(txt); items.appendChild(item);
+          item.addEventListener('mouseenter', () => { state.highlightModel = name; updateHighlight(); });
+          item.addEventListener('mouseleave', () => { state.highlightModel = null; updateHighlight(); });
+        });
+      }
+
+      function renderChart(gRoot, data) {
+        const { innerWidth, innerHeight } = updateSize();
+        const models = getModels(data);
+        const benchmarks = getBenchmarks(data);
+
+        x0.domain(benchmarks).range([0, innerWidth]);
+        x1.domain(models).range([0, x0.bandwidth()]);
+
+        const yMaxRaw = 70;
+        const yMax = yMaxRaw + yTopPadding;
+        y.domain([0, yMax]).range([innerHeight, 0]).nice();
+
+        // Axes (standardized colors)
+        gRoot
+          .selectAll('.axis-x')
+          .data([0])
+          .join('g')
+          .attr('class','axis-x')
+          .attr('transform',`translate(0,${innerHeight})`)
+          .call(xAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px')
+              .text(d => formatBenchmark(d));
+          });
+        gRoot
+          .selectAll('.axis-y')
+          .data([0])
+          .join('g')
+          .attr('class','axis-y')
+          .call(yAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+          });
+
+        // Gridlines (y) standardized color
+        gRoot
+          .selectAll('.grid-y')
+          .data([0])
+          .join('g')
+          .attr('class','grid-y')
+          .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
+          .call(g => g.select('.domain').remove())
+          .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)').attr('stroke-opacity',1))
+          .call(g => g.selectAll('.tick').filter((d, i, nodes) => i === nodes.length - 1).select('line').attr('stroke-opacity', 0));
+
+        // Groups per benchmark
+        const groups = gRoot.selectAll('.group').data(benchmarks, d => d);
+        const groupsEnter = groups.enter().append('g').attr('class','group');
+        groupsEnter.merge(groups).attr('transform', d => `translate(${x0(d)},0)`);
+        groups.exit().remove();
+
+        // Bars per model
+        const nested = d3.group(data, d => d.benchmark);
+        groupsEnter.each(function(bench){ d3.select(this).selectAll('rect.bar').data([]).join('rect'); });
+        const allGroups = gRoot.selectAll('.group');
+        allGroups.each(function(bench){
+          const dataForBench = nested.get(bench) || [];
+          const bars = d3.select(this).selectAll('rect.bar').data(models.map(m => ({ bench, model:m, score:(dataForBench.find(dd=>dd.model===m)||{score:0}).score })) , d => d.model);
+          bars.join(
+            enter => enter.append('rect')
+              .attr('class','bar')
+              .attr('x', d => x1(d.model))
+              .attr('y', innerHeight)
+              .attr('width', x1.bandwidth())
+              .attr('height', 0)
+              .attr('fill', d => state.colorsByModel(d.model))
+              .on('mouseenter', (event, d) => { state.highlightModel = d.model; updateHighlight(); })
+              .on('mousemove', (event, d) => {
+                const [mx, my] = d3.pointer(event, container);
+                showTip(`<strong>${d.model}</strong><br/>${formatBenchmark(d.bench)}: <strong>${d.score}</strong>`, mx, my);
+              })
+              .on('mouseleave', () => { hideTip(); state.highlightModel = null; updateHighlight(); })
+              .transition().duration(160)
+              .attr('y', d => y(d.score))
+              .attr('height', d => Math.max(0, innerHeight - y(d.score))),
+            update => update
+              .on('mouseenter', (event, d) => { state.highlightModel = d.model; updateHighlight(); })
+              .on('mousemove', (event, d) => {
+                const [mx, my] = d3.pointer(event, container);
+                showTip(`<strong>${d.model}</strong><br/>${formatBenchmark(d.bench)}: <strong>${d.score}</strong>`, mx, my);
+              })
+              .on('mouseleave', () => { hideTip(); state.highlightModel = null; updateHighlight(); })
+              .transition().duration(160)
+              .attr('x', d => x1(d.model))
+              .attr('y', d => y(d.score))
+              .attr('width', x1.bandwidth())
+              .attr('height', d => Math.max(0, innerHeight - y(d.score)))
+              .attr('fill', d => state.colorsByModel(d.model)),
+            exit => exit.transition().duration(120).attr('y', innerHeight).attr('height', 0).remove()
+          );
+
+          // Value labels centered above bars (small, darker)
+          const labels = d3.select(this).selectAll('text.value').data(models.map(m => ({ bench, model:m, score:(dataForBench.find(dd=>dd.model===m)||{score:0}).score })) , d => d.model);
+          labels.join(
+            enter => enter.append('text')
+              .attr('class','value')
+              .attr('x', d => x1(d.model) + x1.bandwidth()/2)
+              .attr('y', d => y(d.score) - 4)
+              .attr('text-anchor','middle')
+              .attr('fill','var(--text-color)')
+              .attr('opacity',0.9)
+              .attr('font-size',10)
+              .text(d => d.score),
+            update => update
+              .transition().duration(160)
+              .attr('x', d => x1(d.model) + x1.bandwidth()/2)
+              .attr('y', d => y(d.score) - 4)
+              .text(d => d.score),
+            exit => exit.remove()
+          );
+        });
+
+        // Axis labels
+        gRoot.selectAll('.y-label').data([0]).join('text').attr('class','y-label')
+          .attr('transform', `rotate(-90)`) 
+          .attr('x', -innerHeight / 2)
+          .attr('y', -margin.left + 24)
+          .attr('text-anchor','middle')
+          .attr('fill','var(--text-color)')
+          .attr('font-size',12)
+          .attr('font-weight',700)
+          .text('Score');
+      }
+
+      function render(){
+        const allModels = [...getModels(state.data1), ...getModels(state.data2)];
+        const uniqueModels = [...new Set(allModels)];
+        if (!state.colorsByModel) state.colorsByModel = computeSeriesColors(uniqueModels);
+        makeLegend(uniqueModels, state.colorsByModel);
+
+        renderChart(gRoot1, state.data1);
+        renderChart(gRoot2, state.data2);
+      }
+
+      // Initial render + resize handling
+      render();
+      const rerender = () => render();
+      if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); }
+      else { window.addEventListener('resize', rerender); }
+    };
+
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); 
+    } else { 
+      ensureD3(bootstrap); 
+    }
+  })();
+</script>

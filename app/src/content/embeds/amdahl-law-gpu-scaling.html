@@ -1,0 +1,479 @@
+<div class="amdahl-law-gpu-scaling"></div>
+<style>
+  .amdahl-law-gpu-scaling {
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .amdahl-law-gpu-scaling .charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .amdahl-law-gpu-scaling .chart-panel {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 12px;
+  }
+
+  .amdahl-law-gpu-scaling .cell-header {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .amdahl-law-gpu-scaling .cell-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .amdahl-law-gpu-scaling .cell-body {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .amdahl-law-gpu-scaling .cell-body svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .amdahl-law-gpu-scaling .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .amdahl-law-gpu-scaling .tick text {
+    fill: var(--tick-color);
+    font-size: 10px;
+  }
+
+  .amdahl-law-gpu-scaling .tick line {
+    stroke: var(--axis-color);
+  }
+
+  .amdahl-law-gpu-scaling .domain {
+    stroke: var(--axis-color);
+  }
+
+  .amdahl-law-gpu-scaling .line {
+    fill: none;
+    stroke-width: 2px;
+  }
+
+  .amdahl-law-gpu-scaling .line-ideal {
+    stroke: var(--muted-color);
+    stroke-dasharray: 2,2;
+    stroke-width: 1px;
+  }
+
+  .amdahl-law-gpu-scaling .amdahl-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 0 0;
+    flex-wrap: wrap;
+  }
+
+  .amdahl-law-gpu-scaling .legend-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+
+  .amdahl-law-gpu-scaling .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .amdahl-law-gpu-scaling .legend-bottom .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .amdahl-law-gpu-scaling .legend-bottom .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .amdahl-law-gpu-scaling .legend-bottom .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+
+  .amdahl-law-gpu-scaling .tooltip {
+    position: absolute;
+    text-align: center;
+    padding: 8px 10px;
+    font: 12px sans-serif;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    pointer-events: none;
+    color: var(--text-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  @media (max-width: 800px) {
+    .amdahl-law-gpu-scaling .charts-container {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+<script>
+  (() => {
+    // Prevent multiple executions
+    if (window.amdahlLawGpuScalingInitialized) return;
+    window.amdahlLawGpuScalingInitialized = true;
+
+    // Load D3 from CDN once
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('amdahl-law-gpu-scaling'))) {
+        const cs = Array.from(document.querySelectorAll('.amdahl-law-gpu-scaling')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'tooltip';
+        container.appendChild(tip);
+      }
+
+      // Data parameters
+      const nGpus = d3.range(1, 501);
+      const sValues = [0.00, 0.01, 0.02, 0.05, 0.10, 0.20];
+      const lineStyles = ['-', '-', '-', '--', '--', '--'];
+
+      // Get colors from ColorPalettes
+      const getColors = () => {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('categorical', sValues.length);
+          }
+        } catch (_) { }
+        return ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#8c564b', '#7f7f7f'];
+      };
+
+      const colors = getColors();
+
+      // Amdahl's Law functions
+      const amdahlSpeedup = (n, s) => 1 / (s + (1 - s) / n);
+      const efficiency = (n, s) => amdahlSpeedup(n, s) / n * 100;
+
+      // Create charts container
+      const chartsContainer = document.createElement('div');
+      chartsContainer.className = 'charts-container';
+      container.appendChild(chartsContainer);
+
+      // Create speedup chart
+      const speedupPanel = document.createElement('div');
+      speedupPanel.className = 'chart-panel';
+      
+      // Add header with title
+      const speedupHeader = document.createElement('div');
+      speedupHeader.className = 'cell-header';
+      const speedupTitle = document.createElement('div');
+      speedupTitle.className = 'cell-title';
+      speedupTitle.textContent = 'GPU Speedup vs Number of GPUs';
+      speedupHeader.appendChild(speedupTitle);
+      speedupPanel.appendChild(speedupHeader);
+      
+      // Add body for SVG
+      const speedupBody = document.createElement('div');
+      speedupBody.className = 'cell-body';
+      speedupPanel.appendChild(speedupBody);
+      
+      chartsContainer.appendChild(speedupPanel);
+
+      // Create efficiency chart
+      const efficiencyPanel = document.createElement('div');
+      efficiencyPanel.className = 'chart-panel';
+      
+      // Add header with title
+      const efficiencyHeader = document.createElement('div');
+      efficiencyHeader.className = 'cell-header';
+      const efficiencyTitle = document.createElement('div');
+      efficiencyTitle.className = 'cell-title';
+      efficiencyTitle.textContent = 'GPU Efficiency vs Number of GPUs';
+      efficiencyHeader.appendChild(efficiencyTitle);
+      efficiencyPanel.appendChild(efficiencyHeader);
+      
+      // Add body for SVG
+      const efficiencyBody = document.createElement('div');
+      efficiencyBody.className = 'cell-body';
+      efficiencyPanel.appendChild(efficiencyBody);
+      
+      chartsContainer.appendChild(efficiencyPanel);
+
+      // Chart dimensions
+      const margin = { top: 16, right: 20, bottom: 46, left: 56 };
+      const width = 600;
+      const height = 340;
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      // Create speedup chart
+      const speedupSvg = d3.select(speedupBody)
+        .append('svg')
+        .attr('width', '100%')
+        .style('display', 'block')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+      const speedupG = speedupSvg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      // Speedup scales
+      const speedupX = d3.scaleLinear()
+        .domain([1, 500])
+        .range([0, innerWidth]);
+
+      const speedupY = d3.scaleLinear()
+        .domain([1, 200])
+        .range([innerHeight, 0]);
+
+      // Speedup axes
+      speedupG.append('g')
+        .attr('transform', `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(speedupX).ticks(5))
+        .selectAll('text')
+        .attr('class', 'tick text');
+
+      speedupG.append('g')
+        .call(d3.axisLeft(speedupY).ticks(5))
+        .selectAll('text')
+        .attr('class', 'tick text');
+
+      // Speedup axis labels
+      speedupG.append('text')
+        .attr('class', 'axis-label')
+        .attr('text-anchor', 'middle')
+        .attr('x', innerWidth / 2)
+        .attr('y', innerHeight + 35)
+        .text('Number of GPUs');
+
+      speedupG.append('text')
+        .attr('class', 'axis-label')
+        .attr('text-anchor', 'middle')
+        .attr('transform', `translate(${-40}, ${innerHeight / 2}) rotate(-90)`)
+        .text('Speedup');
+
+      // Create efficiency chart
+      const efficiencySvg = d3.select(efficiencyBody)
+        .append('svg')
+        .attr('width', '100%')
+        .style('display', 'block')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
+
+      const efficiencyG = efficiencySvg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      // Efficiency scales
+      const efficiencyX = d3.scaleLinear()
+        .domain([1, 500])
+        .range([0, innerWidth]);
+
+      const efficiencyY = d3.scaleLinear()
+        .domain([0, 105])
+        .range([innerHeight, 0]);
+
+      // Efficiency axes
+      efficiencyG.append('g')
+        .attr('transform', `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(efficiencyX).ticks(5))
+        .selectAll('text')
+        .attr('class', 'tick text');
+
+      efficiencyG.append('g')
+        .call(d3.axisLeft(efficiencyY).ticks(5))
+        .selectAll('text')
+        .attr('class', 'tick text');
+
+      // Efficiency axis labels
+      efficiencyG.append('text')
+        .attr('class', 'axis-label')
+        .attr('text-anchor', 'middle')
+        .attr('x', innerWidth / 2)
+        .attr('y', innerHeight + 35)
+        .text('Number of GPUs');
+
+      efficiencyG.append('text')
+        .attr('class', 'axis-label')
+        .attr('text-anchor', 'middle')
+        .attr('transform', `translate(${-40}, ${innerHeight / 2}) rotate(-90)`)
+        .text('Efficiency (%)');
+
+      // Ideal efficiency line
+      const idealData = nGpus.map(n => ({ n, efficiency: 100 }));
+      efficiencyG.append('path')
+        .datum(idealData)
+        .attr('class', 'line line-ideal')
+        .attr('d', d3.line()
+          .x(d => efficiencyX(d.n))
+          .y(d => efficiencyY(d.efficiency))
+        );
+
+      // Create legend below charts
+      const header = document.createElement('div');
+      header.className = 'amdahl-header';
+      const legend = document.createElement('div');
+      legend.className = 'legend-bottom';
+      legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>';
+      header.appendChild(legend);
+      container.appendChild(header);
+
+      // Add legend items
+      const legendItemsHost = legend.querySelector('.items');
+      sValues.forEach((s, i) => {
+        const item = document.createElement('span');
+        item.className = 'item';
+        item.setAttribute('data-s', s);
+        item.innerHTML = `<span class="swatch" style="background:${colors[i]}; border-top-style: ${lineStyles[i] === '--' ? 'dashed' : 'solid'}; border-top-width: 2px; border-top-color: ${colors[i]}"></span><span>s = ${s.toFixed(2)}</span>`;
+        legendItemsHost.appendChild(item);
+      });
+
+      // Add hover effects to legend items
+      legendItemsHost.querySelectorAll('.item').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          const s = el.getAttribute('data-s');
+          const sValue = parseFloat(s);
+          const index = sValues.indexOf(sValue);
+          speedupSvg.selectAll('.line').style('opacity', (d, i) => i === index ? 1 : 0.3);
+          efficiencySvg.selectAll('.line').style('opacity', (d, i) => i === index ? 1 : 0.3);
+          efficiencySvg.selectAll('.line-ideal').style('opacity', 0.3);
+        });
+        
+        el.addEventListener('mouseleave', () => {
+          speedupSvg.selectAll('.line').style('opacity', 0.9);
+          efficiencySvg.selectAll('.line').style('opacity', 0.9);
+          efficiencySvg.selectAll('.line-ideal').style('opacity', 1);
+        });
+      });
+
+      // Draw speedup lines
+      sValues.forEach((s, i) => {
+        const data = nGpus.map(n => ({ n, speedup: amdahlSpeedup(n, s) }));
+        
+        const line = speedupG.append('path')
+          .datum(data)
+          .attr('class', 'line')
+          .attr('stroke', colors[i])
+          .attr('stroke-dasharray', lineStyles[i] === '--' ? '5,5' : 'none')
+          .attr('d', d3.line()
+            .x(d => speedupX(d.n))
+            .y(d => speedupY(d.speedup))
+          );
+
+        // Add hover effects
+        line
+          .on('mouseover', function(event, d) {
+            const [mouseX, mouseY] = d3.pointer(event, container);
+            const closestPoint = data.reduce((prev, curr) => {
+              const prevDist = Math.abs(speedupX(prev.n) - (event.offsetX - margin.left));
+              const currDist = Math.abs(speedupX(curr.n) - (event.offsetX - margin.left));
+              return currDist < prevDist ? curr : prev;
+            });
+            
+            tip.innerHTML = `<strong>s = ${s.toFixed(2)}</strong><br/>GPUs: ${closestPoint.n}<br/>Speedup: ${closestPoint.speedup.toFixed(2)}x`;
+            tip.style.left = mouseX + 10 + 'px';
+            tip.style.top = mouseY + 10 + 'px';
+            tip.style.opacity = '1';
+          })
+          .on('mouseout', () => {
+            tip.style.opacity = '0';
+          });
+      });
+
+      // Draw efficiency lines
+      sValues.forEach((s, i) => {
+        const data = nGpus.map(n => ({ n, efficiency: efficiency(n, s) }));
+        
+        const line = efficiencyG.append('path')
+          .datum(data)
+          .attr('class', 'line')
+          .attr('stroke', colors[i])
+          .attr('stroke-dasharray', lineStyles[i] === '--' ? '5,5' : 'none')
+          .attr('d', d3.line()
+            .x(d => efficiencyX(d.n))
+            .y(d => efficiencyY(d.efficiency))
+          );
+
+        // Add hover effects
+        line
+          .on('mouseover', function(event, d) {
+            const [mouseX, mouseY] = d3.pointer(event, container);
+            const closestPoint = data.reduce((prev, curr) => {
+              const prevDist = Math.abs(efficiencyX(prev.n) - (event.offsetX - margin.left));
+              const currDist = Math.abs(efficiencyX(curr.n) - (event.offsetX - margin.left));
+              return currDist < prevDist ? curr : prev;
+            });
+            
+            tip.innerHTML = `<strong>s = ${s.toFixed(2)}</strong><br/>GPUs: ${closestPoint.n}<br/>Efficiency: ${closestPoint.efficiency.toFixed(1)}%`;
+            tip.style.left = mouseX + 10 + 'px';
+            tip.style.top = mouseY + 10 + 'px';
+            tip.style.opacity = '1';
+          })
+          .on('mouseout', () => {
+            tip.style.opacity = '0';
+          });
+      });
+
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

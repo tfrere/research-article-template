@@ -1,0 +1,252 @@
+<div class="d3-data-mixture-stages"></div>
+<style>
+  .d3-data-mixture-stages { position: relative; }
+  .d3-data-mixture-stages .legend { display:flex; flex-direction:column; align-items:center; gap:6px; margin: 8px 0 0 0; font-size:12px; color: var(--text-color); }
+  .d3-data-mixture-stages .legend .legend-title { font-size:12px; font-weight:700; color: var(--text-color); }
+  .d3-data-mixture-stages .legend .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .d3-data-mixture-stages .legend .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .d3-data-mixture-stages .legend .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); }
+  .d3-data-mixture-stages .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  .d3-data-mixture-stages .axes path, .d3-data-mixture-stages .axes line { stroke: var(--axis-color); }
+  .d3-data-mixture-stages .axes text { fill: var(--tick-color); }
+  .d3-data-mixture-stages .grid line { stroke: var(--grid-color); }
+  .d3-data-mixture-stages .stage-label { fill: var(--text-color); font-size: 11px; font-weight: 600; text-anchor: middle; }
+  .d3-data-mixture-stages .stage-line { stroke: var(--muted-color); stroke-width: 1; stroke-dasharray: 3,3; opacity: 0.6; }
+  .d3-data-mixture-stages .d3-tooltip { position:absolute; top:0; left:0; transform:translate(-9999px,-9999px); pointer-events:none; padding:8px 10px; border-radius:8px; font-size:12px; line-height:1.35; border:1px solid var(--border-color); background:var(--surface-bg); color:var(--text-color); box-shadow:0 4px 24px rgba(0,0,0,.18); opacity:0; transition:opacity .12s ease; z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .d3-data-mixture-stages .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; text-align: left; }
+  .d3-data-mixture-stages .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .d3-data-mixture-stages .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .d3-data-mixture-stages .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--border-color); }
+  .d3-data-mixture-stages .d3-tooltip .swatch { width:12px; height:12px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; margin-right:6px; }
+  .d3-data-mixture-stages .chart-card { background: var(--page-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id='d3-cdn-script'; s.src='https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once:true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-data-mixture-stages'))){
+        const cs = Array.from(document.querySelectorAll('.d3-data-mixture-stages')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) { tip = document.createElement('div'); tip.className = 'd3-tooltip'; tipInner = document.createElement('div'); tipInner.className='d3-tooltip__inner'; tip.appendChild(tipInner); container.appendChild(tip); } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      const legend = document.createElement('div'); legend.className = 'legend'; legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>'; container.appendChild(legend);
+
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+
+      // Data with smooth transitions between stages
+      const S1_vals = { web: 85, code: 12, math: 3 };
+      const S2_vals = { web: 75, code: 15, math: 10 };
+      const S3_vals = { web: 63, code: 24, math: 13 };
+
+      const T1 = 8; // Transition from Stage 1 to Stage 2 (8T tokens)
+      const T2 = 10; // Transition from Stage 2 to Stage 3 (8T + 2T tokens)
+      const eps = 0.1; // Small offset for smooth transitions
+
+      const data = [
+        // Stage 1: Base training
+        { tokens: 0, ...S1_vals, stage: 'Base training', duration: '8T tokens' },
+        { tokens: T1 - eps, ...S1_vals, stage: 'Base training', duration: '8T tokens' },
+        
+        // Transition 1 (Stage 1 to Stage 2)
+        { tokens: T1 + eps, ...S2_vals, stage: 'High quality injection', duration: '2T tokens' },
+        
+        // Stage 2: High quality injection
+        { tokens: T2 - eps, ...S2_vals, stage: 'High quality injection', duration: '2T tokens' },
+        
+        // Transition 2 (Stage 2 to Stage 3)
+        { tokens: T2 + eps, ...S3_vals, stage: 'LR Decay', duration: '1.1T tokens' },
+        
+        // Stage 3: LR Decay
+        { tokens: 11.1, ...S3_vals, stage: 'LR Decay', duration: '1.1T tokens' }
+      ];
+
+      const categories = ['web', 'code', 'math'];
+      const categoryLabels = {
+        'web': 'Web',
+        'code': 'Code',
+        'math': 'Math'
+      };
+
+      let width=800, height=260; const margin = { top: 40, right: 40, bottom: 60, left: 80 };
+      function updateSize(){
+        width = container.clientWidth || 800; height = Math.max(240, Math.round(width/3.2));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+      }
+
+      function makeLegend(categories, colorOf){
+        const items = legend.querySelector('.items'); items.innerHTML = '';
+        categories.forEach(name => { 
+          const el = document.createElement('span'); el.className='item'; el.dataset.category=name; 
+          const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=colorOf(name); 
+          const txt=document.createElement('span'); txt.textContent=categoryLabels[name]; 
+          el.appendChild(sw); el.appendChild(txt); items.appendChild(el); 
+        });
+      }
+
+      function render(){
+        const { innerWidth, innerHeight } = updateSize();
+        
+        // Get colors from ColorPalettes
+        const getColors = (n) => { 
+          try { 
+            if (window.ColorPalettes && typeof window.ColorPalettes.getColors==='function') 
+              return window.ColorPalettes.getColors('categorical', n); 
+          } catch(_){} 
+          return ['#4e79a7','#f28e2b','#e15759','#76b7b2'].slice(0,n); 
+        };
+        const palette = getColors(categories.length);
+        const color = d3.scaleOrdinal().domain(categories).range(palette);
+        const colorOf = (c) => color(c);
+
+        makeLegend(categories, colorOf);
+
+        // Scales
+        const xScale = d3.scaleLinear()
+          .domain(d3.extent(data, d => d.tokens))
+          .range([0, innerWidth]);
+
+        const yScale = d3.scaleLinear()
+          .domain([0, 100])
+          .range([innerHeight, 0]);
+
+        // Stack generator
+        const stack = d3.stack()
+          .keys(categories)
+          .order(d3.stackOrderNone)
+          .offset(d3.stackOffsetNone);
+
+        const stackedData = stack(data);
+
+        // Area generator
+        const area = d3.area()
+          .x(d => xScale(d.data.tokens))
+          .y0(d => yScale(d[0]))
+          .y1(d => yScale(d[1]))
+          .curve(d3.curveMonotoneX);
+
+        // Draw areas
+        const areas = gRoot.selectAll('path.area').data(stackedData, d => d.key);
+        areas.enter().append('path').attr('class','area')
+          .attr('fill', d => colorOf(d.key))
+          .attr('stroke', 'var(--surface-bg)')
+          .attr('stroke-width', 1)
+          .attr('data-category', d => d.key)
+          .on('mouseenter', (ev, d) => {
+            const point = d3.pointer(ev, container);
+            const x = xScale.invert(point[0] - margin.left);
+            const closest = data.reduce((prev, curr) => 
+              Math.abs(curr.tokens - x) < Math.abs(prev.tokens - x) ? curr : prev
+            );
+            
+            // Sort categories by value (ascending order)
+            const sortedCategories = categories.sort((a, b) => closest[a] - closest[b]);
+            
+            tipInner.innerHTML = `<div><strong>Training Progress: ${closest.tokens.toFixed(1)}T tokens</strong></div>` +
+              `<div>Stage: ${closest.stage}</div>` +
+              `<div>Duration: ${closest.duration}</div>` +
+              sortedCategories.map(cat => {
+                const value = closest[cat];
+                const colorSw = colorOf(cat);
+                return `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><span class="swatch" style="background:${colorSw}"></span><strong>${categoryLabels[cat]}</strong><span style="margin-left:auto;text-align:right;">${value}%</span></div>`;
+              }).join('');
+            tip.style.opacity='1';
+          })
+          .on('mousemove', (ev) => { 
+            const [mx,my] = d3.pointer(ev, container); 
+            tip.style.transform = `translate(${Math.round(mx+12)}px, ${Math.round(my+12)}px)`; 
+          })
+          .on('mouseleave', () => {
+            tip.style.opacity='0'; 
+            tip.style.transform='translate(-9999px, -9999px)';
+          })
+          .merge(areas)
+          .attr('d', area);
+        areas.exit().remove();
+
+        // Add stage dividers and labels
+        const stageTransitions = [
+          { x: 0, label: 'Stage 1: Base training', stage: 'Base training' },
+          { x: 8, label: 'Stage 2: High quality injection', stage: 'High quality injection' },
+          { x: 10, label: 'Stage 3: LR Decay', stage: 'LR Decay' }
+        ];
+
+        const stageLines = gRoot.selectAll('line.stage-line').data(stageTransitions);
+        stageLines.enter().append('line').attr('class','stage-line')
+          .merge(stageLines)
+          .attr('x1', d => xScale(d.x))
+          .attr('x2', d => xScale(d.x))
+          .attr('y1', 0)
+          .attr('y2', innerHeight);
+
+        const stageLabels = gRoot.selectAll('text.stage-label').data(stageTransitions);
+        stageLabels.enter().append('text').attr('class','stage-label')
+          .merge(stageLabels)
+          .attr('x', d => xScale(d.x))
+          .attr('y', -15)
+          .text(d => d.label);
+
+        // Axes
+        const xAxis = d3.axisBottom(xScale)
+          .tickFormat(d => `${d}T`)
+          .ticks(8);
+
+        const yAxis = d3.axisLeft(yScale)
+          .tickFormat(d => `${d}%`)
+          .ticks(5);
+
+        gRoot.selectAll('.x-axis').data([0]).join('g').attr('class','x-axis axes')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(xAxis);
+
+        gRoot.selectAll('.y-axis').data([0]).join('g').attr('class','y-axis axes')
+          .call(yAxis);
+
+        // Grid lines
+        gRoot.selectAll('.grid-x').data([0]).join('g').attr('class','grid-x grid')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickSize(-innerHeight).tickFormat(''));
+
+        gRoot.selectAll('.grid-y').data([0]).join('g').attr('class','grid-y grid')
+          .call(d3.axisLeft(yScale).tickSize(-innerWidth).tickFormat(''));
+
+        // Axis labels
+        gRoot.selectAll('.x-label').data([0]).join('text').attr('class','x-label axis-label')
+          .attr('transform', `translate(${innerWidth/2},${innerHeight + 40})`)
+          .attr('text-anchor', 'middle')
+          .text('Training Progress (Trillion Tokens)');
+
+        gRoot.selectAll('.y-label').data([0]).join('text').attr('class','y-label axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('y', 0 - margin.left)
+          .attr('x', 0 - (innerHeight / 2))
+          .attr('text-anchor', 'middle')
+          .text('Data Mixture (%)');
+      }
+
+      render();
+      const rerender = () => render();
+      if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+    };
+
+    if (document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once:true }); } else { ensureD3(bootstrap); }
+  })();
+</script>

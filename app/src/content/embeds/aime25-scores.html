@@ -1,0 +1,254 @@
+<div class="d3-aime25-scores"></div>
+<style>
+  .d3-aime25-scores { position: relative; }
+  .d3-aime25-scores .chart-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .d3-aime25-scores .d3-tooltip {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    text-align: left;
+    z-index: 1000;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-aime25-scores'))){
+        const cs = Array.from(document.querySelectorAll('.d3-aime25-scores')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // SVG scaffolding inside a card wrapper
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+
+      // Data for AIME25 scores
+      const data = [
+        { method: 'SFT', score: 2.34 },
+        { method: 'SFT + DPO', score: 8.49 },
+        { method: 'SFT + DPO (reasoning on)', score: 36.7 },
+        { method: 'SFT + DPO + GRPO', score: 38.91 }
+      ];
+
+      // Get primary color
+      const getPrimaryColor = () => {
+        if (window.ColorPalettes && window.ColorPalettes.getPrimary) {
+          return window.ColorPalettes.getPrimary();
+        }
+        return getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+      };
+      
+      const primaryColor = getPrimaryColor();
+      
+      // All methods use the same primary color
+      const methodColors = {
+        'SFT': primaryColor,
+        'SFT + DPO': primaryColor, 
+        'SFT + DPO (reasoning on)': primaryColor,
+        'SFT + DPO + GRPO': primaryColor
+      };
+
+      const margin = { top: 12, right: 28, bottom: 40, left: 56 };
+      let width = 800, height = 360;
+      const x = d3.scaleBand().paddingInner(0.2).paddingOuter(0.05);
+      const y = d3.scaleLinear();
+      const xAxis = d3.axisBottom(x).tickSizeOuter(0);
+      const yAxis = d3.axisLeft(y).ticks(6).tickSizeOuter(0);
+      const yTopPadding = 2; // avoid bars touching top at max
+
+      function updateSize(){
+        width = container.clientWidth || 800;
+        height = Math.max(240, Math.round(width / 3.4));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+      }
+
+      function showTip(html, x, y){
+        tip.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+        tip.style.opacity = '1';
+        const inner = tip.querySelector('.d3-tooltip__inner') || tip;
+        inner.innerHTML = html;
+      }
+      function hideTip(){
+        tip.style.opacity = '0';
+        tip.style.transform = 'translate(-9999px, -9999px)';
+      }
+
+      function render(){
+        const { innerWidth, innerHeight } = updateSize();
+
+        x.domain(data.map(d => d.method)).range([0, innerWidth]);
+        const yMaxRaw = 40;
+        const yMax = yMaxRaw + yTopPadding;
+        y.domain([0, yMax]).range([innerHeight, 0]).nice();
+
+        // Axes (standardized colors)
+        gRoot
+          .selectAll('.axis-x')
+          .data([0])
+          .join('g')
+          .attr('class','axis-x')
+          .attr('transform',`translate(0,${innerHeight})`)
+          .call(xAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+            // Handle multi-line labels for specific method
+            g.selectAll('text').each(function(d) {
+              const text = d3.select(this);
+              const label = text.text();
+              if (label === 'SFT + DPO (reasoning on)') {
+                text.text('SFT + DPO');
+                text.append('tspan')
+                  .attr('x', 0)
+                  .attr('dy', '1.2em')
+                  .text('(reasoning on)');
+              }
+            });
+          });
+        gRoot
+          .selectAll('.axis-y')
+          .data([0])
+          .join('g')
+          .attr('class','axis-y')
+          .call(yAxis)
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+          });
+
+        // Gridlines (y) standardized color
+        gRoot
+          .selectAll('.grid-y')
+          .data([0])
+          .join('g')
+          .attr('class','grid-y')
+          .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
+          .call(g => g.select('.domain').remove())
+          .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)').attr('stroke-opacity',1))
+          .call(g => g.selectAll('.tick').filter((d, i, nodes) => i === nodes.length - 1).select('line').attr('stroke-opacity', 0));
+
+        // Bars
+        const bars = gRoot.selectAll('.bar').data(data, d => d.method);
+        bars.join(
+          enter => enter.append('rect')
+            .attr('class','bar')
+            .attr('x', d => x(d.method))
+            .attr('y', innerHeight)
+            .attr('width', x.bandwidth())
+            .attr('height', 0)
+            .attr('fill', d => methodColors[d.method])
+            .on('mouseenter', (event, d) => {
+              const [mx, my] = d3.pointer(event, container);
+              showTip(`<strong>${d.method}</strong><br/>Score: <strong>${d.score}</strong>`, mx, my);
+            })
+            .on('mouseleave', () => hideTip())
+            .transition().duration(160)
+            .attr('y', d => y(d.score))
+            .attr('height', d => Math.max(0, innerHeight - y(d.score))),
+          update => update
+            .on('mouseenter', (event, d) => {
+              const [mx, my] = d3.pointer(event, container);
+              showTip(`<strong>${d.method}</strong><br/>Score: <strong>${d.score}</strong>`, mx, my);
+            })
+            .on('mouseleave', () => hideTip())
+            .transition().duration(160)
+            .attr('x', d => x(d.method))
+            .attr('y', d => y(d.score))
+            .attr('width', x.bandwidth())
+            .attr('height', d => Math.max(0, innerHeight - y(d.score)))
+            .attr('fill', d => methodColors[d.method]),
+          exit => exit.transition().duration(120).attr('y', innerHeight).attr('height', 0).remove()
+        );
+
+        // Value labels centered above bars (small, darker)
+        const labels = gRoot.selectAll('.value-label').data(data, d => d.method);
+        labels.join(
+          enter => enter.append('text')
+            .attr('class','value')
+            .attr('x', d => x(d.method) + x.bandwidth()/2)
+            .attr('y', d => y(d.score) - 4)
+            .attr('text-anchor','middle')
+            .attr('fill','var(--text-color)')
+            .attr('opacity',0.9)
+            .attr('font-size',10)
+            .text(d => d.score),
+          update => update
+            .transition().duration(160)
+            .attr('x', d => x(d.method) + x.bandwidth()/2)
+            .attr('y', d => y(d.score) - 4)
+            .text(d => d.score),
+          exit => exit.remove()
+        );
+
+        // Axis labels
+        gRoot.selectAll('.y-label').data([0]).join('text').attr('class','y-label')
+          .attr('transform', `rotate(-90)`) 
+          .attr('x', -innerHeight / 2)
+          .attr('y', -margin.left + 24)
+          .attr('text-anchor','middle')
+          .attr('fill','var(--text-color)')
+          .attr('font-size',12)
+          .attr('font-weight',700)
+          .text('AIME25 Score');
+      }
+
+      // Initial render + resize handling
+      render();
+      const rerender = () => render();
+      if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); }
+      else { window.addEventListener('resize', rerender); }
+    };
+
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); 
+    } else { 
+      ensureD3(bootstrap); 
+    }
+  })();
+</script>

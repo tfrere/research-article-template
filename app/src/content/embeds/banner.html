@@ -1,258 +1,807 @@
-<div class="d3-galaxy" style="width:100%;margin:10px 0;aspect-ratio:3/1;min-height:260px;"></div>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet">
+<div class="d3-loss-curves"></div>
+<style>
+  .d3-loss-curves { 
+    margin-top:20px; 
+    width: 100%;
+    height: 350px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Ghosting on hover */
+  .d3-loss-curves.hovering .lines path.ghost { opacity: .25 !important; }
+  .d3-loss-curves.hovering .legend-item.ghost { opacity: .25 !important; }
+  
+  /* Tooltip styling */
+  .d3-loss-curves .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .d3-loss-curves .d3-tooltip__inner { display:flex; flex-direction:column; gap:4px; min-width: 180px; }
+  .d3-loss-curves .d3-tooltip__header { display: flex; align-items: center; gap: 8px; }
+  .d3-loss-curves .d3-tooltip__color-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .d3-loss-curves .d3-tooltip__title { font-weight: 800; letter-spacing: 0.1px; font-size: 13px; }
+  .d3-loss-curves .d3-tooltip__subtitle { font-size: 11px; color: var(--muted-color); }
+  .d3-loss-curves .d3-tooltip__divider { 
+    width: 100%; 
+    height: 1px; 
+    background: var(--border-color); 
+    margin: 2px 0;
+  }
+  .d3-loss-curves .d3-tooltip__data { font-size: 11px; line-height: 1.5; }
+  
+  /* Container styling */
+  .d3-loss-curves { border: 1px solid var(--border-color); border-radius: 20px; }
+  
+  /* Hand-drawn annotation */
+  .d3-loss-curves .annotation {
+    position: absolute;
+    top: 54px;
+    right: 120px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+  }
+  
+  .d3-loss-curves .annotation-text {
+    font-family: 'Caveat', cursive, var(--default-font-family);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.1;
+    text-align: left;
+    max-width: 160px;
+    transform: rotate(-2deg);
+    transform-origin: left center;
+  }
+  
+  .d3-loss-curves .annotation-arrow {
+    width: 22px;
+    height: 28px;
+    margin-top:40px;
+  }
+  
+  /* Legend styling */
+  .d3-loss-curves .legend {
+    position: absolute;
+    bottom: 16px;
+    left: 20px;
+    max-width: 50%;
+    font-size: 11px;
+    line-height: 1.2;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .d3-loss-curves .legend-title {
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted-color);
+    margin-bottom: 4px;
+  }
+  
+  .d3-loss-curves .legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .d3-loss-curves .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  .d3-loss-curves .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    opacity: 1;
+  }
+  
+  .d3-loss-curves .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  
+  .d3-loss-curves .legend-label {
+    font-size: 11px;
+    color: var(--text-color);
+    white-space: nowrap;
+  }
+</style>
 <script>
-    (() => {
-        const ensureD3 = (cb) => {
-            if (window.d3 && typeof window.d3.select === 'function') return cb();
-            let s = document.getElementById('d3-cdn-script');
-            if (!s) {
-                s = document.createElement('script');
-                s.id = 'd3-cdn-script';
-                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-                document.head.appendChild(s);
+  (() => {
+    // Pretty label mapping for run names
+    const prettyRunLabel = (key) => {
+      if (!key) return '';
+      // Extract the meaningful part from run names like "attention_loss+22/09/2025_16:41:43_baseline"
+      const parts = key.split('+');
+      if (parts.length > 1) {
+        const runType = parts[0].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return runType;
+      }
+      return key.replace(/[_-]+/g, ' ').trim();
+    };
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-loss-curves'))){
+        const cs = Array.from(document.querySelectorAll('.d3-loss-curves')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      // No controls needed for this visualization
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
+          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Legend
+      let legend = container.querySelector('.legend');
+      if (!legend) {
+        legend = document.createElement('div');
+        legend.className = 'legend';
+        container.appendChild(legend);
+      }
+      
+      // Hand-drawn annotation
+      let annotation = container.querySelector('.annotation');
+      if (!annotation) {
+        annotation = document.createElement('div');
+        annotation.className = 'annotation';
+        annotation.innerHTML = `
+          <svg class="annotation-arrow" viewBox="0 0 20 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 17 3 Q 12 7, 8 12 Q 6 16, 4 20" 
+                  stroke="var(--text-color)" 
+                  stroke-width="2" 
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  fill="none"/>
+            <path d="M 4 20 L 1 13 M 4 20 L 10 17" 
+                  stroke="var(--text-color)" 
+                  stroke-width="2" 
+                  stroke-linecap="round"/>
+          </svg>
+          <div class="annotation-text">
+            Just a few<br/>attempts
+          </div>
+        `;
+        container.appendChild(annotation);
+      }
+
+      // ============ CONFIGURATION ============
+      // Visualization mode: 'normalize' | 'align' | 'raw'
+      //
+      // 'normalize' (CURRENT) ✅
+      //   → Each run starts at X=0 (relative to its own start)
+      //   → Runs have different lengths (based on their training duration)
+      //   → No data removed
+      //   → Ideal for comparing curve shapes
+      //
+      // 'align'
+      //   → All runs start at the same absolute point (latest start)
+      //   → All runs end at the same absolute point (earliest end)
+      //   → Same length for all runs (trimmed)
+      //   → Data trimmed for alignment
+      //   → Ideal for comparing over a common time window
+      //
+      // 'raw'
+      //   → Displays raw data without transformation
+      //   → Each run keeps its original start and end points
+      //   → No normalization
+      //   → Ideal for seeing real training timelines
+      //
+      const VISUALIZATION_MODE = 'align';
+      
+      // Log scale control: true = logarithmic, false = linear
+      const USE_LOG_SCALE = true;
+      
+      // Gap between run groups: 0.2 = doubled gap, 0.1 = normal gap
+      const CATEGORY_GAP = 0.1;
+      // =======================================
+      
+      // State/data
+      const svgPaddingTop = 20;
+      const svgPaddingBottom = 20;
+      const svgHeight = 330;
+      const contentHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
+      let width = 800, height = svgHeight; const margin = { top: 0, right: 0, bottom: 0, left: 0 };
+
+      // SVG container
+      const svg = d3.select(container).append('svg').attr('width', 800).attr('height', svgHeight).style('display', 'block');
+      const gRoot = svg.append('g').attr('transform', `translate(0, ${svgPaddingTop})`);
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      const overlay = gRoot.append('rect').attr('fill','transparent').style('cursor','crosshair');
+      const hoverLine = gRoot.append('line').attr('stroke-width',1).style('display','none');
+      const xScale = USE_LOG_SCALE ? d3.scaleLinear() : d3.scaleLinear();
+      const yScale = USE_LOG_SCALE ? d3.scaleLinear() : d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.logTokens)).y(d => yScale(d.logLoss));
+      const dataByRun = new Map();
+      let runOrder = [];
+
+      // Colors - categorical for distinct run categories
+      function getRunColors(count){
+        try { 
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('categorical', count);
+          }
+        } catch(_){}
+        // Fallback to categorical-like colors - evenly distributed hues
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+          const hue = (i * 360 / count) % 360;
+          colors.push(`hsl(${hue}, 70%, 60%)`);
+        }
+        return colors;
+      }
+
+      // Format helper for thousands (5000 -> 5k, 1500 -> 1.5k)
+      function formatK(v){
+        const abs = Math.abs(v);
+        if (abs >= 1000) {
+          const n = v / 1000;
+          const s = d3.format('.1f')(n);
+          return (s.endsWith('.0') ? s.slice(0, -2) : s) + 'k';
+        }
+        return d3.format('d')(v);
+      }
+      
+      // Format numbers with K/M/B suffixes
+      function formatNumber(num) {
+        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+        return num.toFixed(0);
+      }
+      
+      // Parse run name to extract type and config
+      function parseRunName(runName) {
+        // Format: "category_loss+date_time_config"
+        const parts = runName.split('+');
+        const category = parts[0] || '';
+        const configPart = parts[1] || '';
+        
+        // Extract readable category name
+        const categoryName = category.replace(/_loss$/i, '').replace(/_/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+        
+        // Remove date/time part (format: DD/MM/YYYY_HH:MM:SS_)
+        // This will match patterns like "22/09/2025_16:41:43_"
+        let config = configPart.replace(/^\d{2}\/\d{2}\/\d{4}_\d{2}:\d{2}:\d{2}_/, '');
+        
+        // Check if it was baseline before removing it
+        const wasBaseline = /^baseline$/i.test(config) || /^baseline[-_]/i.test(config) || /[-_]baseline$/i.test(config);
+        
+        // Remove "baseline" (case insensitive)
+        config = config.replace(/^baseline$/i, '').replace(/^baseline[-_]/i, '').replace(/[-_]baseline$/i, '');
+        
+        // Clean up and format if something remains
+        if (config) {
+          config = config.replace(/[_-]+/g, ' ').trim()
+            .replace(/\b\w/g, l => l.toUpperCase());
+        } else if (wasBaseline) {
+          // If nothing remains but it was baseline, show "Baseline"
+          config = 'Baseline';
+        }
+        
+        return { categoryName, config };
+      }
+
+      // Helper function to check if a run is a true baseline (nothing after "baseline")
+      function isBaselineRun(runName) {
+        const parts = runName.split('+');
+        if (parts.length < 2) return false;
+        const configPart = parts[1] || '';
+        // Remove date/time part first (format: DD/MM/YYYY_HH:MM:SS_)
+        let config = configPart.replace(/^\d{2}\/\d{2}\/\d{4}_\d{2}:\d{2}:\d{2}_/, '');
+        // Check if it's exactly "baseline" (case insensitive) with nothing after
+        return /^baseline$/i.test(config);
+      }
+
+      // Single aggregated CSV file
+      const AGGREGATED_CSV = 'aggregated-loss-data.csv';
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) { 
+          try {
+            // Add timestamp to bypass cache
+            const url = p + (p.includes('?') ? '&' : '?') + '_=' + Date.now();
+            const r = await fetch(url, { cache: 'no-cache' }); 
+            if (r.ok) return await r.text(); 
+          } catch(_){} 
+        }
+        throw new Error('CSV not found');
+      };
+
+      // ============ DATA TRANSFORMATION MODES ============
+      /**
+       * Transform data according to the selected visualization mode
+       * @param {Map} dataByRun - Map(run_name -> array of {tokens, loss, logTokens, logLoss})
+       * @param {string} mode - 'normalize' | 'align' | 'raw'
+       * @returns {Map} Transformed data
+       */
+      function transformDataByMode(dataByRun, mode) {
+        const runs = Array.from(dataByRun.keys());
+        const transformedData = new Map();
+        
+        if (mode === 'normalize') {
+          // NORMALIZE MODE: Each run starts at X=0 (relative to its start)
+          runs.forEach(r => {
+            const data = dataByRun.get(r) || [];
+            if (data.length > 0) {
+              const firstLogTokens = Math.min(...data.map(d => d.logTokens));
+              const normalizedData = data.map(d => ({
+                ...d,
+                logTokens: d.logTokens - firstLogTokens
+              }));
+              transformedData.set(r, normalizedData);
             }
-            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
-            s.addEventListener('load', onReady, { once: true });
-            if (window.d3) onReady();
-        };
-
-        const bootstrap = () => {
-            const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-            const container = (mount && mount.querySelector && mount.querySelector('.d3-galaxy')) || document.querySelector('.d3-galaxy');
-            if (!container) return;
-            if (container.dataset) {
-                if (container.dataset.mounted === 'true') return;
-                container.dataset.mounted = 'true';
+          });
+          
+        } else if (mode === 'align') {
+          // ALIGN MODE: Improved alignment strategy
+          // 1. Collect all start and end points
+          const runRanges = [];
+          runs.forEach(r => {
+            const data = dataByRun.get(r) || [];
+            if (data.length > 0) {
+              const minTokens = Math.min(...data.map(d => d.logTokens));
+              const maxTokens = Math.max(...data.map(d => d.logTokens));
+              runRanges.push({ run: r, min: minTokens, max: maxTokens, data });
             }
-            // Scene params (match previous Plotly ranges)
-            const cx = 1.5, cy = 0.5;
-            const a = 1.3, b = 0.45;
-            const numPoints = 3000;
-            const numArms = 3;
-            const numTurns = 2.1;
-            const angleJitter = 0.12;
-            const posNoise = 0.015;
-
-            // Circle size settings
-            const minCircleSize = 4;  // minimum diameter in pixels
-            const maxCircleSize = 12; // maximum diameter in pixels
-
-            // Generate spiral + bulge
-            const twoPi = Math.PI * 2;
-            const t = Float64Array.from({ length: numPoints }, () => Math.random() * (twoPi * numTurns));
-            const armIndices = Int16Array.from({ length: numPoints }, () => Math.floor(Math.random() * numArms));
-            const armOffsets = Float64Array.from(armIndices, (k) => k * (twoPi / numArms));
-            const theta = Float64Array.from(t, (tv, i) => tv + armOffsets[i] + d3.randomNormal.source(Math.random)(0, angleJitter)());
-            const rNorm = Float64Array.from(t, (tv) => Math.pow(tv / (twoPi * numTurns), 0.9));
-            const noiseScale = (rn) => posNoise * (0.8 + 0.6 * rn);
-            const noiseX = Float64Array.from(rNorm, (rn) => d3.randomNormal.source(Math.random)(0, noiseScale(rn))());
-            const noiseY = Float64Array.from(rNorm, (rn) => d3.randomNormal.source(Math.random)(0, noiseScale(rn))());
-
-            const xSpiral = Float64Array.from(theta, (th, i) => cx + a * rNorm[i] * Math.cos(th) + noiseX[i]);
-            const ySpiral = Float64Array.from(theta, (th, i) => cy + b * rNorm[i] * Math.sin(th) + noiseY[i]);
-
-            const bulgePoints = Math.floor(0.18 * numPoints);
-            const phiB = Float64Array.from({ length: bulgePoints }, () => twoPi * Math.random());
-            const rB = Float64Array.from({ length: bulgePoints }, () => Math.pow(Math.random(), 2.2) * 0.22);
-            const noiseXB = Float64Array.from({ length: bulgePoints }, () => d3.randomNormal.source(Math.random)(0, posNoise * 0.6)());
-            const noiseYB = Float64Array.from({ length: bulgePoints }, () => d3.randomNormal.source(Math.random)(0, posNoise * 0.6)());
-            const xBulge = Float64Array.from(phiB, (ph, i) => cx + a * rB[i] * Math.cos(ph) + noiseXB[i]);
-            const yBulge = Float64Array.from(phiB, (ph, i) => cy + b * rB[i] * Math.sin(ph) + noiseYB[i]);
-
-            // Concatenate
-            const X = Array.from(xSpiral).concat(Array.from(xBulge));
-            const Y = Array.from(ySpiral).concat(Array.from(yBulge));
-            const lenSpiral = xSpiral.length;
-
-            const zSpiral = Array.from(rNorm, (rn) => 1 - rn);
-            const maxRB = rB && rB.length ? (window.d3 && d3.max ? d3.max(rB) : Math.max.apply(null, Array.from(rB))) : 1;
-            const zBulge = Array.from(rB, (rb) => 1 - (maxRB ? rb / maxRB : 0));
-            const Zraw = zSpiral.concat(zBulge);
-            const sizesPx = Zraw.map((z) => minCircleSize + z * (maxCircleSize - minCircleSize)); // diameter in pixels
-
-            // Labels (same categories as Python version)
-            const labelOf = (i) => {
-                const z = Zraw[i];
-                if (z < 0.25) return 'tiny star';
-                if (z < 0.5) return 'small star';
-                if (z < 0.75) return 'medium star';
-                return 'large star';
-            };
-
-            // Sort by size ascending for z-index: small first, big last
-            const idx = d3.range(X.length).sort((i, j) => sizesPx[i] - sizesPx[j]);
-
-            // Colors: piecewise gradient [0 -> 0.5 -> 1]
-            const c0 = d3.rgb(78, 165, 183);    // rgb(78, 165, 183)
-            const c1 = d3.rgb(206, 192, 250);   // rgb(206, 192, 250)
-            const c2 = d3.rgb(232, 137, 171);   // rgb(232, 137, 171)
-            const interp01 = d3.interpolateRgb(c0, c1);
-            const interp12 = d3.interpolateRgb(c1, c2);
-            const colorFor = (v) => {
-                const t = Math.max(0, Math.min(1, v));
-                return t <= 0.5 ? interp01(t / 0.5) : interp12((t - 0.5) / 0.5);
-            };
-
-            // Create SVG
-            const svg = d3.select(container).append('svg')
-                .attr('width', '100%')
-                .style('display', 'block')
-                .style('cursor', 'crosshair');
-
-            const render = () => {
-                const width = container.clientWidth || 800;
-                const height = Math.max(260, Math.round(width / 3)); // keep ~3:1, min height
-                svg.attr('width', width).attr('height', height);
-
-                const xScale = d3.scaleLinear().domain([0, 3]).range([0, width]);
-                const yScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
-
-                // Subtle stroke color depending on theme
-                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                const strokeColor = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
-                const glowColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)';
-
-
-                // Group for points (no blend mode for better print/PDF visibility)
-                const g = svg.selectAll('g.points').data([0]).join('g').attr('class', 'points');
-
-                // Ensure container can host an absolute tooltip
-                container.style.position = container.style.position || 'relative';
-                let tip = container.querySelector('.d3-tooltip');
-                let tipInner;
-                if (!tip) {
-                    tip = document.createElement('div');
-                    tip.className = 'd3-tooltip';
-                    Object.assign(tip.style, {
-                        position: 'absolute',
-                        top: '0px',
-                        left: '0px',
-                        transform: 'translate(-9999px, -9999px)',
-                        pointerEvents: 'none',
-                        padding: '10px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        lineHeight: '1.35',
-                        border: '1px solid var(--border-color)',
-                        background: 'var(--surface-bg)',
-                        color: 'var(--text-color)',
-                        boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)',
-                        opacity: '0',
-                        transition: 'opacity .12s ease',
-                        backdropFilter: 'saturate(1.12) blur(8px)',
-                        zIndex: '20'
-                    });
-                    tipInner = document.createElement('div');
-                    tipInner.className = 'd3-tooltip__inner';
-                    Object.assign(tipInner.style, {
-                        textAlign: 'left',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        minWidth: '220px'
-                    });
-                    tip.appendChild(tipInner);
-                    container.appendChild(tip);
-                } else {
-                    tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+          });
+          
+          if (runRanges.length === 0) return transformedData;
+          
+          // 2. Use percentile-based alignment (70th percentile start, 30th percentile end)
+          // This gives a better balance than strict min/max
+          const starts = runRanges.map(r => r.min).sort((a, b) => a - b);
+          const ends = runRanges.map(r => r.max).sort((a, b) => a - b);
+          
+          const startPercentile = Math.floor(starts.length * 0.3); // Use 30th percentile as start
+          const endPercentile = Math.floor(ends.length * 0.8);    // Use 80th percentile as end
+          
+          const alignedStart = starts[Math.max(0, startPercentile)];
+          const alignedEnd = ends[Math.min(ends.length - 1, endPercentile)];
+          
+          // 3. Filter and align data
+          runs.forEach(r => {
+            const data = dataByRun.get(r) || [];
+            if (data.length > 0) {
+              // Filter to alignment window but be more permissive
+              const filtered = data.filter(d => 
+                d.logTokens >= alignedStart && d.logTokens <= alignedEnd
+              );
+              
+              // If we have very little data after filtering, be more lenient
+              let finalData = filtered;
+              if (filtered.length < 3) {
+                // Fallback: use data that intersects with the alignment window
+                finalData = data.filter(d => d.logTokens >= alignedStart);
+                // Take at least 80% of the run's original length or minimum viable amount
+                if (finalData.length < Math.max(3, data.length * 0.8)) {
+                  finalData = data; // If still too restrictive, use all data
                 }
-
-                // Final filter: remove small dots very close to the galaxy center (after placement)
-                const centerHoleRadius = 0.48; // elliptical radius threshold
-                const smallSizeThreshold = 7.5; // same notion as Python size cut
-                const rTotal = idx.map((i) => Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2));
-                const idxFiltered = idx.filter((i, k) => !(rTotal[k] <= centerHoleRadius && sizesPx[i] < smallSizeThreshold));
-
-                const sel = g.selectAll('circle').data(idxFiltered, (i) => i);
-                sel.join(
-                    (enter) => enter.append('circle')
-                        .attr('cx', (i) => xScale(X[i]))
-                        .attr('cy', (i) => yScale(Y[i]))
-                        .attr('r', (i) => sizesPx[i] / 2)
-                        .attr('fill', (i) => colorFor(Zraw[i]))
-                        .attr('fill-opacity', 0.9)
-                        .on('mouseenter', function (ev, i) {
-                            d3.select(this).raise()
-                                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (sizesPx[i] / 2) * 1.25)
-                                .attr('fill-opacity', 1);
-                            const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
-                            const type = i < lenSpiral ? 'spiral' : 'bulge';
-                            const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-                            tipInner.innerHTML =
-                                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
-                                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
-                                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
-                                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
-                            tip.style.opacity = '1';
-                        })
-                        .on('mousemove', (ev, i) => {
-                            const [mx, my] = d3.pointer(ev, container);
-                            const offsetX = 10, offsetY = 12;
-                            tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
-                        })
-                        .on('mouseleave', function () {
-                            tip.style.opacity = '0';
-                            tip.style.transform = 'translate(-9999px, -9999px)';
-                            d3.select(this)
-                                .style('filter', null)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (i2) => sizesPx[i2] / 2)
-                                .attr('fill-opacity', 0.9);
-                        }),
-                    (update) => update
-                        .attr('cx', (i) => xScale(X[i]))
-                        .attr('cy', (i) => yScale(Y[i]))
-                        .attr('r', (i) => sizesPx[i] / 2)
-                        .attr('fill', (i) => colorFor(Zraw[i]))
-                        .attr('fill-opacity', 0.9)
-                        .on('mouseenter', function (ev, i) {
-                            d3.select(this).raise()
-                                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (sizesPx[i] / 2) * 1.25)
-                                .attr('fill-opacity', 1);
-                            const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
-                            const type = i < lenSpiral ? 'spiral' : 'bulge';
-                            const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-                            tipInner.innerHTML =
-                                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
-                                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
-                                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
-                                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
-                            tip.style.opacity = '1';
-                        })
-                        .on('mousemove', (ev, i) => {
-                            const [mx, my] = d3.pointer(ev, container);
-                            const offsetX = 10, offsetY = 12;
-                            tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
-                        })
-                        .on('mouseleave', function () {
-                            tip.style.opacity = '0';
-                            tip.style.transform = 'translate(-9999px, -9999px)';
-                            d3.select(this)
-                                .style('filter', null)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (i2) => sizesPx[i2] / 2)
-                                .attr('fill-opacity', 0.9);
-                        })
-                );
-            };
-
-            // First render + resize
-            if (window.ResizeObserver) {
-                const ro = new ResizeObserver(() => render());
-                ro.observe(container);
-            } else {
-                window.addEventListener('resize', render);
+                // But still normalize to the alignment start
+              }
+              
+              if (finalData.length > 0) {
+                const alignedData = finalData.map(d => ({
+                  ...d,
+                  logTokens: d.logTokens - alignedStart
+                }));
+                transformedData.set(r, alignedData);
+              }
             }
-            render();
-        };
+          });
+          
+        } else {
+          // RAW MODE: Raw data without transformation
+          runs.forEach(r => {
+            const data = dataByRun.get(r) || [];
+            if (data.length > 0) {
+              transformedData.set(r, [...data]); // Deep copy
+            }
+          });
+        }
+        
+        return transformedData;
+      }
+      // ==================================================
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
-        } else { ensureD3(bootstrap); }
-    })();
+      function updateLayout(){
+        const axisColor = getComputedStyle(container).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
+        width = container.clientWidth || 800;
+        height = svgHeight;
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(0, ${svgPaddingTop})`);
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = contentHeight;
+        overlay.attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        hoverLine.attr('y1',0).attr('y2', innerHeight).attr('stroke', axisColor);
+        return { innerWidth, innerHeight };
+      }
+
+      function render(){
+        const { innerWidth, innerHeight } = updateLayout();
+        
+        // Transform data according to selected mode
+        const transformedData = transformDataByMode(dataByRun, VISUALIZATION_MODE);
+        const allRuns = Array.from(transformedData.keys()).sort();
+        // Filter out debug runs
+        const runs = allRuns.filter(run => 
+          !run.toLowerCase().includes('debug') && 
+          !run.toLowerCase().includes('tp debug') && 
+          !run.toLowerCase().includes('tp-debug') &&
+          !run.toLowerCase().includes('test')
+        );
+        
+        // Compute domains from transformed data
+        let minLogTokens = Infinity, maxLogTokens = -Infinity;
+        let minLogLoss = Infinity, maxLogLoss = -Infinity;
+        
+        runs.forEach(r => {
+          const data = transformedData.get(r) || [];
+          data.forEach(d => {
+            minLogTokens = Math.min(minLogTokens, d.logTokens);
+            maxLogTokens = Math.max(maxLogTokens, d.logTokens);
+            minLogLoss = Math.min(minLogLoss, d.logLoss);
+            maxLogLoss = Math.max(maxLogLoss, d.logLoss);
+          });
+        });
+        
+        // No grid or axes - clean visualization
+        gGrid.selectAll('*').remove();
+        gAxes.selectAll('*').remove();
+
+        // Lines with vertical offset - optimized
+        // Group runs by category (prefix before '+')
+        const categoryMap = new Map();
+        const categories = [];
+        runs.forEach(r => {
+          const parts = r.split('+');
+          const category = parts.length > 1 ? parts[0] : r;
+          if (!categoryMap.has(category)) {
+            categories.push(category);
+            categoryMap.set(category, []);
+          }
+          categoryMap.get(category).push(r);
+        });
+        
+        // Generate one color per category
+        const categoryColors = getRunColors(categories.length);
+        const runColorMap = {};
+        categories.forEach((cat, idx) => {
+          const color = categoryColors[idx];
+          categoryMap.get(cat).forEach(run => {
+            runColorMap[run] = color;
+          });
+        });
+        
+        // Split categories into two rows (5 on top, 6 on bottom for 11 items)
+        const midPoint = Math.floor(categories.length / 2);
+        const firstRow = categories.slice(0, midPoint);
+        const secondRow = categories.slice(midPoint);
+        
+        const createRow = (cats, startIdx) => cats.map((cat, i) => {
+          const idx = startIdx + i;
+          const prettyLabel = cat.replace(/_/g, ' ').replace(/loss/g, '').trim()
+            .replace(/\b\w/g, l => l.toUpperCase());
+          return `
+            <div class="legend-item" data-category="${cat}">
+              <div class="legend-swatch" style="background: ${categoryColors[idx]}"></div>
+              <div class="legend-label">${prettyLabel}</div>
+            </div>
+          `;
+        }).join('');
+        
+        // Update legend with two rows
+        legend.innerHTML = `
+          <div class="legend-title">Run Types</div>
+          <div class="legend-items">
+            <div class="legend-row">${createRow(firstRow, 0)}</div>
+            <div class="legend-row">${createRow(secondRow, midPoint)}</div>
+          </div>
+        `;
+        
+        // Legend interaction - highlight category on hover
+        legend.querySelectorAll('.legend-item').forEach(item => {
+          const cat = item.getAttribute('data-category');
+          item.addEventListener('mouseenter', () => {
+            container.classList.add('hovering');
+            // Ghost lines
+            gLines.selectAll('path.run').classed('ghost', function(d) {
+              const parts = d.run.split('+');
+              const runCat = parts.length > 1 ? parts[0] : d.run;
+              return runCat !== cat;
+            });
+            // Ghost legend items
+            legend.querySelectorAll('.legend-item').forEach(otherItem => {
+              if (otherItem.getAttribute('data-category') !== cat) {
+                otherItem.classList.add('ghost');
+              }
+            });
+          });
+          item.addEventListener('mouseleave', () => {
+            container.classList.remove('hovering');
+            gLines.selectAll('path.run').classed('ghost', false);
+            legend.querySelectorAll('.legend-item').forEach(otherItem => {
+              otherItem.classList.remove('ghost');
+            });
+          });
+        });
+        
+        // Create vertical offset mapping with doubled gaps between categories
+        const createVerticalOffsetMap = () => {
+          const runToOffset = new Map();
+          let runIndex = 0;
+          
+          categories.forEach((category, catIndex) => {
+            const categoryRuns = categoryMap.get(category);
+            categoryRuns.forEach(run => {
+              // Gap between categories + normal run spacing (runIndex * 0.05)
+              const verticalOffset = (catIndex * CATEGORY_GAP) + (runIndex * 0.05);
+              runToOffset.set(run, verticalOffset);
+              runIndex++;
+            });
+          });
+          
+          return runToOffset;
+        };
+        
+        const verticalOffsetMap = createVerticalOffsetMap();
+        
+        // Calculate max vertical offset for padding
+        let maxVerticalOffset = 0;
+        for (const offset of verticalOffsetMap.values()) {
+          maxVerticalOffset = Math.max(maxVerticalOffset, offset);
+        }
+        maxLogLoss += maxVerticalOffset;
+        
+        // Update scales with final domain
+        xScale.domain([minLogTokens, maxLogTokens]).range([0, innerWidth]);
+        yScale.domain([minLogLoss, maxLogLoss]).range([innerHeight, 0]);
+        
+        const series = runs.map((r) => { 
+          const data = transformedData.get(r) || [];
+          // Sample data for performance - take every 5th point
+          const sampledData = data.filter((_, idx) => idx % 5 === 0);
+          return {
+            run: r, 
+            color: runColorMap[r], 
+            values: sampledData.sort((a,b) => a.logTokens - b.logTokens).map(d => ({
+              ...d,
+              logLoss: d.logLoss + verticalOffsetMap.get(r) // Vertical offset with doubled category gaps
+            }))
+          };
+        });
+
+        const paths = gLines.selectAll('path.run').data(series, d=>d.run);
+        const pathsEnter = paths.enter().append('path')
+          .attr('class','run')
+          .attr('fill','none')
+          .attr('stroke-width',2)
+          .attr('stroke', d=>d.color)
+          .attr('stroke-dasharray', d => isBaselineRun(d.run) ? '4,2' : null)
+          .attr('d', d=>lineGen(d.values));
+        
+        pathsEnter.merge(paths)
+          .attr('stroke', d=>d.color)
+          .attr('stroke-dasharray', d => isBaselineRun(d.run) ? '4,2' : null)
+          .attr('d', d=>lineGen(d.values)); // No transition for performance
+        paths.exit().remove();
+
+        // Hover capture paths (wider invisible stroke for easy hovering) - optimized
+        const captures = gLines.selectAll('path.run-hover').data(series, d=>`cap-${d.run}`);
+        captures.enter().append('path').attr('class','run-hover').attr('fill','none').attr('stroke','transparent').attr('stroke-width', 12).style('pointer-events','stroke')
+          .attr('d', d=>lineGen(d.values))
+          .merge(captures)
+          .attr('d', d=>lineGen(d.values))
+          .on('mouseenter', function(ev, d){
+            container.classList.add('hovering');
+            // Ghost non-hovered lines
+            gLines.selectAll('path.run').classed('ghost', s => s.run !== d.run);
+          })
+          .on('mouseleave', function(){
+            container.classList.remove('hovering');
+            gLines.selectAll('path.run').classed('ghost', false);
+          });
+        captures.exit().remove();
+
+        // No point markers - just lines
+
+        // No legend needed
+
+        // Hover interaction - optimized
+        function onMove(ev){
+          const [mx, my] = d3.pointer(ev, overlay.node());
+          
+          // Find nearest point on any line - optimized search
+          let nearestPoint = null;
+          let minDist = Infinity;
+          const threshold = 20;
+          
+          for (const s of series) {
+            for (const pt of s.values) {
+              const dist = Math.abs(xScale(pt.logTokens) - mx); // Only check X distance first
+              if (dist < threshold && dist < minDist) {
+                const yDist = Math.abs(yScale(pt.logLoss) - my);
+                const totalDist = Math.sqrt(dist * dist + yDist * yDist);
+                if (totalDist < minDist) {
+                  minDist = totalDist;
+                  nearestPoint = { ...pt, run: s.run, color: s.color };
+                }
+              }
+            }
+          }
+
+          if (nearestPoint && minDist < threshold) {
+            // Parse run info
+            const { categoryName, config } = parseRunName(nearestPoint.run);
+            
+            // Format metrics
+            const tokensFormatted = formatNumber(nearestPoint.tokens);
+            const lossFormatted = nearestPoint.loss.toFixed(2);
+            
+            // Build rich tooltip with color swatch
+            let html = `
+              <div class="d3-tooltip__header">
+                <div class="d3-tooltip__color-swatch" style="background: ${nearestPoint.color}"></div>
+                <div class="d3-tooltip__title">${categoryName}</div>
+              </div>
+            `;
+            
+            // Only show config if it exists
+            if (config) {
+              html += `<div class="d3-tooltip__subtitle">Config: ${config}</div>`;
+            }
+            
+            html += `
+              <div class="d3-tooltip__divider"></div>
+              <div class="d3-tooltip__data">
+                Tokens: ${tokensFormatted}<br/>
+                Loss: ${lossFormatted}
+              </div>
+            `;
+            
+            tipInner.innerHTML = html; 
+            tip.style.opacity = '1';
+            
+            // Ghost other lines (but not legend items when hovering lines)
+            container.classList.add('hovering');
+            gLines.selectAll('path.run').classed('ghost', s => s.run !== nearestPoint.run);
+            
+            // Smart positioning - keep tooltip within container bounds
+            const tooltipRect = tip.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            const offset = 12;
+            let x = mx + margin.left + offset;
+            let y = my + margin.top + offset;
+            
+            // Check right edge
+            if (x + tooltipRect.width > containerRect.width) {
+              x = mx + margin.left - tooltipRect.width - offset;
+            }
+            
+            // Check bottom edge
+            if (y + tooltipRect.height > containerRect.height) {
+              y = my + margin.top - tooltipRect.height - offset;
+            }
+            
+            // Check left edge (if flipped to left)
+            if (x < 0) {
+              x = offset;
+            }
+            
+            // Check top edge (if flipped to top)
+            if (y < 0) {
+              y = offset;
+            }
+            
+            tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+          } else {
+            tip.style.opacity = '0';
+            container.classList.remove('hovering');
+            gLines.selectAll('path.run').classed('ghost', false);
+          }
+        }
+        function onLeave(){ 
+          tip.style.opacity='0'; 
+          tip.style.transform='translate(-9999px, -9999px)'; 
+          container.classList.remove('hovering');
+          gLines.selectAll('path.run').classed('ghost', false);
+        }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      // Load aggregated CSV file and initialize
+      (async () => {
+        try {
+          // Load single aggregated CSV file
+          const paths = [
+            `/data/${AGGREGATED_CSV}`,
+            `./assets/data/${AGGREGATED_CSV}`,
+            `../assets/data/${AGGREGATED_CSV}`,
+            `../../assets/data/${AGGREGATED_CSV}`
+          ];
+          
+          const text = await fetchFirstAvailable(paths);
+          
+          // Parse CSV - format is run_name,tokens,loss with prefixes already included
+          const rows = d3.csvParse(text, d => ({
+            run: (d.run_name || '').trim(),
+            tokens: +d.tokens,
+            loss: +d.loss
+          }));
+          
+          // Filter out invalid data and compute log values
+          const allData = rows
+            .filter(r => r.run && r.tokens > 0 && r.loss > 0) // Valid data only
+            .map(row => ({
+              run: row.run,
+              tokens: row.tokens,
+              loss: row.loss,
+              logTokens: USE_LOG_SCALE ? Math.log(row.tokens) : row.tokens,
+              logLoss: USE_LOG_SCALE ? Math.log(row.loss) : row.loss
+            }));
+
+          // Group data by run
+          runOrder = Array.from(new Set(allData.map(r => r.run))).sort();
+          runOrder.forEach(r => {
+            dataByRun.set(r, allData.filter(d => d.run === r));
+          });
+
+          render();
+          const rerender = () => render();
+          if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
+        } catch (e) {
+          const pre = document.createElement('pre'); pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)'; pre.style.fontSize = '12px'; pre.style.whiteSpace = 'pre-wrap'; container.appendChild(pre);
+        }
+      })();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
 </script>
+

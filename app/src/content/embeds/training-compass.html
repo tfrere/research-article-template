@@ -1,0 +1,177 @@
+<div class="training-compass"></div>
+
+<style>
+  .training-compass {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: 800px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  
+  .training-compass .compass-flow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--spacing-1);
+  }
+  
+  .training-compass .compass-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 220px;
+  }
+  
+  .training-compass .stage-header {
+    background: var(--primary-color);
+    color: var(--on-primary);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    width: 100%;
+    margin-bottom: var(--spacing-4);
+    min-height: 48px;
+    line-height: 1.2;
+  }
+  
+  .training-compass .arrow-right {
+    font-size: 32px;
+    color: var(--primary-color);
+    flex-shrink: 0;
+    margin: 0 var(--spacing-2);
+    font-weight: 300;
+  }
+  
+  .training-compass .stage-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-1);
+    width: 100%;
+  }
+  
+  .training-compass .stage-item {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-1) var(--spacing-1);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-color);
+    font-weight: 500;
+  }
+  
+  .training-compass .stage-dots {
+    color: var(--muted-color);
+    font-size: 16px;
+    font-weight: 600;
+    padding: var(--spacing-1);
+    text-align: center;
+  }
+  
+  @media (max-width: 768px) {
+    .training-compass {
+      padding: var(--spacing-1) var(--spacing-2);
+    }
+    
+    .training-compass .compass-flow {
+      flex-direction: column;
+      gap: var(--spacing-1);
+    }
+    
+    .training-compass .arrow-right {
+      transform: rotate(90deg);
+      margin: var(--spacing-3) auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .training-compass .compass-stage {
+      max-width: 100%;
+      width: 100%;
+    }
+    
+    .training-compass .stage-header {
+      font-size: 16px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('training-compass'))) {
+        const candidates = Array.from(document.querySelectorAll('.training-compass'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Create the compass structure
+      container.innerHTML = `
+        
+        <div class="compass-flow">
+          <!-- Why Stage -->
+          <div class="compass-stage">
+            <div class="stage-header">Why train?</div>
+            <div class="stage-items">
+              <div class="stage-item">Research</div>
+              <div class="stage-item">Production</div>
+              <div class="stage-item">Learning</div>
+              <div class="stage-item">Strategic</div>
+            </div>
+          </div>
+          
+          <div class="arrow-right">→</div>
+          
+          <!-- What Stage -->
+          <div class="compass-stage">
+            <div class="stage-header">What to train?</div>
+            <div class="stage-items">
+              <div class="stage-item">Architecture</div>
+              <div class="stage-item">Model size</div>
+              <div class="stage-item">Data mix</div>
+              <div class="stage-item">Assistant type</div>
+              <div class="stage-item">Running ablations</div>
+              <div class="stage-dots">...</div>
+            </div>
+          </div>
+          
+          <div class="arrow-right">→</div>
+          
+          <!-- How Stage -->
+          <div class="compass-stage">
+            <div class="stage-header">How to train?</div>
+            <div class="stage-items">
+              <div class="stage-item">Setup infra</div>
+              <div class="stage-item">Training framework</div>
+              <div class="stage-item">Handling loss spikes</div>
+              <div class="stage-item">Midtraining</div>
+              <div class="stage-item">SFT vs RL</div>
+              <div class="stage-dots">...</div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

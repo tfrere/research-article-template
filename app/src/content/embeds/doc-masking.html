@@ -1,0 +1,649 @@
+<div class="doc-masking"></div>
+
+<style>
+  .doc-masking {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+    color: var(--text-color);
+    padding: 20px 0;
+  }
+  
+  .doc-masking .concatenated {
+    padding: 15px;
+    margin: 0 auto 30px auto;
+    text-align: center;
+    max-width: 70%;
+  }
+  
+  .doc-masking .section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+  }
+  
+  .doc-masking .token-sequence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+    justify-content: center;
+  }
+  
+  .doc-masking .token {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .doc-masking .token:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  
+  .doc-masking .token-recipe { 
+    background: var(--token-recipe-bg); 
+    color: var(--token-recipe-color); 
+    filter: saturate(1.3);
+  }
+  .doc-masking .token-code { 
+    background: var(--token-code-bg); 
+    color: var(--token-code-color); 
+    filter: saturate(1.3);
+  }
+  .doc-masking .token-climate { 
+    background: var(--token-climate-bg); 
+    color: var(--token-climate-color); 
+    filter: saturate(1.3);
+  }
+  .doc-masking .token-separator { 
+    background: var(--border-color); 
+    color: var(--muted-color); 
+    font-weight: 600; 
+  }
+  
+  .doc-masking .attention-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  .doc-masking .attention-section {
+    text-align: center;
+  }
+  
+  .doc-masking .mask-type {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-top: 15px;
+    margin-bottom: 30px;
+  }
+  
+  .doc-masking .causal-mask { 
+    color: #92400E; 
+  }
+  .doc-masking .intradoc-mask { 
+    color: #077c3a; 
+  }
+  
+  .doc-masking .matrix-container {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    grid-template-rows: 1fr 30px;
+    gap: 8px;
+    justify-self: center;
+    align-items: center;
+    background: var(--page-bg)!important;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .doc-masking .doc-labels {
+    display: grid;
+    gap: 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted-color);
+  }
+  
+  .doc-masking .doc-label {
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px 0 0 3px;
+  }
+  
+  .doc-masking .doc-recipe-label { 
+    background: var(--token-recipe-bg); 
+    color: var(--token-recipe-color); 
+    font-weight: 700;
+  }
+  .doc-masking .doc-code-label { 
+    background: var(--token-code-bg); 
+    color: var(--token-code-color); 
+    font-weight: 700;
+  }
+  .doc-masking .doc-climate-label { 
+    background: var(--token-climate-bg); 
+    color: var(--token-climate-color); 
+    font-weight: 700;
+  }
+  
+  .doc-masking .doc-labels-bottom {
+    display: grid;
+    gap: 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted-color);
+    grid-column: 2;
+  }
+  
+  .doc-masking .doc-label-bottom {
+    width: 18px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 0 3px 3px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 0.65rem;
+  }
+  
+  .doc-masking .attention-matrix {
+    display: grid;
+    gap: 2px;
+    justify-items: stretch;
+    align-items: stretch;
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+  }
+  
+  .doc-masking .attention-cell {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .doc-masking .highlight-overlay {
+    position: absolute;
+    background: color-mix(in srgb, var(--border-color) 35%, transparent);
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.2s ease;
+  }
+  
+  .doc-masking .highlight-overlay.row {
+    left: 0;
+    right: 0;
+    height: 18px;
+  }
+  
+  .doc-masking .highlight-overlay.col {
+    top: 0;
+    bottom: 0;
+    width: 18px;
+  }
+  
+  .doc-masking .can-attend {
+    background: #10B981;
+    color: white;
+  }
+  
+  .doc-masking .cannot-attend {
+    background: var(--border-color);
+    color: var(--muted-color);
+  }
+  
+  .doc-masking .attention-cell:hover {
+    transform: scale(1.2);
+    z-index: 10;
+    position: relative;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  .doc-masking .tooltip {
+    position: absolute;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    max-width: 240px;
+    text-align: left;
+    line-height: 1.3;
+  }
+  
+  .doc-masking .tooltip.show {
+    opacity: 1;
+  }
+  
+  .doc-masking .legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 45px;
+    padding: 10px;
+  }
+  
+  .doc-masking .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .doc-masking .legend-box {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+  }
+  
+  .doc-masking .legend-box.can-attend {
+    background: #10B981;
+  }
+  
+  .doc-masking .legend-box.cannot-attend {
+    background: var(--border-color);
+    color: var(--text-color);
+  }
+  
+  /* Responsive design */
+  @media (max-width: 1000px) {
+    .doc-masking .attention-comparison {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .doc-masking .token-sequence {
+      font-size: 0.7rem;
+    }
+    
+    .doc-masking .matrix-container {
+      grid-template-columns: 50px 1fr;
+    }
+    
+    .doc-masking .doc-labels {
+      font-size: 0.7rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .doc-masking {
+      padding: 16px 0;
+    }
+    
+    .doc-masking .concatenated {
+      padding: 16px;
+    }
+    
+    .doc-masking .legend {
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('doc-masking'))) {
+        const candidates = Array.from(document.querySelectorAll('.doc-masking'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Generate categorical colors for 3 categories
+      const setupColors = () => {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            const colors = window.ColorPalettes.getColors('categorical', 3);
+            if (colors && colors.length >= 3) {
+              const root = document.documentElement;
+              
+              // Recipe (index 0)
+              root.style.setProperty('--token-recipe-bg', `color-mix(in srgb, ${colors[0]} 20%, var(--surface-bg))`);
+              root.style.setProperty('--token-recipe-color', `color-mix(in srgb, ${colors[0]} 60%, var(--text-color))`);
+              
+              // Code (index 1) 
+              root.style.setProperty('--token-code-bg', `color-mix(in srgb, ${colors[1]} 20%, var(--surface-bg))`);
+              root.style.setProperty('--token-code-color', `color-mix(in srgb, ${colors[1]} 60%, var(--text-color))`);
+              
+              // Climate (index 2)
+              root.style.setProperty('--token-climate-bg', `color-mix(in srgb, ${colors[2]} 20%, var(--surface-bg))`);
+              root.style.setProperty('--token-climate-color', `color-mix(in srgb, ${colors[2]} 60%, var(--text-color))`);
+              
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to load color palettes:', e);
+        }
+        
+        // Fallback colors if palette system fails
+        const root = document.documentElement;
+        root.style.setProperty('--token-recipe-bg', 'color-mix(in srgb, #FED7AA 12%, var(--surface-bg))');
+        root.style.setProperty('--token-recipe-color', '#9A3412');
+        root.style.setProperty('--token-code-bg', 'color-mix(in srgb, #BFDBFE 12%, var(--surface-bg))');
+        root.style.setProperty('--token-code-color', '#1E40AF');
+        root.style.setProperty('--token-climate-bg', 'color-mix(in srgb, #FDE68A 12%, var(--surface-bg))');
+        root.style.setProperty('--token-climate-color', '#92400E');
+      };
+
+      setupColors();
+
+      // Listen for palette updates
+      document.addEventListener('palettes:updated', setupColors);
+
+      // Define the token sequence with document boundaries
+      const tokens = [
+        { text: 'Mix', type: 'recipe', doc: 0 },
+        { text: 'oats', type: 'recipe', doc: 0 },
+        { text: 'with', type: 'recipe', doc: 0 },
+        { text: 'honey', type: 'recipe', doc: 0 },
+        { text: '<|end_of_text|>', type: 'separator', doc: 0 },
+        { text: 'def', type: 'code', doc: 1 },
+        { text: 'hello():', type: 'code', doc: 1 },
+        { text: 'print', type: 'code', doc: 1 },
+        { text: '<|end_of_text|>', type: 'separator', doc: 1 },
+        { text: 'Climate', type: 'climate', doc: 2 },
+        { text: 'change', type: 'climate', doc: 2 },
+        { text: 'affects', type: 'climate', doc: 2 },
+        { text: 'the', type: 'climate', doc: 2 },
+        { text: 'planet', type: 'climate', doc: 2 },
+        { text: '<|end_of_text|>', type: 'separator', doc: 2 }
+      ];
+
+      // Create the HTML structure
+      container.innerHTML = `
+        <div class="concatenated">
+          <div class="section-title">Training sequence = concatenated files</div>
+          <div class="token-sequence" id="tokenSequence">
+            <!-- Tokens will be generated by JavaScript -->
+          </div>
+        </div>
+
+        <div class="attention-comparison">
+          <div class="attention-section">
+            <div class="mask-type causal-mask">Causal Masking</div>
+            <div class="matrix-container">
+              <div class="doc-labels" id="causalLabels">
+                <!-- Labels will be generated by JavaScript -->
+              </div>
+              <div class="attention-matrix" id="causalMatrix">
+                <!-- Matrix will be generated by JavaScript -->
+              </div>
+              <div class="doc-labels-bottom" id="causalLabelsBottom">
+                <!-- Bottom labels will be generated by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <div class="attention-section">
+            <div class="mask-type intradoc-mask">Intra-Document Masking</div>
+            <div class="matrix-container">
+              <div class="doc-labels" id="intradocLabels">
+                <!-- Labels will be generated by JavaScript -->
+              </div>
+              <div class="attention-matrix" id="intradocMatrix">
+                <!-- Matrix will be generated by JavaScript -->
+              </div>
+              <div class="doc-labels-bottom" id="intradocLabelsBottom">
+                <!-- Bottom labels will be generated by JavaScript -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-box can-attend">✓</div>
+            <span>Can Attend</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box cannot-attend">✗</div>
+            <span>Cannot Attend</span>
+          </div>
+        </div>
+        
+        <div class="tooltip" id="tooltip"></div>
+      `;
+
+      // Render tokens
+      function renderTokens() {
+        const container = document.getElementById('tokenSequence');
+        tokens.forEach((token, index) => {
+          const tokenEl = document.createElement('span');
+          tokenEl.className = `token token-${token.type}`;
+          tokenEl.textContent = token.text;
+          tokenEl.dataset.tokenIndex = index;
+          container.appendChild(tokenEl);
+        });
+      }
+
+      // Create attention matrix with labels
+      function createAttentionMatrix(containerId, labelsId, bottomLabelsId, maskType) {
+        const container = document.getElementById(containerId);
+        const labelsContainer = document.getElementById(labelsId);
+        const bottomLabelsContainer = document.getElementById(bottomLabelsId);
+        const size = tokens.length;
+        
+        // Create side labels (Y-axis)
+        labelsContainer.style.gridTemplateRows = `repeat(${size}, 18px)`;
+        tokens.forEach((token, index) => {
+          const label = document.createElement('div');
+          
+          if (token.doc === 0) {
+            label.className = 'doc-label doc-recipe-label';
+            if (index === 0) label.textContent = 'Recipe';
+          } else if (token.doc === 1) {
+            label.className = 'doc-label doc-code-label';
+            if (index === 5) label.textContent = 'Code';
+          } else if (token.doc === 2) {
+            label.className = 'doc-label doc-climate-label';
+            if (index === 9) label.textContent = 'Climate';
+          } else {
+            label.className = 'doc-label';
+          }
+          
+          labelsContainer.appendChild(label);
+        });
+
+        // Create bottom labels (X-axis)
+        bottomLabelsContainer.style.gridTemplateColumns = `repeat(${size}, 18px)`;
+        tokens.forEach((token, index) => {
+          const label = document.createElement('div');
+          
+          if (token.doc === 0) {
+            label.className = 'doc-label-bottom doc-recipe-label';
+            if (index === 0) label.textContent = 'Recipe';
+          } else if (token.doc === 1) {
+            label.className = 'doc-label-bottom doc-code-label';
+            if (index === 5) label.textContent = 'Code';
+          } else if (token.doc === 2) {
+            label.className = 'doc-label-bottom doc-climate-label';
+            if (index === 9) label.textContent = 'Climate';
+          } else {
+            label.className = 'doc-label-bottom';
+          }
+          
+          bottomLabelsContainer.appendChild(label);
+        });
+        
+        // Create attention matrix
+        container.style.gridTemplateColumns = `repeat(${size}, 18px)`;
+        container.style.gridTemplateRows = `repeat(${size}, 18px)`;
+
+        for (let i = 0; i < size; i++) {
+          for (let j = 0; j < size; j++) {
+            const cell = document.createElement('div');
+            cell.className = 'attention-cell';
+            cell.dataset.row = i;
+            cell.dataset.col = j;
+            
+            let canAttend = false;
+            
+            if (maskType === 'causal') {
+              canAttend = j <= i;
+            } else if (maskType === 'intradoc') {
+              canAttend = j <= i && tokens[i].doc === tokens[j].doc;
+            }
+            
+            if (canAttend) {
+              cell.classList.add('can-attend');
+              cell.textContent = '✓';
+            } else {
+              cell.classList.add('cannot-attend');
+              cell.textContent = '✗';
+            }
+            
+            // Add hover events for tooltip
+            cell.addEventListener('mouseenter', (e) => {
+              const tooltip = document.getElementById('tooltip');
+              const fromToken = tokens[i];
+              const toToken = tokens[j];
+              const fromDoc = fromToken.doc === 0 ? 'Recipe' : fromToken.doc === 1 ? 'Code' : 'Climate';
+              const toDoc = toToken.doc === 0 ? 'Recipe' : toToken.doc === 1 ? 'Code' : 'Climate';
+              
+              tooltip.innerHTML = `
+                <div style="font-weight: 600; margin-bottom: 2px;">${canAttend ? '✓ Can attend' : '✗ Cannot attend'}</div>
+                <div style="font-size: 11px; color: var(--muted-color);">
+                  From: "${fromToken.text}" (${fromDoc}, pos ${i})<br>
+                  To: "${toToken.text}" (${toDoc}, pos ${j})
+                </div>
+              `;
+              tooltip.classList.add('show');
+              
+              const rect = cell.getBoundingClientRect();
+              const containerRect = document.querySelector('.doc-masking').getBoundingClientRect();
+              tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+              tooltip.style.top = (rect.top - containerRect.top - 35) + 'px';
+            });
+            
+            cell.addEventListener('mouseleave', () => {
+              const tooltip = document.getElementById('tooltip');
+              tooltip.classList.remove('show');
+            });
+            
+            container.appendChild(cell);
+          }
+        }
+      }
+
+      // Add hover effects for tokens
+      function addTokenHoverEffects() {
+        const tokenElements = document.querySelectorAll('.token');
+        
+        tokenElements.forEach((tokenEl, index) => {
+          tokenEl.addEventListener('mouseenter', () => {
+            // Highlight corresponding row and column in both matrices
+            const matrices = document.querySelectorAll('.attention-matrix');
+            matrices.forEach(matrix => {
+              const cellSize = 18; // Size of each cell
+              const gap = 2; // Gap between cells
+              const rowPos = index * (cellSize + gap);
+              const colPos = index * (cellSize + gap);
+              
+              // Create row highlight overlay
+              const rowOverlay = document.createElement('div');
+              rowOverlay.className = 'highlight-overlay row';
+              rowOverlay.style.top = `${rowPos}px`;
+              
+              // Create column highlight overlay
+              const colOverlay = document.createElement('div');
+              colOverlay.className = 'highlight-overlay col';
+              colOverlay.style.left = `${colPos}px`;
+              
+              // Add overlays to matrix
+              matrix.appendChild(rowOverlay);
+              matrix.appendChild(colOverlay);
+              
+              // Store references for cleanup
+              matrix._rowOverlay = rowOverlay;
+              matrix._colOverlay = colOverlay;
+            });
+          });
+          
+          tokenEl.addEventListener('mouseleave', () => {
+            // Remove highlight overlays from all matrices
+            const matrices = document.querySelectorAll('.attention-matrix');
+            matrices.forEach(matrix => {
+              if (matrix._rowOverlay) {
+                matrix._rowOverlay.remove();
+                matrix._rowOverlay = null;
+              }
+              if (matrix._colOverlay) {
+                matrix._colOverlay.remove();
+                matrix._colOverlay = null;
+              }
+            });
+          });
+        });
+      }
+
+      // Initialize the visualization
+      renderTokens();
+      createAttentionMatrix('causalMatrix', 'causalLabels', 'causalLabelsBottom', 'causal');
+      createAttentionMatrix('intradocMatrix', 'intradocLabels', 'intradocLabelsBottom', 'intradoc');
+      addTokenHoverEffects();
+    };
+
+    // Load color palettes script if not already loaded
+    if (!window.ColorPalettes) {
+      const script = document.createElement('script');
+      script.src = '/scripts/color-palettes.js';
+      script.onload = () => {
+        if (window.ColorPalettes) {
+          window.ColorPalettes.refresh();
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+        } else {
+          bootstrap();
+        }
+      };
+      document.head.appendChild(script);
+    } else {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+      } else {
+        bootstrap();
+      }
+    }
+  })();
+</script>

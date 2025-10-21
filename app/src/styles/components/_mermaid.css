@@ -1,0 +1,92 @@
+.mermaid .nodeLabel p {
+    color: black !important;
+}
+
+/* Styles pour les nœuds avec bords arrondis */
+.mermaid rect:not(.flowchart-link),
+.mermaid .node rect,
+.mermaid .nodeLabel rect,
+.mermaid .cluster rect {
+    rx: 8px !important;
+    ry: 8px !important;
+}
+
+/* Styles spécifiques pour différents types de diagrammes */
+
+/* Flowchart/Graph - styles généraux */
+.mermaid .node rect,
+.mermaid .node circle,
+.mermaid .node ellipse,
+.mermaid .label rect {
+    rx: 8px !important;
+    ry: 8px !important;
+}
+
+/* Flowchart - nœuds principaux */
+.mermaid .flowchart-node rect,
+.mermaid .flowchart-label rect {
+    rx: 8px !important;
+    ry: 8px !important;
+}
+
+/* Sequence diagram */
+.mermaid .actor rect,
+.mermaid .participant rect {
+    rx: 8px !important;
+    ry: 8px !important;
+}
+
+/* ER diagram */
+.mermaid .entityBox rect,
+.mermaid .er .entityBox rect {
+    rx: 6px !important;
+    ry: 6px !important;
+}
+
+/* Gantt chart */
+.mermaid .section0 rect,
+.mermaid .section1 rect,
+.mermaid .section2 rect,
+.mermaid .section3 rect {
+    rx: 4px !important;
+    ry: 4px !important;
+}
+
+/* Gitgraph */
+.mermaid .commit rect {
+    rx: 12px !important;
+    ry: 12px !important;
+}
+
+/* Mindmap */
+.mermaid .mindmap-node rect {
+    rx: 10px !important;
+    ry: 10px !important;
+}
+
+/* Sankey */
+.mermaid .sankey .node rect {
+    rx: 4px !important;
+    ry: 4px !important;
+}
+
+/* Timeline */
+.mermaid .timeline rect {
+    rx: 6px !important;
+    ry: 6px !important;
+}
+
+/* Pie chart */
+.mermaid .pieTitleText {
+    rx: 8px !important;
+    ry: 8px !important;
+}
+
+/* Journey */
+.mermaid .journey .section0 rect,
+.mermaid .journey .section1 rect,
+.mermaid .journey .section2 rect,
+.mermaid .journey .section3 rect {
+    rx: 8px !important;
+    ry: 8px !important;
+}

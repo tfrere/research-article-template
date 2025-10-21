@@ -1,0 +1,439 @@
+<div class="nccl-latency-comparison">
+  <div class="nccl-latency-comparison__grid">
+    <div class="nccl-chart-cell" data-benchmark="sendrecv" data-title="NCCL Sendrecv Latency vs Message Size (In-place)"></div>
+    <div class="nccl-chart-cell" data-benchmark="all_reduce" data-title="NCCL All-Reduce Latency vs Message Size"></div>
+    <div class="nccl-chart-cell" data-benchmark="alltoall" data-title="NCCL Alltoall Latency vs Message Size (In-place)"></div>
+  </div>
+  <div class="nccl-latency-comparison__legend"></div>
+  <noscript>JavaScript is required to render these charts.</noscript>
+</div>
+<style>
+  .nccl-latency-comparison { position: relative; }
+  .nccl-latency-comparison .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  .nccl-latency-comparison .axes path, .nccl-latency-comparison .axes line { stroke: var(--axis-color); }
+  .nccl-latency-comparison .axes text { fill: var(--tick-color); }
+  .nccl-latency-comparison .grid line { stroke: var(--grid-color); }
+  .nccl-latency-comparison__grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1100px) { .nccl-latency-comparison__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 700px) { .nccl-latency-comparison__grid { grid-template-columns: 1fr; } }
+  .nccl-chart-cell { border:1px solid var(--border-color); border-radius:10px; background: var(--page-bg); display:flex; flex-direction:column; position: relative; padding: 12px; }
+  .nccl-chart-cell .cell-header { min-height: 58px; padding:8px 10px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .nccl-chart-cell .cell-title { font-size: 13px; font-weight: 700; color: var(--text-color); }
+  .nccl-chart-cell .cell-subtitle { font-size: 11px; color: var(--muted-color); }
+  .nccl-chart-cell .cell-body { position: relative; width:100%; overflow:hidden; }
+  .nccl-chart-cell .cell-body svg { max-width:100%; height:auto; }
+  .nccl-chart-cell .legend-bottom { display:flex; align-items:flex-start; justify-content:flex-start; font-size:12px; color: var(--text-color); flex-direction: column; gap: 4px; margin-top: 8px; }
+  .nccl-chart-cell .legend-bottom .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .nccl-chart-cell .legend-bottom .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .nccl-chart-cell .legend-bottom .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
+  .nccl-chart-cell .legend-bottom .legend-label { font-size: 11px; font-weight: 600; color: var(--muted-color); text-transform: uppercase; letter-spacing: 0.5px; }
+  .nccl-chart-cell .lines path.active { stroke-width: 3; }
+  .nccl-chart-cell .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .nccl-chart-cell .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; }
+  .nccl-chart-cell .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .nccl-chart-cell .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .nccl-chart-cell .d3-tooltip__color-dot { display:inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+  .nccl-latency-comparison__legend { 
+    margin-top: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+  }
+  .nccl-latency-comparison__legend .legend-label { 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: var(--muted-color); 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+  }
+  .nccl-latency-comparison__legend .legend-items { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px 16px; 
+  }
+  .nccl-latency-comparison__legend .legend-item { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 6px; 
+    font-size: 12px; 
+    color: var(--text-color); 
+  }
+  .nccl-latency-comparison__legend .legend-swatch { 
+    width: 14px; 
+    height: 14px; 
+    border-radius: 3px; 
+    border: 1px solid var(--border-color); 
+  }
+</style>
+<script> 
+  (() => {
+    // Prevent multiple executions
+    if (window.ncclLatencyComparisonInitialized) return;
+    window.ncclLatencyComparisonInitialized = true;
+    
+    // Completely scoped IIFE to avoid variable conflicts
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrapLatencyComparison = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('nccl-latency-comparison'))){
+        const cs = Array.from(document.querySelectorAll('.nccl-latency-comparison')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      container.dataset.mounted = 'true';
+      let data = {};
+      let currentColors = [];
+
+      function getColors() {
+        return currentColors.length > 0 ? currentColors : [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+        '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
+        '#c49c94', '#f7b6d3', '#c7c7c7', '#dbdb8d', '#9edae5'
+      ];
+    }
+
+    function refreshPalette() {
+      try { 
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          const colors = window.ColorPalettes.getColors('categorical', 26);
+          if (colors && colors.length >= 26) {
+            currentColors = colors;
+            // Re-render with new colors
+            if (Object.keys(data).length > 0) {
+              renderAllCharts();
+            }
+          }
+        }
+      } catch (e) { 
+        console.warn('ColorPalettes not available:', e); 
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function formatLatency(latency) {
+      if (latency < 1000) {
+        return Math.round(latency) + ' μs';
+      } else if (latency < 1000000) {
+        return (latency / 1000).toFixed(1) + ' ms';
+      } else {
+        return (latency / 1000000).toFixed(1) + ' s';
+      }
+    }
+
+    function createChart(cell, benchmark) {
+      // Create tooltip if it doesn't exist
+      let tip = cell.querySelector('.d3-tooltip');
+      let tipInner = cell.querySelector('.d3-tooltip__inner');
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tip.style.cssText = 'position:absolute;pointer-events:none;opacity:0;transform:translate(-9999px,-9999px);background:var(--surface-bg);border:1px solid var(--border-color);border-radius:6px;padding:8px 12px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);backdrop-filter:blur(8px);';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        cell.appendChild(tip);
+      }
+
+      // Create header if it doesn't exist
+      let header = cell.querySelector('.cell-header');
+      if (!header) {
+        header = document.createElement('div');
+        header.className = 'cell-header';
+        const title = document.createElement('div');
+        title.className = 'cell-title';
+        title.textContent = cell.dataset.title;
+        header.appendChild(title);
+        cell.appendChild(header);
+      }
+
+      // Create body if it doesn't exist
+      let body = cell.querySelector('.cell-body');
+      if (!body) {
+        body = document.createElement('div');
+        body.className = 'cell-body';
+        cell.appendChild(body);
+      }
+
+      // SVG - create only if it doesn't exist
+      let svg = d3.select(body).select('svg');
+      let gRoot, gGrid, gAxes, gLines;
+      
+      if (svg.empty()) {
+        svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+        gRoot = svg.append('g');
+        gGrid = gRoot.append('g').attr('class','grid');
+        gAxes = gRoot.append('g').attr('class','axes');
+        gLines = gRoot.append('g').attr('class','lines');
+      } else {
+        gRoot = svg.select('g');
+        gGrid = gRoot.select('.grid');
+        gAxes = gRoot.select('.axes');
+        gLines = gRoot.select('.lines');
+      }
+
+      // State
+      let width = 400, height = 250; 
+      const margin = { top: 16, right: 32, bottom: 70, left: 80 };
+      const xScale = d3.scaleLog();
+      const yScale = d3.scaleLog();
+      const lineGen = d3.line().x(d => xScale(d.messageSize)).y(d => yScale(d.latency));
+
+      function updateLayout(){
+        const axisColor = getComputedStyle(cell).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
+        width = cell.clientWidth || 400;
+        height = Math.max(250, Math.round(width * 0.65));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        return { innerWidth, innerHeight };
+      }
+
+      function render() {
+        console.log('Rendering chart for benchmark:', benchmark, 'Data:', data[benchmark]);
+        if (!data[benchmark]) {
+          console.log('No data for benchmark:', benchmark);
+          return;
+        }
+        
+        const { innerWidth, innerHeight } = updateLayout();
+        
+        // Prepare series data - one line per node count
+        const series = [];
+        const colors = getColors();
+        
+        Object.keys(data[benchmark]).forEach(nodeKey => {
+          const nodeData = data[benchmark][nodeKey];
+          if (nodeData && nodeData.length > 0) {
+            const nodeCount = parseInt(nodeKey.replace('nodes_', ''));
+            series.push({
+              name: `${nodeCount} nodes`,
+              nodeCount: nodeCount,
+              values: nodeData.map(d => ({ messageSize: d.messageSize, latency: d.latency })),
+              color: colors[(nodeCount - 1) % colors.length]
+            });
+          }
+        });
+        
+        if (series.length === 0) return;
+        
+        // Sort by node count
+        series.sort((a, b) => a.nodeCount - b.nodeCount);
+        
+        // Get all data points for domain calculation
+        const allData = series.flatMap(s => s.values);
+        const sortedData = allData.slice().sort((a, b) => a.messageSize - b.messageSize);
+        
+        // domains
+        const minSize = d3.min(sortedData, d => d.messageSize);
+        const maxSize = d3.max(sortedData, d => d.messageSize);
+        const minLatency = d3.min(sortedData, d => d.latency);
+        const maxLatency = d3.max(sortedData, d => d.latency);
+        
+        // Set Y domain based on benchmark with individual caps
+        let yMax;
+        if (benchmark === 'alltoall') {
+          yMax = 200000; // 200ms
+        } else if (benchmark === 'all_reduce') {
+          yMax = 60000; // 60ms
+        } else if (benchmark === 'sendrecv') {
+          yMax = 500000; // 500ms
+        } else {
+          yMax = maxLatency * 1.1;
+        }
+        
+        xScale.domain([minSize, maxSize]).range([0, innerWidth]);
+        yScale.domain([minLatency, yMax]).range([innerHeight, 0]);
+
+        // grid - horizontal lines for Y ticks
+        gGrid.selectAll('*').remove();
+        const gridBaseTicks = [50, 100, 200, 500, 1000];
+        const gridExtendedTicks = [10, 20, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
+        const allGridTicks = [...gridBaseTicks, ...gridExtendedTicks];
+        const gridTicks = allGridTicks.filter(tick => tick >= minLatency && tick <= yMax);
+        
+        gGrid.selectAll('line').data(gridTicks).join('line')
+          .attr('x1',0).attr('x2', innerWidth).attr('y1', d=>yScale(d)).attr('y2', d=>yScale(d))
+          .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // axes
+        gAxes.selectAll('*').remove();
+        
+        // Create custom ticks for X axis (powers of 2, every 4th tick)
+        const xTicks = [8, 128, 2048, 32768, 524288, 8388608, 134217728, 2147483648, 8589934592];
+        const filteredXTicks = xTicks.filter(tick => tick >= minSize && tick <= maxSize);
+        
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickValues(filteredXTicks).tickFormat(formatBytes))
+          .call(g=>{ 
+            g.selectAll('path, line').attr('stroke','var(--axis-color)'); 
+            g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px').attr('transform', 'rotate(-45)').style('text-anchor', 'end');
+          });
+
+        // Create custom ticks for Y axis: base range + extended range
+        const baseTicks = [50, 100, 200, 500, 1000]; // 50μs, 100μs, 200μs, 500μs, 1ms
+        const extendedTicks = [10, 20, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000]; // Extended range
+        const yTicks = [...baseTicks, ...extendedTicks];
+        const filteredYTicks = yTicks.filter(tick => tick >= minLatency && tick <= yMax);
+        
+        gAxes.append('g')
+          .call(d3.axisLeft(yScale).tickValues(filteredYTicks).tickFormat(formatLatency))
+          .call(g=>{ 
+            g.selectAll('path, line').attr('stroke','var(--axis-color)'); 
+            g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','11px');
+          });
+
+        // axis labels
+        gAxes.selectAll('.axis-label').remove();
+        gAxes.append('text').attr('class','axis-label').attr('transform','rotate(-90)').attr('y',0-margin.left).attr('x',0-(innerHeight/2)).attr('dy','1em').style('text-anchor','middle').text('Latency (μs)');
+        gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('x', innerWidth/2).attr('y', innerHeight + 45).text('Message Size (bytes)');
+
+        // lines
+        gLines.selectAll('*').remove();
+        gLines.selectAll('path').data(series).join('path')
+          .attr('d', d => lineGen(d.values))
+          .attr('fill','none')
+          .attr('stroke', d => d.color)
+          .attr('stroke-width',2)
+          .attr('stroke-linecap','round')
+          .attr('stroke-linejoin','round');
+
+        // Point markers removed - no longer needed
+
+      }
+
+      return { render };
+    }
+
+    function renderAllCharts() {
+      const cells = container.querySelectorAll('.nccl-chart-cell');
+      cells.forEach(cell => {
+        const benchmark = cell.dataset.benchmark;
+        
+        // Check if chart is already initialized
+        if (!cell.dataset.chartInitialized) {
+          const chart = createChart(cell, benchmark);
+          cell.chartInstance = chart;
+          cell.dataset.chartInitialized = 'true';
+        }
+        
+        // Render the existing chart
+        if (cell.chartInstance) {
+          cell.chartInstance.render();
+        }
+      });
+      
+      // Render common legend
+      renderCommonLegend();
+    }
+    
+    function renderCommonLegend() {
+      const legendContainer = container.querySelector('.nccl-latency-comparison__legend');
+      if (!legendContainer || !data) return;
+      
+      // Collect all unique node counts from all benchmarks
+      const nodeCounts = new Set();
+      Object.keys(data).forEach(benchmark => {
+        Object.keys(data[benchmark]).forEach(nodeKey => {
+          // nodeKey format is "nodes_X" where X is the node count
+          const nodeCount = parseInt(nodeKey.replace('nodes_', ''));
+          if (!isNaN(nodeCount)) {
+            nodeCounts.add(nodeCount);
+          }
+        });
+      });
+      
+      // Sort node counts
+      const sortedNodeCounts = Array.from(nodeCounts).sort((a, b) => a - b);
+      
+      // Get colors
+      const colors = getColors();
+      
+      // Create legend with individual colored lines
+      const legendWidth = Math.min(container.clientWidth * 0.8, 600);
+      const legendHeight = 30;
+      const lineHeight = 5; // Height of each colored line
+      const lineY = 0; // Y position of the lines
+      
+      // Calculate spacing between items
+      const numItems = sortedNodeCounts.length;
+      const itemWidth = legendWidth / numItems;
+      
+      legendContainer.innerHTML = `
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-color); margin-bottom: 12px;">Number of Nodes</div>
+        <svg width="${legendWidth}" height="${legendHeight}" style="display: block; overflow:visible!important;">
+          <!-- Individual colored lines and labels -->
+          ${sortedNodeCounts.map((nodeCount, i) => {
+            const x = (i + 0.5) * itemWidth;
+            const lineWidth = itemWidth * 0.5; // 50% of available space for each line
+            const lineX = i * itemWidth + (itemWidth - lineWidth) / 2;
+            const label = nodeCount === 1 ? '1' : `${nodeCount}`;
+            const color = colors[(nodeCount - 1) % colors.length];
+            
+            return `
+              <!-- Colored line -->
+              <line x1="${lineX}" y1="${lineY}" x2="${lineX + lineWidth}" y2="${lineY}" 
+                    stroke="${color}" stroke-width="${lineHeight}" stroke-linecap="round" />
+              
+              <!-- Label -->
+              <text x="${x}" y="${lineY + 20}" 
+                    text-anchor="middle" 
+                    font-size="11px" 
+                    font-weight="600"
+                    fill="var(--text-color)">${label}</text>
+            `;
+          }).join('')}
+        </svg>
+      `;
+    }
+
+    // Load real data from JSON
+    async function loadData() {
+      try {
+        console.log('Loading NCCL latency data...');
+        const response = await fetch('/data/nccl-multinode-latency.json');
+        const jsonData = await response.json();
+        
+        console.log('Loaded data:', jsonData);
+        data = jsonData;
+        renderAllCharts();
+      } catch (error) {
+        console.error('Error loading NCCL multinode latency data:', error);
+      }
+    }
+
+    // Initialize palette and listen for changes
+    refreshPalette();
+    document.addEventListener('palettes:updated', refreshPalette);
+    
+    // Initialize data by loading from JSON
+    loadData();
+    
+    const rerender = () => renderAllCharts();
+    if (window.ResizeObserver) { 
+      const ro = new ResizeObserver(() => rerender()); 
+      ro.observe(container); 
+    } else { 
+      window.addEventListener('resize', rerender); 
+    }
+    };
+
+    ensureD3(bootstrapLatencyComparison);
+  })();
+</script>

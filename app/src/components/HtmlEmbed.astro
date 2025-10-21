@@ -1,15 +1,40 @@
 ---
-interface Props { src: string; title?: string; desc?: string; frameless?: boolean; align?: 'left' | 'center' | 'right'; id?: string, data?: string | string[], config?: any }
-const { src, title, desc, frameless = false, align = 'left', id, data, config } = Astro.props as Props;
+interface Props {
+  src: string;
+  title?: string;
+  desc?: string;
+  frameless?: boolean;
+  align?: "left" | "center" | "right";
+  id?: string;
+  data?: string | string[];
+  config?: any;
+}
+const {
+  src,
+  title,
+  desc,
+  frameless = false,
+  align = "left",
+  id,
+  data,
+  config,
+} = Astro.props as Props;
 
 // Load all .html embeds under src/content/embeds/** as strings (dev & build)
-const embeds = (import.meta as any).glob('../content/embeds/**/*.html', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const embeds = (import.meta as any).glob("../content/embeds/**/*.html", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 function resolveFragment(requested: string): string | null {
   // Allow both "banner.html" and "embeds/banner.html"
-  const needle = requested.replace(/^\/*/, '');
+  const needle = requested.replace(/^\/*/, "");
   for (const [key, html] of Object.entries(embeds)) {
-    if (key.endsWith('/' + needle) || key.endsWith('/' + needle.replace(/^embeds\//, ''))) {
+    if (
+      key.endsWith("/" + needle) ||
+      key.endsWith("/" + needle.replace(/^embeds\//, ""))
+    ) {
       return html;
     }
   }
@@ -18,25 +43,62 @@ function resolveFragment(requested: string): string | null {
 
 const html = resolveFragment(src);
 const mountId = `frag-${Math.random().toString(36).slice(2)}`;
-const dataAttr = Array.isArray(data) ? JSON.stringify(data) : (typeof data === 'string' ? data : undefined);
-const configAttr = typeof config === 'string' ? config : (config != null ? JSON.stringify(config) : undefined);
+const dataAttr = Array.isArray(data)
+  ? JSON.stringify(data)
+  : typeof data === "string"
+    ? data
+    : undefined;
+const configAttr =
+  typeof config === "string"
+    ? config
+    : config != null
+      ? JSON.stringify(config)
+      : undefined;
 
 // Apply the ID to the HTML content if provided
-const htmlWithId = id && html ? html.replace(/<div class="([^"]*)"[^>]*>/, `<div class="$1" id="${id}">`) : html;
+const htmlWithId =
+  id && html
+    ? html.replace(/<div class="([^"]*)"[^>]*>/, `<div class="$1" id="${id}">`)
+    : html;
 ---
-{ html ? (
-  <figure class="html-embed" id={id}>
-    {title && <figcaption class="html-embed__title" style={`text-align:${align}`}>{title}</figcaption>}
-    <div class={`html-embed__card${frameless ? ' is-frameless' : ''}`}>
-      <div id={mountId} data-datafiles={dataAttr} data-config={configAttr} set:html={htmlWithId} />
-    </div>
-    {desc && <figcaption class="html-embed__desc" style={`text-align:${align}`} set:html={desc}></figcaption>}
-  </figure>
- ) : (
-  <div><!-- Fragment not found: {src} --></div>
- ) }
 
-
+{
+  html ? (
+    <figure class="html-embed" id={id}>
+      {title && (
+        <figcaption class="html-embed__title" style={`text-align:${align}`}>
+          {title}
+        </figcaption>
+      )}
+      <div class={`html-embed__card${frameless ? " is-frameless" : ""}`}>
+        <div
+          id={mountId}
+          data-datafiles={dataAttr}
+          data-config={configAttr}
+          set:html={htmlWithId}
+        />
+      </div>
+      {desc && (
+        <figcaption
+          class="html-embed__desc"
+          style={`text-align:${align}`}
+          set:html={desc}
+        />
+      )}
+    </figure>
+  ) : (
+    <figure class="html-embed html-embed--error" id={id}>
+      <div class="html-embed__card html-embed__card--error">
+        <div class="html-embed__error">
+          <strong>Embed not found</strong>
+          <p>
+            The requested embed could not be loaded: <code>{src}</code>
+          </p>
+        </div>
+      </div>
+    </figure>
+  )
+}
 
 <script>
   // Re-execute <script> tags inside the injected fragment (innerHTML doesn't run scripts)
@@ -44,40 +106,50 @@ const htmlWithId = id && html ? html.replace(/<div class="([^"]*)"[^>]*>/, `<div
   const mount = scriptEl ? scriptEl.previousElementSibling : null;
   const execute = () => {
     if (!mount) return;
-    const scripts = mount.querySelectorAll('script');
-    scripts.forEach(old => {
+    const scripts = mount.querySelectorAll("script");
+    scripts.forEach((old) => {
       // ignore non-executable types (e.g., application/json)
-      if (old.type && old.type !== 'text/javascript' && old.type !== 'module' && old.type !== '') return;
-      if (old.dataset.executed === 'true') return;
-      old.dataset.executed = 'true';
+      if (
+        old.type &&
+        old.type !== "text/javascript" &&
+        old.type !== "module" &&
+        old.type !== ""
+      )
+        return;
+      if (old.dataset.executed === "true") return;
+      old.dataset.executed = "true";
       if (old.src) {
-        const s = document.createElement('script');
-        Array.from(old.attributes).forEach(attr => s.setAttribute(attr.name, attr.value));
+        const s = document.createElement("script");
+        Array.from(old.attributes).forEach((attr) =>
+          s.setAttribute(attr.name, attr.value),
+        );
         document.body.appendChild(s);
       } else {
         try {
           // run inline
-          (0, eval)(old.text || '');
+          (0, eval)(old.text || "");
         } catch (e) {
-          console.error('HtmlEmbed inline script error:', e);
+          console.error("HtmlEmbed inline script error:", e);
         }
       }
     });
   };
   // Execute after DOM is parsed (ensures deferred module scripts are executed first)
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', execute, { once: true });
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", execute, { once: true });
   else execute();
-  </script>
+</script>
 
 <style is:global>
-  .html-embed { margin: 0 0 var(--block-spacing-y);
+  .html-embed {
+    margin: 0 0 var(--block-spacing-y);
     z-index: var(--z-elevated);
     position: relative;
   }
-  .html-embed__title { 
-    text-align: left; 
-    font-weight: 600; 
-    font-size: 0.95rem; 
+  .html-embed__title {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.95rem;
     color: var(--text-color);
     margin: 0;
     padding: 0;
@@ -101,11 +173,11 @@ const htmlWithId = id && html ? html.replace(/<div class="([^"]*)"[^>]*>/, `<div
     border-color: transparent;
     padding: 0;
   }
-  .html-embed__desc { 
-    text-align: left; 
-    font-size: 0.9rem; 
-    color: var(--muted-color); 
-    margin: 0; 
+  .html-embed__desc {
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--muted-color);
+    margin: 0;
     padding: 0;
     padding-top: var(--spacing-1);
     position: relative;
@@ -114,63 +186,224 @@ const htmlWithId = id && html ? html.replace(/<div class="([^"]*)"[^>]*>/, `<div
     width: 100%;
     background: var(--page-bg);
   }
+  /* Error state for missing embeds */
+  .html-embed__card--error {
+    background: #fef2f2;
+    border: 2px solid #dc2626;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .html-embed__error {
+    text-align: center;
+    color: #dc2626;
+  }
+  .html-embed__error strong {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .html-embed__error p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .html-embed__error code {
+    background: rgba(220, 38, 38, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    word-break: break-all;
+  }
+  /* Dark mode for error state */
+  [data-theme="dark"] .html-embed__card--error {
+    background: #1f2937;
+    border-color: #ef4444;
+  }
+  [data-theme="dark"] .html-embed__error {
+    color: #ef4444;
+  }
+  [data-theme="dark"] .html-embed__error code {
+    background: rgba(239, 68, 68, 0.2);
+  }
   /* Plotly – fragments & controls */
-  .html-embed__card svg text { fill: var(--text-color); }
-  .html-embed__card label { color: var(--text-color); }
-  .plotly-graph-div { width: 100%; min-height: 320px; }
-  @media (max-width: 768px) { .plotly-graph-div { min-height: 260px; } }
-  [id^="plot-"] { display: flex; flex-direction: column; align-items: center; gap: 15px; }
-  .plotly_caption { font-style: italic; margin-top: 10px; }
-  .plotly_controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; }
-  .plotly_input_container { display: flex; align-items: center; flex-direction: column; gap: 10px; }
-  .plotly_input_container > select { padding: 2px 4px; line-height: 1.5em; text-align: center; border-radius: 4px; font-size: 12px; background-color: var(--neutral-200); outline: none; border: 1px solid var(--neutral-300); }
-  .plotly_slider { display: flex; align-items: center; gap: 10px; }
-  .plotly_slider > input[type="range"] { -webkit-appearance: none; appearance: none; height: 2px; background: var(--neutral-400); border-radius: 5px; outline: none; }
-  .plotly_slider > input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary-color); cursor: pointer; }
-  .plotly_slider > input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--primary-color); cursor: pointer; }
-  .plotly_slider > span { font-size: 14px; line-height: 1.6em; min-width: 16px; }
+  .html-embed__card svg text {
+    fill: var(--text-color);
+  }
+  .html-embed__card label {
+    color: var(--text-color);
+  }
+  .plotly-graph-div {
+    width: 100%;
+    min-height: 320px;
+  }
+  @media (max-width: 768px) {
+    .plotly-graph-div {
+      min-height: 260px;
+    }
+  }
+  [id^="plot-"] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  .plotly_caption {
+    font-style: italic;
+    margin-top: 10px;
+  }
+  .plotly_controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+  }
+  .plotly_input_container {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .plotly_input_container > select {
+    padding: 2px 4px;
+    line-height: 1.5em;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: var(--neutral-200);
+    outline: none;
+    border: 1px solid var(--neutral-300);
+  }
+  .plotly_slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .plotly_slider > input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 2px;
+    background: var(--neutral-400);
+    border-radius: 5px;
+    outline: none;
+  }
+  .plotly_slider > input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+  }
+  .plotly_slider > input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+  }
+  .plotly_slider > span {
+    font-size: 14px;
+    line-height: 1.6em;
+    min-width: 16px;
+  }
   /* Dark mode overrides for Plotly readability */
-  [data-theme="dark"] .html-embed__card:not(.is-frameless) { background: #12151b; border-color: rgba(255,255,255,.15); }
+  [data-theme="dark"] .html-embed__card:not(.is-frameless) {
+    background: #12151b;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
   [data-theme="dark"] .html-embed__card .xaxislayer-above text,
   [data-theme="dark"] .html-embed__card .yaxislayer-above text,
   [data-theme="dark"] .html-embed__card .infolayer text,
   [data-theme="dark"] .html-embed__card .legend text,
   [data-theme="dark"] .html-embed__card .annotation text,
   [data-theme="dark"] .html-embed__card .colorbar text,
-  [data-theme="dark"] .html-embed__card .hoverlayer text { fill: #fff !important; }
+  [data-theme="dark"] .html-embed__card .hoverlayer text {
+    fill: #fff !important;
+  }
   [data-theme="dark"] .html-embed__card .xaxislayer-above path,
   [data-theme="dark"] .html-embed__card .yaxislayer-above path,
   [data-theme="dark"] .html-embed__card .xlines-above,
-  [data-theme="dark"] .html-embed__card .ylines-above { stroke: rgba(255,255,255,.35) !important; }
-  [data-theme="dark"] .html-embed__card .gridlayer path { stroke: rgba(255,255,255,.15) !important; }
-  [data-theme="dark"] .html-embed__card .legend rect.bg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
-  [data-theme="dark"] .html-embed__card .hoverlayer .bg { fill: rgba(0,0,0,.8) !important; stroke: rgba(255,255,255,.2) !important; }
-  [data-theme="dark"] .html-embed__card .colorbar .cbbg { fill: rgba(0,0,0,.25) !important; stroke: rgba(255,255,255,.2) !important; }
+  [data-theme="dark"] .html-embed__card .ylines-above {
+    stroke: rgba(255, 255, 255, 0.35) !important;
+  }
+  [data-theme="dark"] .html-embed__card .gridlayer path {
+    stroke: rgba(255, 255, 255, 0.15) !important;
+  }
+  [data-theme="dark"] .html-embed__card .legend rect.bg {
+    fill: rgba(0, 0, 0, 0.25) !important;
+    stroke: rgba(255, 255, 255, 0.2) !important;
+  }
+  [data-theme="dark"] .html-embed__card .hoverlayer .bg {
+    fill: rgba(0, 0, 0, 0.8) !important;
+    stroke: rgba(255, 255, 255, 0.2) !important;
+  }
+  [data-theme="dark"] .html-embed__card .colorbar .cbbg {
+    fill: rgba(0, 0, 0, 0.25) !important;
+    stroke: rgba(255, 255, 255, 0.2) !important;
+  }
   @media print {
-    .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
-    .html-embed__card { padding: 6px; }
-    .html-embed__card.is-frameless { padding: 0; }
+    .html-embed,
+    .html-embed__card {
+      max-width: 100% !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+    .html-embed__card {
+      padding: 6px;
+    }
+    .html-embed__card.is-frameless {
+      padding: 0;
+    }
     .html-embed__card svg,
     .html-embed__card canvas,
-    .html-embed__card img { max-width: 100% !important; height: auto !important; }
-    .html-embed__card > div[id^="frag-"] { width: 100% !important; }
+    .html-embed__card img {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    .html-embed__card > div[id^="frag-"] {
+      width: 100% !important;
+    }
   }
   @media print {
     /* Avoid breaks inside embeds */
-    .html-embed, .html-embed__card { break-inside: avoid; page-break-inside: avoid; }
+    .html-embed,
+    .html-embed__card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
     /* Constrain width and scale inner content */
-    .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; }
-    .html-embed__card { padding: 6px; }
-    .html-embed__card.is-frameless { padding: 0; }
+    .html-embed,
+    .html-embed__card {
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+    .html-embed__card {
+      padding: 6px;
+    }
+    .html-embed__card.is-frameless {
+      padding: 0;
+    }
     .html-embed__card svg,
     .html-embed__card canvas,
     .html-embed__card img,
     .html-embed__card video,
-    .html-embed__card iframe { max-width: 100% !important; height: auto !important; }
-    .html-embed__card > div[id^="frag-"] { width: 100% !important; max-width: 100% !important; }
+    .html-embed__card iframe {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    .html-embed__card > div[id^="frag-"] {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
     /* Center and constrain the banner (galaxy) when printing */
-    .html-embed .d3-galaxy { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
+    .html-embed .d3-galaxy {
+      width: 100% !important;
+      max-width: 980px !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
   }
 </style>
-
-

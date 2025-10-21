@@ -1,0 +1,493 @@
+<div class="root-seq-write-heatmaps"></div>
+<style>
+  .root-seq-write-heatmaps {
+    position: relative;
+  }
+
+  .root-seq-write-heatmaps .panels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 4px;
+  }
+
+  .root-seq-write-heatmaps .panel {
+    min-width: 280px;
+  }
+
+  .root-seq-write-heatmaps .panel__title {
+    color: var(--text-color);
+    font-size: 12px;
+    line-height: 1.35;
+    margin: 0 0 6px 0;
+    font-weight: 600;
+  }
+
+  .root-seq-write-heatmaps .axis-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .root-seq-write-heatmaps .cell-border {
+    stroke: var(--border-color);
+    stroke-width: 1px;
+    fill: none;
+  }
+
+  .root-seq-write-heatmaps .cell-text {
+    fill: var(--muted-color);
+    font-size: 10px;
+    pointer-events: none;
+  }
+
+  .root-seq-write-heatmaps .chart-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .root-seq-write-heatmaps .colorbar {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 200px;
+  }
+
+  .root-seq-write-heatmaps .colorbar-gradient {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+  }
+
+  .root-seq-write-heatmaps .colorbar-labels {
+    position: absolute;
+    right: 30px;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted-color);
+  }
+
+  @media (max-width: 1200px) {
+    .root-seq-write-heatmaps .panels {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 800px) {
+    .root-seq-write-heatmaps .panels {
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(6, 1fr);
+    }
+  }
+</style>
+<script>
+  (() => {
+    // Prevent multiple executions
+    if (window.rootSeqWriteHeatmapsInitialized) return;
+    window.rootSeqWriteHeatmapsInitialized = true;
+
+    // Load D3 from CDN once
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('root-seq-write-heatmaps'))) {
+        const cs = Array.from(document.querySelectorAll('.root-seq-write-heatmaps')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      let data = {};
+      let currentColors = [];
+
+      // Color palettes
+      const getSequentialColors = () => {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('sequential', 10);
+          }
+        } catch (_) { }
+        return ['#fff7ec', '#fdd49e', '#fdbb84', '#fc8d59', '#ef6548', '#d7301f', '#b30000', '#7f0000'];
+      };
+
+      const getComplementarySequentialColors = () => {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            // Get primary color in OKLCH format and create complementary sequential palette
+            const primaryOKLCH = window.ColorPalettes.getPrimaryOKLCH();
+            if (primaryOKLCH) {
+              // Create complementary color by adding 180 degrees to hue
+              const complementaryOKLCH = {
+                L: primaryOKLCH.L,
+                C: primaryOKLCH.C,
+                h: (primaryOKLCH.h + 180) % 360
+              };
+              
+              // Generate sequential palette with complementary color (same logic as sequential)
+              const { L, C, h } = complementaryOKLCH;
+              const total = 10;
+              const startL = Math.max(0.25, L - 0.18);
+              const endL = Math.min(0.92, L + 0.18);
+              const cBase = Math.min(0.33, Math.max(0.08, C * 0.9 + 0.06));
+              const out = [];
+              for (let i = 0; i < total; i++) {
+                const t = total === 1 ? 0 : i / (total - 1);
+                const lNow = startL * (1 - t) + endL * t;
+                const cNow = cBase * (0.85 + 0.15 * (1 - Math.abs(0.5 - t) * 2));
+                // Use a simple approach: create OKLCH color string
+                out.push(`oklch(${lNow.toFixed(3)} ${cNow.toFixed(3)} ${h.toFixed(1)})`);
+              }
+              return out;
+            }
+          }
+        } catch (_) { }
+        return ['#f0f8ff', '#b3d9ff', '#80bfff', '#4da6ff', '#1a8cff', '#0073e6', '#005bbf', '#004499'];
+      };
+
+      // Load data
+      async function loadData() {
+        try {
+          const response = await fetch('/data/root-seq-write-heatmaps.json');
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          data = await response.json();
+          console.log('Root seq write data loaded:', data);
+          renderAllHeatmaps();
+        } catch (error) {
+          console.error('Error loading root seq write data:', error);
+        }
+      }
+
+      // Create panels container
+      const panels = document.createElement('div');
+      panels.className = 'panels';
+      container.appendChild(panels);
+
+      // Create 6 panels (3 throughput + 3 IOPS)
+      const panelConfigs = [
+        { xferType: 'CPUONLY', metric: 'throughput', title: 'CPUONLY - Throughput (GiB/s)' },
+        { xferType: 'CPU_GPU', metric: 'throughput', title: 'CPU GPU - Throughput (GiB/s)' },
+        { xferType: 'GPUD', metric: 'throughput', title: 'GPUD - Throughput (GiB/s)' },
+        { xferType: 'CPUONLY', metric: 'iops', title: 'CPUONLY - IOPS' },
+        { xferType: 'CPU_GPU', metric: 'iops', title: 'CPU GPU - IOPS' },
+        { xferType: 'GPUD', metric: 'iops', title: 'GPUD - IOPS' }
+      ];
+
+      const panels_data = {};
+      panelConfigs.forEach((config, i) => {
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.style.position = 'relative';
+        
+        const title = document.createElement('div');
+        title.className = 'panel__title';
+        title.textContent = config.title;
+        panel.appendChild(title);
+        
+        const mount = document.createElement('div');
+        panel.appendChild(mount);
+        
+        const card = document.createElement('div');
+        card.className = 'chart-card';
+        mount.appendChild(card);
+        
+        const svg = d3.select(card).append('svg').attr('width', '100%').style('display', 'block');
+        const gRoot = svg.append('g');
+        const gCells = gRoot.append('g');
+        const gAxes = gRoot.append('g');
+        
+        panels.appendChild(panel);
+        
+        panels_data[`${config.xferType}_${config.metric}`] = {
+          panel,
+          svg,
+          gRoot,
+          gCells,
+          gAxes,
+          config
+        };
+      });
+
+      function createHeatmap(panelData) {
+        const { gRoot, gCells, gAxes, config } = panelData;
+        
+        function render() {
+          if (!data.metadata || !data.data[config.xferType]) return;
+          
+          const { innerWidth, innerHeight } = updateSize(panelData);
+          const threadCounts = data.metadata.thread_counts;
+          const ioSizeLabels = data.metadata.io_size_labels;
+          const matrix = data.data[config.xferType][config.metric];
+          
+          if (!matrix) return;
+          
+          const nRows = threadCounts.length;
+          const nCols = ioSizeLabels.length;
+          const gridSize = Math.min(innerWidth, innerHeight);
+          const cellSize = gridSize / Math.max(nRows, nCols);
+          
+          const x = d3.scaleBand().domain(d3.range(nCols)).range([0, gridSize]).paddingInner(0.06);
+          const y = d3.scaleBand().domain(d3.range(nRows)).range([0, gridSize]).paddingInner(0.06);
+          
+          // Flatten matrix data
+          const flatData = [];
+          let minVal = Infinity, maxVal = -Infinity;
+          
+          for (let r = 0; r < nRows; r++) {
+            for (let c = 0; c < nCols; c++) {
+              const value = matrix[r][c];
+              if (value < minVal) minVal = value;
+              if (value > maxVal) maxVal = value;
+              flatData.push({ r, c, value, threadCount: threadCounts[r], ioSize: ioSizeLabels[c] });
+            }
+          }
+          
+          // Color scale using D3 sequential scales
+          let colorScale;
+          if (config.metric === 'throughput') {
+            // Use viridis for throughput (top row)
+            colorScale = d3.scaleSequential(d3.interpolateViridis)
+              .domain([maxVal, minVal]); // Inverted: higher values = more saturated
+          } else {
+            // Use plasma for IOPS (bottom row) 
+            colorScale = d3.scaleSequential(d3.interpolatePlasma)
+              .domain([maxVal, minVal]); // Inverted: higher values = more saturated
+          }
+          
+          // Clear previous content
+          gCells.selectAll('*').remove();
+          gAxes.selectAll('*').remove();
+          
+          // Background
+          gCells.append('rect')
+            .attr('class', 'cell-bg')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', gridSize)
+            .attr('height', gridSize)
+            .attr('fill', 'none')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+          
+          // Cells
+          const cells = gCells.selectAll('g.cell')
+            .data(flatData, d => `${d.r}-${d.c}`);
+          
+          const cellsEnter = cells.enter()
+            .append('g')
+            .attr('class', 'cell');
+          
+          cellsEnter.append('rect')
+            .attr('rx', 2)
+            .attr('ry', 2)
+            .on('mousemove', (event, d) => {
+              const [px, py] = d3.pointer(event, container);
+              const iops = data.data[config.xferType].iops[d.r][d.c];
+              const throughput = data.data[config.xferType].throughput[d.r][d.c];
+              
+              if (config.metric === 'throughput') {
+                tipInner.innerHTML = `<strong>${config.xferType}</strong><br/>Threads: ${d.threadCount}<br/>IO Size: ${d.ioSize}<br/>Throughput: ${d.value.toFixed(2)} GiB/s<br/>IOPS: ${iops}`;
+              } else {
+                tipInner.innerHTML = `<strong>${config.xferType}</strong><br/>Threads: ${d.threadCount}<br/>IO Size: ${d.ioSize}<br/>IOPS: ${d.value}<br/>Throughput: ${throughput.toFixed(2)} GiB/s`;
+              }
+              tip.style.transform = `translate(${px + 10}px, ${py + 10}px)`;
+              tip.style.opacity = '1';
+            })
+            .on('mouseleave', () => {
+              tip.style.opacity = '0';
+            });
+          
+          cellsEnter.append('text')
+            .attr('class', 'cell-text')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle');
+          
+          const cellsMerged = cellsEnter.merge(cells);
+          
+          cellsMerged.select('rect')
+            .attr('x', d => x(d.c))
+            .attr('y', d => y(d.r))
+            .attr('width', Math.max(1, x.bandwidth()))
+            .attr('height', Math.max(1, y.bandwidth()))
+            .attr('fill', d => colorScale(d.value));
+          
+          cellsMerged.select('text')
+            .attr('x', d => x(d.c) + x.bandwidth() / 2)
+            .attr('y', d => y(d.r) + y.bandwidth() / 2)
+            .text(d => {
+              if (config.metric === 'throughput') {
+                return d.value.toFixed(2);
+              } else {
+                return d.value.toString();
+              }
+            })
+            .style('fill', function(d) {
+              try {
+                const rect = this && this.parentNode ? this.parentNode.querySelector('rect') : null;
+                const bg = rect ? getComputedStyle(rect).fill : colorScale(d.value);
+                return chooseReadableTextColor(bg);
+              } catch (_) {
+                return '#0e1116';
+              }
+            });
+          
+          cells.exit().remove();
+          
+          // Axes
+          gAxes.append('g')
+            .selectAll('text')
+            .data(ioSizeLabels)
+            .join('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', (_, i) => x(i) + x.bandwidth() / 2)
+            .attr('y', -8)
+            .text(d => d);
+          
+          gAxes.append('g')
+            .selectAll('text')
+            .data(threadCounts)
+            .join('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'end')
+            .attr('x', -8)
+            .attr('y', (_, i) => y(i) + y.bandwidth() / 2)
+            .attr('dominant-baseline', 'middle')
+            .text(d => d);
+          
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', gridSize / 2)
+            .attr('y', innerHeight + 20)
+            .text('IO Size');
+          
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('transform', `translate(${-40}, ${gridSize / 2}) rotate(-90)`)
+            .text('Thread Count');
+        }
+        
+        return { render };
+      }
+
+      function updateSize(panelData) {
+        const { panel, svg, gRoot } = panelData;
+        const width = panel.clientWidth || 400;
+        const height = 300;
+        const margin = { top: 36, right: 24, bottom: 26, left: 56 };
+        
+        svg
+          .attr('viewBox', `0 0 ${width} ${height}`)
+          .attr('preserveAspectRatio', 'xMidYMid meet')
+          .style('width', '100%')
+          .style('height', 'auto');
+        
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        
+        return { innerWidth, innerHeight };
+      }
+
+      function chooseReadableTextColor(bgCss) {
+        try {
+          const m = String(bgCss || '').match(/rgba?\(([^)]+)\)/);
+          if (!m) return '#0e1116';
+          const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+          const [r, g, b] = parts;
+          const srgb = [r, g, b].map(v => Math.max(0, Math.min(255, v)) / 255);
+          const linear = srgb.map(c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+          const L = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+          return L < 0.5 ? '#ffffff' : '#0e1116';
+        } catch (_) { return '#0e1116'; }
+      }
+
+      function renderAllHeatmaps() {
+        Object.values(panels_data).forEach(panelData => {
+          const chart = createHeatmap(panelData);
+          chart.render();
+        });
+      }
+
+      // Initial load
+      loadData();
+      
+      // Resize handling
+      const rerender = () => renderAllHeatmaps();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

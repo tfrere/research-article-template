@@ -1,0 +1,435 @@
+<div class="nccl-bandwidth-comparison">
+  <div class="nccl-bandwidth-comparison__grid">
+    <div class="nccl-chart-cell" data-benchmark="sendrecv" data-title="NCCL Sendrecv Bus Bandwidth vs Message Size (In-place)"></div>
+    <div class="nccl-chart-cell" data-benchmark="all_reduce" data-title="NCCL All-Reduce Bus Bandwidth vs Message Size"></div>
+    <div class="nccl-chart-cell" data-benchmark="alltoall" data-title="NCCL Alltoall Bus Bandwidth vs Message Size (In-place)"></div>
+  </div>
+  <div class="nccl-bandwidth-comparison__legend"></div>
+  <noscript>JavaScript is required to render these charts.</noscript>
+</div>
+<style>
+  .nccl-bandwidth-comparison { position: relative; }
+  .nccl-bandwidth-comparison .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  .nccl-bandwidth-comparison .axes path, .nccl-bandwidth-comparison .axes line { stroke: var(--axis-color); }
+  .nccl-bandwidth-comparison .axes text { fill: var(--tick-color); }
+  .nccl-bandwidth-comparison .grid line { stroke: var(--grid-color); }
+  .nccl-bandwidth-comparison__grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1100px) { .nccl-bandwidth-comparison__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 700px) { .nccl-bandwidth-comparison__grid { grid-template-columns: 1fr; } }
+  .nccl-chart-cell { border:1px solid var(--border-color); border-radius:10px; background: var(--page-bg); display:flex; flex-direction:column; position: relative; padding: 12px; }
+  .nccl-chart-cell .cell-header { padding:8px 10px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .nccl-chart-cell .cell-title { font-size: 13px; font-weight: 700; color: var(--text-color); }
+  .nccl-chart-cell .cell-subtitle { font-size: 11px; color: var(--muted-color); }
+  .nccl-chart-cell .cell-body { position: relative; width:100%; overflow:hidden; }
+  .nccl-chart-cell .cell-body svg { max-width:100%; height:auto; }
+  .nccl-chart-cell .legend-bottom { display:flex; align-items:flex-start; justify-content:flex-start; font-size:12px; color: var(--text-color); flex-direction: column; gap: 4px; margin-top: 8px; }
+  .nccl-chart-cell .legend-bottom .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .nccl-chart-cell .legend-bottom .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .nccl-chart-cell .legend-bottom .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
+  .nccl-chart-cell .legend-bottom .legend-label { font-size: 11px; font-weight: 600; color: var(--muted-color); text-transform: uppercase; letter-spacing: 0.5px; }
+  .nccl-chart-cell .lines path.active { stroke-width: 3; }
+  .nccl-chart-cell .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .nccl-chart-cell .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; }
+  .nccl-chart-cell .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .nccl-chart-cell .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .nccl-chart-cell .d3-tooltip__color-dot { display:inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+  .nccl-bandwidth-comparison__legend { 
+    margin-top: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+  }
+  .nccl-bandwidth-comparison__legend .legend-label { 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: var(--muted-color); 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+  }
+  .nccl-bandwidth-comparison__legend .legend-items { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px 16px; 
+  }
+  .nccl-bandwidth-comparison__legend .legend-item { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 6px; 
+    font-size: 12px; 
+    color: var(--text-color); 
+  }
+  .nccl-bandwidth-comparison__legend .legend-swatch { 
+    width: 14px; 
+    height: 14px; 
+    border-radius: 3px; 
+    border: 1px solid var(--border-color); 
+  }
+</style>
+<script> 
+  (() => {
+    // Prevent multiple executions
+    if (window.ncclBandwidthComparisonInitialized) return;
+    window.ncclBandwidthComparisonInitialized = true;
+    
+    // Completely scoped IIFE to avoid variable conflicts
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrapBandwidthComparison = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('nccl-bandwidth-comparison'))){
+        const cs = Array.from(document.querySelectorAll('.nccl-bandwidth-comparison')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      let data = {};
+
+      // Colors - following guidelines to use ColorPalettes
+      let currentColors = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5', '#c49c94'];
+      
+      function refreshPalette(){
+        try { 
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            const colors = window.ColorPalettes.getColors('categorical', 26);
+            if (colors && colors.length >= 26) {
+              currentColors = colors;
+              // Re-render with new colors
+              if (Object.keys(data).length > 0) renderAllCharts();
+              return;
+            }
+          }
+        } catch(_){}
+        // Fallback to CSS variable or default
+        currentColors = ['#d62728', '#1f77b4', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5', '#c49c94'];
+        // Re-render with fallback colors
+        if (Object.keys(data).length > 0) renderAllCharts();
+      }
+      
+      function getColors(){
+        return currentColors;
+      }
+      
+      // Format helper for bytes
+      function formatBytes(bytes){
+        if (bytes >= 1024 * 1024 * 1024) {
+          return Math.round(bytes / (1024 * 1024 * 1024)) + ' GB';
+        } else if (bytes >= 1024 * 1024) {
+          return Math.round(bytes / (1024 * 1024)) + ' MB';
+        } else if (bytes >= 1024) {
+          return Math.round(bytes / 1024) + ' KB';
+        } else {
+          return bytes + ' B';
+        }
+      }
+
+      // Format helper for bandwidth values
+      function formatBandwidth(v){
+        return Math.round(v);
+      }
+
+      function createChart(cell, benchmark) {
+        // Create header if it doesn't exist
+        let header = cell.querySelector('.cell-header');
+        if (!header) {
+          header = document.createElement('div');
+          header.className = 'cell-header';
+          const title = document.createElement('div');
+          title.className = 'cell-title';
+          title.textContent = cell.dataset.title;
+          header.appendChild(title);
+          cell.appendChild(header);
+        }
+
+        // Create body if it doesn't exist
+        let body = cell.querySelector('.cell-body');
+        if (!body) {
+          body = document.createElement('div');
+          body.className = 'cell-body';
+          cell.appendChild(body);
+        }
+
+        // Legend removed - no longer needed
+
+        // Create tooltip if it doesn't exist
+        let tip = cell.querySelector('.d3-tooltip');
+        let tipInner;
+        if (!tip) {
+          tip = document.createElement('div');
+          tip.className = 'd3-tooltip';
+          Object.assign(tip.style, {
+            position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
+            padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+            background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+          });
+          tipInner = document.createElement('div');
+          tipInner.className = 'd3-tooltip__inner';
+          tipInner.style.textAlign='left';
+          tip.appendChild(tipInner);
+          cell.appendChild(tip);
+        } else {
+          tipInner = tip.querySelector('.d3-tooltip__inner');
+        }
+
+        // SVG - create only if it doesn't exist
+        let svg = d3.select(body).select('svg');
+        let gRoot, gGrid, gAxes, gLines;
+        
+        if (svg.empty()) {
+          svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+          gRoot = svg.append('g');
+          gGrid = gRoot.append('g').attr('class','grid');
+          gAxes = gRoot.append('g').attr('class','axes');
+          gLines = gRoot.append('g').attr('class','lines');
+        } else {
+          gRoot = svg.select('g');
+          gGrid = gRoot.select('.grid');
+          gAxes = gRoot.select('.axes');
+          gLines = gRoot.select('.lines');
+        }
+
+        // State
+        let width = 400, height = 250; 
+        const margin = { top: 16, right: 32, bottom: 70, left: 80 };
+        const xScale = d3.scaleLog();
+        const yScale = d3.scaleLinear();
+        const lineGen = d3.line().x(d => xScale(d.messageSize)).y(d => yScale(d.bandwidth));
+
+        function updateLayout(){
+          const axisColor = getComputedStyle(cell).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
+          width = cell.clientWidth || 400;
+          height = Math.max(250, Math.round(width * 0.75));
+          svg.attr('width', width).attr('height', height);
+          gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+          return { innerWidth, innerHeight };
+        }
+
+        function render() {
+          if (!data[benchmark]) return;
+          
+          const { innerWidth, innerHeight } = updateLayout();
+          
+          // Prepare series data - one line per node count
+          const series = [];
+          const colors = getColors();
+          
+          Object.keys(data[benchmark]).forEach(nodeKey => {
+            const nodeData = data[benchmark][nodeKey];
+            if (nodeData && nodeData.length > 0) {
+              const nodeCount = parseInt(nodeKey.split('_')[0]);
+              series.push({
+                name: `${nodeCount} nodes`,
+                nodeCount: nodeCount,
+                values: nodeData.map(d => ({ messageSize: d.messageSize, bandwidth: d.bandwidth })),
+                color: colors[(nodeCount - 1) % colors.length]
+              });
+            }
+          });
+          
+          if (series.length === 0) return;
+          
+          // Sort by node count
+          series.sort((a, b) => a.nodeCount - b.nodeCount);
+          
+          // Get all data points for domain calculation
+          const allData = series.flatMap(s => s.values);
+          const sortedData = allData.slice().sort((a, b) => a.messageSize - b.messageSize);
+          
+          // domains
+          const minSize = d3.min(sortedData, d => d.messageSize);
+          const maxSize = d3.max(sortedData, d => d.messageSize);
+          const minBandwidth = 0;
+          const maxBandwidth = d3.max(sortedData, d => d.bandwidth);
+          
+          // Set Y domain based on benchmark with individual caps
+          let yMax;
+          if (benchmark === 'alltoall') {
+            yMax = 350;
+          } else if (benchmark === 'all_reduce') {
+            yMax = 500;
+          } else if (benchmark === 'sendrecv') {
+            yMax = Math.ceil(maxBandwidth * 1.1); // Cap au max des données
+          } else {
+            yMax = maxBandwidth * 1.1;
+          }
+          
+          xScale.domain([minSize, maxSize]).range([0, innerWidth]);
+          yScale.domain([minBandwidth, yMax]).range([innerHeight, 0]);
+
+          // grid
+          gGrid.selectAll('*').remove();
+          gGrid.selectAll('line').data(yScale.ticks(7)).join('line')
+            .attr('x1',0).attr('x2', innerWidth).attr('y1', d=>yScale(d)).attr('y2', d=>yScale(d))
+            .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+          // axes
+          gAxes.selectAll('*').remove();
+          
+          // Create custom ticks for X axis (powers of 2, every 4th tick)
+          const xTicks = [8, 128, 2048, 32768, 524288, 8388608, 134217728, 2147483648, 8589934592];
+          const filteredXTicks = xTicks.filter(tick => tick >= minSize && tick <= maxSize);
+          
+          gAxes.append('g').attr('transform', `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(xScale).tickValues(filteredXTicks).tickFormat(formatBytes))
+            .call(g=>{ 
+              g.selectAll('path, line').attr('stroke','var(--axis-color)'); 
+              g.selectAll('text')
+                .attr('fill','var(--tick-color)')
+                .style('font-size','10px')
+                .attr('transform', 'rotate(-45)')
+                .style('text-anchor', 'end')
+                .attr('dx', '-8px');
+            });
+          
+          gAxes.append('g').call(d3.axisLeft(yScale).tickFormat(formatBandwidth)).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','12px'); });
+          gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('x', innerWidth/2).attr('y', innerHeight + 50).text('Message Size (bytes)');
+          gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('transform', `translate(${-60}, ${innerHeight/2}) rotate(-90)`).text('Bus Bandwidth (GB/s)');
+
+          // lines
+          gLines.selectAll('*').remove();
+          series.forEach((s, i) => {
+            if (s.values.length > 0) {
+              gLines.append('path')
+                .attr('class', `line line-${i}`)
+                .attr('data-series', s.name)
+                .attr('fill','none')
+                .attr('stroke', s.color)
+                .attr('stroke-width', 2)
+                .attr('d', lineGen(s.values));
+            }
+          });
+
+          // Point markers removed - no longer needed
+
+        }
+
+        return { render };
+      }
+
+      function renderAllCharts() {
+        const cells = container.querySelectorAll('.nccl-chart-cell');
+        cells.forEach(cell => {
+          const benchmark = cell.dataset.benchmark;
+          
+          // Check if chart is already initialized
+          if (!cell.dataset.chartInitialized) {
+            const chart = createChart(cell, benchmark);
+            cell.chartInstance = chart;
+            cell.dataset.chartInitialized = 'true';
+          }
+          
+          // Render the existing chart
+          if (cell.chartInstance) {
+            cell.chartInstance.render();
+          }
+        });
+        
+        // Render common legend
+        renderCommonLegend();
+      }
+      
+      function renderCommonLegend() {
+        const legendContainer = container.querySelector('.nccl-bandwidth-comparison__legend');
+        if (!legendContainer || !data) return;
+        
+        // Collect all unique node counts from all benchmarks
+        const nodeCounts = new Set();
+        Object.keys(data).forEach(benchmark => {
+          Object.keys(data[benchmark]).forEach(nodeKey => {
+            // nodeKey format is "nodes_X" where X is the node count
+            const nodeCount = parseInt(nodeKey.replace('nodes_', ''));
+            if (!isNaN(nodeCount)) {
+              nodeCounts.add(nodeCount);
+            }
+          });
+        });
+        
+        // Sort node counts
+        const sortedNodeCounts = Array.from(nodeCounts).sort((a, b) => a - b);
+        
+        // Get colors
+        const colors = getColors();
+        
+        // Create legend with individual colored lines
+        const legendWidth = Math.min(container.clientWidth * 0.8, 600);
+        const legendHeight = 30;
+        const lineHeight = 5; // Height of each colored line
+        const lineY = 0; // Y position of the lines
+        
+        // Calculate spacing between items
+        const numItems = sortedNodeCounts.length;
+        const itemWidth = legendWidth / numItems;
+        
+        legendContainer.innerHTML = `
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-color); margin-bottom: 12px;">Number of Nodes</div>
+          <svg width="${legendWidth}" height="${legendHeight}" style="display: block; overflow:visible!important;">
+            <!-- Individual colored lines and labels -->
+            ${sortedNodeCounts.map((nodeCount, i) => {
+              const x = (i + 0.5) * itemWidth;
+              const lineWidth = itemWidth * 0.5; // 50% of available space for each line
+              const lineX = i * itemWidth + (itemWidth - lineWidth) / 2;
+              const label = nodeCount === 1 ? '1' : `${nodeCount}`;
+              const color = colors[(nodeCount - 1) % colors.length];
+              
+              return `
+                <!-- Colored line -->
+                <line x1="${lineX}" y1="${lineY}" x2="${lineX + lineWidth}" y2="${lineY}" 
+                      stroke="${color}" stroke-width="${lineHeight}" stroke-linecap="round" />
+                
+                <!-- Label -->
+                <text x="${x}" y="${lineY + 20}" 
+                      text-anchor="middle" 
+                      font-size="11px" 
+                      font-weight="600"
+                      fill="var(--text-color)">${label}</text>
+              `;
+            }).join('')}
+          </svg>
+        `;
+      }
+
+      // Load real data from JSON
+      async function loadData() {
+        try {
+          const response = await fetch('/data/nccl-multinode-bandwidth.json');
+          const jsonData = await response.json();
+          
+          data = jsonData;
+          renderAllCharts();
+        } catch (error) {
+          console.error('Error loading NCCL multinode bandwidth data:', error);
+        }
+      }
+
+      // Initialize palette and listen for changes
+      refreshPalette();
+      document.addEventListener('palettes:updated', refreshPalette);
+      
+      // Initialize data by loading from JSON
+      loadData();
+      
+      const rerender = () => renderAllCharts();
+      if (window.ResizeObserver) { 
+        const ro = new ResizeObserver(() => rerender()); 
+        ro.observe(container); 
+      } else { 
+        window.addEventListener('resize', rerender); 
+      }
+    };
+
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrapBandwidthComparison), { once: true }); 
+    } else { 
+      ensureD3(bootstrapBandwidthComparison); 
+    }
+  })();
+</script>

@@ -22,6 +22,7 @@ node_modules/
 *.cache
 
 app/scripts/latex-to-mdx/output/
+app/scripts/notion-importer/output/**/*
 app/src/content/embeds/typography/generated
 
 # PDF export

@@ -8,7 +8,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { postProcessMarkdown } from './post-processor.mjs';
-import { createCustomCodeRenderer } from './custom-code-renderer.mjs';
 
 // Load environment variables from .env file (but don't override existing ones)
 config({ override: false });
@@ -178,13 +177,21 @@ export async function convertNotionToMarkdown(inputFile, outputDir, notionToken)
             }
         }
 
-        // Post-process all converted files
+        // Post-process all converted files and create one intermediate file
         console.log('🔧 Post-processing converted files...');
         for (const file of convertedFiles) {
             try {
-                let content = readFileSync(file, 'utf8');
-                content = postProcessMarkdown(content);
-                writeFileSync(file, content);
+                // Read the raw markdown from notion-to-md
+                let rawContent = readFileSync(file, 'utf8');
+
+                // Create intermediate file: raw markdown (from notion-to-md)
+                const rawFile = file.replace('.md', '.raw.md');
+                writeFileSync(rawFile, rawContent);
+                console.log(`    📄 Created raw markdown: ${basename(rawFile)}`);
+
+                // Apply post-processing with Notion client for page inclusion
+                let processedContent = await postProcessMarkdown(rawContent, notion, notionToken);
+                writeFileSync(file, processedContent);
                 console.log(`    ✅ Post-processed: ${basename(file)}`);
             } catch (error) {
                 console.error(`    ❌ Failed to post-process ${file}: ${error.message}`);

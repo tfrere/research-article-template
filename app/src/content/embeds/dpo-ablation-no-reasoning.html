@@ -1,0 +1,412 @@
+<div class="d3-dpo-ablation-no-reasoning"></div>
+<style>
+  .d3-dpo-ablation-no-reasoning { position: relative; }
+  .d3-dpo-ablation-no-reasoning .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .d3-dpo-ablation-no-reasoning .controls label {
+    font-size: 12px;
+    color: var(--muted-color);
+  }
+  .d3-dpo-ablation-no-reasoning .controls select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    font-size: 13px;
+    line-height: 1.2;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.41 1.59L6 6.17l4.59-4.58L12 3 6 9 0 3z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .d3-dpo-ablation-no-reasoning .controls select:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  .d3-dpo-ablation-no-reasoning .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 0 0 0;
+  }
+  .d3-dpo-ablation-no-reasoning .legend .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-dpo-ablation-no-reasoning .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-dpo-ablation-no-reasoning .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted-color);
+    cursor: pointer;
+  }
+  .d3-dpo-ablation-no-reasoning .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-dpo-ablation-no-reasoning .ghost { opacity: .25; }
+  .d3-dpo-ablation-no-reasoning .d3-tooltip {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    text-align: left;
+  }
+  .d3-dpo-ablation-no-reasoning .chart-card {
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .d3-dpo-ablation-no-reasoning__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (max-width: 900px) {
+    .d3-dpo-ablation-no-reasoning__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .dpo-cell-no-reasoning {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--page-bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 12px;
+  }
+  .dpo-cell-no-reasoning .cell-header {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .dpo-cell-no-reasoning .cell-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .dpo-cell-no-reasoning .cell-body {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+  .dpo-cell-no-reasoning .cell-body svg {
+    max-width: 100%;
+    height: auto;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-dpo-ablation-no-reasoning'))){
+        const cs = Array.from(document.querySelectorAll('.d3-dpo-ablation-no-reasoning')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
+        container = cs[cs.length-1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Create grid layout
+      const grid = document.createElement('div');
+      grid.className = 'd3-dpo-ablation-no-reasoning__grid';
+      container.appendChild(grid);
+
+      // Data for the four benchmarks (Reasoning mode disabled)
+      const benchmarkData = {
+        'AIME25': [
+          { method: 'SFT', score: 1.04 },
+          { method: 'DPO', score: 4.79 },
+          { method: 'IPO', score: 2.66 },
+          { method: 'APO (zero)', score: 2.29 },
+          { method: 'APO (down)', score: 0.78 },
+          { method: 'DISCOPOP', score: 2.24 }
+        ],
+        'GPQA-diamond': [
+          { method: 'SFT', score: 28.60 },
+          { method: 'DPO', score: 26.96 },
+          { method: 'IPO', score: 29.17 },
+          { method: 'APO (zero)', score: 26.89 },
+          { method: 'APO (down)', score: 26.58 },
+          { method: 'DISCOPOP', score: 27.15 }
+        ],
+        'IFEval': [
+          { method: 'SFT', score: 47.60 },
+          { method: 'DPO', score: 59.69 },
+          { method: 'IPO', score: 70.73 },
+          { method: 'APO (zero)', score: 71.57 },
+          { method: 'APO (down)', score: 53.34 },
+          { method: 'DISCOPOP', score: 49.81 }
+        ],
+        'LCBv4': [
+          { method: 'SFT', score: 9.90 },
+          { method: 'DPO', score: 9.90 },
+          { method: 'IPO', score: 12.81 },
+          { method: 'APO (zero)', score: 11.70 },
+          { method: 'APO (down)', score: 4.39 },
+          { method: 'DISCOPOP', score: 3.34 }
+        ]
+      };
+
+      // Get consistent colors for benchmarks across all embeds
+      const getBenchmarkColors = () => {
+        let colors;
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          colors = window.ColorPalettes.getColors('categorical', 5);
+        } else {
+          colors = ['#E889AB', '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6'];
+        }
+        return {
+          'AIME25': colors[0],
+          'GPQA-diamond': colors[1],
+          'IFEval': colors[2],
+          'LCBv4': colors[3]
+        };
+      };
+      const benchmarkColors = getBenchmarkColors();
+
+      // Create cells for each benchmark
+      Object.entries(benchmarkData).forEach(([benchmark, data]) => {
+        const cell = document.createElement('div');
+        cell.className = 'dpo-cell-no-reasoning';
+        cell.setAttribute('data-benchmark', benchmark);
+        grid.appendChild(cell);
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'cell-header';
+        const title = document.createElement('div');
+        title.className = 'cell-title';
+        title.textContent = benchmark;
+        header.appendChild(title);
+        cell.appendChild(header);
+
+        // Body & SVG
+        const body = document.createElement('div');
+        body.className = 'cell-body';
+        cell.appendChild(body);
+
+        const svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+        const gRoot = svg.append('g');
+
+        // Tooltip for this cell
+        cell.style.position = cell.style.position || 'relative';
+        let cellTip = cell.querySelector('.d3-tooltip');
+        if (!cellTip) {
+          cellTip = document.createElement('div');
+          cellTip.className = 'd3-tooltip';
+          Object.assign(cellTip.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            transform: 'translate(-9999px, -9999px)',
+            pointerEvents: 'none',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            lineHeight: '1.35',
+            border: '1px solid var(--border-color)',
+            background: 'var(--surface-bg)',
+            color: 'var(--text-color)',
+            boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+            opacity: '0',
+            transition: 'opacity .12s ease'
+          });
+          cell.appendChild(cellTip);
+        }
+
+        function renderChart() {
+          const rect = cell.getBoundingClientRect();
+          const width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 400)));
+          const height = Math.max(280, Math.round(width / 1.4));
+          
+          svg.attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio','xMidYMid meet');
+          
+          const margin = { top: 16, right: 20, bottom: 46, left: 56 };
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+          
+          gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+          // Scales
+          const xScale = d3.scaleBand()
+            .domain(data.map(d => d.method))
+            .range([0, innerWidth])
+            .paddingInner(0.2)
+            .paddingOuter(0.05);
+
+          const yMax = Math.max(...data.map(d => d.score)) * 1.1;
+          const yScale = d3.scaleLinear()
+            .domain([0, yMax])
+            .range([innerHeight, 0])
+            .nice();
+
+          // Clear previous content
+          gRoot.selectAll('*').remove();
+
+          // Grid lines
+          const yTicks = yScale.ticks(6);
+          gRoot.selectAll('.grid-y')
+            .data(yTicks)
+            .join('line')
+            .attr('class', 'grid-y')
+            .attr('x1', 0)
+            .attr('x2', innerWidth)
+            .attr('y1', d => yScale(d))
+            .attr('y2', d => yScale(d))
+            .attr('stroke', 'var(--grid-color)')
+            .attr('stroke-width', 1)
+            .attr('shape-rendering', 'crispEdges');
+
+          // Axes
+          const xAxis = d3.axisBottom(xScale).tickSizeOuter(0);
+          const yAxis = d3.axisLeft(yScale).ticks(6).tickSizeOuter(0);
+
+          gRoot.append('g')
+            .attr('class', 'axis-x')
+            .attr('transform', `translate(0,${innerHeight})`)
+            .call(xAxis)
+            .call(g => {
+              g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+              g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','11px');
+            });
+
+          gRoot.append('g')
+            .attr('class', 'axis-y')
+            .call(yAxis)
+            .call(g => {
+              g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+              g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','11px');
+            });
+
+          // Bars
+          gRoot.selectAll('.bar')
+            .data(data)
+            .join('rect')
+            .attr('class', 'bar')
+            .attr('x', d => xScale(d.method))
+            .attr('y', innerHeight)
+            .attr('width', xScale.bandwidth())
+            .attr('height', 0)
+            .attr('fill', benchmarkColors[benchmark])
+            .on('mouseenter', (event, d) => {
+              const [mx, my] = d3.pointer(event, cell);
+              cellTip.style.opacity = '1';
+              cellTip.style.transform = `translate(${mx + 12}px, ${my + 12}px)`;
+              cellTip.innerHTML = `<strong>${d.method}</strong><br/>Score: <strong>${d.score}</strong>`;
+            })
+            .on('mouseleave', () => {
+              cellTip.style.opacity = '0';
+              cellTip.style.transform = 'translate(-9999px, -9999px)';
+            })
+            .transition()
+            .duration(300)
+            .attr('y', d => yScale(d.score))
+            .attr('height', d => Math.max(0, innerHeight - yScale(d.score)));
+
+          // Value labels on bars
+          gRoot.selectAll('.value-label')
+            .data(data)
+            .join('text')
+            .attr('class', 'value-label')
+            .attr('x', d => xScale(d.method) + xScale.bandwidth() / 2)
+            .attr('y', d => yScale(d.score) - 4)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-color)')
+            .attr('opacity', 0.9)
+            .attr('font-size', 10)
+            .text(d => d.score)
+            .transition()
+            .duration(300)
+            .attr('y', d => yScale(d.score) - 4);
+
+          // Axis labels
+          gRoot.append('text')
+            .attr('class', 'y-axis-label')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -innerHeight / 2)
+            .attr('y', -margin.left + 24)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-color)')
+            .attr('font-size', 12)
+            .attr('font-weight', 700)
+            .text('Score');
+        }
+
+        // Initial render
+        renderChart();
+
+        // Resize handling
+        const rerender = () => renderChart();
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => rerender());
+          ro.observe(cell);
+        } else {
+          window.addEventListener('resize', rerender);
+        }
+      });
+
+    };
+
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); 
+    } else { 
+      ensureD3(bootstrap); 
+    }
+  })();
+</script>

@@ -1,0 +1,400 @@
+<div class="nccl-all-reduce-bandwidth-plot-throttling"></div>
+<style>
+  .nccl-all-reduce-bandwidth-plot-throttling {
+    position: relative;
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .tick {
+    font-size: 11px;
+    fill: var(--muted-color);
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .grid-line {
+    stroke: var(--grid-color);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+  }
+
+  .nccl-all-reduce-bandwidth-plot-throttling .reference-line {
+    stroke: #e74c3c;
+    stroke-width: 2;
+    stroke-dasharray: 4, 4;
+    opacity: 0.8;
+  }
+</style>
+<script>
+  (() => {
+    // Prevent multiple executions
+    if (window.ncclAllReduceThrottlingInitialized) return;
+    window.ncclAllReduceThrottlingInitialized = true;
+
+    // Load D3 from CDN once
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('nccl-all-reduce-bandwidth-plot-throttling'))) {
+        const cs = Array.from(document.querySelectorAll('.nccl-all-reduce-bandwidth-plot-throttling')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // No header
+
+      // Create SVG
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g');
+      const gAxes = gRoot.append('g');
+      const gLines = gRoot.append('g');
+
+      let data = {};
+      let currentColors = [];
+
+      // Color palette
+      const getColors = () => {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('categorical', 26);
+          }
+        } catch (_) { }
+        return d3.schemeCategory20;
+      };
+
+      // Format functions
+      const formatBytes = (bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+      };
+
+      const formatBandwidth = (gbps) => {
+        return `${gbps.toFixed(1)} GB/s`;
+      };
+
+      // Load data
+      async function loadData() {
+        try {
+          const response = await fetch('/data/nccl-all-reduce-throttling-bandwidth.json');
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          data = await response.json();
+          console.log('NCCL throttling data loaded:', data);
+          render();
+        } catch (error) {
+          console.error('Error loading NCCL throttling data:', error);
+        }
+      }
+
+      function updateSize() {
+        const width = container.clientWidth || 800;
+        const height = 300;
+        const margin = { top: 20, right: 20, bottom: 70, left: 80 };
+
+        svg
+          .attr('viewBox', `0 0 ${width} ${height}`)
+          .attr('preserveAspectRatio', 'xMidYMid meet')
+          .style('width', '100%')
+          .style('height', 'auto');
+
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        return { innerWidth, innerHeight };
+      }
+
+      function render() {
+        if (!data.data) return;
+
+        const { innerWidth, innerHeight } = updateSize();
+        
+        // Prepare series data
+        const series = [];
+        const nodeKeys = Object.keys(data.data).sort((a, b) => {
+          const aNum = parseInt(a.replace('nodes_', ''));
+          const bNum = parseInt(b.replace('nodes_', ''));
+          return aNum - bNum;
+        });
+
+        nodeKeys.forEach(nodeKey => {
+          const nodeData = data.data[nodeKey];
+          if (nodeData && nodeData.length > 0) {
+            series.push({
+              name: nodeKey.replace('nodes_', '') + ' nodes',
+              key: nodeKey,
+              data: nodeData
+            });
+          }
+        });
+
+        if (series.length === 0) return;
+
+        // Get colors
+        currentColors = getColors();
+
+        // Calculate domains
+        const allSizes = series.flatMap(s => s.data.map(d => d.messageSize));
+        const allBandwidths = series.flatMap(s => s.data.map(d => d.bandwidth));
+        
+        const minSize = d3.min(allSizes);
+        const maxSize = d3.max(allSizes);
+        const maxBandwidth = d3.max(allBandwidths);
+
+        // Scales
+        const xScale = d3.scaleLog().domain([minSize, maxSize]).range([0, innerWidth]);
+        const yScale = d3.scaleLinear().domain([0, Math.min(500, Math.ceil(maxBandwidth * 1.1))]).range([innerHeight, 0]);
+
+        // Clear previous content
+        gGrid.selectAll('*').remove();
+        gAxes.selectAll('*').remove();
+        gLines.selectAll('*').remove();
+
+        // Grid lines
+        const xTicks = xScale.ticks(8);
+        const yTicks = yScale.ticks(6);
+
+        gGrid.selectAll('line.x')
+          .data(xTicks)
+          .join('line')
+          .attr('class', 'grid-line')
+          .attr('x1', d => xScale(d))
+          .attr('x2', d => xScale(d))
+          .attr('y1', 0)
+          .attr('y2', innerHeight);
+
+        gGrid.selectAll('line.y')
+          .data(yTicks)
+          .join('line')
+          .attr('class', 'grid-line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', d => yScale(d))
+          .attr('y2', d => yScale(d));
+
+        // Reference line (max theoretical bandwidth)
+        const maxTheoreticalBandwidth = 485; // GB/s
+        gLines.append('line')
+          .attr('class', 'reference-line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', yScale(maxTheoreticalBandwidth))
+          .attr('y2', yScale(maxTheoreticalBandwidth));
+
+        // Data lines
+        const line = d3.line()
+          .x(d => xScale(d.messageSize))
+          .y(d => yScale(d.bandwidth))
+          .curve(d3.curveLinear);
+
+        series.forEach((s, i) => {
+          gLines.append('path')
+            .datum(s.data)
+            .attr('fill', 'none')
+            .attr('stroke', currentColors[i % currentColors.length])
+            .attr('stroke-width', 2)
+            .attr('d', line)
+            .on('mouseover', function(event, d) {
+              d3.select(this).attr('stroke-width', 3);
+            })
+            .on('mouseout', function(event, d) {
+              d3.select(this).attr('stroke-width', 2);
+            });
+        });
+
+        // X axis
+        gAxes.append('g')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale)
+            .tickFormat(formatBytes)
+            .ticks(8))
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text')
+              .attr('fill', 'var(--muted-color)')
+              .style('font-size', '10px')
+              .attr('transform', 'rotate(-45)')
+              .style('text-anchor', 'end')
+              .attr('dx', '-8px');
+          });
+
+        // Y axis
+        gAxes.append('g')
+          .call(d3.axisLeft(yScale)
+            .tickFormat(d => `${d} GB/s`)
+            .ticks(6))
+          .call(g => {
+            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+            g.selectAll('text').attr('fill', 'var(--muted-color)').style('font-size', '11px');
+          });
+
+        // Axis labels
+        gAxes.append('text')
+          .attr('class', 'axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + 55)
+          .text('Message Size (bytes)');
+
+        gAxes.append('text')
+          .attr('class', 'axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('transform', `translate(${-60}, ${innerHeight / 2}) rotate(-90)`)
+          .text('Bandwidth (GB/s)');
+
+        // Legend with individual colored lines (outside the chart container)
+        const legendContainer = container.parentNode.querySelector('.nccl-legend') || 
+          (() => {
+            const legend = document.createElement('div');
+            legend.className = 'nccl-legend';
+            legend.style.cssText = `
+              margin-top: 20px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            `;
+            container.parentNode.insertBefore(legend, container.nextSibling);
+            return legend;
+          })();
+        
+        // Create legend with individual colored lines
+        const legendWidth = Math.min(innerWidth * 0.8, 600);
+        const legendHeight = 30;
+        const lineHeight = 5; // Height of each colored line
+        const lineY = 0; // Y position of the lines
+        
+        // Calculate spacing between items
+        const numItems = series.length;
+        const itemWidth = legendWidth / numItems;
+        
+        legendContainer.innerHTML = `
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-color); margin-bottom: 12px;">Number of Nodes</div>
+          <svg width="${legendWidth}" height="${legendHeight}" style="display: block; overflow:visible!important;">
+            <!-- Individual colored lines and labels -->
+            ${series.map((s, i) => {
+              const x = (i + 0.5) * itemWidth;
+              const lineWidth = itemWidth * 0.5; // 70% of available space for each line
+              const lineX = i * itemWidth + (itemWidth - lineWidth) / 2;
+              const nodeCount = s.name.replace(' nodes', '');
+              const color = currentColors[i % currentColors.length];
+              
+              return `
+                <!-- Colored line -->
+                <line x1="${lineX}" y1="${lineY}" x2="${lineX + lineWidth}" y2="${lineY}" 
+                      stroke="${color}" stroke-width="${lineHeight}" stroke-linecap="round" />
+                
+                <!-- Label -->
+                <text x="${x}" y="${lineY + 20}" 
+                      text-anchor="middle" 
+                      font-size="11px" 
+                      font-weight="600"
+                      fill="var(--text-color)">${nodeCount}</text>
+              `;
+            }).join('')}
+          </svg>
+        `;
+      }
+
+      // Initial load
+      loadData();
+
+      // Resize handling
+      const rerender = () => render();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

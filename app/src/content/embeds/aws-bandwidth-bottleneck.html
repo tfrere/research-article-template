@@ -1,0 +1,1855 @@
+<!--
+  AWS Bandwidth Bottleneck Visualization
+  
+  Usage:
+  
+  Basic:
+    <HtmlEmbed src="/embeds/aws-bandwidth-bottleneck.html" />
+  
+  With initial filter:
+    <HtmlEmbed 
+      src="/embeds/aws-bandwidth-bottleneck.html" 
+      config={{ initialFilter: 'cpu-gpu' }} 
+    />
+  
+  Available filters:
+    - cpu-gpu (Intranode: CPU ⟷ GPU)
+    - gpu-gpu-cpu (Intranode: GPU ⟷ GPU via CPU)
+    - gpu-gpu-nvswitch (Intranode: GPU ⟷ GPU via NVSwitch)
+    - gpu-gpu-efa-intranode (Intranode: GPU ⟷ GPU via EFA)
+    - gpu-gpu-efa-internode (Internode: GPU ⟷ GPU via EFA)
+    - gpu-storage (Storage: GPU ⟷ Storage)
+    - cpu-storage (Storage: CPU ⟷ Storage)
+    - gpu-cpu-storage (Storage: GPU ⟷ Storage via CPU)
+-->
+<div class="aws-topology-wrapper">
+  <div id="aws-topology-container"></div>
+  <div id="aws-topology-controls" class="aws-topology-controls"></div>
+  <div id="aws-topology-legend" class="aws-topology-legend"></div>
+  <div id="aws-topology-tooltip" class="aws-topology-tooltip"></div>
+  <div id="aws-topology-bottleneck" class="aws-topology-bottleneck">
+    <div class="bottleneck-label">Bandwidth Max</div>
+    <div class="bottleneck-path" id="bottleneck-path">for CPU → GPU</div>
+    <div class="bottleneck-value" id="bottleneck-value">-</div>
+    <div class="bottleneck-unit">GB/s</div>
+  </div>
+</div>
+
+<style>
+  .aws-topology-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  
+  #aws-topology-container {
+    width: 100%;
+    height: 800px;
+    position: relative;
+    transition: opacity 0.15s ease;
+  }
+  
+  #aws-topology-container svg {
+    width: 100%;
+    height: 100%;
+  }
+  
+  #aws-topology-container svg g {
+    transition: opacity 0.2s ease;
+  }
+  
+  .aws-topology-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 800px;
+  }
+  
+  .aws-topology-controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .aws-topology-controls-row {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .aws-topology-controls-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+  }
+  
+  .aws-topology-controls-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .aws-topology-controls-buttons .button {
+    flex-shrink: 0;
+  }
+  
+  .aws-topology-legend {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 264px;  /* 220 * 1.2 */
+    height: 120px;  /* 100 * 1.2 */
+  }
+  
+  .aws-topology-tooltip {
+    position: absolute;
+    padding: 6px 10px;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-color);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 1000;
+  }
+  
+  .aws-topology-tooltip.visible {
+    opacity: 1;
+  }
+  
+  .aws-topology-bottleneck {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    text-align: right;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .aws-topology-bottleneck.visible {
+    opacity: 1;
+  }
+  
+  .bottleneck-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    text-shadow: 
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg);
+  }
+  
+  .bottleneck-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 2px;
+    text-shadow: 
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg);
+  }
+  
+  .bottleneck-unit {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-shadow: 
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg);
+  }
+  
+  .bottleneck-path {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 6px;
+    opacity: 0.8;
+    text-shadow: 
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg);
+  }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.2.5/svg.min.js"></script>
+<script>
+  (function() {
+    // ============================================================================
+    // CONFIGURATION - All settings in one place
+    // ============================================================================
+    const CONFIG = {
+      // Canvas settings
+      viewbox: { 
+        width: 2400,  // Width for 2 ensembles side by side
+        get height() { 
+          // Calculate height based on vertical elements × systemCount
+          const singleSystemHeight = this.parent.gaps.topMargin + 
+                 this.parent.sizes.cpu + 
+                 this.parent.gaps.cpuToPcie + 
+                 this.parent.sizes.pcie.height + 
+                 this.parent.gaps.pcieToGpu + 
+                 this.parent.sizes.gpu.height + 
+                 this.parent.gaps.gpuToNvswitch + 
+                 this.parent.sizes.nvswitch.height + 
+                 this.parent.gaps.bottomMargin;
+          
+          return singleSystemHeight * this.parent.systemCount + 
+                 this.parent.gaps.systemGap * (this.parent.systemCount - 1);
+        },
+        parent: null  // Will be set to CONFIG
+      },
+      
+      // System replication
+      systemCount: 2,      // Number of complete systems (each has 2 ensembles)
+      ensembleCount: 2,    // Number of ensembles per system (each ensemble = CPU + 4 groups + 2 NVSwitches)
+      groupCount: 4,       // Groups per ensemble
+      nvswitchCount: 2,    // NVSwitches per ensemble
+      
+      // Node sizes (all based on CPU size)
+      sizes: {
+        cpu: 80,
+        get pcie() { return { width: this.cpu * 0.75, height: this.cpu * 0.625 * 3 }; },
+        get gpu() { return { width: this.cpu, height: this.cpu }; },
+        get efa() { return { width: 60, height: 30 }; },
+        get nvme() { return { width: 60, height: 30 }; },
+        get nvswitch() { return { width: 100, height: 60 }; }
+      },
+      
+      // Gaps and spacing
+      gaps: {
+        topMargin: 0,        // Margin from top to CPU
+        cpuToPcie: 80,        // Vertical gap CPU → PCIe
+        pcieToGpu: 80,        // Vertical gap PCIe → GPU
+        gpuToNvswitch: 200,    // Vertical gap GPU → NVSwitch
+        bottomMargin: 40,     // Margin from NVSwitch to bottom
+        horizontal: 230,      // Horizontal gap between groups
+        ensembleGap: 50,     // Horizontal gap between ensembles (within a system)
+        systemGap: 30,       // Horizontal gap between complete systems
+        connectionOffset: 15  // Gap between node edge and arrow anchor
+      },
+      
+      // Group layout offsets (all relative positions within a group)
+      layout: {
+        pcieOffsetX: -40,      // PCIe X offset from group center (to the left)
+        efaNvmeOffsetX: 60,    // EFA/NVMe X offset from group center (to the right)
+        efaOffsetY: -30,       // EFA Y offset from PCIe Y (above)
+        nvmeOffsetY: 30,       // NVMe Y offset from PCIe Y (below)
+        groupPadding: 20       // Padding around group bounding box
+      },
+      
+      // Debug mode
+      debug: {
+        showPhantoms: false    // Set to true to visualize phantom nodes
+      },
+      
+      // Highlight paths (for interactive buttons)
+      paths: {
+        'cpu-gpu': {
+          label: 'CPU ⟷ GPU',
+          requiredEnsembles: 1,  // Need only 1 ensemble
+          requiredSystems: 1,
+          nodes: ['cpu', 'pcie', 'gpu'],
+          links: [
+            { from: 'cpu', to: 'pcie' },
+            { from: 'pcie', to: 'gpu' }
+          ]
+        },
+        'gpu-gpu-cpu': {
+          label: 'GPU ⟷ GPU via CPU',
+          requiredEnsembles: 1,  // Need only 1 ensemble (2 groups within)
+          requiredSystems: 1,
+          nodes: ['gpu', 'pcie', 'cpu', 'pcie-1', 'gpu-1'],
+          links: [
+            { from: 'pcie', to: 'gpu' },
+            { from: 'pcie', to: 'cpu' },
+            { from: 'cpu', to: 'pcie' },
+            { from: 'cpu', to: 'pcie-1' },
+            { from: 'pcie-1', to: 'gpu-1' }
+          ]
+        },
+        'gpu-gpu-nvswitch': {
+          label: 'GPU ⟷ GPU via NVSwitch',
+          requiredEnsembles: 1,  // Need only 1 ensemble
+          requiredSystems: 1,
+          nodes: ['gpu', 'nvswitch-0', 'gpu-1'],
+          links: [
+            { from: 'gpu', to: 'nvswitch-0' },
+            { from: 'gpu-1', to: 'nvswitch-0' }
+          ]
+        },
+        'gpu-gpu-efa': {
+          label: 'GPU ⟷ GPU via EFA',
+          requiredEnsembles: 1,  // Need only 1 ensemble
+          requiredSystems: 1,
+          nodes: ['gpu', 'pcie', 'efa', 'efa-1', 'pcie-1', 'gpu-1'],
+          links: [
+            { from: 'pcie', to: 'gpu' },
+            { from: 'efa', to: 'pcie-efa-phantom' },
+            { from: 'efa', to: 'efa-external' },
+            { from: 'efa-1', to: 'efa-external-1' },
+            { from: 'efa-1', to: 'pcie-efa-phantom-1' },
+            { from: 'pcie-1', to: 'gpu-1' }
+          ]
+        },
+        'gpu-gpu-efa-intranode': {
+          label: 'GPU ⟷ GPU via EFA',
+          requiredEnsembles: 2,  // Need 2 ensembles (same system)
+          requiredSystems: 1,
+          nodes: ['gpu', 'pcie', 'efa', 'efa-4', 'pcie-4', 'gpu-4'],
+          links: [
+            { from: 'pcie', to: 'gpu' },
+            { from: 'efa', to: 'pcie-efa-phantom' },
+            { from: 'efa', to: 'efa-external' },
+            { from: 'efa-external', to: 'efa-external-4' },  // EFA cross-link between ensembles (12.5GB/s)
+            { from: 'efa-4', to: 'efa-external-4' },
+            { from: 'efa-4', to: 'pcie-efa-phantom-4' },
+            { from: 'pcie-4', to: 'gpu-4' }
+          ]
+        },
+        'gpu-gpu-efa-internode': {
+          label: 'GPU ⟷ GPU via EFA',
+          requiredEnsembles: 2,  // Need 2 ensembles per system
+          requiredSystems: 2,    // Need 2 systems
+          nodes: ['gpu', 'pcie', 'efa', 'efa-8', 'pcie-8', 'gpu-8'],
+          links: [
+            { from: 'pcie', to: 'gpu' },
+            { from: 'efa', to: 'pcie-efa-phantom' },
+            { from: 'efa', to: 'efa-external' },
+            { from: 'efa-external', to: 'efa-external-8' },  // EFA cross-link between systems
+            { from: 'efa-8', to: 'efa-external-8' },
+            { from: 'efa-8', to: 'pcie-efa-phantom-8' },
+            { from: 'pcie-8', to: 'gpu-8' }
+          ]
+        },
+        'gpu-storage': {
+          label: 'GPU ⟷ Storage',
+          requiredEnsembles: 1,
+          requiredSystems: 1,
+          nodes: ['gpu', 'pcie', 'nvme'],
+          links: [
+            { from: 'pcie', to: 'gpu' },
+            { from: 'nvme', to: 'pcie-nvme-phantom' },
+            { from: 'pcie', to: 'pcie-nvme-phantom' }
+          ]
+        },
+        'cpu-storage': {
+          label: 'CPU ⟷ Storage',
+          requiredEnsembles: 1,
+          requiredSystems: 1,
+          nodes: ['cpu', 'pcie', 'nvme'],
+          links: [
+            { from: 'cpu', to: 'pcie' },
+            { from: 'nvme', to: 'pcie-nvme-phantom' },
+            { from: 'pcie', to: 'pcie-nvme-phantom' }
+          ]
+        },
+        'gpu-cpu-storage': {
+          label: 'GPU ⟷ Storage via CPU',
+          requiredEnsembles: 1,
+          requiredSystems: 1,
+          nodes: ['cpu', 'gpu', 'pcie', 'nvme'],
+          links: [
+            { from: 'cpu', to: 'pcie' },
+            { from: 'pcie', to: 'gpu' },
+            { from: 'nvme', to: 'pcie-nvme-phantom' },
+            { from: 'pcie', to: 'pcie-nvme-phantom' }
+          ]
+        }
+      },
+      
+      
+      // Bandwidth levels
+      bandwidths: [
+        { speed: '900GB/s', label: 'NVLink 4.0', width: 9 },
+        { speed: '64GB/s',  label: 'PCIe Gen5',  width: 6 },
+        { speed: '16GB/s',  label: 'PCIe Gen4',  width: 3 },
+        { speed: '12.5GB/s', label: 'EFA Link',  width: 1.25 }
+      ],
+      
+      // Link definitions for groups
+      groupLinks: [
+        { from: 'cpu', to: 'pcie', bandwidth: '16GB/s', type: 'cpu', fromSide: 'bottom', toSide: 'top', multiLink: true },
+        { from: 'efa', to: 'pcie-efa-phantom', bandwidth: '16GB/s', type: 'network', fromSide: 'left', toSide: 'right', stacked: 4 },
+        { from: 'nvme', to: 'pcie-nvme-phantom', bandwidth: '16GB/s', type: 'storage', fromSide: 'left', toSide: 'right' },
+        { from: 'pcie', to: 'gpu', bandwidth: '64GB/s', type: 'gpu', fromSide: 'bottom', toSide: 'top' },
+        { from: 'efa', to: 'efa-external', bandwidth: '12.5GB/s', type: 'network', fromSide: 'right', toSide: 'left', stacked: 4 }
+      ],
+      
+      // GPU to NVSwitch links (full mesh)
+      gpuNvswitchLink: {
+        bandwidth: '900GB/s',
+        type: 'gpu',
+        fromSide: 'bottom',
+        toSide: 'top'
+      },
+      
+      // Colors (using CSS variables for dark mode compatibility)
+      colors: {
+        // Node colors
+        nodeFill: 'var(--page-bg)',
+        nodeStroke: 'var(--muted-color)',     // More contrast than border-color
+        nodeText: 'var(--text-color)',
+        nodePins: 'var(--muted-color)',
+        nodeCoreFill: 'rgba(0, 0, 0, 0.05)',  // Very light gray for cores
+        nodeCoreStroke: 'rgba(0, 0, 0, 0.2)', // More visible border for cores
+        
+        // Link colors
+        linkColor: 'var(--primary-color)',
+        linkCircleBorder: 'rgba(0, 0, 0, 0.1)', // Border for link circles
+        
+        // Group border
+        groupBorder: 'var(--border-color)',
+        
+        // Phantom debug
+        phantomFill: 'rgba(255, 0, 255, 0.2)',
+        phantomStroke: 'magenta'
+      }
+    };
+    
+    // Initialize viewbox parent reference
+    CONFIG.viewbox.parent = CONFIG;
+
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+    function getBandwidth(speed) {
+      const bw = CONFIG.bandwidths.find(b => b.speed === speed);
+      if (bw) {
+        // Add numericValue for comparison
+        bw.numericValue = parseFloat(bw.speed.replace('GB/s', ''));
+      }
+      return bw;
+    }
+    
+    // Calculate connection offset proportional to link width
+    function getLinkOffset(linkWidth) {
+      const minOffset = 5;   // Minimum offset for thin links
+      const maxOffset = 20;  // Maximum offset for thick links
+      
+      // Proportional offset: thinner links = smaller offset
+      const proportionalOffset = minOffset + (linkWidth / 10) * (maxOffset - minOffset);
+      return Math.min(Math.max(proportionalOffset, minOffset), maxOffset);
+    }
+
+    // ============================================================================
+    // SVG HELPERS
+    // ============================================================================
+    class TopologyRenderer {
+      constructor(draw) {
+        this.draw = draw;
+        this.nodes = new Map();
+        this.linksGroup = draw.group();   // Links layer (bottom)
+        this.nodesGroup = draw.group();   // Nodes layer (middle)
+        this.phantomsGroup = draw.group(); // Phantoms layer (for debug)
+        this.crossLinksGroup = draw.group(); // EFA cross-links layer (top)
+      }
+
+      // Draw a simple rectangular node
+      // Helper: Draw text with consistent styling
+      drawText(x, y, label, group = this.nodesGroup) {
+        if (!label) return;
+        
+        const lines = label.split('\n');
+        lines.forEach((line, i) => {
+          group.text(line)
+            .font({ family: 'Inter, sans-serif', size: 12, weight: '600', anchor: 'middle' })
+            .fill(CONFIG.colors.nodeText)
+            .cx(x)
+            .cy(y + (i - (lines.length - 1) / 2) * 14);
+        });
+      }
+
+      // Helper: Draw pins around a node
+      drawPins(x, y, width, height, pinConfig = {}, targetGroup = null) {
+        const group = targetGroup || this.nodesGroup;
+        
+        const defaultConfig = {
+          pinsPerSide: width >= 80 ? 18 : 15,
+          pinLength: 3,
+          pinOffset: width / 2 + 1.5,
+          pinPadding: 12
+        };
+        
+        const config = { ...defaultConfig, ...pinConfig };
+        const pinStartOffset = -width / 2 + config.pinPadding;
+        const pinEndOffset = width / 2 - config.pinPadding;
+        const pinSpacing = (pinEndOffset - pinStartOffset) / (config.pinsPerSide - 1);
+        
+        const sides = [
+          { side: 'left', xOffset: -config.pinOffset, yOffset: 0 },
+          { side: 'right', xOffset: config.pinOffset, yOffset: 0 },
+          { side: 'top', xOffset: 0, yOffset: -config.pinOffset },
+          { side: 'bottom', xOffset: 0, yOffset: config.pinOffset }
+        ];
+        
+        sides.forEach(({ side, xOffset, yOffset }) => {
+          for (let i = 0; i < config.pinsPerSide; i++) {
+            const pinX = x + xOffset + (side === 'left' || side === 'right' ? 0 : pinStartOffset + (i * pinSpacing));
+            const pinY = y + yOffset + (side === 'top' || side === 'bottom' ? 0 : pinStartOffset + (i * pinSpacing));
+            
+            group.rect(
+              side === 'left' || side === 'right' ? config.pinLength : 1,
+              side === 'top' || side === 'bottom' ? config.pinLength : 1
+            )
+            .move(
+              pinX - (side === 'left' || side === 'right' ? config.pinLength : 1) / 2,
+              pinY - (side === 'top' || side === 'bottom' ? config.pinLength : 1) / 2
+            )
+            .fill(CONFIG.colors.nodePins)
+            .stroke('none');
+          }
+        });
+      }
+
+      drawNode(id, x, y, width, height, label, nodeType = '') {
+        const group = this.nodesGroup.group();
+        group.attr('id', id);  // Set ID for selection
+        if (nodeType) group.attr('data-node-type', nodeType);
+        
+        group.rect(width, height)
+          .move(x - width/2, y - height/2)
+          .fill(CONFIG.colors.nodeFill)
+          .stroke({ color: CONFIG.colors.nodeStroke, width: 1 })
+          .radius(4)
+          .opacity(1);
+        
+        this.drawText(x, y, label, group);
+        
+        this.nodes.set(id, { x, y, width, height });
+        return group;
+      }
+
+      drawNodeWithPins(id, x, y, width, height, label, pinConfig = {}, nodeType = '') {
+        const node = this.drawNode(id, x, y, width, height, label, nodeType);
+        this.drawPins(x, y, width, height, pinConfig);
+        return node;
+      }
+
+      drawNodeWithCores(id, x, y, width, height, label, coreConfig = {}, nodeType = '') {
+        // Draw main node
+        const node = this.drawNode(id, x, y, width, height, label, nodeType);
+        
+        // Default core configuration
+        const defaultCoreConfig = {
+          coresX: 2,              // 2x2 for CPU, 8x8 for GPU
+          coresY: 2,
+          coreSpacing: 2,         // Space between cores
+          coreMargin: 8           // Margin from node edges
+        };
+        
+        const config = { ...defaultCoreConfig, ...coreConfig };
+        
+        // Calculate core size
+        const availableWidth = width - (config.coreMargin * 2);
+        const availableHeight = height - (config.coreMargin * 2);
+        const coreWidth = (availableWidth - (config.coreSpacing * (config.coresX - 1))) / config.coresX;
+        const coreHeight = (availableHeight - (config.coreSpacing * (config.coresY - 1))) / config.coresY;
+        
+        // Draw cores
+        for (let row = 0; row < config.coresY; row++) {
+          for (let col = 0; col < config.coresX; col++) {
+            const coreX = x - width/2 + config.coreMargin + col * (coreWidth + config.coreSpacing);
+            const coreY = y - height/2 + config.coreMargin + row * (coreHeight + config.coreSpacing);
+            
+            this.nodesGroup.rect(coreWidth, coreHeight)
+              .move(coreX, coreY)
+              .fill(CONFIG.colors.nodeCoreFill)
+              .stroke({ color: CONFIG.colors.nodeCoreStroke, width: 0.5 })
+              .radius(1);
+          }
+        }
+        
+        return node;
+      }
+
+      drawProcessorNode(id, x, y, width, height, label, type = 'cpu') {
+        // Create main group for the node
+        const nodeGroup = this.nodesGroup.group();
+        nodeGroup.attr('id', id);
+        nodeGroup.attr('data-node-type', type);
+        
+        // Draw node background
+        nodeGroup.rect(width, height)
+          .move(x - width/2, y - height/2)
+          .fill(CONFIG.colors.nodeFill)
+          .stroke({ color: CONFIG.colors.nodeStroke, width: 1 })
+          .radius(4)
+          .opacity(1);
+        
+        // Draw cores
+        const coreConfig = type === 'gpu' ? { coresX: 8, coresY: 8 } : { coresX: 2, coresY: 2 };
+        const config = { coreSpacing: 2, coreMargin: 8, ...coreConfig };
+        const availableWidth = width - (config.coreMargin * 2);
+        const availableHeight = height - (config.coreMargin * 2);
+        const coreWidth = (availableWidth - (config.coresX - 1) * config.coreSpacing) / config.coresX;
+        const coreHeight = (availableHeight - (config.coresY - 1) * config.coreSpacing) / config.coresY;
+        
+        for (let row = 0; row < config.coresY; row++) {
+          for (let col = 0; col < config.coresX; col++) {
+            const coreX = x - width/2 + config.coreMargin + col * (coreWidth + config.coreSpacing);
+            const coreY = y - height/2 + config.coreMargin + row * (coreHeight + config.coreSpacing);
+            
+            nodeGroup.rect(coreWidth, coreHeight)
+              .move(coreX, coreY)
+              .fill(CONFIG.colors.nodeCoreFill)
+              .stroke({ color: CONFIG.colors.nodeCoreStroke, width: 0.5 })
+              .radius(1);
+          }
+        }
+        
+        // Draw pins in the same group
+        this.drawPins(x, y, width, height, {}, nodeGroup);
+        
+        // Draw text on top
+        this.drawText(x, y, label, nodeGroup);
+        
+        // Store node position
+        this.nodes.set(id, { x, y, width, height });
+        
+        return nodeGroup;
+      }
+
+      // Add pins to an existing node (without changing the node design)
+      addPinsToNode(nodeId, pinConfig = {}) {
+        const node = this.nodes.get(nodeId);
+        if (!node) return;
+        
+        // Find the node's SVG group
+        const svg = document.querySelector('#aws-topology-container svg');
+        const nodeGroup = svg.querySelector(`g[id="${nodeId}"]`);
+        if (!nodeGroup) return;
+        
+        // Use SVG.js to manipulate the group
+        const group = this.draw.findOne(`#${nodeId}`);
+        if (!group) return;
+        
+        // Default pin configuration
+        const defaultPinConfig = {
+          pinsPerSide: node.width >= 80 ? 18 : 15,
+          sides: ['left', 'right', 'top', 'bottom'],
+          pinLength: 3,
+          pinPadding: 12
+        };
+        
+        const config = { ...defaultPinConfig, ...pinConfig };
+        
+        // Generate pins on specified sides only
+        config.sides.forEach(side => {
+          let pinSpacing, pinStartOffset, pinEndOffset;
+          
+          if (side === 'left' || side === 'right') {
+            pinStartOffset = -node.height / 2 + config.pinPadding;
+            pinEndOffset = node.height / 2 - config.pinPadding;
+            pinSpacing = (pinEndOffset - pinStartOffset) / (config.pinsPerSide - 1);
+          } else {
+            pinStartOffset = -node.width / 2 + config.pinPadding;
+            pinEndOffset = node.width / 2 - config.pinPadding;
+            pinSpacing = (pinEndOffset - pinStartOffset) / (config.pinsPerSide - 1);
+          }
+          
+          for (let i = 0; i < config.pinsPerSide; i++) {
+            let pinX, pinY;
+            
+            if (side === 'left') {
+              pinX = node.x - node.width / 2 - 1.5;
+              pinY = node.y + pinStartOffset + (i * pinSpacing);
+            } else if (side === 'right') {
+              pinX = node.x + node.width / 2 + 1.5;
+              pinY = node.y + pinStartOffset + (i * pinSpacing);
+            } else if (side === 'top') {
+              pinX = node.x + pinStartOffset + (i * pinSpacing);
+              pinY = node.y - node.height / 2 - 1.5;
+            } else if (side === 'bottom') {
+              pinX = node.x + pinStartOffset + (i * pinSpacing);
+              pinY = node.y + node.height / 2 + 1.5;
+            }
+            
+            // Draw pin in the node's group
+            group.rect(
+              side === 'left' || side === 'right' ? config.pinLength : 1,
+              side === 'top' || side === 'bottom' ? config.pinLength : 1
+            )
+            .move(
+              pinX - (side === 'left' || side === 'right' ? config.pinLength : 1) / 2,
+              pinY - (side === 'top' || side === 'bottom' ? config.pinLength : 1) / 2
+            )
+            .fill(CONFIG.colors.nodePins)
+            .stroke('none');
+          }
+        });
+      }
+
+      // Draw a stacked node (visual stack effect)
+      drawStackedNode(id, x, y, width, height, label, stackCount, nodeType = '') {
+        const group = this.nodesGroup.group();
+        group.attr('id', id);  // Set ID for selection
+        if (nodeType) group.attr('data-node-type', nodeType);
+        
+        for (let i = stackCount - 1; i >= 0; i--) {
+          const offsetY = i * 3;
+          group.rect(width, height)
+            .move(x - width/2, y - height/2 + offsetY)
+            .fill(CONFIG.colors.nodeFill)
+            .stroke({ color: CONFIG.colors.nodeStroke, width: 1 })
+            .radius(4)
+            .opacity(1);
+        }
+        
+        this.drawText(x, y, label, group);
+        
+        this.nodes.set(id, { x, y, width, height });
+        return group;
+      }
+
+      // Draw a storage node (NVMe) with internal rectangle
+      drawStorageNode(id, x, y, width, height, label, nodeType = 'storage') {
+        const group = this.nodesGroup.group();
+        group.attr('id', id);
+        if (nodeType) group.attr('data-node-type', nodeType);
+        
+        // Main node background
+        group.rect(width, height)
+          .move(x - width/2, y - height/2)
+          .fill(CONFIG.colors.nodeFill)
+          .stroke({ color: CONFIG.colors.nodeStroke, width: 1 })
+          .radius(4)
+          .opacity(1);
+        
+        // Internal rectangle on the left side (flush with edge)
+        const internalRectWidth = 5;
+        const internalRectHeight = height * .6; // Full height
+        const internalRectX = x - width/2; // Flush with left edge
+        const internalRectY = y - height/2 + height * .20;
+        
+        group.rect(internalRectWidth, internalRectHeight)
+          .move(internalRectX, internalRectY)
+          .fill(CONFIG.colors.nodeFill)
+          .stroke({ color: '#ffffff', width: 1 })
+          .opacity(.4)
+          .radius(0); // No radius
+        
+        this.drawText(x, y, label, group);
+        
+        this.nodes.set(id, { x, y, width, height });
+        return group;
+      }
+
+      // Draw background rectangle
+      drawBackground(id, x, y, width, height) {
+        const bg = this.linksGroup.rect(width, height)
+          .move(x - width/2, y - height/2)
+          .fill('none')
+          .stroke({ 
+            color: CONFIG.colors.groupBorder, 
+            width: 2, 
+            dasharray: '5,5' 
+          })
+          .radius(8);
+        
+        this.nodes.set(id, { x, y, width, height });
+        return bg;
+      }
+
+      // Get connection point on a node's side with configurable offset and multi-link spacing
+      getPoint(nodeId, side, offset = CONFIG.gaps.connectionOffset, linkIndex = 0, totalLinks = 1) {
+        const node = this.nodes.get(nodeId);
+        if (!node) return { x: 0, y: 0 };
+        
+        const points = {
+          top: { x: node.x, y: node.y - node.height/2 - offset },
+          right: { x: node.x + node.width/2 + offset, y: node.y },
+          bottom: { x: node.x, y: node.y + node.height/2 + offset },
+          left: { x: node.x - node.width/2 - offset, y: node.y }
+        };
+        
+        let basePoint = points[side] || { x: node.x, y: node.y };
+        
+        // Apply spacing for multiple links to the same anchor
+        if (totalLinks > 1) {
+          const isVerticalAnchor = (side === 'top' || side === 'bottom');
+          
+          // Vertical anchors (top/bottom) space horizontally, horizontal anchors (left/right) space vertically
+          const spacing = isVerticalAnchor ? node.width / (totalLinks + 1) : node.height / (totalLinks + 1);
+          const linkOffset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+          
+          // Apply offset in the perpendicular direction to the anchor
+          if (isVerticalAnchor) {
+            basePoint.x += linkOffset;  // Horizontal offset for vertical anchors
+          } else {
+            basePoint.y += linkOffset;  // Vertical offset for horizontal anchors
+          }
+        }
+        
+        return basePoint;
+      }
+
+      // Draw single link with optional multi-link spacing
+      drawLink(fromId, toId, color, width, fromSide = 'right', toSide = 'left', offset = CONFIG.gaps.connectionOffset, fromLinkIndex = 0, fromTotalLinks = 1, toLinkIndex = 0, toTotalLinks = 1, linkType = '', bandwidth = '') {
+        const start = this.getPoint(fromId, fromSide, offset, fromLinkIndex, fromTotalLinks);
+        const end = this.getPoint(toId, toSide, offset, toLinkIndex, toTotalLinks);
+        
+        const group = this.linksGroup.group();
+        if (linkType) group.attr('data-link-type', linkType);
+        if (bandwidth) group.attr('data-bandwidth', bandwidth);
+        group.attr('data-from', fromId);
+        group.attr('data-to', toId);
+        
+        // Draw border (wider line behind)
+        group.line(start.x, start.y, end.x, end.y)
+          .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: width + 1, opacity: 1 });
+        
+        // Draw main line on top
+        group.line(start.x, start.y, end.x, end.y).stroke({ color, width, opacity: 1 });
+        
+        const r = width * 0.8;
+        const startCircle = group.circle(r * 2).move(start.x - r, start.y - r);
+        startCircle.fill(color);
+        startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        startCircle.attr('data-link-circle', 'true');
+        
+        const endCircle = group.circle(r * 2).move(end.x - r, end.y - r);
+        endCircle.fill(color);
+        endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        endCircle.attr('data-link-circle', 'true');
+        
+        return group;
+      }
+
+      // Draw stacked links
+      drawStackedLinks(fromId, toId, count, color, width, fromSide = 'right', toSide = 'left', offset = CONFIG.gaps.connectionOffset, linkType = '', bandwidth = '') {
+        const fromNode = this.nodes.get(fromId);
+        const toNode = this.nodes.get(toId);
+        if (!fromNode || !toNode) return [];
+        
+        const isHorizontal = (fromSide === 'left' || fromSide === 'right') && 
+                            (toSide === 'left' || toSide === 'right');
+        const spacing = isHorizontal 
+          ? Math.min(fromNode.height, toNode.height) / (count + 1)
+          : Math.min(fromNode.width, toNode.width) / (count + 1);
+        
+        const arrows = [];
+        for (let i = 0; i < count; i++) {
+          const stackOffset = (i - (count - 1) / 2) * spacing;
+          let start = this.getPoint(fromId, fromSide, offset);
+          let end = this.getPoint(toId, toSide, offset);
+          
+          if (isHorizontal) {
+            start.y += stackOffset;
+            end.y += stackOffset;
+          } else {
+            start.x += stackOffset;
+            end.x += stackOffset;
+          }
+
+          const group = this.linksGroup.group();
+          if (linkType) group.attr('data-link-type', linkType);
+          if (bandwidth) group.attr('data-bandwidth', bandwidth);
+          group.attr('data-from', fromId);
+          group.attr('data-to', toId);
+          
+          // Draw border (wider line behind)
+          group.line(start.x, start.y, end.x, end.y)
+            .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: width + 1, opacity: 1 });
+          
+          // Draw main line on top
+          group.line(start.x, start.y, end.x, end.y).stroke({ color, width, opacity: 1 });
+          
+          const r = width * 0.8;
+          const startCircle = group.circle(r * 2).move(start.x - r, start.y - r);
+          startCircle.fill(color);
+          startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 1 });
+          startCircle.attr('data-link-circle', 'true');
+          
+          const endCircle = group.circle(r * 2).move(end.x - r, end.y - r);
+          endCircle.fill(color);
+          endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 1 });
+          endCircle.attr('data-link-circle', 'true');
+          
+          arrows.push(group);
+        }
+        return arrows;
+      }
+
+      // Add phantom node (invisible connection point)
+      addPhantom(id, x, y, width = 30, height = 30) {
+        this.nodes.set(id, { x, y, width, height });
+        
+        // Draw phantom for debug visualization
+        if (CONFIG.debug.showPhantoms) {
+          this.phantomsGroup.rect(width, height)
+            .move(x - width/2, y - height/2)
+            .fill('rgba(255, 0, 255, 0.2)')  // Semi-transparent magenta
+            .stroke({ color: 'magenta', width: 2, dasharray: '4,4' })
+            .radius(4);
+          
+          // Add label
+          this.phantomsGroup.text(id)
+            .move(x, y)
+            .font({ 
+              family: 'system-ui, -apple-system, sans-serif', 
+              size: 10, 
+              anchor: 'middle',
+              fill: 'magenta',
+              weight: 'bold'
+            })
+            .dy(-height/2 - 5);
+        }
+      }
+    }
+
+    // ============================================================================
+    // DRAW SINGLE GROUP
+    // ============================================================================
+    function drawGroup(renderer, globalIndex, localIndex, x, cpuY, nvswitchY, cpuId = 'cpu') {
+      const s = CONFIG.sizes;
+      const g = CONFIG.gaps;
+      const l = CONFIG.layout;
+      const suffix = globalIndex > 0 ? `-${globalIndex}` : '';
+      
+      // Calculate Y positions
+      const pcieY = cpuY + s.cpu/2 + g.cpuToPcie + s.pcie.height/2;
+      const gpuY = pcieY + s.pcie.height/2 + g.pcieToGpu + s.gpu.height/2;
+      
+      // Calculate node positions
+      const pcieX = x + l.pcieOffsetX;
+      const efaX = x + l.efaNvmeOffsetX;
+      const nvmeX = x + l.efaNvmeOffsetX;
+      const efaY = pcieY + l.efaOffsetY;
+      const nvmeY = pcieY + l.nvmeOffsetY;
+      
+      // Calculate bounding box BEFORE creating nodes
+      const nodeBounds = [
+        { x: pcieX, y: pcieY, width: s.pcie.width, height: s.pcie.height },
+        { x: efaX, y: efaY, width: s.efa.width, height: s.efa.height },
+        { x: nvmeX, y: nvmeY, width: s.nvme.width, height: s.nvme.height },
+        { x: pcieX, y: gpuY, width: s.gpu.width, height: s.gpu.height }
+      ];
+      
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      nodeBounds.forEach(node => {
+        minX = Math.min(minX, node.x - node.width/2);
+        maxX = Math.max(maxX, node.x + node.width/2);
+        minY = Math.min(minY, node.y - node.height/2);
+        maxY = Math.max(maxY, node.y + node.height/2);
+      });
+      
+      const bgWidth = maxX - minX + l.groupPadding * 2;
+      const bgHeight = maxY - minY + l.groupPadding * 2;
+      const bgCenterX = (minX + maxX) / 2;
+      const bgCenterY = (minY + maxY) / 2;
+      
+      // Draw background FIRST (will be behind nodes)
+      renderer.drawBackground(`group${suffix}`, bgCenterX, bgCenterY, bgWidth, bgHeight);
+      
+      // Nodes
+      renderer.drawNode(`pcie${suffix}`, pcieX, pcieY, s.pcie.width, s.pcie.height, 'PCIe\nSwitch', 'network');
+      renderer.addPinsToNode(`pcie${suffix}`, {
+        pinsPerSide: 6,
+        sides: ['left', 'right'],
+        pinLength: 3,
+        pinPadding: 8
+      });
+      renderer.drawStackedNode(`efa${suffix}`, efaX, efaY, s.efa.width, s.efa.height, 'EFA', 4, 'network');
+      renderer.drawStorageNode(`nvme${suffix}`, nvmeX, nvmeY, s.nvme.width, s.nvme.height, 'NVMe', 'storage');
+      renderer.drawProcessorNode(`gpu${suffix}`, pcieX, gpuY, s.gpu.width, s.gpu.height, 'GPU', 'gpu');
+      
+      // Phantom nodes for routing
+      // PCIe phantoms: bord gauche aligné avec PCIe, largeur du PCIe
+      const pcieLeftEdge = pcieX;                    
+      const pciePhantomX = pcieLeftEdge;             
+      renderer.addPhantom(`pcie-efa-phantom${suffix}`, pciePhantomX, efaY, s.pcie.width, s.efa.height);
+      renderer.addPhantom(`pcie-nvme-phantom${suffix}`, pciePhantomX, nvmeY, s.pcie.width, s.nvme.height);
+      
+      // EFA external phantom: à droite de EFA
+      const efaRightEdge = efaX + s.efa.width/2;
+      const efaPhantomX = efaRightEdge + g.connectionOffset + s.efa.width/2 + 20;  // Centre du phantom + décalage réduit
+      renderer.addPhantom(`efa-external${suffix}`, efaPhantomX, efaY, s.efa.width, s.efa.height);
+      
+      // Create links from configuration
+      CONFIG.groupLinks.forEach(linkDef => {
+        const bw = getBandwidth(linkDef.bandwidth);
+        const fromId = linkDef.from === 'cpu' ? cpuId : `${linkDef.from}${suffix}`;  // Use cpuId from parameter
+        const toId = `${linkDef.to}${suffix}`;
+        const color = CONFIG.colors.linkColor;  // Use primary color for all links
+        const offset = getLinkOffset(bw.width);  // Proportional offset based on link width
+        
+        if (linkDef.stacked) {
+          renderer.drawStackedLinks(fromId, toId, linkDef.stacked, color, bw.width, linkDef.fromSide, linkDef.toSide, offset, linkDef.type, linkDef.bandwidth);
+        } else if (linkDef.multiLink) {
+          // Use localIndex for multi-link spacing (0-3 within ensemble)
+          renderer.drawLink(fromId, toId, color, bw.width, linkDef.fromSide, linkDef.toSide, offset, localIndex, CONFIG.groupCount, 0, 1, linkDef.type, linkDef.bandwidth);
+        } else {
+          renderer.drawLink(fromId, toId, color, bw.width, linkDef.fromSide, linkDef.toSide, offset, 0, 1, 0, 1, linkDef.type, linkDef.bandwidth);
+        }
+      });
+    }
+
+    // ============================================================================
+    // DRAW SINGLE ENSEMBLE (CPU + 4 groups + 2 NVSwitches)
+    // ============================================================================
+    function drawEnsemble(renderer, ensembleGlobalIndex, centerX, cpuY, nvswitchY) {
+      const cpuId = ensembleGlobalIndex === 0 ? 'cpu' : `cpu-${ensembleGlobalIndex}`;
+      
+      // CPU for this ensemble
+      renderer.drawProcessorNode(cpuId, centerX, cpuY, CONFIG.sizes.cpu, CONFIG.sizes.cpu, 'CPU', 'cpu');
+      
+      // Groups for this ensemble
+      for (let i = 0; i < CONFIG.groupCount; i++) {
+        const groupGlobalIndex = ensembleGlobalIndex * CONFIG.groupCount + i;
+        const offsetX = (i - (CONFIG.groupCount - 1) / 2) * CONFIG.gaps.horizontal;
+        drawGroup(renderer, groupGlobalIndex, i, centerX + offsetX, cpuY, nvswitchY, cpuId);  // Pass i as localIndex
+      }
+      
+      // NVSwitches: positioned between pairs of groups
+      for (let i = 0; i < CONFIG.nvswitchCount; i++) {
+        const nvswitchGlobalIndex = ensembleGlobalIndex * CONFIG.nvswitchCount + i;
+        const groupPairStart = i * 2;
+        const groupPairEnd = groupPairStart + 1;
+        
+        const group1X = centerX + ((groupPairStart - (CONFIG.groupCount - 1) / 2) * CONFIG.gaps.horizontal);
+        const group2X = centerX + ((groupPairEnd - (CONFIG.groupCount - 1) / 2) * CONFIG.gaps.horizontal);
+        const nvswitchX = (group1X + group2X) / 2;
+        
+        renderer.drawNode(`nvswitch-${nvswitchGlobalIndex}`, nvswitchX, nvswitchY, 
+          CONFIG.sizes.nvswitch.width, CONFIG.sizes.nvswitch.height, 'NVSwitch', 'network');
+        
+        // Add pins to NVSwitch (like PCIe Switch)
+        renderer.addPinsToNode(`nvswitch-${nvswitchGlobalIndex}`, {
+          pinsPerSide: 6,
+          sides: ['left', 'right'],
+          pinLength: 3,
+          pinPadding: 8
+        });
+      }
+      
+    }
+    
+    // ============================================================================
+    // DRAW SINGLE SYSTEM (variable number of ensembles)
+    // ============================================================================
+    function drawSystem(renderer, systemIndex, systemCenterX, cpuY, nvswitchY, ensembleCount = 1, drawEfaCrossLinks = false) {
+      // Calculate ensemble width (4 groups)
+      const ensembleWidth = CONFIG.groupCount * CONFIG.gaps.horizontal;
+      
+      // Calculate system bounding box
+      const systemWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap;
+      const systemHeight = CONFIG.sizes.cpu + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height + 
+                           CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height + 
+                           CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height;
+      
+      const systemBgCenterY = cpuY + (nvswitchY - cpuY) / 2;
+      const systemPadding = 30;
+      
+      // Draw system background ONLY if 2 ensembles (intra-node vs inter-node distinction)
+      if (ensembleCount === 2) {
+        const rectX = systemCenterX - (systemWidth + systemPadding * 2) / 2;
+        const rectY = systemBgCenterY - (systemHeight + systemPadding * 2) / 2;
+        const rectWidth = systemWidth + systemPadding * 2;
+        const rectHeight = systemHeight + systemPadding * 2;
+        
+        renderer.linksGroup.rect(rectWidth, rectHeight)
+          .move(rectX, rectY)
+          .fill('none')
+          .stroke({ 
+            color: CONFIG.colors.groupBorder, 
+            width: 5, 
+            dasharray: '8,5',
+            opacity: 0.8
+          })
+          .radius(12);
+        
+        // Add "Node" label at top left of the system box
+        renderer.nodesGroup.text('Node')
+          .move(rectX + 35, rectY + 40)
+          .font({
+            size: 32,
+            family: 'var(--font-family)',
+            weight: 900,
+            fill: CONFIG.colors.textSecondary
+          })
+          .opacity(0.8);
+      }
+      
+      // Draw each ensemble in the system
+      for (let ensIndex = 0; ensIndex < ensembleCount; ensIndex++) {
+        const ensembleGlobalIndex = systemIndex * CONFIG.ensembleCount + ensIndex;
+        
+        // Position ensemble within system
+        const ensembleOffsetX = (ensIndex - (ensembleCount - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+        const ensembleCenterX = systemCenterX + ensembleOffsetX;
+        
+        drawEnsemble(renderer, ensembleGlobalIndex, ensembleCenterX, cpuY, nvswitchY);
+      }
+      
+      // Draw NUMA node borders (one per ensemble) if 2 ensembles
+      if (ensembleCount === 2) {
+        for (let ensIndex = 0; ensIndex < ensembleCount; ensIndex++) {
+          const ensembleOffsetX = (ensIndex - (ensembleCount - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+          const ensembleCenterX = systemCenterX + ensembleOffsetX;
+          
+          // Calculate NUMA node bounding box (same as system but for single ensemble)
+          const numaWidth = ensembleWidth;
+          const numaHeight = systemHeight;
+          const numaPadding = 15;
+          
+          const numaX = ensembleCenterX - (numaWidth + numaPadding * 2) / 2;
+          const numaY = systemBgCenterY - (numaHeight + numaPadding * 2) / 2;
+          const numaRectWidth = numaWidth + numaPadding * 2;
+          const numaRectHeight = numaHeight + numaPadding * 2;
+          
+          renderer.linksGroup.rect(numaRectWidth, numaRectHeight)
+            .move(numaX, numaY)
+            .fill('none')
+            .stroke({ 
+              color: CONFIG.colors.groupBorder, 
+              width: 3, 
+              dasharray: '6,4',
+              opacity: 0.7
+            })
+            .radius(8);
+          
+          // Add "NUMA" label at top right
+          renderer.nodesGroup.text(`NUMA ${ensIndex}`)
+            .move(numaX + numaRectWidth - 15, numaY + 15)
+            .font({
+              size: 14,
+              family: 'var(--font-family)',
+              weight: 600,
+              fill: CONFIG.colors.textSecondary,
+              anchor: 'end'
+            })
+            .opacity(0.7);
+        }
+      }
+      
+      // GPU to NVSwitch connections (full mesh - all GPUs to all NVSwitches in system)
+      const linkDef = CONFIG.gpuNvswitchLink;
+      const bw = getBandwidth(linkDef.bandwidth);
+      const color = CONFIG.colors.linkColor;
+      const offset = getLinkOffset(bw.width);
+      
+      // Connect all GPUs in the system to all NVSwitches in the system
+      const totalGpusInSystem = ensembleCount * CONFIG.groupCount;
+      const totalNVSwitchesInSystem = ensembleCount * CONFIG.nvswitchCount;
+      
+      for (let gpuIndex = 0; gpuIndex < totalGpusInSystem; gpuIndex++) {
+        const gpuGlobalIndex = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + gpuIndex;
+        const gpuId = gpuGlobalIndex === 0 ? 'gpu' : `gpu-${gpuGlobalIndex}`;
+        
+        for (let nvIndex = 0; nvIndex < totalNVSwitchesInSystem; nvIndex++) {
+          const nvswitchGlobalIndex = systemIndex * CONFIG.ensembleCount * CONFIG.nvswitchCount + nvIndex;
+          renderer.drawLink(gpuId, `nvswitch-${nvswitchGlobalIndex}`, color, bw.width, linkDef.fromSide, linkDef.toSide, offset, 0, 1, 0, 1, linkDef.type, linkDef.bandwidth);
+        }
+      }
+      
+      // Draw CPU-to-CPU link between ensembles (only if 2 ensembles)
+      if (ensembleCount === 2) {
+        const cpu0Id = systemIndex * CONFIG.ensembleCount === 0 ? 'cpu' : `cpu-${systemIndex * CONFIG.ensembleCount}`;
+        const cpu1Id = `cpu-${systemIndex * CONFIG.ensembleCount + 1}`;
+        
+        // Use a bandwidth for CPU-CPU connection (assuming similar to CPU-PCIe)
+        const bw = getBandwidth('16GB/s');
+        const color = CONFIG.colors.linkColor;
+        const offset = getLinkOffset(bw.width);
+        
+        renderer.drawLink(cpu0Id, cpu1Id, color, bw.width, 'right', 'left', offset, 0, 1, 0, 1, 'cpu', '16GB/s');
+        
+        // Draw EFA-to-EFA link between ensembles (only if explicitly requested)
+        if (drawEfaCrossLinks) {
+          const efaExt0Id = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount === 0 ? 'efa-external' : `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount}`;
+          const efaExt1Id = `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + CONFIG.groupCount}`;
+          
+          // Get phantom positions from renderer.nodes
+          const phantom0 = renderer.nodes.get(efaExt0Id);
+          const phantom1 = renderer.nodes.get(efaExt1Id);
+          
+          if (phantom0 && phantom1) {
+          const efaBw = getBandwidth('12.5GB/s');
+          const efaColor = CONFIG.colors.linkColor;
+          
+          // Draw 4 stacked links manually (EFA has 4 connections)
+          const stackCount = 4;
+          // Use fixed spacing to keep consistent visual spacing
+          const spacing = 6; // Fixed spacing between stacked links
+          const verticalShift = -95; // Shift up to align with EFA nodes
+          const horizontalShift = -40; // Shift left to better position the arrows
+          const horizontalExtension = 20; // Extend arrows horizontally on each side
+          
+          for (let i = 0; i < stackCount; i++) {
+            const offsetY = (i - (stackCount - 1) / 2) * spacing;
+            
+            const efaCrossGroup = renderer.crossLinksGroup.group();
+            efaCrossGroup.attr('data-link-type', 'efa-crosslink');
+            efaCrossGroup.attr('data-from', efaExt0Id);
+            efaCrossGroup.attr('data-to', efaExt1Id);
+            efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
+            
+            // Draw line with vertical offset for stacking + shifts + horizontal extension
+            const x0 = phantom0.x + horizontalShift;
+            const x1 = phantom1.x + horizontalShift + horizontalExtension;
+            const y0 = phantom0.y + offsetY + verticalShift;
+            const y1 = phantom1.y + offsetY + verticalShift;
+            
+            // Draw border
+            efaCrossGroup.line(x0, y0, x1, y1)
+              .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+            
+            // Draw main line
+            efaCrossGroup.line(x0, y0, x1, y1)
+              .stroke({ color: efaColor, width: efaBw.width, opacity: 1 });
+            
+            // Draw circles at both ends
+            const r = efaBw.width * 0.8;
+            const startCircle = efaCrossGroup.circle(r * 2).move(x0 - r, y0 - r);
+            startCircle.fill(efaColor);
+            startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            startCircle.attr('data-link-circle', 'true');
+            
+            const endCircle = efaCrossGroup.circle(r * 2).move(x1 - r, y1 - r);
+            endCircle.fill(efaColor);
+            endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            endCircle.attr('data-link-circle', 'true');
+          }
+          
+          // Add vertical bars at both ends (connect horizontal arrows to EFA phantoms)
+          const barColor = CONFIG.colors.linkColor; // Use primary color for vertical bars
+          
+          for (let i = 0; i < stackCount; i++) {
+            const offsetX = (i - (stackCount - 1) / 2) * spacing + 12; // Horizontal offset for vertical bars
+            const yHorizontal = phantom0.y + verticalShift + 10;
+            const yPhantom = phantom0.y + 8; // End a bit higher (5px above phantom center)
+            
+            // Left vertical bar (one per horizontal arrow)
+            const leftBarGroup = renderer.crossLinksGroup.group();
+            leftBarGroup.attr('data-link-type', 'efa-crosslink');
+            leftBarGroup.attr('data-from', efaExt0Id);
+            leftBarGroup.attr('data-to', efaExt1Id);
+            leftBarGroup.attr('data-bandwidth', '12.5GB/s');
+            
+            const x0 = phantom0.x + horizontalShift + offsetX;
+            
+            // Draw border
+            leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
+              .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+            
+            // Draw main line
+            leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
+              .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
+            
+            const r = efaBw.width * 0.8;
+            const bottomCircle0 = leftBarGroup.circle(r * 2).move(x0 - r, yPhantom - r);
+            bottomCircle0.fill(barColor);
+            bottomCircle0.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            bottomCircle0.attr('data-link-circle', 'true');
+            
+            // Right vertical bar (one per horizontal arrow)
+            const rightBarGroup = renderer.crossLinksGroup.group();
+            rightBarGroup.attr('data-link-type', 'efa-crosslink');
+            rightBarGroup.attr('data-from', efaExt0Id);
+            rightBarGroup.attr('data-to', efaExt1Id);
+            rightBarGroup.attr('data-bandwidth', '12.5GB/s');
+            
+            const x1 = phantom1.x + horizontalShift + offsetX;
+            
+            // Draw border
+            rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
+              .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+            
+            // Draw main line
+            rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
+              .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
+            
+            const bottomCircle1 = rightBarGroup.circle(r * 2).move(x1 - r, yPhantom - r);
+            bottomCircle1.fill(barColor);
+            bottomCircle1.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            bottomCircle1.attr('data-link-circle', 'true');
+          }
+          }
+        }
+      }
+    }
+
+    // ============================================================================
+    // DRAW COMPLETE TOPOLOGY
+    // ============================================================================
+    let currentEnsembleCount = 2;  // Start with 2 ensembles (1 complete node)
+    let currentSystemCount = 1;    // Start with 1 system
+    let currentActivePathId = null; // Track active path for conditional rendering
+    
+    function drawTopology(ensembleCount = currentEnsembleCount, systemCount = currentSystemCount) {
+      // Clear existing
+      const container = document.getElementById('aws-topology-container');
+      container.innerHTML = '';
+      
+      // Calculate dynamic viewbox based on what we're drawing
+      const ensembleWidth = CONFIG.groupCount * CONFIG.gaps.horizontal;
+      let viewboxWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap + 200;  // +200 for padding
+      
+      const singleSystemHeight = CONFIG.gaps.topMargin + CONFIG.sizes.cpu + 
+                                  CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height + 
+                                  CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height + 
+                                  CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height + 
+                                  CONFIG.gaps.bottomMargin;
+      let viewboxHeight = systemCount * singleSystemHeight + (systemCount - 1) * CONFIG.gaps.systemGap;
+      
+      // Scale down more for internode (2 systems)
+      if (systemCount === 2) {
+        viewboxWidth *= 1.15;   // Increase viewbox width by 15% to scale down content
+        viewboxHeight *= 1.15;  // Increase viewbox height by 15% to scale down content
+      }
+      
+      const draw = SVG().addTo('#aws-topology-container').size('100%', '100%').viewbox(0, 50, viewboxWidth, viewboxHeight);
+      const renderer = new TopologyRenderer(draw);
+      
+      const centerX = viewboxWidth / 2;
+      
+      // Draw each system (stacked vertically)
+      for (let sysIndex = 0; sysIndex < systemCount; sysIndex++) {
+        // Calculate Y offset for this system
+        const systemOffsetY = sysIndex * (singleSystemHeight + CONFIG.gaps.systemGap);
+        
+        // Calculate Y positions for this system
+        const cpuY = systemOffsetY + CONFIG.gaps.topMargin + CONFIG.sizes.cpu / 2;
+        const nvswitchY = cpuY + CONFIG.sizes.cpu / 2 + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height + 
+                          CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height / 2 + CONFIG.gaps.gpuToNvswitch + 
+                          CONFIG.sizes.nvswitch.height / 2;
+        
+        // Only draw EFA cross-links for intranode EFA path
+        const drawEfaCrossLinks = currentActivePathId === 'gpu-gpu-efa-intranode';
+        drawSystem(renderer, sysIndex, centerX, cpuY, nvswitchY, ensembleCount, drawEfaCrossLinks);
+      }
+      
+      // Draw EFA cross-link between systems (for internode)
+      if (systemCount === 2 && ensembleCount === 2 && currentActivePathId === 'gpu-gpu-efa-internode') {
+        const efaExt0Id = 'efa-external';  // System 0, ensemble 0, group 0
+        const efaExt1Id = 'efa-external-8';  // System 1, ensemble 0, group 0 (4 groups per ensemble, 2 ensembles per system = group 8)
+        
+        const phantom0 = renderer.nodes.get(efaExt0Id);
+        const phantom1 = renderer.nodes.get(efaExt1Id);
+        
+        // Only draw if both phantoms exist
+        if (phantom0 && phantom1) {
+          const efaBw = getBandwidth('12.5GB/s');  // External EFA bandwidth
+          const efaColor = CONFIG.colors.linkColor;
+          
+          // Draw 4 stacked links manually (EFA has 4 connections)
+          const stackCount = 4;
+          // Use fixed spacing like intranode to keep consistent visual spacing
+          const spacing = 6; // Fixed spacing between stacked links
+          const verticalExtension = 10; // Extend arrows vertically
+          const horizontalShift = -22; // Shift left to better position the arrows
+          
+          for (let i = 0; i < stackCount; i++) {
+            const offsetX = (i - (stackCount - 1) / 2) * spacing; // Horizontal offset for vertical lines
+            
+            const efaCrossGroup = renderer.crossLinksGroup.group();
+            efaCrossGroup.attr('data-link-type', 'efa-crosslink-internode');
+            efaCrossGroup.attr('data-from', efaExt0Id);
+            efaCrossGroup.attr('data-to', efaExt1Id);
+            efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
+            
+            // Draw line with horizontal offset for stacking + vertical extension + horizontal shift
+            const x0 = phantom0.x + offsetX + horizontalShift;
+            const x1 = phantom1.x + offsetX + horizontalShift;
+            const y0 = phantom0.y - verticalExtension;
+            const y1 = phantom1.y + verticalExtension;
+            
+            // Draw border
+            efaCrossGroup.line(x0, y0, x1, y1)
+              .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+            
+            // Draw main line
+            efaCrossGroup.line(x0, y0, x1, y1)
+              .stroke({ color: efaColor, width: efaBw.width, opacity: 1 });
+            
+            // Draw circles at both ends
+            const r = efaBw.width * 0.8;
+            const startCircle = efaCrossGroup.circle(r * 2).move(x0 - r, y0 - r);
+            startCircle.fill(efaColor);
+            startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            startCircle.attr('data-link-circle', 'true');
+            
+            const endCircle = efaCrossGroup.circle(r * 2).move(x1 - r, y1 - r);
+            endCircle.fill(efaColor);
+            endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+            endCircle.attr('data-link-circle', 'true');
+          }
+        }
+      }
+      
+      currentEnsembleCount = ensembleCount;
+      currentSystemCount = systemCount;
+    }
+
+    // ============================================================================
+    // HIGHLIGHT HELPERS
+    // ============================================================================
+    function highlightPath(path, pathLabel = '') {
+      const svg = document.querySelector('#aws-topology-container svg');
+      if (!svg) return;
+      
+      // Dim all elements
+      svg.querySelectorAll('g[data-node-type], g[data-link-type]').forEach(el => {
+        el.style.opacity = '0.6';
+        // Dim link lines even more (half of element opacity)
+        el.querySelectorAll('line').forEach(line => {
+          line.style.opacity = '0.1';  // 0.45 / 2
+        });
+        // Also dim link circles more
+        el.querySelectorAll('[data-link-circle]').forEach(circle => {
+          circle.style.opacity = '0';
+        });
+        // Dim text labels even more (half of element opacity)
+        el.querySelectorAll('text').forEach(text => {
+          text.style.opacity = '0.35';  // 0.45 / 2 + un peu plus
+        });
+      });
+      
+      // Highlight path nodes
+      path.nodes.forEach(nodeId => {
+        let nodeEl = svg.querySelector(`g[id="${nodeId}"]`);
+        if (!nodeEl) {
+          const candidates = svg.querySelectorAll(`g[id^="${nodeId}"]`);
+          nodeEl = candidates[0];
+        }
+        if (nodeEl) {
+          nodeEl.style.opacity = '1';
+          // Restore text opacity
+          nodeEl.querySelectorAll('text').forEach(text => {
+            text.style.opacity = '1';
+          });
+        }
+      });
+      
+      // Highlight path links
+      path.links.forEach(linkSpec => {
+        svg.querySelectorAll('g[data-link-type]').forEach(linkGroup => {
+          const linkFrom = linkGroup.getAttribute('data-from');
+          const linkTo = linkGroup.getAttribute('data-to');
+          
+          const matchesFrom = linkFrom === linkSpec.from || linkFrom === `${linkSpec.from}`;
+          const matchesTo = linkTo === linkSpec.to || linkTo === `${linkSpec.to}`;
+          
+          if (matchesFrom && matchesTo) {
+            linkGroup.style.opacity = '1';
+            // Restore line opacity for active links
+            linkGroup.querySelectorAll('line').forEach(line => {
+              line.style.opacity = '1';
+            });
+            // Restore circle opacity for active links
+            linkGroup.querySelectorAll('[data-link-circle]').forEach(circle => {
+              circle.style.opacity = '1';
+            });
+            // Restore text opacity for active links
+            linkGroup.querySelectorAll('text').forEach(text => {
+              text.style.opacity = '1';
+            });
+          }
+        });
+      });
+      
+      // Calculate and show bottleneck (minimum bandwidth in the path)
+      let minBandwidth = Infinity;
+      let minBandwidthValue = null;
+      const usedBandwidths = new Set();
+      
+      path.links.forEach(linkSpec => {
+        svg.querySelectorAll('g[data-link-type]').forEach(linkGroup => {
+          const linkFrom = linkGroup.getAttribute('data-from');
+          const linkTo = linkGroup.getAttribute('data-to');
+          
+          const matchesFrom = linkFrom === linkSpec.from || linkFrom === `${linkSpec.from}`;
+          const matchesTo = linkTo === linkSpec.to || linkTo === `${linkSpec.to}`;
+          
+          if (matchesFrom && matchesTo) {
+            const bandwidth = linkGroup.getAttribute('data-bandwidth');
+            if (bandwidth) {
+              const bw = getBandwidth(bandwidth);
+              if (bw && bw.numericValue < minBandwidth) {
+                minBandwidth = bw.numericValue;
+                minBandwidthValue = bw.speed;
+              }
+              if (bw) {
+                usedBandwidths.add(bw.speed);
+              }
+            }
+          }
+        });
+      });
+      
+      // Highlight all used bandwidths in the legend
+      const legendContainer = document.getElementById('aws-topology-legend');
+      if (legendContainer) {
+        legendContainer.querySelectorAll('g[data-legend-bandwidth]').forEach(legendItem => {
+          const bandwidth = legendItem.getAttribute('data-legend-bandwidth');
+          if (usedBandwidths.has(bandwidth)) {
+            // Used in the path - active
+            legendItem.style.opacity = '1';
+          } else {
+            // Not used - ghosted
+            legendItem.style.opacity = '0.25';
+          }
+        });
+      }
+      
+      // Show bottleneck info
+      const bottleneckEl = document.getElementById('aws-topology-bottleneck');
+      const bottleneckValueEl = document.getElementById('bottleneck-value');
+      const bottleneckPathEl = document.getElementById('bottleneck-path');
+      
+      if (minBandwidthValue) {
+        const value = minBandwidthValue.replace('GB/s', '');
+        // For EFA (12.5GB/s), add ×4 to indicate 4 links
+        const displayValue = value === '12.5' ? `${value} ×4` : value;
+        bottleneckValueEl.textContent = displayValue;
+        bottleneckPathEl.textContent = `for ${pathLabel}`;
+        bottleneckEl.classList.add('visible');
+      } else {
+        // Debug: show the module even without bandwidth data
+        bottleneckValueEl.textContent = '?';
+        bottleneckPathEl.textContent = `for ${pathLabel}`;
+        bottleneckEl.classList.add('visible');
+      }
+    }
+    
+    function resetHighlight() {
+      const svg = document.querySelector('#aws-topology-container svg');
+      if (!svg) return;
+      
+      svg.querySelectorAll('g[data-node-type], g[data-link-type]').forEach(el => {
+        el.style.opacity = '1';
+        // Reset line opacity
+        el.querySelectorAll('line').forEach(line => {
+          line.style.opacity = '1';
+        });
+        // Reset circle opacity
+        el.querySelectorAll('[data-link-circle]').forEach(circle => {
+          circle.style.opacity = '1';
+        });
+        // Reset text opacity
+        el.querySelectorAll('text').forEach(text => {
+          text.style.opacity = '1';
+        });
+      });
+      
+      // Reset legend opacity
+      const legendContainer = document.getElementById('aws-topology-legend');
+      if (legendContainer) {
+        legendContainer.querySelectorAll('g[data-legend-bandwidth]').forEach(legendItem => {
+          legendItem.style.opacity = '1';
+        });
+      }
+      
+      // Hide bottleneck
+      const bottleneckEl = document.getElementById('aws-topology-bottleneck');
+      bottleneckEl.classList.remove('visible');
+    }
+
+    // ============================================================================
+    // CONFIG READING (from HtmlEmbed props)
+    // ============================================================================
+    function readEmbedConfig() {
+      // Find the closest ancestor that carries the data-config attribute
+      let mountEl = document.getElementById('aws-topology-container');
+      while (mountEl && !mountEl.getAttribute?.('data-config')) {
+        mountEl = mountEl.parentElement;
+      }
+      
+      let providedConfig = null;
+      try {
+        const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+        if (cfg && cfg.trim()) {
+          providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+        }
+      } catch (e) {
+        console.error('Error parsing embed config:', e);
+      }
+      
+      return providedConfig || {};
+    }
+
+    // ============================================================================
+    // INITIALIZATION
+    // ============================================================================
+    function initialize() {
+      const container = document.getElementById('aws-topology-container');
+      const tooltip = document.getElementById('aws-topology-tooltip');
+      
+      // Read config from HtmlEmbed props
+      const embedConfig = readEmbedConfig();
+      
+      drawTopology();
+      
+      // Initial fade in
+      requestAnimationFrame(() => {
+        container.style.opacity = '1';
+      });
+      
+      // Setup tooltip
+      
+      container.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-bandwidth]');
+        if (target) {
+          const bandwidth = target.getAttribute('data-bandwidth');
+          tooltip.textContent = bandwidth;
+          tooltip.classList.add('visible');
+        }
+      });
+      
+      container.addEventListener('mousemove', (e) => {
+        if (tooltip.classList.contains('visible')) {
+          const rect = container.getBoundingClientRect();
+          tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+          tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+        }
+      });
+      
+      container.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-bandwidth]');
+        if (target) {
+          tooltip.classList.remove('visible');
+        }
+      });
+      
+      // Create control buttons organized by category
+      const controlsContainer = document.getElementById('aws-topology-controls');
+      
+      // Categorize paths
+      const intranodePaths = [
+        { id: 'cpu-gpu', label: CONFIG.paths['cpu-gpu'].label },
+        { id: 'gpu-gpu-cpu', label: CONFIG.paths['gpu-gpu-cpu'].label },
+        { id: 'gpu-gpu-nvswitch', label: CONFIG.paths['gpu-gpu-nvswitch'].label },
+        { id: 'gpu-gpu-efa-intranode', label: CONFIG.paths['gpu-gpu-efa-intranode'].label }
+      ];
+      
+      const internodePaths = [
+        { id: 'gpu-gpu-efa-internode', label: CONFIG.paths['gpu-gpu-efa-internode'].label }
+      ];
+      
+      const storagePaths = [
+        { id: 'gpu-storage', label: CONFIG.paths['gpu-storage'].label },
+        { id: 'cpu-storage', label: CONFIG.paths['cpu-storage'].label },
+        { id: 'gpu-cpu-storage', label: CONFIG.paths['gpu-cpu-storage'].label }
+      ];
+      
+      const controlsHTML = `
+        <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 4px;">Filters</div>
+        
+        <div class="aws-topology-controls-section">
+          <div class="aws-topology-controls-label">Intranode</div>
+          <div class="aws-topology-controls-buttons">
+            ${intranodePaths.map(ctrl => `
+              <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="aws-topology-controls-row">
+          <div class="aws-topology-controls-section">
+            <div class="aws-topology-controls-label">Internode</div>
+            <div class="aws-topology-controls-buttons">
+              ${internodePaths.map(ctrl => `
+                <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="aws-topology-controls-section">
+            <div class="aws-topology-controls-label">Storage</div>
+            <div class="aws-topology-controls-buttons">
+              ${storagePaths.map(ctrl => `
+                <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      controlsContainer.innerHTML = controlsHTML;
+      
+      // Add click handlers
+      controlsContainer.querySelectorAll('.button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const pathId = btn.dataset.highlight;
+          const path = CONFIG.paths[pathId];
+          
+          if (!path) return;
+          
+          // Check if this button is currently active BEFORE toggling
+          const isActive = btn.classList.contains('button--ghost') === false;
+          
+          // Deactivate all buttons
+          controlsContainer.querySelectorAll('.button').forEach(b => {
+            b.classList.remove('button--ghost');
+            b.classList.add('button--ghost');
+          });
+          
+          // If button was NOT active, activate it and show path
+          if (!isActive) {
+            btn.classList.remove('button--ghost');
+            currentActivePathId = pathId; // Track active path
+            
+            // Check if we need to redraw (either different config OR EFA paths that need cross-links)
+            const needsRedraw = path.requiredEnsembles !== currentEnsembleCount || 
+                               path.requiredSystems !== currentSystemCount ||
+                               pathId === 'gpu-gpu-efa-intranode' ||
+                               pathId === 'gpu-gpu-efa-internode';
+            
+            if (needsRedraw) {
+              // Fade out first
+              const container = document.getElementById('aws-topology-container');
+              container.style.opacity = '0';
+              
+              // Wait for fade out to complete, then redraw
+              setTimeout(() => {
+                drawTopology(path.requiredEnsembles, path.requiredSystems);
+                
+                // Highlight BEFORE fade in (while still invisible)
+                highlightPath(path, path.label);
+                
+                // Then fade in with highlight already applied
+                requestAnimationFrame(() => {
+                  container.style.opacity = '1';
+                });
+              }, 150);  // Wait for CSS transition to complete
+            } else {
+              // No redraw needed, just highlight immediately
+              highlightPath(path, path.label);
+            }
+          } else {
+            // Button was active, now deactivate: reset to default (2 ensembles, 1 system)
+            currentActivePathId = null; // Clear active path
+            
+            if (currentEnsembleCount !== 2 || currentSystemCount !== 1) {
+              const container = document.getElementById('aws-topology-container');
+              container.style.opacity = '0';
+              
+              setTimeout(() => {
+                drawTopology(2, 1);
+                resetHighlight(); // Reset highlight after redraw
+                
+                // Fade in after redraw
+                requestAnimationFrame(() => {
+                  container.style.opacity = '1';
+                });
+              }, 150);
+            } else {
+              // Just reset highlight without redrawing
+              resetHighlight();
+            }
+          }
+        });
+      });
+      
+      // Apply initial filter from embedConfig if provided
+      if (embedConfig.initialFilter) {
+        const initialPathId = embedConfig.initialFilter;
+        const path = CONFIG.paths[initialPathId];
+        
+        if (path) {
+          // Find the button for this path
+          const btn = controlsContainer.querySelector(`[data-highlight="${initialPathId}"]`);
+          
+          if (btn) {
+            // Activate button visually
+            btn.classList.remove('button--ghost');
+            currentActivePathId = initialPathId;
+            
+            // Draw topology with correct requirements
+            const needsRedraw = path.requiredEnsembles !== currentEnsembleCount || 
+                               path.requiredSystems !== currentSystemCount ||
+                               initialPathId === 'gpu-gpu-efa-intranode' ||
+                               initialPathId === 'gpu-gpu-efa-internode';
+            
+            if (needsRedraw) {
+              drawTopology(path.requiredEnsembles, path.requiredSystems);
+            }
+            
+            // Apply highlight immediately (before fade in)
+            highlightPath(path, path.label);
+          }
+        }
+      }
+      
+      // Create SVG legend
+      const legendContainer = document.getElementById('aws-topology-legend');
+      const legendSvg = SVG().addTo(legendContainer).size('100%', '100%');
+      
+      const lineLength = 36;  // 30 * 1.2
+      const itemSpacing = 30;  // 25 * 1.2
+      const startX = 96;  // 80 * 1.2
+      const startY = 42;  // 35 * 1.2
+      const textOffset = 24;  // 20 * 1.2
+      
+      // Calculate actual legend width based on content
+      const legendWidth = startX + lineLength + textOffset + 168;  // 140 * 1.2
+      const legendHeight = 144;  // 120 * 1.2
+      legendSvg.viewbox(0, 0, legendWidth, legendHeight);
+      
+      [...CONFIG.bandwidths].reverse().forEach((bw, index) => {
+        const y = startY + (index * itemSpacing);
+        const color = CONFIG.colors.linkColor;  // Use primary color for all links
+        const width = bw.width;
+        
+        // Create a group for each legend item with a data attribute for bandwidth
+        const legendItemGroup = legendSvg.group();
+        legendItemGroup.attr('data-legend-bandwidth', bw.speed);
+        
+        // Dessiner la ligne
+        legendItemGroup.line(startX, y, startX + lineLength, y)
+          .stroke({ color, width });
+        
+        // Dessiner les cercles aux extrémités
+        const r = width * 0.8;
+        const startCircle = legendItemGroup.circle(r * 2).move(startX - r, y - r);
+        startCircle.fill(color);
+        startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        
+        const endCircle = legendItemGroup.circle(r * 2).move(startX + lineLength - r, y - r);
+        endCircle.fill(color);
+        endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        
+        // Ajouter le texte (aligné à droite, valeur en gras)
+        const textX = legendWidth - 5;
+        const value = bw.speed.replace('GB/s', '').trim();
+        
+        // Format: "Label - 900 GB/s" avec 900 en gras
+        const textEl = legendItemGroup.text(function(add) {
+          add.tspan(bw.label + ' - ').font({ weight: 'normal' });
+          add.tspan(value).font({ weight: 'bold' });
+          add.tspan(' GB/s').font({ weight: 'normal' });
+        })
+          .move(textX, y)
+          .font({ 
+            family: 'system-ui, -apple-system, sans-serif', 
+            size: 14,  // 12 * 1.2 ≈ 14
+            anchor: 'end',
+            fill: CONFIG.colors.nodeText 
+          })
+          .dy(-7);  // -6 * 1.2 ≈ -7
+      });
+    }
+
+    initialize();
+  })();
+</script>
+

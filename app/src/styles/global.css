@@ -8,7 +8,8 @@
 @import './components/_table.css';
 @import './components/_tag.css';
 @import './components/_card.css';
-@import './components/_form.css'; 
+@import './components/_form.css';
+@import './components/_mermaid.css';
 
 .demo-wide,
 .demo-full-width {
@@ -27,6 +28,6 @@
 }
 
 .mermaid {
-    background: none!important;
-    margin-bottom: var(--block-spacing-y) !important;
+  background: none !important;
+  margin-bottom: var(--block-spacing-y) !important;
 }

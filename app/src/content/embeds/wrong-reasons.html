@@ -1,0 +1,113 @@
+<div class="wrong-reasons"></div>
+
+<style>
+  .wrong-reasons {
+    font-family: var(--default-font-family);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .wrong-reasons .bad-reasons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-4);
+    margin-bottom: 0;
+  }
+  
+  .wrong-reasons .reason-card {
+    background: oklch(from var(--danger-color) calc(l + 0.4) c h / 0.06);
+    border: 2px solid oklch(from var(--danger-color) calc(l + 0.1) c h / 0.5);
+    border-radius: 16px;
+    padding: var(--spacing-5);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 140px;
+  }
+  
+  .wrong-reasons .reason-quote {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--danger-color);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  
+  .wrong-reasons .reason-explanation {
+    font-size: 15px;
+    color: var(--muted-color);
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  
+  @media (max-width: 768px) {
+    .wrong-reasons {
+      padding: var(--spacing-5) var(--spacing-4);
+    }
+    
+    .wrong-reasons .title {
+      font-size: 24px;
+    }
+    
+    .wrong-reasons .bad-reasons {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('wrong-reasons'))) {
+        const candidates = Array.from(document.querySelectorAll('.wrong-reasons'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Create the wrong reasons structure
+      container.innerHTML = `
+        <div class="bad-reasons">
+          <div class="reason-card">
+            <div class="reason-quote">"We have compute available"</div>
+            <div class="reason-explanation">That's a resource, not a goal</div>
+          </div>
+          
+          <div class="reason-card">
+            <div class="reason-quote">"Everyone else is doing it"</div>
+            <div class="reason-explanation">That's peer pressure, not strategy</div>
+          </div>
+          
+          <div class="reason-card">
+            <div class="reason-quote">"AI is the future"</div>
+            <div class="reason-explanation">That's a platitude, not a plan</div>
+          </div>
+          
+          <div class="reason-card">
+            <div class="reason-quote">"We want the best model possible"</div>
+            <div class="reason-explanation">That's not specific enough to guide decisions</div>
+          </div>
+        </div>
+      `;
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

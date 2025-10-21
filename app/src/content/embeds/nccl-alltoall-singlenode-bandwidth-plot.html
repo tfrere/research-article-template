@@ -1,0 +1,307 @@
+<div class="nccl-alltoall-singlenode"></div>
+<style>
+  .nccl-alltoall-singlenode { position: relative; }
+  .nccl-alltoall-singlenode .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 700; }
+  .nccl-alltoall-singlenode .axes path, .nccl-alltoall-singlenode .axes line { stroke: var(--axis-color); }
+  .nccl-alltoall-singlenode .axes text { fill: var(--tick-color); }
+  .nccl-alltoall-singlenode .grid line { stroke: var(--grid-color); }
+  .nccl-alltoall-singlenode .chart-card { background: var(--page-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; }
+  .nccl-alltoall-singlenode .chart-header { display:flex; align-items:flex-start; justify-content:flex-start; gap:12px; margin: 8px 0 0 0; flex-wrap: wrap; }
+  .nccl-alltoall-singlenode .legend-bottom { display:flex; align-items:flex-start; justify-content:flex-start; font-size:12px; color: var(--text-color); flex-direction: column; gap: 4px; }
+  .nccl-alltoall-singlenode .legend-bottom .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
+  .nccl-alltoall-singlenode .legend-bottom .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+  .nccl-alltoall-singlenode .legend-bottom .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
+  .nccl-alltoall-singlenode .legend-bottom .legend-label { font-size: 11px; font-weight: 600; color: var(--muted-color); text-transform: uppercase; letter-spacing: 0.5px; }
+  .nccl-alltoall-singlenode .lines path.active { stroke-width: 3; }
+  .nccl-alltoall-singlenode .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
+  .nccl-alltoall-singlenode .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; }
+  .nccl-alltoall-singlenode .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
+  .nccl-alltoall-singlenode .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
+  .nccl-alltoall-singlenode .d3-tooltip__color-dot { display:inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+  /* Ghosting on hover */
+  .nccl-alltoall-singlenode.hovering .legend-bottom .item.ghost { opacity: .35; }
+  .nccl-alltoall-singlenode.hovering .lines path.ghost { opacity: .25; }
+  .nccl-alltoall-singlenode.hovering .points circle.ghost { opacity: .25; }
+</style>
+<script> 
+  (() => {
+    // Prevent multiple executions
+    if (window.ncclAllToAllInitialized) return;
+    window.ncclAllToAllInitialized = true;
+    
+    // Completely scoped IIFE to avoid variable conflicts
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrapAllToAll = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('nccl-alltoall-singlenode'))){
+        const cs = Array.from(document.querySelectorAll('.nccl-alltoall-singlenode')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
+          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Header (legend) placed after the chart
+      const header = document.createElement('div'); header.className = 'chart-header';
+      const legendBottom = document.createElement('div'); legendBottom.className = 'legend-bottom'; header.appendChild(legendBottom);
+
+      // Chart card (SVG)
+      const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+      container.appendChild(header);
+      
+      // SVG
+      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      const overlay = gRoot.append('rect').attr('fill','transparent').style('cursor','crosshair');
+      const hoverLine = gRoot.append('line').attr('stroke-width',1).style('display','none');
+
+      // State/data
+      let width = 800, height = 480; const margin = { top: 16, right: 32, bottom: 60, left: 80 };
+      const xScale = d3.scaleLog();
+      const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.messageSize)).y(d => yScale(d.bandwidth));
+      let data = [];
+      let maxBandwidth = 0;
+
+      // Colors - following guidelines to use ColorPalettes
+      let currentColors = ['#d62728']; // Red color for single line
+      
+      function refreshPalette(){
+        try { 
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            const colors = window.ColorPalettes.getColors('categorical', 1);
+            if (colors && colors.length >= 1) {
+              currentColors = colors;
+              // Re-render with new colors
+              if (data.length > 0) render();
+              return;
+            }
+          }
+        } catch(_){}
+        // Fallback to CSS variable or default
+        currentColors = ['#d62728'];
+        // Re-render with fallback colors
+        if (data.length > 0) render();
+      }
+      
+      function getColors(){
+        return currentColors;
+      }
+      
+      // Format helper for bytes
+      function formatBytes(bytes){
+        if (bytes >= 1024 * 1024 * 1024) {
+          return Math.round(bytes / (1024 * 1024 * 1024)) + ' GB';
+        } else if (bytes >= 1024 * 1024) {
+          return Math.round(bytes / (1024 * 1024)) + ' MB';
+        } else if (bytes >= 1024) {
+          return Math.round(bytes / 1024) + ' KB';
+        } else {
+          return bytes + ' B';
+        }
+      }
+
+      // Format helper for bandwidth values
+      function formatBandwidth(v){
+        return Math.round(v);
+      }
+
+      function updateLayout(){
+        const axisColor = getComputedStyle(container).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
+        width = container.clientWidth || 800;
+        height = Math.max(280, Math.round(width / 3));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        overlay.attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        hoverLine.attr('y1',0).attr('y2', innerHeight).attr('stroke', axisColor);
+        return { innerWidth, innerHeight };
+      }
+
+      function render(){
+        if (data.length === 0) return;
+        
+        const { innerWidth, innerHeight } = updateLayout();
+        
+        // Sort data by message size
+        const sortedData = data.slice().sort((a, b) => a.messageSize - b.messageSize);
+        
+        // Prepare series data
+        const series = [{
+          name: 'Bus Bandwidth',
+          values: sortedData.map(d => ({ messageSize: d.messageSize, bandwidth: d.bandwidth }))
+        }];
+        
+        // domains
+        const minSize = d3.min(sortedData, d => d.messageSize);
+        const maxSize = d3.max(sortedData, d => d.messageSize);
+        const minBandwidth = 0;
+        maxBandwidth = d3.max(sortedData, d => d.bandwidth);
+        
+        xScale.domain([minSize, maxSize]).range([0, innerWidth]);
+        yScale.domain([minBandwidth, 350]).range([innerHeight, 0]);
+
+        // grid
+        gGrid.selectAll('*').remove();
+        gGrid.selectAll('line').data(yScale.ticks(7)).join('line')
+          .attr('x1',0).attr('x2', innerWidth).attr('y1', d=>yScale(d)).attr('y2', d=>yScale(d))
+          .attr('stroke','var(--grid-color)').attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // axes
+        gAxes.selectAll('*').remove();
+        
+        // Create custom ticks for X axis (powers of 2, every other tick)
+        const xTicks = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648, 4294967296, 8589934592];
+        const filteredXTicks = xTicks.filter(tick => tick >= minSize && tick <= maxSize);
+        
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickValues(filteredXTicks).tickFormat(formatBytes))
+          .call(g=>{ 
+            g.selectAll('path, line').attr('stroke','var(--axis-color)'); 
+            g.selectAll('text')
+              .attr('fill','var(--tick-color)')
+              .style('font-size','10px')
+              .attr('transform', 'rotate(-45)')
+              .style('text-anchor', 'end')
+              .attr('dx', '-8px');
+          });
+        
+        gAxes.append('g').call(d3.axisLeft(yScale).tickFormat(formatBandwidth)).call(g=>{ g.selectAll('path, line').attr('stroke','var(--axis-color)'); g.selectAll('text').attr('fill','var(--tick-color)').style('font-size','12px'); });
+        gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('x', innerWidth/2).attr('y', innerHeight + 50).text('Message Size (bytes)');
+        gAxes.append('text').attr('class','axis-label').attr('text-anchor','middle').attr('transform', `translate(${-60}, ${innerHeight/2}) rotate(-90)`).text('Bus Bandwidth (GB/s)');
+
+        // lines
+        const colors = getColors();
+        gLines.selectAll('*').remove();
+        series.forEach((s, i) => {
+          gLines.append('path')
+            .attr('class', `line line-${i}`)
+            .attr('data-series', s.name)
+            .attr('fill','none')
+            .attr('stroke', colors[i % colors.length])
+            .attr('stroke-width', 2)
+            .attr('d', lineGen(s.values));
+        });
+
+        // point markers
+        gPoints.selectAll('*').remove();
+        series.forEach((s, i) => {
+          gPoints.selectAll(`g.point-group-${i}`).data(s.values).join('g')
+            .attr('class', `point-group point-group-${i}`)
+            .attr('data-series', s.name)
+            .attr('transform', d => `translate(${xScale(d.messageSize)}, ${yScale(d.bandwidth)})`)
+            .append('circle')
+            .attr('r', 3)
+            .attr('fill', colors[i % colors.length])
+            .attr('fill-opacity', 0.8)
+            .attr('stroke', 'white')
+            .attr('stroke-width', 1);
+        });
+
+        // Add max bandwidth reference line
+        gAxes.append('line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', yScale(maxBandwidth))
+          .attr('y2', yScale(maxBandwidth))
+          .attr('stroke', colors[0])
+          .attr('stroke-dasharray', '5,5')
+          .attr('stroke-width', 1)
+          .attr('opacity', 0.7);
+
+        // No legend needed for single line chart
+
+        // hover
+        function onMove(ev){
+          const [mx, my] = d3.pointer(ev, overlay.node());
+          const sx = xScale.invert(mx);
+          
+          // Find nearest message size
+          const sizes = Array.from(new Set(sortedData.map(d => d.messageSize))).sort((a,b) => a - b);
+          const nearest = sizes.reduce((best, s) => Math.abs(s - sx) < Math.abs(best - sx) ? s : best, sizes[0]);
+          const xpx = xScale(nearest);
+          hoverLine.style('display', null).attr('x1', xpx).attr('x2', xpx);
+          
+          // Find data point for this message size
+          const dataPoint = sortedData.find(d => d.messageSize === nearest);
+          if (!dataPoint) return;
+          
+          // tooltip content
+          let html = `<div style="font-weight:800;letter-spacing:.1px;">NCCL AllToAll Bus Bandwidth</div><div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;">${formatBytes(nearest)}</div>`;
+          html += `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap;"><span class="d3-tooltip__color-dot" style="background:${colors[0]}"></span><strong>Bus Bandwidth</strong><span style="margin-left:auto;">${formatBandwidth(dataPoint.bandwidth)} GB/s</span></div>`;
+          
+          tipInner.innerHTML = html; 
+          tip.style.opacity = '1'; 
+          tip.style.transform = `translate(${Math.round(mx + margin.left + 12)}px, ${Math.round(my + margin.top + 12)}px)`;
+        }
+        
+        function onLeave(){ 
+          tip.style.opacity='0'; 
+          tip.style.transform='translate(-9999px, -9999px)'; 
+          hoverLine.style('display','none'); 
+        }
+        
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      // Load real data from JSON
+      async function loadData() {
+        try {
+          const response = await fetch('/data/nccl-alltoall-singlenode-bandwidth.json');
+          const jsonData = await response.json();
+          
+          data = jsonData;
+          render();
+        } catch (error) {
+          console.error('Error loading NCCL AllToAll data:', error);
+        }
+      }
+
+      // Initialize palette and listen for changes
+      refreshPalette();
+      document.addEventListener('palettes:updated', refreshPalette);
+      
+      // Initialize data by loading from JSON
+      loadData();
+      
+      const rerender = () => render();
+      if (window.ResizeObserver) { 
+        const ro = new ResizeObserver(() => rerender()); 
+        ro.observe(container); 
+      } else { 
+        window.addEventListener('resize', rerender); 
+      }
+    };
+
+    if (document.readyState === 'loading') { 
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrapAllToAll), { once: true }); 
+    } else { 
+      ensureD3(bootstrapAllToAll); 
+    }
+  })();
+</script>

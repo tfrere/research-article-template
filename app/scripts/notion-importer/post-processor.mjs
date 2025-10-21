@@ -1,31 +1,243 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
+import { Client } from '@notionhq/client';
+import { NotionConverter } from 'notion-to-md';
+import { DefaultExporter } from 'notion-to-md/plugins/exporter';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
+ * Ensure directory exists
+ */
+function ensureDirectory(dir) {
+    if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+    }
+}
+
+/**
  * Post-process Notion-generated Markdown for better MDX compatibility
  * @param {string} content - Raw markdown content from Notion
- * @returns {string} - Processed markdown content
+ * @param {Client} notionClient - Notion API client (optional)
+ * @param {string} notionToken - Notion API token (optional)
+ * @returns {Promise<string>} - Processed markdown content
  */
-export function postProcessMarkdown(content) {
+export async function postProcessMarkdown(content, notionClient = null, notionToken = null) {
     console.log('🔧 Post-processing Notion Markdown for MDX compatibility...');
 
     let processedContent = content;
 
     // Apply each transformation step
+    processedContent = removeExcludeTags(processedContent);
+    processedContent = await includeNotionPages(processedContent, notionClient, notionToken);
     processedContent = cleanNotionArtifacts(processedContent);
     processedContent = fixNotionLinks(processedContent);
+    processedContent = fixJsxAttributes(processedContent);
     processedContent = optimizeImages(processedContent);
     processedContent = shiftHeadingLevels(processedContent);
     processedContent = cleanEmptyLines(processedContent);
     processedContent = fixCodeBlocks(processedContent);
     processedContent = fixCodeBlockEndings(processedContent);
     processedContent = optimizeTables(processedContent);
+
+    return processedContent;
+}
+
+/**
+ * Remove <exclude> tags and their content
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with exclude tags removed and unused imports cleaned
+ */
+function removeExcludeTags(content) {
+    console.log('  🗑️  Removing <exclude> tags...');
+
+    let removedCount = 0;
+    const removedImageVariables = new Set();
+
+    // First, extract image variable names from exclude blocks before removing them
+    const excludeBlocks = content.match(/<exclude>[\s\S]*?<\/exclude>/g) || [];
+    excludeBlocks.forEach(match => {
+        const imageMatches = match.match(/src=\{([^}]+)\}/g);
+        if (imageMatches) {
+            imageMatches.forEach(imgMatch => {
+                const varName = imgMatch.match(/src=\{([^}]+)\}/)?.[1];
+                if (varName) {
+                    removedImageVariables.add(varName);
+                }
+            });
+        }
+    });
+
+    // Remove <exclude> tags and everything between them (including multiline)
+    content = content.replace(/<exclude>[\s\S]*?<\/exclude>/g, (match) => {
+        removedCount++;
+        return '';
+    });
+
+    // Remove unused image imports that were only used in exclude blocks
+    if (removedImageVariables.size > 0) {
+        console.log(`    🖼️  Found ${removedImageVariables.size} unused image import(s) in exclude blocks`);
+
+        removedImageVariables.forEach(varName => {
+            // Check if the variable is still used elsewhere in the content after removing exclude blocks
+            const remainingUsage = content.includes(`{${varName}}`) || content.includes(`src={${varName}}`);
+
+            if (!remainingUsage) {
+                // Remove import lines for unused image variables
+                // Pattern: import VarName from './assets/image/filename';
+                const importPattern = new RegExp(`import\\s+${varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+from\\s+['"][^'"]+['"];?\\s*`, 'g');
+                content = content.replace(importPattern, '');
+                console.log(`    🗑️  Removed unused import: ${varName}`);
+            }
+        });
+
+        console.log(`    🧹 Cleaned up unused image imports`);
+    }
+
+    if (removedCount > 0) {
+        console.log(`    ✅ Removed ${removedCount} <exclude> tag(s) and their content`);
+    } else {
+        console.log('    ℹ️  No <exclude> tags found');
+    }
+
+    return content;
+}
+
+/**
+ * Replace Notion page links with their actual content
+ * @param {string} content - Markdown content
+ * @param {Client} notionClient - Notion API client
+ * @param {string} notionToken - Notion API token
+ * @returns {Promise<string>} - Content with page links replaced
+ */
+async function includeNotionPages(content, notionClient, notionToken) {
+    console.log('  📄 Including linked Notion pages...');
+
+    if (!notionClient || !notionToken) {
+        console.log('    ℹ️  Skipping page inclusion (no Notion client/token provided)');
+        return content;
+    }
+
+    let includedCount = 0;
+    let skippedCount = 0;
+
+    // First, identify all exclude blocks to avoid processing links within them
+    const excludeBlocks = [];
+    const excludeRegex = /<exclude>[\s\S]*?<\/exclude>/g;
+    let excludeMatch;
+
+    while ((excludeMatch = excludeRegex.exec(content)) !== null) {
+        excludeBlocks.push({
+            start: excludeMatch.index,
+            end: excludeMatch.index + excludeMatch[0].length
+        });
+    }
+
+    // Helper function to check if a position is within an exclude block
+    const isWithinExcludeBlock = (position) => {
+        return excludeBlocks.some(block => position >= block.start && position <= block.end);
+    };
+
+    // Regex to match links to Notion pages with UUID format
+    // Pattern: [text](uuid-with-dashes)
+    const notionPageLinkRegex = /\[([^\]]+)\]\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)/g;
+
+    let processedContent = content;
+    let match;
+
+    // Find all matches
+    const matches = [];
+    while ((match = notionPageLinkRegex.exec(content)) !== null) {
+        const linkStartPos = match.index;
+
+        // Skip if this link is within an exclude block
+        if (isWithinExcludeBlock(linkStartPos)) {
+            console.log(`    ⏭️  Skipping page link in exclude block: ${match[1]} (${match[2]})`);
+            skippedCount++;
+            continue;
+        }
+
+        matches.push({
+            fullMatch: match[0],
+            linkText: match[1],
+            pageId: match[2],
+            startPos: match.index,
+            endPos: match.index + match[0].length
+        });
+    }
+
+    // Process matches in reverse order to maintain correct indices
+    for (let i = matches.length - 1; i >= 0; i--) {
+        const link = matches[i];
+
+        try {
+            console.log(`    🔗 Fetching content for page: ${link.pageId}`);
+
+            // Create media directory for this sub-page
+            const outputDir = join(__dirname, 'output');
+            const mediaDir = join(outputDir, 'media', link.pageId);
+            ensureDirectory(mediaDir);
+
+            // Configure the DefaultExporter to get content as string
+            const exporter = new DefaultExporter({
+                outputType: 'string',
+            });
+
+            // Create the converter with media downloading strategy (same as convertNotionPage)
+            const converter = new NotionConverter(notionClient)
+                .withExporter(exporter)
+                // Download media to local directory with path transformation
+                .downloadMediaTo({
+                    outputDir: mediaDir,
+                    // Transform paths to be web-accessible
+                    transformPath: (localPath) => `/media/${link.pageId}/${basename(localPath)}`,
+                });
+
+            // Convert the page
+            const result = await converter.convert(link.pageId);
+
+            console.log(`    🖼️  Media saved to: ${mediaDir}`);
+
+            if (result && result.content) {
+                // Clean the content (remove frontmatter, etc.)
+                let pageContent = result.content;
+
+                // Remove YAML frontmatter if present
+                pageContent = pageContent.replace(/^---[\s\S]*?---\s*\n/, '');
+
+                // Add a header for the included page
+                const pageHeader = `\n\n## ${link.linkText}\n\n`;
+                const finalContent = pageHeader + pageContent.trim() + '\n\n';
+
+                // Replace the link with the content
+                processedContent = processedContent.substring(0, link.startPos) +
+                    finalContent +
+                    processedContent.substring(link.endPos);
+
+                includedCount++;
+                console.log(`    ✅ Included page content: ${link.linkText}`);
+            } else {
+                console.log(`    ⚠️  No content found for page: ${link.pageId}`);
+            }
+        } catch (error) {
+            console.log(`    ❌ Failed to fetch page ${link.pageId}: ${error.message}`);
+            // Keep the original link if we can't fetch the content
+        }
+    }
+
+    if (includedCount > 0) {
+        console.log(`    ✅ Included ${includedCount} Notion page(s)`);
+    } else {
+        console.log('    ℹ️  No Notion page links found to include');
+    }
+
+    if (skippedCount > 0) {
+        console.log(`    ⏭️  Skipped ${skippedCount} page link(s) in exclude blocks`);
+    }
 
     return processedContent;
 }
@@ -54,6 +266,20 @@ function cleanNotionArtifacts(content) {
 
     // Clean up empty blockquotes
     content = content.replace(/^>\s*$/gm, '');
+
+    // Fix corrupted bold/italic formatting from notion-to-md conversion
+    // Pattern: ***text***  **** -> ***text***
+    content = content.replace(/\*\*\*([^*]+)\*\*\*\s+\*\*\*\*/g, (match, text) => {
+        cleanedCount++;
+        return `***${text.trim()}***`;
+    });
+
+    // Fix other corrupted asterisk patterns
+    // Pattern: **text**  ** -> **text**
+    content = content.replace(/\*\*([^*]+)\*\*\s+\*\*/g, (match, text) => {
+        cleanedCount++;
+        return `**${text.trim()}**`;
+    });
 
     if (cleanedCount > 0) {
         console.log(`    ✅ Cleaned ${cleanedCount} Notion artifact(s)`);
@@ -87,6 +313,76 @@ function fixNotionLinks(content) {
 
     if (fixedCount > 0) {
         console.log(`    ✅ Fixed ${fixedCount} Notion link(s)`);
+    }
+
+    return content;
+}
+
+/**
+ * Fix JSX attributes that were corrupted during Notion conversion
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with fixed JSX attributes
+ */
+function fixJsxAttributes(content) {
+    console.log('  🔧 Fixing JSX attributes corrupted by Notion conversion...');
+
+    let fixedCount = 0;
+
+    // Fix the specific issue: <HtmlEmbed  *src* ="/path" /> → <HtmlEmbed src="/path" />
+    // Pattern: <TagName  *attribute* ="value" />
+    content = content.replace(/<(\w+)\s+\*\s*([^*\s]+)\s*\*\s*=\s*"([^"]*)"\s*\/?>/g, (match, tagName, attribute, value) => {
+        fixedCount++;
+        return `<${tagName} ${attribute}="${value}" />`;
+    });
+
+    // Pattern: <TagName  *attribute* =value />
+    content = content.replace(/<(\w+)\s+\*\s*([^*\s]+)\s*\*\s*=\s*([^>\s\/]+)\s*\/?>/g, (match, tagName, attribute, value) => {
+        fixedCount++;
+        return `<${tagName} ${attribute}=${value} />`;
+    });
+
+    // Handle cases with **double asterisks** around attribute names
+    content = content.replace(/<(\w+)\s+\*\*\s*([^*\s]+)\s*\*\*\s*=\s*"([^"]*)"\s*\/?>/g, (match, tagName, attribute, value) => {
+        fixedCount++;
+        return `<${tagName} ${attribute}="${value}" />`;
+    });
+
+    content = content.replace(/<(\w+)\s+\*\*\s*([^*\s]+)\s*\*\*\s*=\s*([^>\s\/]+)\s*\/?>/g, (match, tagName, attribute, value) => {
+        fixedCount++;
+        return `<${tagName} ${attribute}=${value} />`;
+    });
+
+    // Fix HTML tags (like iframe, video, etc.) where URLs were corrupted by markdown conversion
+    // Pattern: src="[url](url)" -> src="url"
+    // Handle both regular quotes and various smart quote characters (", ", ', ', """, etc.)
+    // Handle attributes before and after src
+
+    // Handle iframe tags with separate opening and closing tags FIRST: <iframe ... src="[url](url)" ...>...</iframe>
+    content = content.replace(/<iframe([^>]*?)\ssrc=[""''""\u201C\u201D\u2018\u2019]\[([^\]]+)\]\([^)]+\)[""''""\u201C\u201D\u2018\u2019]([^>]*?)>\s*<\/iframe>/gi, (match, before, urlText, after) => {
+        fixedCount++;
+        return `<iframe${before} src="${urlText}"${after}></iframe>`;
+    });
+
+    // Handle self-closing iframe tags SECOND: <iframe ... src="[url](url)" ... />
+    content = content.replace(/<iframe([^>]*?)\ssrc=[""''""\u201C\u201D\u2018\u2019]\[([^\]]+)\]\([^)]+\)[""''""\u201C\u201D\u2018\u2019]([^>]*?)\s*\/?>/gi, (match, before, urlText, after) => {
+        fixedCount++;
+        return `<iframe${before} src="${urlText}"${after} />`;
+    });
+
+    // Handle other HTML tags with separate opening and closing tags FIRST: <video ... src="[url](url)" ...>...</video>
+    content = content.replace(/<(video|audio|embed|object)([^>]*?)\ssrc=[""''""\u201C\u201D\u2018\u2019]\[([^\]]+)\]\([^)]+\)[""''""\u201C\u201D\u2018\u2019]([^>]*?)>\s*<\/\1>/gi, (match, tagName, before, urlText, after) => {
+        fixedCount++;
+        return `<${tagName}${before} src="${urlText}"${after}></${tagName}>`;
+    });
+
+    // Handle other HTML tags with the same pattern (self-closing) SECOND: <video ... src="[url](url)" ... />
+    content = content.replace(/<(video|audio|embed|object)([^>]*?)\ssrc=[""''""\u201C\u201D\u2018\u2019]\[([^\]]+)\]\([^)]+\)[""''""\u201C\u201D\u2018\u2019]([^>]*?)\s*\/?>/gi, (match, tagName, before, urlText, after) => {
+        fixedCount++;
+        return `<${tagName}${before} src="${urlText}"${after} />`;
+    });
+
+    if (fixedCount > 0) {
+        console.log(`    ✅ Fixed ${fixedCount} corrupted JSX attribute(s)`);
     }
 
     return content;
@@ -184,8 +480,9 @@ function fixCodeBlockEndings(content) {
 function cleanEmptyLines(content) {
     console.log('  📝 Cleaning excessive empty lines...');
 
-    // Replace 3+ consecutive newlines with 2 newlines
-    const cleanedContent = content.replace(/\n{3,}/g, '\n\n');
+    // Only replace 4+ consecutive newlines with 2 newlines (be more conservative)
+    // This preserves single empty lines between paragraphs which are important for readability
+    const cleanedContent = content.replace(/\n{4,}/g, '\n\n');
 
     const originalLines = content.split('\n').length;
     const cleanedLines = cleanedContent.split('\n').length;

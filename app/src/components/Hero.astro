@@ -37,7 +37,6 @@ function normalizeAuthors(
         url?: string;
         link?: string;
         affiliationIndices?: number[];
-        affiliations?: number[];
       }
   >,
 ): Author[] {
@@ -48,11 +47,8 @@ function normalizeAuthors(
       }
       const name = (a?.name ?? "").toString();
       const url = (a?.url ?? a?.link) as string | undefined;
-      // Support both 'affiliationIndices' and 'affiliations' as property names
       const affiliationIndices = Array.isArray((a as any)?.affiliationIndices)
         ? (a as any).affiliationIndices
-        : Array.isArray((a as any)?.affiliations)
-        ? (a as any).affiliations
         : undefined;
       return { name, url, affiliationIndices } as Author;
     })
@@ -73,9 +69,9 @@ for (const author of normalizedAuthors) {
     }
   }
 }
+const shouldShowAffiliationSupers = authorAffiliationIndexSet.size > 1;
 const hasMultipleAffiliations =
   Array.isArray(affiliations) && affiliations.length > 1;
-const shouldShowAffiliationSupers = hasMultipleAffiliations && authorAffiliationIndexSet.size > 0;
 
 function stripHtml(text: string): string {
   return String(text || "").replace(/<[^>]*>/g, "");
@@ -369,7 +365,8 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   .hero-desc {
     color: var(--muted-color);
     font-style: italic;
-    margin: 0 0 16px 0;
+    margin: 0 auto 16px;
+    max-width: 55%;
   }
 
   /* Meta (byline-like header) */
@@ -380,7 +377,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     font-size: 0.9rem;
   }
   .meta-container {
-    max-width: 760px;
+    max-width: 980px;
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -408,8 +405,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex: 1;
-    min-width: 0;
+    max-width: 250px;
   }
   .meta-container-cell h3 {
     margin: 0;

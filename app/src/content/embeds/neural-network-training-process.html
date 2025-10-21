@@ -1,0 +1,718 @@
+<div class="cytoscape-training-process"></div>
+
+<style>
+  .cytoscape-training-process {
+    width: 100%;
+    height: 600px;
+    position: relative;
+    pointer-events: none;
+    user-select: none;
+  }
+  
+  .cytoscape-training-process * {
+    pointer-events: none !important;
+    cursor: default !important;
+  }
+
+
+  .cytoscape-training-process .stage-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .cytoscape-training-process .layer-label {
+    font-size: 11px;
+    color: var(--muted-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .cytoscape-training-process .input-label {
+    font-size: 10px;
+    color: var(--text-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+
+  .cytoscape-training-process .output-label {
+    font-size: 10px;
+    color: var(--text-color);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureCytoscape = (cb) => {
+      if (window.cytoscape && typeof window.cytoscape === 'function') return cb();
+      let s = document.getElementById('cytoscape-cdn-script');
+      if (!s) { 
+        s = document.createElement('script'); 
+        s.id = 'cytoscape-cdn-script'; 
+        s.src = 'https://cdn.jsdelivr.net/npm/cytoscape@3.26.0/dist/cytoscape.min.js'; 
+        document.head.appendChild(s); 
+      }
+      const onReady = () => { 
+        if (window.cytoscape && typeof window.cytoscape === 'function') cb(); 
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.cytoscape) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('cytoscape-training-process'))) {
+        const candidates = Array.from(document.querySelectorAll('.cytoscape-training-process'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = (type, count) => {
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          return window.ColorPalettes.getColors(type, count);
+        }
+        // Fallback colors
+        const fallbacks = {
+          categorical: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f'],
+          sequential: ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c'],
+          diverging: ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#f7f7f7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061']
+        };
+        return fallbacks[type] || fallbacks.categorical;
+      };
+
+      // Get CSS variables for theming
+      const getCSSVariable = (varName) => {
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+      };
+
+      const isDarkMode = () => {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+      };
+
+      // Theme-aware colors
+      const themeColors = {
+        primary: getCSSVariable('--primary-color'),
+        text: getCSSVariable('--text-color'),
+        muted: getCSSVariable('--muted-color'),
+        surface: getCSSVariable('--surface-bg'),
+        border: getCSSVariable('--muted-color'),
+        grid: getCSSVariable('--grid-color'),
+        danger: getCSSVariable('--danger-color'),
+        neutral400: getCSSVariable('--neutral-400'),
+        neutral600: getCSSVariable('--neutral-600')
+      };
+
+      // Function to update colors when theme changes
+      const updateThemeColors = () => {
+        Object.assign(themeColors, {
+          primary: getCSSVariable('--primary-color'),
+          text: getCSSVariable('--text-color'),
+          muted: getCSSVariable('--muted-color'),
+          surface: getCSSVariable('--surface-bg'),
+          border: getCSSVariable('--muted-color'),
+          grid: getCSSVariable('--grid-color'),
+          danger: getCSSVariable('--danger-color'),
+          neutral400: getCSSVariable('--neutral-400'),
+          neutral600: getCSSVariable('--neutral-600')
+        });
+      };
+
+
+      // Helper function to create neural network nodes
+      const createNeuralNetwork = (stageId, xOffset, stageTitle) => {
+        const elements = [];
+        
+        // Stage title
+        elements.push({
+          data: { id: `${stageId}-title`, label: stageTitle },
+          position: { x: xOffset, y: 50 },
+          classes: 'stage-title'
+        });
+
+        // Output layer (at the top)
+        if (stageId === 's3') {
+          elements.push({
+            data: { id: `${stageId}-output`, label: 'Positive/Negative' },
+            position: { x: xOffset + 45, y: 100 },
+            classes: 'output-label highlighted-label'
+          });
+          
+          // Classifier head (2 nodes) - active
+          for (let i = 0; i < 2; i++) {
+            elements.push({
+              data: { id: `${stageId}-classifier-${i}`, label: '' },
+              position: { x: xOffset + 36 + i * 18, y: 150 },
+              classes: 'classifier highlighted-node'
+            });
+          }
+          elements.push({
+            data: { id: `${stageId}-classifier-label`, label: '' },
+            position: { x: xOffset + 72, y: 170 },
+            classes: 'layer-label'
+          });
+          
+          // Softmax layer (7 nodes) - faded/disabled
+          for (let i = 0; i < 7; i++) {
+            elements.push({
+              data: { id: `${stageId}-softmax-${i}`, label: '' },
+              position: { x: xOffset - 54 + i * 18, y: 150 },
+              classes: 'softmax faded'
+            });
+          }
+          elements.push({
+            data: { id: `${stageId}-softmax-label`, label: 'Softmax' },
+            position: { x: xOffset - 20, y: 170 },
+            classes: 'layer-label'
+          });
+        } else {
+          elements.push({
+            data: { id: `${stageId}-output`, label: 'Probabilities for words' },
+            position: { x: xOffset, y: 100 },
+            classes: 'output-label'
+          });
+          
+          // Softmax layer (6 nodes)
+          for (let i = 0; i < 6; i++) {
+            elements.push({
+              data: { id: `${stageId}-softmax-${i}`, label: '' },
+              position: { x: xOffset - 45 + i * 18, y: 150 },
+              classes: 'softmax'
+            });
+          }
+          elements.push({
+            data: { id: `${stageId}-softmax-label`, label: 'Softmax' },
+            position: { x: xOffset, y: 170 },
+            classes: 'layer-label'
+          });
+        }
+
+        // Hidden layers (3 layers, 4 nodes each)
+        for (let layer = 0; layer < 3; layer++) {
+          for (let i = 0; i < 4; i++) {
+            elements.push({
+              data: { id: `${stageId}-h${layer}-${i}`, label: '' },
+              position: { x: xOffset - 27 + i * 18, y: 220 + layer * 50 },
+              classes: 'hidden'
+            });
+          }
+          elements.push({
+            data: { id: `${stageId}-h${layer}-label`, label: `3 hidden layer` },
+            position: { x: xOffset, y: 240 + layer * 50 },
+            classes: 'layer-label'
+          });
+        }
+
+        // Embedding layer (2 nodes)
+        for (let i = 0; i < 2; i++) {
+          elements.push({
+            data: { id: `${stageId}-embed-${i}`, label: '' },
+            position: { x: xOffset - 18 + i * 36, y: 370 },
+            classes: 'embedding'
+          });
+        }
+        elements.push({
+          data: { id: `${stageId}-embed-label`, label: 'Embedding' },
+          position: { x: xOffset, y: 390 },
+          classes: 'layer-label'
+        });
+
+        // Input words (at the bottom)
+        elements.push({
+          data: { id: `${stageId}-input`, label: stageId === 's1' ? 'This, is, ...' : 'Bad, start, ...' },
+          position: { x: xOffset, y: 420 },
+          classes: 'input-label'
+        });
+
+
+        // Create connections (now from bottom to top)
+        // Input to embedding
+        for (let i = 0; i < 2; i++) {
+          elements.push({
+            data: { id: `${stageId}-conn-input-embed-${i}`, source: `${stageId}-input`, target: `${stageId}-embed-${i}` }
+          });
+        }
+
+        // Embedding to first hidden layer
+        for (let i = 0; i < 2; i++) {
+          for (let j = 0; j < 4; j++) {
+            elements.push({
+              data: { id: `${stageId}-conn-embed-h0-${i}-${j}`, source: `${stageId}-embed-${i}`, target: `${stageId}-h0-${j}` }
+            });
+          }
+        }
+
+        // Hidden layer connections
+        for (let layer = 0; layer < 2; layer++) {
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+              elements.push({
+                data: { id: `${stageId}-conn-h${layer}-h${layer+1}-${i}-${j}`, source: `${stageId}-h${layer}-${i}`, target: `${stageId}-h${layer+1}-${j}` }
+              });
+            }
+          }
+        }
+
+        // First hidden layer to softmax/classifier (closest visually)
+        if (stageId === 's3') {
+          // To softmax (faded, no connections to output)
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 7; j++) {
+              elements.push({
+                data: { id: `${stageId}-conn-h0-softmax-${i}-${j}`, source: `${stageId}-h0-${i}`, target: `${stageId}-softmax-${j}` }
+              });
+            }
+          }
+          
+          // To classifier (active)
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 2; j++) {
+              elements.push({
+                data: { id: `${stageId}-conn-h0-classifier-${i}-${j}`, source: `${stageId}-h0-${i}`, target: `${stageId}-classifier-${j}` }
+              });
+            }
+          }
+          
+          // Only classifier to output
+          for (let i = 0; i < 2; i++) {
+            elements.push({
+              data: { id: `${stageId}-conn-classifier-output-${i}`, source: `${stageId}-classifier-${i}`, target: `${stageId}-output` }
+            });
+          }
+        } else {
+          // To softmax
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 6; j++) {
+              elements.push({
+                data: { id: `${stageId}-conn-h0-softmax-${i}-${j}`, source: `${stageId}-h0-${i}`, target: `${stageId}-softmax-${j}` }
+              });
+            }
+          }
+          // Softmax to output
+          for (let i = 0; i < 6; i++) {
+            elements.push({
+              data: { id: `${stageId}-conn-softmax-output-${i}`, source: `${stageId}-softmax-${i}`, target: `${stageId}-output` }
+            });
+          }
+        }
+
+        return elements;
+      };
+
+      // Create all neural networks
+      const stage1Elements = createNeuralNetwork('s1', 150, '1. LM pretraining');
+      const stage2Elements = createNeuralNetwork('s2', 450, '2. LM fine-tuning');
+      const stage3Elements = createNeuralNetwork('s3', 750, '3. Classifier fine-tuning');
+
+      // Add stage boxes
+      const stageBoxes = [
+        // Stage 1 box
+        {
+          data: { id: 'stage1-box', label: '' },
+          position: { x: 150, y: 250 },
+          classes: 'stage-box'
+        },
+        // Stage 2 box
+        {
+          data: { id: 'stage2-box', label: '' },
+          position: { x: 450, y: 250 },
+          classes: 'stage-box'
+        },
+        // Stage 3 box
+        {
+          data: { id: 'stage3-box', label: '' },
+          position: { x: 750, y: 250 },
+          classes: 'stage-box'
+        }
+      ];
+
+      // Add progression arrows between stages
+      const progressionArrows = [
+        // Arrow from stage 1 to stage 2
+        {
+          data: { id: 'arrow-1-to-2', source: 'stage1-box', target: 'stage2-box' },
+          classes: 'progression-arrow'
+        },
+        // Arrow from stage 2 to stage 3
+        {
+          data: { id: 'arrow-2-to-3', source: 'stage2-box', target: 'stage3-box' },
+          classes: 'progression-arrow'
+        },
+        // Flame icons above arrows
+        {
+          data: { id: 'flame-1', label: '🔥' },
+          position: { x: 300, y: 230 },
+          classes: 'flame-icon'
+        },
+        {
+          data: { id: 'flame-2', label: '🔥' },
+          position: { x: 600, y: 230 },
+          classes: 'flame-icon'
+        }
+      ];
+
+      // Combine all elements
+      const allElements = [...stage1Elements, ...stage2Elements, ...stage3Elements, ...stageBoxes, ...progressionArrows];
+
+      // Initialize Cytoscape
+      const cy = window.cytoscape({
+        container: container,
+        userZoomingEnabled: false,
+        userPanningEnabled: false,
+        boxSelectionEnabled: false,
+        autoungrabify: true,
+        autolock: true,
+        selectionType: 'single',
+        userSelectingEnabled: false,
+        autounselectify: true,
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': themeColors.surface,
+              'border-width': 1,
+              'border-color': themeColors.border,
+              'width': 12,
+              'height': 12,
+              'label': 'data(label)',
+              'text-valign': 'center',
+              'text-halign': 'center',
+              'font-size': '10px',
+              'color': themeColors.text,
+              'shape': 'ellipse',
+              'text-outline-width': 0,
+              'text-outline-color': 'transparent'
+            }
+          },
+          {
+            selector: 'node.embedding',
+            style: {
+              'background-color': `oklch(from ${themeColors.primary} calc(l + 0.15) c h)`,
+              'border-color': themeColors.primary,
+              'width': 14,
+              'height': 14
+            }
+          },
+          {
+            selector: 'node.hidden',
+            style: {
+              'background-color': `oklch(from ${themeColors.neutral400} calc(l + 0.1) c h)`,
+              'border-color': themeColors.neutral600,
+              'width': 14,
+              'height': 14
+            }
+          },
+          {
+            selector: 'node.softmax',
+            style: {
+              'background-color': `oklch(from ${themeColors.primary} calc(l + 0.1) calc(c * 0.8) calc(h + 60))`,
+              'border-color': `oklch(from ${themeColors.primary} calc(l - 0.1) calc(c * 0.8) calc(h + 60))`,
+              'width': 12,
+              'height': 12
+            }
+          },
+          {
+            selector: 'node.softmax.faded',
+            style: {
+              'background-color': `oklch(from ${themeColors.primary} calc(l + 0.1) calc(c * 0.8) calc(h + 60))`,
+              'border-color': `oklch(from ${themeColors.primary} calc(l - 0.1) calc(c * 0.8) calc(h + 60))`,
+              'width': 12,
+              'height': 12,
+              'opacity': 0.3
+            }
+          },
+          {
+            selector: 'node.classifier',
+            style: {
+              'background-color': `oklch(from ${themeColors.primary} calc(l + 0.15) c h)`,
+              'border-color': themeColors.primary,
+              'width': 12,
+              'height': 12
+            }
+          },
+          {
+            selector: 'node.classifier.highlighted-node',
+            style: {
+              'background-color': `oklch(from ${themeColors.primary} calc(l + 0.2) calc(c * 1.2) h)`,
+              'border-color': themeColors.primary,
+              'border-width': 3,
+              'width': 14,
+              'height': 14
+            }
+          },
+          {
+            selector: 'node.stage-title',
+            style: {
+              'background-color': 'transparent',
+              'background-opacity': 0,
+              'border-width': 0,
+              'border-opacity': 0,
+              'width': 200,
+              'height': 20,
+              'font-size': '16px',
+              'font-weight': 'bold',
+              'color': themeColors.text,
+              'shape': 'rectangle',
+              'text-outline-width': 3,
+              'text-outline-color': themeColors.surface,
+              'text-outline-opacity': 1
+            }
+          },
+          {
+            selector: 'node.input-label, node.output-label',
+            style: {
+              'background-color': 'transparent',
+              'background-opacity': 0,
+              'border-width': 0,
+              'border-opacity': 0,
+              'width': 100,
+              'height': 20,
+              'font-size': '10px',
+              'color': themeColors.text,
+              'shape': 'rectangle',
+              'text-outline-width': 2,
+              'text-outline-color': themeColors.surface,
+              'text-outline-opacity': 1
+            }
+          },
+          {
+            selector: 'node.output-label.highlighted-label',
+            style: {
+              'font-size': '11px',
+              'font-weight': 'bold',
+              'color': themeColors.primary,
+              'text-outline-width': 2,
+              'text-outline-color': themeColors.surface,
+              'text-outline-opacity': 1
+            }
+          },
+          {
+            selector: 'node.layer-label',
+            style: {
+              'background-color': 'transparent',
+              'background-opacity': 0,
+              'border-width': 0,
+              'border-opacity': 0,
+              'width': 80,
+              'height': 15,
+              'font-size': '11px',
+              'color': themeColors.muted,
+              'shape': 'rectangle',
+              'text-outline-width': 2,
+              'text-outline-color': themeColors.surface,
+              'text-outline-opacity': 1
+            }
+          },
+          {
+            selector: 'node.stage-box',
+            style: {
+              'background-color': 'transparent',
+              'background-opacity': 0,
+              'border-width': 1,
+              'border-color': themeColors.grid,
+              'border-style': 'solid',
+              'border-opacity': 0.3,
+              'width': 250,
+              'height': 450,
+              'shape': 'round-rectangle',
+              'border-radius': 8,
+              'text-outline-width': 0,
+              'text-outline-color': 'transparent',
+              'text-outline-opacity': 0
+            }
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 1,
+              'line-color': themeColors.grid,
+              'target-arrow-color': themeColors.grid,
+              'target-arrow-shape': 'none',
+              'curve-style': 'straight',
+              'opacity': 0.1
+            }
+          },
+          {
+            selector: 'edge.progression-arrow',
+            style: {
+              'width': 2,
+              'line-color': themeColors.primary,
+              'target-arrow-color': themeColors.primary,
+              'target-arrow-shape': 'triangle',
+              'target-arrow-size': 8,
+              'curve-style': 'straight',
+              'opacity': 1,
+              'source-distance-from-node': 5,
+              'target-distance-from-node': 5
+            }
+          },
+          {
+            selector: 'node.flame-icon',
+            style: {
+              'background-color': 'transparent',
+              'background-opacity': 0,
+              'border-width': 0,
+              'border-opacity': 0,
+              'width': 30,
+              'height': 30,
+              'font-size': '20px',
+              'color': themeColors.primary,
+              'shape': 'rectangle',
+              'text-outline-width': 2,
+              'text-outline-color': themeColors.surface,
+              'text-outline-opacity': 1
+            }
+          },
+        ],
+        elements: allElements,
+        layout: {
+          name: 'preset'
+        }
+      });
+
+      // Theme change detection and update
+      const updateChartTheme = () => {
+        updateThemeColors();
+        
+        // Update node styles
+        cy.style()
+          .selector('node')
+          .style('background-color', themeColors.surface)
+          .style('border-color', themeColors.border)
+          .style('color', themeColors.text)
+          .update();
+
+        cy.style()
+          .selector('node.embedding')
+          .style('background-color', `oklch(from ${themeColors.primary} calc(l + 0.15) c h)`)
+          .style('border-color', themeColors.primary)
+          .update();
+
+        cy.style()
+          .selector('node.hidden')
+          .style('background-color', `oklch(from ${themeColors.neutral400} calc(l + 0.1) c h)`)
+          .style('border-color', themeColors.neutral600)
+          .update();
+
+        cy.style()
+          .selector('node.softmax')
+          .style('background-color', `oklch(from ${themeColors.primary} calc(l + 0.1) calc(c * 0.8) calc(h + 60))`)
+          .style('border-color', `oklch(from ${themeColors.primary} calc(l - 0.1) calc(c * 0.8) calc(h + 60))`)
+          .update();
+
+        cy.style()
+          .selector('node.softmax.faded')
+          .style('background-color', `oklch(from ${themeColors.primary} calc(l + 0.1) calc(c * 0.8) calc(h + 60))`)
+          .style('border-color', `oklch(from ${themeColors.primary} calc(l - 0.1) calc(c * 0.8) calc(h + 60))`)
+          .update();
+
+        cy.style()
+          .selector('node.classifier')
+          .style('background-color', `oklch(from ${themeColors.primary} calc(l + 0.15) c h)`)
+          .style('border-color', themeColors.primary)
+          .update();
+
+        cy.style()
+          .selector('node.classifier.highlighted-node')
+          .style('background-color', `oklch(from ${themeColors.primary} calc(l + 0.2) calc(c * 1.2) h)`)
+          .style('border-color', themeColors.primary)
+          .update();
+
+        cy.style()
+          .selector('node.stage-title')
+          .style('color', themeColors.text)
+          .style('text-outline-color', themeColors.surface)
+          .update();
+
+        cy.style()
+          .selector('node.input-label, node.output-label')
+          .style('color', themeColors.text)
+          .style('text-outline-color', themeColors.surface)
+          .update();
+
+        cy.style()
+          .selector('node.output-label.highlighted-label')
+          .style('color', themeColors.primary)
+          .style('text-outline-color', themeColors.surface)
+          .update();
+
+        cy.style()
+          .selector('node.layer-label')
+          .style('color', themeColors.muted)
+          .style('text-outline-color', themeColors.surface)
+          .update();
+
+        cy.style()
+          .selector('node.stage-box')
+          .style('border-color', themeColors.grid)
+          .update();
+
+        // Update edge styles
+        cy.style()
+          .selector('edge')
+          .style('line-color', themeColors.grid)
+          .style('target-arrow-color', themeColors.grid)
+          .update();
+
+        cy.style()
+          .selector('edge.progression-arrow')
+          .style('line-color', themeColors.primary)
+          .style('target-arrow-color', themeColors.primary)
+          .update();
+
+        cy.style()
+          .selector('node.flame-icon')
+          .style('color', themeColors.primary)
+          .style('text-outline-color', themeColors.surface)
+          .update();
+      };
+
+      // Listen for theme changes
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+            updateChartTheme();
+          }
+        });
+      });
+
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+      });
+
+      // Responsive handling
+      const updateSize = () => {
+        const width = container.clientWidth || 1000;
+        const height = Math.max(500, Math.round(width / 1.8));
+        container.style.height = `${height}px`;
+        cy.resize();
+        cy.fit(cy.elements(), 30);
+      };
+
+      updateSize();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => updateSize());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', updateSize);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureCytoscape(bootstrap), { once: true });
+    } else {
+      ensureCytoscape(bootstrap);
+    }
+  })();
+</script>

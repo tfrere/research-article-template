@@ -4,7 +4,6 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
-import { extractAndGenerateNotionFrontmatter } from './notion-metadata-extractor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,6 +11,7 @@ const __dirname = dirname(__filename);
 // Configuration
 const DEFAULT_INPUT = join(__dirname, 'output');
 const DEFAULT_OUTPUT = join(__dirname, 'output');
+const STATIC_FRONTMATTER_PATH = join(__dirname, 'static', 'frontmatter.mdx');
 
 function parseArgs() {
     const args = process.argv.slice(2);
@@ -79,6 +79,50 @@ function generateImageVarName(src) {
 }
 
 /**
+ * Detect and track Astro components used in the content
+ * @param {string} content - MDX content
+ */
+function detectAstroComponents(content) {
+    console.log('  🔍 Detecting Astro components in content...');
+
+    let detectedCount = 0;
+
+    // Known Astro components that should be auto-imported
+    const knownComponents = [
+        'HtmlEmbed', 'Image', 'Note', 'Sidenote', 'Wide', 'FullWidth',
+        'Accordion', 'Quote', 'Reference', 'Glossary', 'Stack', 'ThemeToggle',
+        'RawHtml', 'HfUser'
+    ];
+
+    // Find all JSX elements that look like Astro components
+    // Pattern: <ComponentName ... />
+    const componentMatches = content.match(/<([A-Z][a-zA-Z0-9]*)\s*[^>]*\/?>/g);
+
+    if (componentMatches) {
+        for (const match of componentMatches) {
+            // Extract component name from the JSX element
+            const componentMatch = match.match(/<([A-Z][a-zA-Z0-9]*)/);
+            if (componentMatch) {
+                const componentName = componentMatch[1];
+
+                // Only track known Astro components (skip HTML elements)
+                if (knownComponents.includes(componentName) && !usedComponents.has(componentName)) {
+                    usedComponents.add(componentName);
+                    detectedCount++;
+                    console.log(`    📦 Found component: ${componentName}`);
+                }
+            }
+        }
+    }
+
+    if (detectedCount > 0) {
+        console.log(`    ✅ Detected ${detectedCount} new Astro component(s)`);
+    } else {
+        console.log(`    ℹ️  No new Astro components detected`);
+    }
+}
+
+/**
  * Add required component imports to the frontmatter
  * @param {string} content - MDX content
  * @returns {string} - Content with component imports
@@ -114,284 +158,91 @@ function addComponentImports(content) {
     // Insert imports after frontmatter
     const frontmatterEnd = content.indexOf('---', 3) + 3;
     if (frontmatterEnd > 2) {
-        return content.slice(0, frontmatterEnd) + '\n\n' + importBlock + '\n' + content.slice(frontmatterEnd);
+        return content.slice(0, frontmatterEnd) + '\n\n' + importBlock + '\n\n' + content.slice(frontmatterEnd);
     } else {
         // No frontmatter, add at beginning
         return importBlock + '\n\n' + content;
     }
 }
 
+
 /**
- * Transform Notion images to Image components
- * @param {string} content - MDX content
- * @returns {string} - Content with Image components
+ * Load static frontmatter from file
+ * @returns {object} - Static frontmatter data
  */
-function transformImages(content) {
-    console.log('  🖼️  Transforming images to Image components...');
-
-    let hasImages = false;
-
-    // Helper function to clean source paths
-    const cleanSrcPath = (src) => {
-        // Convert Notion media paths to relative paths
-        return src.replace(/^\/media\//, './media/')
-            .replace(/^\.\/media\//, './media/');
-    };
-
-    // Helper to clean caption text
-    const cleanCaption = (caption) => {
-        return caption
-            .replace(/<[^>]*>/g, '')          // Remove HTML tags
-            .replace(/\n/g, ' ')              // Replace newlines with spaces
-            .replace(/\r/g, ' ')              // Replace carriage returns with spaces
-            .replace(/\s+/g, ' ')             // Replace multiple spaces with single space
-            .replace(/'/g, "\\'")             // Escape quotes
-            .trim();                          // Trim whitespace
-    };
-
-    // Helper to clean alt text
-    const cleanAltText = (alt, maxLength = 100) => {
-        const cleaned = alt
-            .replace(/<[^>]*>/g, '')          // Remove HTML tags
-            .replace(/\n/g, ' ')              // Replace newlines with spaces
-            .replace(/\r/g, ' ')              // Replace carriage returns with spaces
-            .replace(/\s+/g, ' ')             // Replace multiple spaces with single space
-            .trim();                          // Trim whitespace
-
-        return cleaned.length > maxLength
-            ? cleaned.substring(0, maxLength) + '...'
-            : cleaned;
-    };
-
-    // Create Image component with import
-    const createImageComponent = (src, alt = '', caption = '') => {
-        const cleanSrc = cleanSrcPath(src);
-
-        // Skip PDF URLs and external URLs - they should remain as links only
-        if (cleanSrc.includes('.pdf') || cleanSrc.includes('arxiv.org/pdf') ||
-            (cleanSrc.startsWith('http') && !cleanSrc.includes('/media/'))) {
-            console.log(`    ⚠️  Skipping external/PDF URL: ${cleanSrc}`);
-            // Return the original markdown image syntax for external URLs
-            return `![${alt}](${src})`;
+function loadStaticFrontmatter() {
+    try {
+        if (existsSync(STATIC_FRONTMATTER_PATH)) {
+            const staticContent = readFileSync(STATIC_FRONTMATTER_PATH, 'utf8');
+            const { data } = matter(staticContent);
+            console.log('    ✅ Loaded static frontmatter from file');
+            return data;
         }
-
-        const varName = generateImageVarName(cleanSrc);
-        imageImports.set(cleanSrc, varName);
-        usedComponents.add('Image');
-
-        const props = [];
-        props.push(`src={${varName}}`);
-        props.push('zoomable');
-        props.push('downloadable');
-        props.push('layout="fixed"');
-        if (alt) props.push(`alt="${alt}"`);
-        if (caption) props.push(`caption={'${caption}'}`);
-
-        return `<Image\n  ${props.join('\n  ')}\n/>`;
-    };
-
-    // Transform markdown images: ![alt](src)
-    content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
-        const cleanSrc = cleanSrcPath(src);
-        const cleanAlt = cleanAltText(alt || 'Image');
-        hasImages = true;
-
-        return createImageComponent(cleanSrc, cleanAlt);
-    });
-
-    // Transform images with captions (Notion sometimes adds captions as separate text)
-    content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*\n\s*([^\n]+)/g, (match, alt, src, caption) => {
-        const cleanSrc = cleanSrcPath(src);
-        const cleanAlt = cleanAltText(alt || 'Image');
-        const cleanCap = cleanCaption(caption);
-        hasImages = true;
-
-        return createImageComponent(cleanSrc, cleanAlt, cleanCap);
-    });
-
-    if (hasImages) {
-        console.log('    ✅ Image components with imports will be created');
+        console.log('    ℹ️  No static frontmatter file found');
+        return {};
+    } catch (error) {
+        console.log(`    ⚠️  Failed to load static frontmatter: ${error.message}`);
+        return {};
     }
-
-    return content;
 }
 
 /**
- * Transform Notion callouts to Note components
+ * Ensure proper frontmatter for MDX using static file first, then existing data
  * @param {string} content - MDX content
- * @returns {string} - Content with Note components
- */
-function transformCallouts(content) {
-    console.log('  📝 Transforming callouts to Note components...');
-
-    let transformedCount = 0;
-
-    // Transform blockquotes that look like Notion callouts
-    content = content.replace(/^> \*\*([^*]+)\*\*\s*\n> (.+?)(?=\n> \*\*|\n\n|\n$)/gms, (match, title, content) => {
-        transformedCount++;
-        usedComponents.add('Note');
-
-        const cleanContent = content
-            .replace(/^> /gm, '')  // Remove blockquote markers
-            .replace(/\n+/g, '\n') // Normalize newlines
-            .trim();
-
-        return `<Note type="${title.toLowerCase()}" title="${title}">\n${cleanContent}\n</Note>\n\n`;
-    });
-
-    if (transformedCount > 0) {
-        console.log(`    ✅ Transformed ${transformedCount} callout(s) to Note components`);
-    }
-
-    return content;
-}
-
-/**
- * Transform Notion databases/tables to enhanced table components
- * @param {string} content - MDX content
- * @returns {string} - Content with enhanced tables
- */
-function transformTables(content) {
-    console.log('  📊 Enhancing tables...');
-
-    let enhancedCount = 0;
-
-    // Wrap tables in a container for better styling
-    content = content.replace(/^(\|[^|\n]+\|[\s\S]*?)(?=\n\n|\n$)/gm, (match) => {
-        if (match.includes('|') && match.split('\n').length > 2) {
-            enhancedCount++;
-            return `<div class="table-container">\n\n${match}\n\n</div>`;
-        }
-        return match;
-    });
-
-    if (enhancedCount > 0) {
-        console.log(`    ✅ Enhanced ${enhancedCount} table(s)`);
-    }
-
-    return content;
-}
-
-/**
- * Transform Notion code blocks to enhanced code components
- * @param {string} content - MDX content
- * @returns {string} - Content with enhanced code blocks
- */
-function transformCodeBlocks(content) {
-    console.log('  💻 Enhancing code blocks...');
-
-    let enhancedCount = 0;
-
-    // Add copy functionality to code blocks
-    content = content.replace(/^```(\w+)\n([\s\S]*?)\n```$/gm, (match, lang, code) => {
-        enhancedCount++;
-        return `\`\`\`${lang} copy\n${code}\n\`\`\``;
-    });
-
-    if (enhancedCount > 0) {
-        console.log(`    ✅ Enhanced ${enhancedCount} code block(s)`);
-    }
-
-    return content;
-}
-
-/**
- * Fix Notion-specific formatting issues
- * @param {string} content - MDX content
- * @returns {string} - Content with fixed formatting
- */
-function fixNotionFormatting(content) {
-    console.log('  🔧 Fixing Notion formatting issues...');
-
-    let fixedCount = 0;
-
-    // Fix Notion's toggle lists that don't convert well
-    content = content.replace(/^(\s*)•\s*(.+)$/gm, (match, indent, text) => {
-        fixedCount++;
-        return `${indent}- ${text}`;
-    });
-
-    // Fix Notion's numbered lists that might have issues
-    content = content.replace(/^(\s*)\d+\.\s*(.+)$/gm, (match, indent, text) => {
-        // Only fix if it's not already properly formatted
-        if (!text.includes('\n') || text.split('\n').length === 1) {
-            return match; // Keep as is
-        }
-        fixedCount++;
-        return `${indent}1. ${text}`;
-    });
-
-    // Fix Notion's bold/italic combinations
-    content = content.replace(/\*\*([^*]+)\*\*([^*]+)\*\*([^*]+)\*\*/g, (match, part1, part2, part3) => {
-        fixedCount++;
-        return `**${part1}${part2}${part3}**`;
-    });
-
-    if (fixedCount > 0) {
-        console.log(`    ✅ Fixed ${fixedCount} formatting issue(s)`);
-    }
-
-    return content;
-}
-
-/**
- * Ensure proper frontmatter for MDX with Notion metadata
- * @param {string} content - MDX content
- * @param {string} pageId - Notion page ID (optional)
- * @param {string} notionToken - Notion API token (optional)
+ * @param {string} pageId - Notion page ID (optional, kept for compatibility but ignored)
+ * @param {string} notionToken - Notion API token (optional, kept for compatibility but ignored)
  * @returns {string} - Content with proper frontmatter
  */
 async function ensureFrontmatter(content, pageId = null, notionToken = null) {
     console.log('  📄 Ensuring proper frontmatter...');
 
-    if (!content.startsWith('---')) {
-        let frontmatter;
+    // Load static frontmatter first (highest priority)
+    const staticData = loadStaticFrontmatter();
 
-        if (pageId && notionToken) {
-            try {
-                console.log('    🔍 Extracting Notion metadata...');
-                frontmatter = await extractAndGenerateNotionFrontmatter(pageId, notionToken);
-                console.log('    ✅ Generated rich frontmatter from Notion');
-            } catch (error) {
-                console.log('    ⚠️  Failed to extract Notion metadata, using basic frontmatter');
-                frontmatter = generateBasicFrontmatter();
-            }
-        } else {
-            frontmatter = generateBasicFrontmatter();
-            console.log('    ✅ Generated basic frontmatter');
+    if (!content.startsWith('---')) {
+        // No frontmatter in content, use static + basic defaults
+        let baseData = { ...staticData };
+
+        // Add basic defaults for required fields if not in static
+        if (!baseData.title) baseData.title = 'Article';
+        if (!baseData.published) {
+            baseData.published = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            });
+        }
+        if (baseData.tableOfContentsAutoCollapse === undefined) {
+            baseData.tableOfContentsAutoCollapse = true;
         }
 
+        const frontmatter = matter.stringify('', baseData);
+        console.log('    ✅ Applied static frontmatter to content without frontmatter');
         return frontmatter + content;
     }
 
-    // Parse existing frontmatter and enhance it
+    // Parse existing frontmatter and merge with static (static takes priority)
     try {
-        const { data, content: body } = matter(content);
+        const { data: existingData, content: body } = matter(content);
 
-        // If we have Notion metadata available, try to enhance the frontmatter
-        if (pageId && notionToken && (!data.notion_id || data.notion_id !== pageId)) {
-            try {
-                console.log('    🔍 Enhancing frontmatter with Notion metadata...');
-                const notionFrontmatter = await extractAndGenerateNotionFrontmatter(pageId, notionToken);
-                const { data: notionData } = matter(notionFrontmatter);
+        // Merge: existing data first, then static data overrides
+        const mergedData = { ...existingData, ...staticData };
 
-                // Merge Notion metadata with existing frontmatter
-                const enhancedData = { ...data, ...notionData };
-                const enhancedContent = matter.stringify(body, enhancedData);
-                console.log('    ✅ Enhanced frontmatter with Notion metadata');
-                return enhancedContent;
-            } catch (error) {
-                console.log('    ⚠️  Could not enhance with Notion metadata, keeping existing');
-            }
+        // Ensure required fields if still missing after merge
+        if (!mergedData.title) mergedData.title = 'Article';
+        if (!mergedData.published) {
+            mergedData.published = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            });
+        }
+        if (mergedData.tableOfContentsAutoCollapse === undefined) {
+            mergedData.tableOfContentsAutoCollapse = true;
         }
 
-        // Ensure required fields
-        if (!data.title) data.title = 'Notion Article';
-        if (!data.published) data.published = new Date().toISOString().split('T')[0];
-        if (!data.tableOfContentsAutoCollapse) data.tableOfContentsAutoCollapse = true;
-
-        const enhancedContent = matter.stringify(body, data);
-        console.log('    ✅ Enhanced existing frontmatter');
+        const enhancedContent = matter.stringify(body, mergedData);
+        console.log('    ✅ Merged static and existing frontmatter');
         return enhancedContent;
     } catch (error) {
         console.log('    ⚠️  Could not parse frontmatter, keeping as is');
@@ -418,6 +269,103 @@ tableOfContentsAutoCollapse: true
 `;
 }
 
+
+/**
+ * Add a blank line after each markdown table
+ * @param {string} content - MDX content
+ * @returns {string} - Content with blank lines after tables
+ */
+function addBlankLineAfterTables(content) {
+    console.log('  📋 Adding blank lines after tables...');
+
+    let addedCount = 0;
+    const lines = content.split('\n');
+    const result = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        result.push(lines[i]);
+
+        // Check if current line is the end of a table
+        if (lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+            // Look ahead to see if this is the last line of a table
+            let isLastTableLine = false;
+
+            // Check if next line is empty or doesn't start with |
+            if (i + 1 >= lines.length ||
+                lines[i + 1].trim() === '' ||
+                !lines[i + 1].trim().startsWith('|')) {
+
+                // Look back to find if we're actually inside a table
+                let tableLineCount = 0;
+                for (let j = i; j >= 0 && lines[j].trim().startsWith('|') && lines[j].trim().endsWith('|'); j--) {
+                    tableLineCount++;
+                }
+
+                // Only add blank line if we found at least 2 table lines (making it a real table)
+                if (tableLineCount >= 2) {
+                    isLastTableLine = true;
+                }
+            }
+
+            if (isLastTableLine) {
+                addedCount++;
+                result.push(''); // Add blank line
+            }
+        }
+    }
+
+    if (addedCount > 0) {
+        console.log(`    ✅ Added blank line after ${addedCount} table(s)`);
+    } else {
+        console.log('    ℹ️  No tables found to process');
+    }
+
+    return result.join('\n');
+}
+
+/**
+ * Transform markdown images to Image components
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with Image components
+ */
+function transformMarkdownImages(content) {
+    console.log('  🖼️  Transforming markdown images to Image components...');
+
+    let transformedCount = 0;
+
+    // Transform markdown images: ![alt](src) -> <Image src={varName} alt="alt" />
+    content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) => {
+        transformedCount++;
+
+        // Clean up the src path - remove /media/ prefix and use relative path
+        let cleanSrc = src;
+        if (src.startsWith('/media/')) {
+            cleanSrc = src.replace('/media/', './assets/image/');
+        }
+
+        // Generate variable name for the image import
+        const varName = generateImageVarName(cleanSrc);
+
+        // Add to imageImports if not already present
+        if (!imageImports.has(cleanSrc)) {
+            imageImports.set(cleanSrc, varName);
+        }
+
+        // Extract filename for alt text if none provided
+        const finalAlt = alt || src.split('/').pop().split('.')[0];
+
+        return `<Image src={${varName}} alt="${finalAlt}" />`;
+    });
+
+    if (transformedCount > 0) {
+        console.log(`    ✅ Transformed ${transformedCount} markdown image(s) to Image components with imports`);
+    } else {
+        console.log('    ℹ️  No markdown images found to transform');
+    }
+
+    return content;
+}
+
 /**
  * Main MDX processing function that applies all transformations
  * @param {string} content - Raw Markdown content
@@ -434,13 +382,17 @@ async function processMdxContent(content, pageId = null, notionToken = null) {
 
     let processedContent = content;
 
-    // Apply each transformation step sequentially
+    // Apply essential steps only
     processedContent = await ensureFrontmatter(processedContent, pageId, notionToken);
-    processedContent = fixNotionFormatting(processedContent);
-    processedContent = transformCallouts(processedContent);
-    processedContent = transformImages(processedContent);
-    processedContent = transformTables(processedContent);
-    processedContent = transformCodeBlocks(processedContent);
+
+    // Add blank lines after tables
+    processedContent = addBlankLineAfterTables(processedContent);
+
+    // Transform markdown images to Image components
+    processedContent = transformMarkdownImages(processedContent);
+
+    // Detect Astro components used in the content before adding imports
+    detectAstroComponents(processedContent);
 
     // Add component imports at the end
     processedContent = addComponentImports(processedContent);
@@ -508,7 +460,7 @@ async function convertToMdx(inputPath, outputDir, pageId = null, notionToken = n
             // Convert all .md files in directory
             const files = readdirSync(inputPath);
             filesToConvert = files
-                .filter(file => file.endsWith('.md'))
+                .filter(file => file.endsWith('.md') && !file.includes('.raw.md'))
                 .map(file => join(inputPath, file));
         } else if (inputPath.endsWith('.md')) {
             // Convert single file

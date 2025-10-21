@@ -1,0 +1,463 @@
+<div class="line-four">
+  
+  <div class="line-four__grid">
+    <div class="four-cell" data-title="AIME25" data-metric="aime"></div>
+    <div class="four-cell" data-title="GPQA-diamond" data-metric="gpqa_diamond"></div>
+    <div class="four-cell" data-title="LCBv4" data-metric="lcb_v4"></div>
+    <div class="four-cell" data-title="Math500" data-metric="math_500"></div>
+  </div>
+  <noscript>JavaScript is required to render these charts.</noscript>
+
+</div>
+<style>
+  .line-four { position: relative; }
+  /* Axis/tick/grid use global variables from _variables.css */
+  /* Apply axis/tick/grid purely via CSS */
+  .line-four .axes path,
+  .line-four .axes line { stroke: var(--axis-color); }
+  .line-four .axes text { fill: var(--tick-color); }
+  .line-four .grid line { stroke: var(--grid-color); }
+  .line-four__grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 900px) { .line-four__grid { grid-template-columns: 1fr; } }
+
+  .four-cell { border:1px solid var(--border-color); border-radius:10px; background: var(--page-bg); display:flex; flex-direction:column; position: relative; padding: 12px; }
+  /* Stacking order to ensure hover/tooltip overlays are not hidden by neighbors */
+  .line-four__grid .four-cell:nth-child(1) { z-index: 4; } /* top-left */
+  .line-four__grid .four-cell:nth-child(2) { z-index: 3; } /* top-right */
+  .line-four__grid .four-cell:nth-child(3) { z-index: 2; } /* bottom-left */
+  .line-four__grid .four-cell:nth-child(4) { z-index: 1; } /* bottom-right */
+  .four-cell .cell-header { padding:8px 10px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .four-cell .cell-title { font-size: 13px; font-weight: 700; color: var(--text-color); }
+  .four-cell .cell-controls { display:flex; align-items:center; gap:12px; }
+  .four-cell .cell-controls label { font-size:12px; color: var(--muted-color); display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .four-cell select {
+    font-size: 12px; padding: 6px 28px 6px 10px; border: 1px solid var(--border-color); border-radius: 8px;
+    background-color: var(--surface-bg); color: var(--text-color);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f1115' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; background-size: 12px;
+    -webkit-appearance: none; appearance: none; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-theme="dark"] .four-cell select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .four-cell select:hover { border-color: var(--primary-color); }
+  .four-cell select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(232,137,171,.25); outline: none; }
+  .four-cell .cell-body { position: relative; }
+  .four-cell .cell-body { width:100%; overflow:hidden; }
+  .four-cell .cell-body svg { max-width:100%; height:auto; }
+  
+  .line-four.hovering .lines path.ghost { opacity: .25; }
+  .line-four.hovering .points circle.ghost { opacity: .25; }
+  .line-four.hovering .areas path.ghost { opacity: .08; }
+  .line-four.hovering .legend-bottom .item.ghost { opacity: .35; }
+  /* Tooltip refined styling */
+  .line-four .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+  .line-four .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+  }
+  .line-four .d3-tooltip__inner > div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+  .line-four .d3-tooltip__inner > div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+  .line-four .d3-tooltip__inner > div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+  .line-four .d3-tooltip__inner svg {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 2px;
+  }
+  .line-four .d3-tooltip__inner strong {
+    margin-right: 6px;
+  }
+  .line-four .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+</style>
+<script>
+  (() => {
+    const THIS_SCRIPT = document.currentScript;
+    // Shared run->color mapping to keep legend and series perfectly in sync
+    let SHARED_RUN_COLOR = null;
+    // Pretty label mapping for metric keys
+    const prettyMetricLabel = (key) => {
+      if (!key) return '';
+      const table = {
+        'math_500': 'Math500',
+        'lcb_v4': 'LCBv4',
+        'gpqa_diamond': 'GPQA-diamond',
+        'aime': 'AIME25'
+      };
+      if (table[key]) return table[key];
+      const cleaned = String(key).replace(/[_-]+/g, ' ').trim();
+      return cleaned.split(/\s+/).map(w => {
+        if (/^(ai2d|umap|id|auc|f1)$/i.test(w)) return w.toUpperCase();
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+    };
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    function initRunLine(cell){
+      const d3 = window.d3;
+      const metricKey = cell.getAttribute('data-metric');
+      const titleText = cell.getAttribute('data-title') || '';
+
+      // Header
+      const header = document.createElement('div'); header.className = 'cell-header';
+      const title = document.createElement('div'); title.className = 'cell-title'; title.textContent = titleText; header.appendChild(title);
+      cell.appendChild(header);
+
+      // Body & SVG
+      const body = document.createElement('div'); body.className = 'cell-body'; cell.appendChild(body);
+      const svg = d3.select(body).append('svg').attr('width','100%').style('display','block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class','grid');
+      const gAxes = gRoot.append('g').attr('class','axes');
+      const gAreas = gRoot.append('g').attr('class','areas');
+      const gLines = gRoot.append('g').attr('class','lines');
+      const gPoints = gRoot.append('g').attr('class','points');
+      const gHover = gRoot.append('g').attr('class','hover');
+
+      // Tooltip
+      cell.style.position = cell.style.position || 'relative';
+      let tip = cell.querySelector('.d3-tooltip'); let tipInner; let hideTipTimer = null;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position:'absolute',
+          top:'0',
+          left:'0',
+          transform:'translate(-9999px,-9999px)',
+          pointerEvents:'none',
+          padding:'10px 12px',
+          borderRadius:'12px',
+          fontSize:'12px',
+          lineHeight:'1.35',
+          border:'1px solid var(--border-color)',
+          background:'var(--surface-bg)',
+          color:'var(--text-color)',
+          boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)',
+          opacity:'0',
+          transition:'opacity .12s ease',
+          backdropFilter:'saturate(1.12) blur(8px)'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign='left';
+        tip.appendChild(tipInner);
+        cell.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // State
+      let metricList = []; let runList = []; let runOrder = []; const dataByMetric = new Map();
+      let width = 800, height = 340; const margin = { top: 16, right: 20, bottom: 46, left: 56 };
+      const xScale = d3.scaleLinear(); const yScale = d3.scaleLinear();
+      const lineGen = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value));
+      let isRankStrictFlag = false; let isRankMetricFlag = false; let rankTickMax = 1;
+      let sharedYConfig = null; // { type: 'rank_strict', maxRank } | { type: 'value', min, max }
+      let axisLabelY = 'Value';
+      
+      // Get consistent colors for benchmarks across all embeds
+      const getBenchmarkColors = () => {
+        let colors;
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          colors = window.ColorPalettes.getColors('categorical', 5);
+        } else {
+          colors = ['#E889AB', '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6'];
+        }
+        return {
+          'aime': colors[0],        // AIME25
+          'gpqa_diamond': colors[1], // GPQA-diamond
+          'ifeval': colors[2],       // IFEval (pour cohérence future)
+          'lcb_v4': colors[3],       // LCBv4
+          'math_500': colors[4]      // Math500
+        };
+      };
+      const benchmarkColors = getBenchmarkColors();
+      // Ready signal for async load completion
+      let readyResolve = null;
+      const ready = new Promise((res)=> { readyResolve = res; });
+
+      // Format steps
+      const formatSteps = (v) => {
+        return d3.format('.0f')(v);
+      };
+
+      function updateScales(){
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const axisColor = 'var(--axis-color)';
+        const tickColor = 'var(--tick-color)';
+        const gridColor = 'var(--grid-color)';
+
+        const rect = cell.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect && rect.width ? rect.width : (cell.clientWidth || 800)));
+        height = Math.max(280, Math.round(width / 2.3));
+        svg.attr('width', width).attr('height', height).attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio','xMidYMid meet');
+        const innerWidth = width - margin.left - margin.right; const innerHeight = height - margin.top - margin.bottom;
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        xScale.range([0, innerWidth]); yScale.range([innerHeight, 0]);
+
+        // Y ticks
+        let yTicks = [];
+        if (isRankStrictFlag) { const maxR = Math.max(1, Math.round(rankTickMax)); for (let v=1; v<=maxR; v+=1) yTicks.push(v); }
+        else { yTicks = yScale.ticks(6); }
+
+        // Grid
+        gGrid.selectAll('*').remove();
+        gGrid.selectAll('line').data(yTicks).join('line')
+          .attr('x1',0).attr('x2',innerWidth).attr('y1',d=>yScale(d)).attr('y2',d=>yScale(d))
+          .attr('stroke', gridColor).attr('stroke-width',1).attr('shape-rendering','crispEdges');
+
+        // Axes
+        gAxes.selectAll('*').remove();
+        let xAxis = d3.axisBottom(xScale).tickSizeOuter(0); xAxis = xAxis.ticks(5);
+        xAxis = xAxis.tickFormat(formatSteps);
+        const yAxis = d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(d3.format('d'));
+        gAxes.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis).call(g=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','11px'); });
+        gAxes.append('g').call(yAxis).call(g=>{ g.selectAll('path, line').attr('stroke', axisColor); g.selectAll('text').attr('fill', tickColor).style('font-size','11px'); });
+
+        // Axis labels
+        gAxes.append('text')
+          .attr('class', 'x-axis-label')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + Math.max(20, Math.min(36, margin.bottom - 10)))
+          .attr('fill', 'var(--text-color)')
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text('Step');
+
+        gAxes.append('text')
+          .attr('class', 'y-axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -Math.max(16, Math.min(28, margin.left - 8) + 10))
+          .attr('fill', 'var(--text-color)')
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', '700')
+          .text(axisLabelY);
+
+        return { innerWidth, innerHeight, tickColor };
+      }
+
+      function renderMetric(metricKey){
+        // Inline data for SmolLM3 GRPO training
+        const inlineData = {
+          'math_500': [
+            { step: 0, value: 69.0 },
+            { step: 100, value: 79.5 },
+            { step: 200, value: 82.5 },
+            { step: 300, value: 80.5 },
+            { step: 400, value: 80.5 },
+            { step: 500, value: 81.0 },
+            { step: 600, value: 82.5 },
+            { step: 700, value: 80.8 },
+            { step: 800, value: 82.2 },
+            { step: 900, value: 84.5 },
+            { step: 1000, value: 81.5 }
+          ],
+          'lcb_v4': [
+            { step: 0, value: 15.8 },
+            { step: 100, value: 25.0 },
+            { step: 200, value: 26.2 },
+            { step: 300, value: 27.0 },
+            { step: 400, value: 28.8 },
+            { step: 500, value: 30.8 },
+            { step: 600, value: 31.0 },
+            { step: 700, value: 30.2 },
+            { step: 800, value: 30.5 },
+            { step: 900, value: 29.2 },
+            { step: 1000, value: 29.0 }
+          ],
+          'gpqa_diamond': [
+            { step: 0, value: 19.8 },
+            { step: 100, value: 24.0 },
+            { step: 200, value: 30.5 },
+            { step: 300, value: 29.5 },
+            { step: 400, value: 32.5 },
+            { step: 500, value: 36.5 },
+            { step: 600, value: 37.8 },
+            { step: 700, value: 39.2 },
+            { step: 800, value: 39.0 },
+            { step: 900, value: 36.5 },
+            { step: 1000, value: 36.5 }
+          ],
+          'aime': [
+            { step: 0, value: 9.0 },
+            { step: 100, value: 25.8 },
+            { step: 200, value: 31.5 },
+            { step: 300, value: 32.0 },
+            { step: 400, value: 33.5 },
+            { step: 500, value: 35.5 },
+            { step: 600, value: 37.8 },
+            { step: 700, value: 37.5 },
+            { step: 800, value: 39.5 },
+            { step: 900, value: 38.0 },
+            { step: 1000, value: 38.8 }
+          ]
+        };
+
+        const data = inlineData[metricKey] || [];
+        if (!data.length) return;
+
+        const minStep = 0, maxStep = 1000;
+        const minVal = Math.min(...data.map(d => d.value));
+        const maxVal = Math.max(...data.map(d => d.value));
+        
+        xScale.domain([minStep, maxStep]);
+        yScale.domain([minVal, maxVal]).nice();
+
+        axisLabelY = 'Score';
+        const tChange = (window.d3 && d3.transition) ? d3.transition().duration(260).ease(d3.easeCubicOut) : null;
+        const { innerWidth, innerHeight } = updateScales();
+
+        // Single series for this metric
+        const series = [{
+          run: 'GRPO',
+          color: benchmarkColors[metricKey],
+          values: data
+        }];
+
+        // Draw line
+        const paths = gLines.selectAll('path.run-line').data(series, d=>d.run);
+        paths.enter()
+          .append('path')
+          .attr('class','run-line')
+          .attr('data-run', d=>d.run)
+          .attr('fill','none')
+          .attr('stroke-width', 2)
+          .attr('opacity',0)
+          .attr('stroke', d=>d.color)
+          .attr('d', d=>lineGen(d.values))
+          .transition(tChange || undefined)
+          .attr('opacity',0.9);
+        paths
+          .transition(tChange || undefined)
+          .attr('stroke', d=>d.color)
+          .attr('opacity',0.9)
+          .attr('d', d=>lineGen(d.values));
+        paths.exit().remove();
+
+        // Draw point markers
+        const allPoints = series.flatMap(s => {
+          const values = s.values;
+          return values.map((v, i) => ({ 
+            run: s.run, 
+            color: s.color, 
+            step: v.step, 
+            value: v.value,
+            isLast: i === values.length - 1
+          }));
+        });
+        const ptsSel = gPoints.selectAll('circle.pt').data(allPoints, d=> `${d.run}-${d.step}`);
+        ptsSel.enter().append('circle').attr('class','pt')
+          .attr('data-run', d=>d.run)
+          .attr('r', 1.2)
+          .attr('fill', d=>d.color)
+          .attr('fill-opacity', 0.6)
+          .attr('stroke', 'none')
+          .attr('cx', d=>xScale(d.step))
+          .attr('cy', d=>yScale(d.value))
+          .merge(ptsSel)
+          .attr('fill', d=>d.color)
+          .transition(tChange || undefined)
+          .attr('r', d => d.isLast ? 2.5 : 1.5)
+          .attr('cx', d=>xScale(d.step))
+          .attr('cy', d=>yScale(d.value));
+        ptsSel.exit().remove();
+
+        // Hover
+        gHover.selectAll('*').remove();
+        const overlay = gHover.append('rect').attr('fill','transparent').style('cursor','crosshair').attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
+        const hoverLine = gHover.append('line').style('stroke','var(--text-color)').attr('stroke-opacity', 0.25).attr('stroke-width',1).attr('y1',0).attr('y2',innerHeight).style('display','none');
+        const stepSet = new Set(); series.forEach(s=>s.values.forEach(v=>stepSet.add(v.step))); const steps = Array.from(stepSet).sort((a,b)=>a-b);
+        function onMove(ev){ if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; } const [mx,my]=d3.pointer(ev, overlay.node()); const nearest = steps.reduce((best,s)=> Math.abs(s - xScale.invert(mx)) < Math.abs(best - xScale.invert(mx)) ? s : best, steps[0]); const xpx = xScale(nearest); hoverLine.attr('x1',xpx).attr('x2',xpx).style('display',null);
+          let html = `<div><strong>${titleText}</strong></div><div><strong>step</strong> ${formatSteps(nearest)}</div>`;
+          const entries = series.map(s=>{ const map = new Map(s.values.map(v=>[v.step, v])); const pt = map.get(nearest); return { run:s.run, color:s.color, pt }; }).filter(e => e.pt && e.pt.value!=null);
+          entries.sort((a,b)=> (a.pt.value - b.pt.value));
+          const fmt = (vv)=> (+vv).toFixed(1);
+          entries.forEach(e => {
+            html += `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class=\"d3-tooltip__color-dot\" style=\"background:${e.color}\"></span><strong>${e.run}</strong><span style=\"margin-left:auto;text-align:right;\">${fmt(e.pt.value)}</span></div>`;
+          });
+          tipInner.innerHTML = html; const offsetX=12, offsetY=12; tip.style.opacity='1'; tip.style.transform=`translate(${Math.round(mx+offsetX+margin.left)}px, ${Math.round(my+offsetY+margin.top)}px)`; }
+        function onLeave(){ hideTipTimer = setTimeout(()=>{ tip.style.opacity='0'; tip.style.transform='translate(-9999px, -9999px)'; hoverLine.style('display','none'); }, 100); }
+        overlay.on('mousemove', onMove).on('mouseleave', onLeave);
+      }
+
+      // Initial render
+      renderMetric(metricKey);
+      const ro = window.ResizeObserver ? new ResizeObserver(()=>renderMetric(metricKey)) : null; 
+      if (ro) ro.observe(cell);
+      if (typeof readyResolve === 'function') readyResolve();
+      
+      return {
+        ready,
+        getMetrics: () => [metricKey],
+        setMetric: (m) => { if (m) renderMetric(m); },
+        getYInfo: (m) => {
+          return { isRank: false, isRankStrict: false, min: 0, max: 100, rankMax: null };
+        },
+        setSharedY: (cfg) => { sharedYConfig = cfg || null; if (metricKey) renderMetric(metricKey); }
+      };
+    }
+
+    const bootstrap = () => {
+      const scriptEl = THIS_SCRIPT;
+      let host = null;
+      
+      // Try finding within parent (fragment mount is inside parent)
+      if (scriptEl && scriptEl.parentElement && scriptEl.parentElement.querySelector) {
+        host = scriptEl.parentElement.querySelector('.line-four');
+      }
+      // Fallback: scan previous siblings
+      if (!host) {
+        let sib = scriptEl && scriptEl.previousElementSibling;
+        while (sib && !(sib.classList && sib.classList.contains('line-four'))) {
+          sib = sib.previousElementSibling;
+        }
+        host = sib || null;
+      }
+      // Last resort: global query
+      if (!host) { host = document.querySelector('.line-four'); }
+      if (!host) return;
+      if (host.dataset && host.dataset.mounted === 'true') return; if (host.dataset) host.dataset.mounted = 'true';
+      const cells = host.querySelectorAll('.four-cell'); if (!cells.length) return;
+      const instances = Array.from(cells).map(cell => initRunLine(cell));
+
+      (async () => {
+        // Wait for all charts to finish loading
+        await Promise.all(instances.map(i => i.ready));
+      })();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>

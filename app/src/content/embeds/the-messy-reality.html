@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .banner-container {
+            margin-top:20px;
+            width: 100%;
+            height: 520px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-container svg {
+            width: 100%;
+            will-change: transform;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            display: block;
+            margin: 0 auto;
+        }
+
+
+        .banner-circle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .banner-circle:hover {
+            stroke-width: 3px;
+            filter: brightness(1.2);
+        }
+
+        .banner-circle-text {
+            font-family: var(--default-font-family);
+            font-size: 10px;
+            line-height: 2;
+            font-weight: 700;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .banner-text-group text {
+            font-weight: 700 !important;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .banner-container svg {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .banner-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            max-width: 200px;
+            text-align: center;
+        }
+
+        .banner-tooltip.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .banner-circle-text {
+                font-size: 10px;
+            }
+            
+            .banner-tooltip {
+                font-size: 10px;
+                padding: 6px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="banner-container" id="banner-container">
+        <div class="banner-tooltip" id="banner-tooltip"></div>
+    </div>
+
+    <script>
+        // Configuration d'affichage des indicateurs de debug
+        const SHOW_DEBUG_INDICATORS = false; // Mettre à true pour afficher les points de gravité et positions phyllotaxis
+        
+        // Fonction pour découper un texte en deux lignes
+        function splitText(text) {
+            const words = text.split(' ');
+            if (words.length <= 2) {
+                return text;
+            }
+            const mid = Math.ceil(words.length / 2);
+            const firstLine = words.slice(0, mid).join(' ');
+            const secondLine = words.slice(mid).join(' ');
+            return `${firstLine}\n${secondLine}`;
+        }
+
+        // Données pour le groupe de gauche (technique)
+        const leftData = [
+            { text: "Technical\nReports", size: 35, id: "tech1" },
+            { text: "Architecture\nChoices", size: 63, id: "tech2" },
+            { text: "Data\nMixtures", size: 37, id: "tech3" },
+            { text: "Hyperparameters", size: 51, id: "tech4" }
+        ];
+
+        // Données pour le groupe de droite (défis) - tailles selon importance
+        const rightData = [
+            { text: "Node\nFailures", size: 37, id: "right1" },
+            { text: "Hardware\nMonitoring", size: 35, id: "right2" },
+            { text: "GPU\nthrottling", size: 31, id: "right3" },
+            { text: "Training\nRestart", size: 33, id: "right4" },
+            { text: "Data\ncleaning", size: 43, id: "right5" },
+            { text: "Evaluation\npipeline", size: 41, id: "right6" },
+            { text: "Choosing\nLR & BS", size: 45, id: "right7" },
+            { text: "Long\ncontext", size: 35, id: "right8" },
+            { text: "100+\nablations", size: 50, id: "right9" },
+            { text: "Storage\nMigration", size: 27, id: "right10" },
+            { text: "Noisy\nevals", size: 39, id: "right11" },
+            { text: "Tokenizer", size: 33, id: "right12" },
+            { text: "Team\nexpertise", size: 47, id: "right13" },
+            { text: "Loss\nspikes", size: 35, id: "right14" },
+            { text: "Chat\ntemplate", size: 29, id: "right15" },
+            { text: "Vibe\ntesting", size: 31, id: "right16" },
+            { text: "2am\ndebugging", size: 53, id: "right17" },
+            { text: "Tensor\nParallelism bug", size: 45, id: "right18" },
+            { text: "Throughput\ndrops", size: 31, id: "right19" },
+            { text: "Loss\ndivergence", size: 37, id: "right20" },
+            { text: "Data vs\narchitecture", size: 49, id: "right21" },
+            { text: "Grad\nnorm", size: 29, id: "right22" },
+            { text: "It worked\nyesterday", size: 43, id: "right23" },
+            { text: "Broken\nevals", size: 33, id: "right24" },
+            { text: "The Why\n& What", size: 55, id: "right25" },
+            { text: "Real compute\nbudget", size: 47, id: "right26" }
+        ];
+
+        // Centres de gravité (définis avant d'être utilisés) - remontés vers le haut et légèrement décalés vers la gauche
+        const leftCenter = { x: 175, y: 180 };
+        const rightCenter = { x: 575, y: 180 };
+        // Deux centres pour créer une ellipse à droite
+        const rightCenter1 = { x: 455, y: 180 };
+        const rightCenter2 = { x: 795, y: 180 };
+
+        // Fonction pour générer une distribution phyllotaxis circulaire
+        function phyllotaxis(radius, count, centerX, centerY) {
+            const points = [];
+            const angle = Math.PI * (3 - Math.sqrt(5)); // Angle d'or
+            
+            for (let i = 0; i < count; i++) {
+                const r = radius * Math.sqrt(i / count);
+                const theta = angle * i;
+                points.push({
+                    x: centerX + r * Math.cos(theta),
+                    y: centerY + r * Math.sin(theta)
+                });
+            }
+            return points;
+        }
+
+        // Fonction pour générer une distribution elliptique
+        function ellipseDistribution(radiusX, radiusY, count, centerX, centerY) {
+            const points = [];
+            const angle = Math.PI * (3 - Math.sqrt(5)); // Angle d'or pour espacement régulier
+            
+            for (let i = 0; i < count; i++) {
+                const r = Math.sqrt(i / count);
+                const theta = angle * i;
+                points.push({
+                    x: centerX + radiusX * r * Math.cos(theta),
+                    y: centerY + radiusY * r * Math.sin(theta)
+                });
+            }
+            return points;
+        }
+
+        // Combiner toutes les données avec un identifiant de groupe et positions initiales
+        const leftPoints = ellipseDistribution(300,120, leftData.length, leftCenter.x, leftCenter.y);
+        const rightPoints = ellipseDistribution(380, 100, rightData.length, (rightCenter1.x + rightCenter2.x) / 2, rightCenter.y);
+        
+        // Fonction pour ajuster l'intensité de la couleur en fonction de la taille
+        function adjustColorIntensity(baseColor, size, minSize, maxSize) {
+            const color = d3.color(baseColor);
+            const hsl = d3.hsl(color);
+            // Plus le cercle est grand, plus la couleur est intense (luminosité réduite)
+            const sizeRatio = (size - minSize) / (maxSize - minSize);
+            const lightnessAdjustment = -(sizeRatio * 0.12); // Variation de 0 (normal) à -0.12 (plus intense)
+            hsl.l = Math.max(0, Math.min(1, hsl.l + lightnessAdjustment));
+            return hsl.toString();
+        }
+        
+        const minLeftSize = Math.min(...leftData.map(d => d.size));
+        const maxLeftSize = Math.max(...leftData.map(d => d.size));
+        const minRightSize = Math.min(...rightData.map(d => d.size));
+        const maxRightSize = Math.max(...rightData.map(d => d.size));
+        
+        const allData = [
+            ...leftData.map((d, i) => ({ 
+                ...d, 
+                group: 'left', 
+                textColor: adjustColorIntensity('#52a862', d.size, minLeftSize, maxLeftSize), // Vert avec variation pour le texte
+                color: 'rgba(82, 168, 98, 0.08)', // Fond très léger vert
+                strokeColor: adjustColorIntensity('#52a862', d.size, minLeftSize, maxLeftSize), // Bordure verte avec variation
+                x: leftPoints[i].x,
+                y: leftPoints[i].y
+            })),
+            ...rightData.map((d, i) => ({ 
+                ...d, 
+                group: 'right', 
+                textColor: adjustColorIntensity('#e07a5f', d.size, minRightSize, maxRightSize), // Orange primary avec variation pour le texte
+                color: 'rgba(224, 122, 95, 0.08)', // Fond très léger orange
+                strokeColor: adjustColorIntensity('#e07a5f', d.size, minRightSize, maxRightSize), // Bordure orange primary avec variation
+                x: rightPoints[i].x,
+                y: rightPoints[i].y
+            }))
+        ];
+
+
+        // Padding interne du SVG
+        const svgPaddingTop = 20;
+        const svgPaddingBottom = 20;
+        const svgHeight = 500;
+        const contentHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
+        
+        // Créer un seul SVG
+        const svgRoot = d3.select('#banner-container')
+            .append('svg')
+            .attr('width', 800)
+            .attr('height', svgHeight);
+        
+        // Créer un groupe principal avec le padding
+        const svg = svgRoot.append('g')
+            .attr('transform', `translate(0, ${svgPaddingTop})`);
+
+        // Calculer le centre horizontal de chaque groupe
+        const leftCenterX = leftPoints.reduce((sum, p) => sum + p.x, 0) / leftPoints.length;
+        const rightCenterX = rightPoints.reduce((sum, p) => sum + p.x, 0) / rightPoints.length;
+        
+        // Calculer la position entre les deux groupes (basé sur le bord droit du groupe gauche et le bord gauche du groupe droit)
+        const leftMaxX = Math.max(...leftPoints.map(p => p.x));
+        const rightMinX = Math.min(...rightPoints.map(p => p.x));
+        const middleX = (leftMaxX + rightMinX) / 2 + 30;
+        
+        // Ajouter une ligne verticale dashed entre les deux groupes (ajustée pour le contentHeight)
+        svg.append('line')
+            .attr('x1', middleX)
+            .attr('y1', 0)
+            .attr('x2', middleX)
+            .attr('y2', contentHeight)
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '10,10')
+            .style('opacity', 0.45);
+        
+        // Ajouter les labels des groupes en dessous, centrés (invisibles au départ)
+        const leftLabel = svg.append('text')
+            .attr('x', leftCenterX)
+            .attr('y', 350)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .attr('font-weight', '600')
+            .attr('fill', 'var(--muted-color)')
+            .attr('font-family', 'var(--default-font-family)')
+            .style('opacity', 0);
+        
+        leftLabel.append('tspan')
+            .style('opacity', 0.5)
+            .text('↑ ');
+        leftLabel.append('tspan')
+            .text('what you see in paper');
+        leftLabel.append('tspan')
+            .style('opacity', 0.5)
+            .text(' ↑');
+        
+        const rightLabel = svg.append('text')
+            .attr('x', (rightCenter1.x + rightCenter2.x) / 2 + 20)
+            .attr('y', 465)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .attr('font-weight', '600')
+            .attr('fill', 'var(--muted-color)')
+            .attr('font-family', 'var(--default-font-family)')
+            .style('opacity', 0);
+        
+        rightLabel.append('tspan')
+            .style('opacity', 0.5)
+            .text('↑ ');
+        rightLabel.append('tspan')
+            .text('the messy reality');
+        rightLabel.append('tspan')
+            .style('opacity', 0.5)
+            .text(' ↑');
+        
+        // Faire apparaître les labels avec des délais
+        setTimeout(() => {
+            leftLabel.transition().duration(800).style('opacity', 0.6);
+        }, 1500);
+        
+        setTimeout(() => {
+            rightLabel.transition().duration(800).style('opacity', 0.6);
+        }, 2000);
+
+        // Ajouter des indicateurs visuels pour les centres de gravité (si debug activé)
+        if (SHOW_DEBUG_INDICATORS) {
+            svg.append('circle')
+                .attr('class', 'banner-center-indicator')
+                .attr('cx', leftCenter.x)
+                .attr('cy', leftCenter.y)
+                .attr('r', 3)
+                .attr('fill', 'var(--neutral-400)')
+                .attr('stroke', 'var(--neutral-600)')
+                .attr('stroke-width', 1)
+                .style('opacity', 0.6);
+
+            // Deux points pour l'ellipse à droite
+            svg.append('circle')
+                .attr('class', 'banner-center-indicator')
+                .attr('cx', rightCenter1.x)
+                .attr('cy', rightCenter1.y)
+                .attr('r', 3)
+                .attr('fill', 'var(--neutral-400)')
+                .attr('stroke', 'var(--neutral-600)')
+                .attr('stroke-width', 1)
+                .style('opacity', 0.6);
+
+            svg.append('circle')
+                .attr('class', 'banner-center-indicator')
+                .attr('cx', rightCenter2.x)
+                .attr('cy', rightCenter2.y)
+                .attr('r', 3)
+                .attr('fill', 'var(--neutral-400)')
+                .attr('stroke', 'var(--neutral-600)')
+                .attr('stroke-width', 1)
+                .style('opacity', 0.6);
+        }
+
+        // Ajouter des petits cercles pour marquer les positions de départ phyllotaxis (si debug activé)
+        if (SHOW_DEBUG_INDICATORS) {
+            allData.forEach(d => {
+                svg.append('circle')
+                    .attr('class', 'banner-phyllotaxis-indicator')
+                    .attr('cx', d.x)
+                    .attr('cy', d.y)
+                    .attr('r', 1.5)
+                    .attr('fill', 'none')
+                    .attr('stroke', d.group === 'left' ? 'var(--primary-color)' : 'var(--danger-color)')
+                    .attr('stroke-width', 1)
+                    .style('opacity', 0.6);
+            });
+        }
+
+        // Simulation avec centres de gravité (ellipse à droite)
+        const simulation = d3.forceSimulation(allData)
+            .force('collision', d3.forceCollide()
+                .radius(d => d.size + 5) // Plus d'espace entre les cercles pour éviter les chevauchements
+                .strength(.9) // Force maximale pour éviter strictement les overlaps
+                .iterations(3)) // Réduit à 2 itérations pour de meilleures performances
+            .force('gravity', d3.forceManyBody().strength(-5)) // Répulsion légèrement plus forte
+            .force('x', d3.forceX(d => {
+                if (d.group === 'left') return leftCenter.x;
+                // Pour le groupe droit, attirer vers le centre moyen de l'ellipse
+                return (rightCenter1.x + rightCenter2.x) / 2;
+            }).strength(d => d.group === 'left' ? 0.12 : 0.06)) // Plus d'attraction pour le groupe gauche
+            .force('y', d3.forceY(d => d.group === 'left' ? leftCenter.y : rightCenter.y).strength(d => d.group === 'left' ? 0.1 : 0.04)) // Plus d'attraction Y pour le groupe gauche
+            // Force radiale depuis le premier foyer
+            .force('radial1', d3.forceRadial(
+                d => d.group === 'left' ? 100 : 150, 
+                d => d.group === 'left' ? leftCenter.x : rightCenter1.x, 
+                d => d.group === 'left' ? leftCenter.y : rightCenter1.y
+            ).strength(d => d.group === 'left' ? 0.03 : 0.015)) // Force radiale plus forte pour le groupe gauche
+            // Force radiale depuis le second foyer (seulement pour le groupe droit)
+            .force('radial2', d3.forceRadial(
+                150, 
+                d => d.group === 'right' ? rightCenter2.x : rightCenter.x, 
+                d => d.group === 'right' ? rightCenter2.y : rightCenter.y
+            ).strength(d => d.group === 'right' ? 0.015 : 0))
+            .alphaDecay(0.02) // Décélération plus rapide pour de meilleures performances
+            .alphaMin(0.005) // Seuil minimal raisonnable
+            .velocityDecay(0.85); // Friction élevée pour mouvements doux
+
+
+        // Fonction de drag
+        const drag = d3.drag()
+            .on('start', function(event, d) {
+                // Empêcher la sélection de texte
+                event.sourceEvent.preventDefault();
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+                // Effet visuel pendant le drag
+                d3.select(this)
+                    .style('cursor', 'grabbing')
+                    .style('opacity', 0.8)
+                    .raise(); // Mettre le groupe au premier plan
+            })
+            .on('drag', function(event, d) {
+                // Empêcher la sélection de texte
+                event.sourceEvent.preventDefault();
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on('end', function(event, d) {
+                // Empêcher la sélection de texte
+                event.sourceEvent.preventDefault();
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+                // Restaurer l'apparence normale
+                d3.select(this)
+                    .style('cursor', 'grab')
+                    .style('opacity', 1);
+            });
+
+        // Créer un groupe parent pour chaque élément (cercle + texte ensemble)
+        const itemGroups = svg.selectAll('g.banner-item-group')
+            .data(allData)
+            .enter()
+            .append('g')
+            .attr('class', 'banner-item-group')
+            .style('cursor', 'grab')
+            .style('opacity', 0)
+            .call(drag);
+
+        // Ajouter le cercle dans chaque groupe
+        itemGroups.append('circle')
+            .attr('class', 'banner-data-circle banner-circle')
+            .attr('r', d => d.size)
+            .attr('cx', 0)
+            .attr('cy', 0)
+            .attr('fill', d => d.color)
+            .attr('stroke', d => d.strokeColor)
+            .attr('stroke-width', 2)
+            .attr('stroke-opacity', 0.75);
+
+        // Ajouter les textes dans chaque groupe
+        itemGroups.each(function(d) {
+            const group = d3.select(this);
+            const lines = d.text.split('\n');
+            const fontSize = Math.max(8, d.size * 0.25);
+            const lineHeight = 14; // Interlignage constant et généreux (14px)
+            const totalHeight = (lines.length - 1) * lineHeight;
+            
+            lines.forEach((line, i) => {
+                group.append('text')
+                    .attr('class', 'banner-circle-text')
+                    .attr('text-anchor', 'middle')
+                    .attr('dominant-baseline', 'middle')
+                    .attr('fill', d.textColor)
+                    .attr('font-size', fontSize)
+                    .attr('font-weight', '700')
+                    .attr('x', 0)
+                    .attr('y', i * lineHeight - totalHeight / 2)
+                    .text(line)
+                    .style('pointer-events', 'none')
+                    .style('color', d.textColor)
+                    .style('fill', d.textColor);
+            });
+        });
+
+
+        // Simulation invisible - calcul des positions
+        simulation.on('tick', () => {
+            itemGroups
+                .attr('transform', d => `translate(${d.x}, ${d.y})`);
+        });
+
+        // Révéler les groupes (cercles + texte) après un délai avec fade-in progressif
+        setTimeout(() => {
+            itemGroups
+                .transition()
+                .duration(300)
+                .delay((d, i) => i * 10)
+                .style('opacity', 1);
+        }, 800);
+    </script>
+</body>
+</html>
