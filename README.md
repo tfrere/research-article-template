@@ -1,5 +1,6 @@
 ---
-title: 'Bringing paper to life: A modern template for scientific writing'
+title: 'The Smol Training Guide: The Secrets to Building World-Class LLMs'
+short_desc: 'A practical journey behind training SOTA LLMs'
 emoji: 📝
 colorFrom: blue
 colorTo: indigo
