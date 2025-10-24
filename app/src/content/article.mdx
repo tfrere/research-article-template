@@ -108,6 +108,7 @@ import Screenshot_2025_10_16_at_21_20_31_28e1384e_bcac_8059_83b0_c6e19a90f49c fr
 import Screenshot_2025_10_16_at_21_39_34_28e1384e_bcac_8004_9f13_c53e50cd416e from './assets/image/Screenshot_2025-10-16_at_21_39_34_28e1384e-bcac-8004-9f13-c53e50cd416e.png';
 import Screenshot_2025_10_17_at_15_32_35_28f1384e_bcac_8038_aa05_f429bd1bbf0d from './assets/image/Screenshot_2025-10-17_at_15_32_35_28f1384e-bcac-8038-aa05-f429bd1bbf0d.png';
 import Screenshot_2025_10_24_at_12_26_55_2961384e_bcac_80c9_9266_c37d8d5f4a39 from './assets/image/Screenshot_2025-10-24_at_12_26_55_2961384e-bcac-80c9-9266-c37d8d5f4a39.png';
+import Screenshot_2025_10_24_at_13_43_00_2961384e_bcac_8092_8767_c72f25ff159d from './assets/image/Screenshot_2025-10-24_at_13_43_00_2961384e-bcac-8092-8767-c72f25ff159d.png';
 import Screenshot_2025_10_17_at_14_07_07_28f1384e_bcac_8000_b77f_d6b0627e5f54 from './assets/image/Screenshot_2025-10-17_at_14_07_07_28f1384e-bcac-8000-b77f-d6b0627e5f54.png';
 import Screenshot_2025_10_17_at_15_15_26_28f1384e_bcac_8006_a7de_ec57a503d412 from './assets/image/Screenshot_2025-10-17_at_15_15_26_28f1384e-bcac-8006-a7de-ec57a503d412.png';
 import Screenshot_2025_10_17_at_16_00_20_28f1384e_bcac_80f7_ab1c_e448a7e126b4 from './assets/image/Screenshot_2025-10-17_at_16_00_20_28f1384e-bcac-80f7-ab1c-e448a7e126b4.png';
@@ -127,6 +128,9 @@ import image_2941384e_bcac_801f_8178_c6a934bc1509 from './assets/image/image_294
 import image_2941384e_bcac_800c_88e8_c294c0484b38 from './assets/image/image_2941384e-bcac-800c-88e8-c294c0484b38.png';
 import image_2941384e_bcac_808e_b36d_fa163d1e2445 from './assets/image/image_2941384e-bcac-808e-b36d-fa163d1e2445.png';
 import image_2811384e_bcac_80c5_b8dd_f185bb19b961 from './assets/image/image_2811384e-bcac-80c5-b8dd-f185bb19b961.png';
+
+
+
 
 
 ## Introduction
@@ -760,7 +764,7 @@ One of the most active fields of interest around the transformer architecture is
 ####  **How Many Heads for My Attention?** 
 
 
- *Multi-head attention (MHA)* is the standard attention introduced with the original transformer. Checkout [Jay Alamar's famous blog](https://jalammar.github.io/illustrated-transformer/) post for a quick refresher! TL;DR The main idea is that you have N attention heads each independently doing the same retrieval task: transform the hidden state into queries, keys, and values, then use the current query to retrieve the most relevant token by match on the keys and finally forward the value associated with the matched tokens. At inference time we don't need to recompute the KV values for past tokens and can reuse them. The memory for past KV values is called the  *KV-Cache* . Especially as context windows grow the KV-Cache can become a major inference bottleneck eating up all precious GPU memory. Here's a simple calculation following the Llama 3 architecture with MHA and a sequence length of 8192:
+ *Multi-head attention (MHA)* is the standard attention introduced with the [original transformer.](https://arxiv.org/abs/1706.03762) Checkout [Jay Alamar's famous blog](https://jalammar.github.io/illustrated-transformer/) post for a quick refresher! TL;DR The main idea is that you have N attention heads each independently doing the same retrieval task: transform the hidden state into queries, keys, and values, then use the current query to retrieve the most relevant token by match on the keys and finally forward the value associated with the matched tokens. At inference time we don't need to recompute the KV values for past tokens and can reuse them. The memory for past KV values is called the  *KV-Cache* . Especially as context windows grow the KV-Cache can become a major inference bottleneck eating up all precious GPU memory. Here's a simple calculation following the Llama 3 architecture with MHA and a sequence length of 8192:
 
 
 $$
@@ -776,9 +780,9 @@ $$
 
 Note that the leading factor of 2 is due to the fact that we have a K and a V cache. As you can see the cache is increasing linearly with sequence length while the context windows has been increasing rather exponential recently (now reach millions of tokens). So improving the efficiency of the cache would make scaling context at inference time much easier. 
 
-The natural question to ask is: do we really need new KV values for each head? The answer is probably not and both  *Multi-Query Attention (MQA)* and  *Grouped Query Attention (GQA)* address this. The simplest case is to share the KV values across all heads, thus dividing the size of the KV cache by  $n_{heads}$ , which is e.g. a 64 decrease for Llama 3 70B! This is the idea of MQA and was used in some models like StarCoder as an alternative to MHA. However, we might give away a bit more attention capacity than we are willing to, so we could consider the middle ground and share the KV values across groups of heads e.g. 4 heads sharing the same KV values. This is the GQA approach and strikes a middle ground between MQA and MHA. 
+The natural question to ask is: do we really need new KV values for each head? The answer is probably not and both [ *Multi-Query Attention (MQA)* ](https://arxiv.org/abs/1911.02150) ** and [ *Grouped Query Attention (GQA)* ](https://arxiv.org/abs/2305.13245) ** address this. The simplest case is to share the KV values across all heads, thus dividing the size of the KV cache by  $n_{heads}$ , which is e.g. a 64 decrease for Llama 3 70B! This is the idea of MQA and was used in some models like StarCoder as an alternative to MHA. However, we might give away a bit more attention capacity than we are willing to, so we could consider the middle ground and share the KV values across groups of heads e.g. 4 heads sharing the same KV values. This is the GQA approach and strikes a middle ground between MQA and MHA. 
 
-More recently, DeepSeek-v2 (and also used in v3) introduced  *Multi-Latent Attention (MLA)* , which uses a different strategy to compress the cache: rather than reducing the number KV-values it reduces their size and simply stores a latent variable which can be decompressed into KV values at runtime. With this approach they managed to reduced the cache to an equivalent of GQA with 2.25 groups while giving stronger performance than MHA! In order to make this work with RoPE a small tweak with an extra small latent vector is needed. In DeepSeek-v2 they chose  $4*dim_{head}$  for the main latent variable and  $1/2*dim_{head}$  for the RoPE part so a total fo  $4.5*dim_{head}$  which is used for both K and V simultaneously thus dropping the leading factor of 2. 
+More recently, [DeepSeek-v2 ](https://arxiv.org/abs/2405.04434)(and also used in v3) introduced  *Multi-Latent Attention (MLA)* , which uses a different strategy to compress the cache: rather than reducing the number KV-values it reduces their size and simply stores a latent variable which can be decompressed into KV values at runtime. With this approach they managed to reduced the cache to an equivalent of GQA with 2.25 groups while giving stronger performance than MHA! In order to make this work with RoPE a small tweak with an extra small latent vector is needed. In DeepSeek-v2 they chose  $4*dim_{head}$  for the main latent variable and  $1/2*dim_{head}$  for the RoPE part so a total fo  $4.5*dim_{head}$  which is used for both K and V simultaneously thus dropping the leading factor of 2. 
 
 You can see a visual explanation of each attention mechanism in the following graphic:
 
@@ -1488,38 +1492,44 @@ We've now covered the core building blocks of the transformer: attention mechani
 Beyond the components we've covered, there are other architectural decisions worth noting. For initialization, modern models typically use truncated normal initialization (mean=0, std=0.02 or std=0.006) or initialization scheme like muP (Cohere, grok). For  **activation functions** , SwiGLU has become the de facto standard in modern LLMs (except gemma using GeGLU and nvidia using relu^2), replacing older choices like ReLU or GELU.
 At a broader scale, architectural layout choices also play a role in shaping model behavior. Although the total parameter count largely determines a language model's capacity, how those parameters are distributed across depth and width also matters. [Petty et al](https://arxiv.org/abs/2310.19956). found that deeper models outperform equally sized wider ones on language-modeling and compositional tasks until the benefit saturates. This "deep-and-thin" strategy works well for sub-billion-parameter LLMs in [MobileLLM ablations](https://arxiv.org/abs/2402.14905), whereas wider models tend to offer faster inference thanks to greater parallelism. Modern architectures reflect this trade-off differently as noted in this[ blog post](https://sebastianraschka.com/blog/2025/the-big-llm-architecture-comparison.html). 
 
+We now covered the most important aspects of the dense transformer architecture worth optimizing for you training run. However, recently other architecture interventions that concern the model as a whole have emerged, namely MoE and hybrid models. Let's have a look what they have to offer, starting with the MoEs.
+
 ### Going Sparse: MoE 
 
 
-Mixture-of-Experts (MoE) has a simple goal: grow total parameters without increasing the number of "active" parameters per token. That's why you see it in many frontier systems (e.g., DeepSeek V3, K2, and in closed-source models like Gemini, Grok...). The motivation is straightforward: for a fixed per-token compute budget, MoE can be faster to train and faster at inference while scaling model capacity.
+The intuition of  *Mixture-of-Experts (MoEs)* is that we don't need the full model for every token prediction, similarly to how our brain activates different areas depending on the task at hand (e.g. the visual or motor cortex). For an LLM this could mean that the parts that learned about coding syntax don't need to be used when the model performs a translation task. If we can do this well, it means we can save a lot of compute as we only need to run parts of the full model at inference time.
+
+On a technical level MoEs have a simple goal: grow total parameters without increasing the number of "active" parameters per token. Somewhat simplified the total parameters correspond to the learning capacity of the model while the active parameters determine the training cost and inference speed. That's why you see many frontier systems (e.g., DeepSeek V3, K2, and in closed-source models like Gemini, Grok...) using MoE architectures these days.
 
 <Image src={image_2931384e_bcac_80c4_ab02_f22c53e6fdee} alt="Image" />
 
 
-If this is your first time encountering MoE, don't worry, the mechanics are not complicated. Start from the standard Transformer block and look at the MLP:
+If this is your first time encountering MoE, don't worry, the mechanics are not complicated. Let's start with the standard dense architecture and have a look at the necessary changes for the MoE:
 
 <Image src={image_2931384e_bcac_8062_bc11_d1ee3706d996} alt="Image" />
 
 
-In MoE, we replace that single MLP with multiple MLPs ("experts") and add a learnable router. For each token, the router selects a small subset of experts to execute. This is where the distinction between total parameters and active parameters comes from: the model has many experts, but any given token only uses a few.
+In MoE, we replace that single MLP with multiple MLPs ("experts") and add a learnable router before the MLPs. For each token, the router selects a small subset of experts to execute. This is where the distinction between total parameters and active parameters comes from: the model has many experts, but any given token only uses a few.
 
 Designing an MoE layer raises a few core questions:
 
-- Expert shape & sparsity. Should you use many small experts or fewer large ones? How many experts should be active per token (i.e., the sparsity or "top-k")? Will you share any experts across layers?
-- Utilization & specialization. How do you keep experts well-used (avoid idle capacity) while still encouraging them to specialize? In practice this is a load-balancing problem.
-Here we focus on one objective: given a fixed compute budget, how do we choose an MoE configuration that minimizes loss within a set number of FLOPs? That's a different question from pure systems efficiency (throughput/latency), and we'll come back to that later.
+- Expert shape & sparsity: Should you use many small experts or fewer large ones? How many experts should be active per token (i.e., the sparsity or "top-k")? Will you share any experts across layers?
+- Utilization & specialization: How do you keep experts well-used (avoid idle capacity) while still encouraging them to specialize? In practice this is a load-balancing problem and has a significant impact on training and inference efficiency.
+Here we focus on one objective: given a fixed compute budget, how do we choose an MoE configuration that minimizes loss within a set number of FLOPs? That's a different question from pure systems efficiency (throughput/latency), and we'll come back to that later. Much of this section follows the analysis in Ant Group's paper: [https://arxiv.org/pdf/2507.17702](https://arxiv.org/pdf/2507.17702)
 
-Much of this section follows the analysis in Ant Group's paper: [https://arxiv.org/pdf/2507.17702](https://arxiv.org/pdf/2507.17702)
-
-We'll use their notion of Efficiency Leverage (EL). Informally, EL measures how much dense compute you'd need to match the loss achieved by an MoE design. Concretely, it's the ratio between the FLOPs required to reach a given loss in a dense model versus in the MoE setting. A higher EL means the MoE configuration is delivering more loss improvement per unit of compute compared to dense training.
+We'll use their notion of  *Efficiency Leverage (EL)* . Simply put, EL measures how much dense compute you'd need to match the loss achieved by an MoE design where the unit of measurement is FLOPs. A higher EL means the MoE configuration is delivering more loss improvement per unit of compute compared to dense training.
 
 <Image src={Capture_decran_2025_10_20_a_13_15_08_2921384e_bcac_80d1_a3eb_f6a227eb0b86} alt="Image" />
 
+
+Let's have a closer look how we can setup the sparsity of the MoE to improve the efficiency.
 
 #### Sparsity / activation ratio
 
 
  **TL;DR:**  more sparsity → better FLOPs efficiency → diminishing returns at very high sparsity → sweetspot depends on your compute budget.
+
+Before we get deeper into optimal efficiency it is useful to define two quantities: activation ration and its inverse the sparsity
 
 Definitions: Let activation ratio be the fraction of experts used per token:
 
@@ -4845,7 +4855,7 @@ After fixing the multi-turn reasoning issue with IFThink, our baseline finally b
 #### Which hyperparameters actually matter?
 
 
-In SFT, there are only a few hyperparameters that actually matter. Learning rate, batch size, and packing determine almost everything about how efficiently your model trains and how well it generalizes. In our baby baselines, we picked reasonable defaults just to validate the data and chat template. Now that the setup was stable, we revisited these choices to see how much impact they have on our baseline. 
+In SFT, there are only a few hyperparameters that actually matter. Learning rate, batch size, and packing determine almost everything about how efficiently your model trains and how well it generalises. In our baby baselines, we picked reasonable defaults just to validate the data and chat template. Now that the setup was stable, we revisited these choices to see how much impact they have on our baseline. 
 
  **Masking user turns** 
 
@@ -4895,10 +4905,17 @@ To get a sense of how efficient packing is for training, below we compare the ru
 <Image src={Screenshot_2025_10_24_at_12_26_55_2961384e_bcac_80c9_9266_c37d8d5f4a39} alt="Image" />
 
 
+Depending on the batch size, we see that packing improves throughput by a factor of 3-5x! So, should you  *always*  use packing? To some extent, the answer depends on how large your dataset is, because packing reduces the number of optimisation steps per epoch by fitting more tokens into each step. You can see this in the following figure, where we plot the average number of non-padding tokens per batch:
+
+<Image src={Screenshot_2025_10_24_at_13_43_00_2961384e_bcac_8092_8767_c72f25ff159d} alt="Image" />
+
+
+With packing, the number of tokens per batch scales linearly with the batch size and compared to training without packing, can include up to 33x more tokens per optimisation step! However, packing can slight alter the training dynamics: while you process more data overall, you take fewer gradient updates which can influence final performance, especially on small datasets where each sample matters more. For example, if we compare packing versus no-packing at the same effective batch size of 128, we see that some evals like IFEval take a significant performance hit:
+
 <Image src={Screenshot_2025_10_17_at_14_07_07_28f1384e_bcac_8000_b77f_d6b0627e5f54} alt="Image" />
 
 
-Exploring the impact of batch size on packing
+More generally, we see that once the effective batch size is large than 32, there is an average performance hit for this particular model and dataset:
 
 <Image src={Screenshot_2025_10_17_at_15_15_26_28f1384e_bcac_8006_a7de_ec57a503d412} alt="Image" />
 
@@ -4923,13 +4940,6 @@ Embed id: three-stage-training
 This approach was later used in the training of [Phi-4-Mini-Reasoning](https://arxiv.org/abs/2504.21233v1), but with a twist: instead of doing continued pretraining on web data, the authors used distilled reasoning tokens from DeepSeek-R1 for the mid-training corpus. The results were compelling, showing consistent and large gains through multi-stage training: 
 
 | Model | AIME | MATH-500 | GPQA Diamond |
-| --- | --- | --- | --- |
-| ol-mini* | 63.6 | 90.0 | 60.0 |
-| DeepSeek-R1-Distill-Qwen-7B | 53.3 | 91.4 | 49.5 |
-| DeepSeek-R1-Distill-Llama-8B | 43.3 | 86.9 | 47.3 |
-| Bespoke-Stratos-7B* | 20.0 | 82.0 | 37.8 |
-| OpenThinker-7B* | 31.3 | 83.0 | 42.4 |
-| Llama-3.2-3B-Instruct | 6.7 | 44.4 | 25.3 |
 | --- | --- | --- | --- |
 | **Phi-4-Mini** | 10.0 | 71.8 | 36.9 |
 | + Distill Mid-training | 30.0 | 82.9 | 42.6 |
@@ -5015,7 +5025,7 @@ A nice example of such a dataset is from SnorkelAI, which took the prompts from 
   width="100%"
   height="560px"
 ></iframe>
-For SmolLM3, there did not exist any reasoning preference data, so we opted for the "strong vs weak" approach and used the prompts from [Ai2's Tulu 3 preference mixture](https://huggingface.co/datasets/allenai/llama-3.1-tulu-3-8b-preference-mixture) to generate responses from Qwen3-0.6B and Qwen3-32B in  `/think`  model. The result was a large-scale dataset of 250k+ LLM-generated preference to improve our SFT checkpoint along many axes at once. 
+For SmolLM3, we did not find any preference data with reasoning traces, so we opted for the "strong vs weak" approach. We used the prompts from [Ai2's Tulu 3 preference mixture](https://huggingface.co/datasets/allenai/llama-3.1-tulu-3-8b-preference-mixture) to generate responses from Qwen3-0.6B and Qwen3-32B in the /think mode. The result was a large-scale dataset of 250k+ LLM-generated preferences, ready to simultaneously improve our SFT checkpoint across multiple axes using preference optimisation algorithms.
 
 #### Which algorithm do I pick?
 
