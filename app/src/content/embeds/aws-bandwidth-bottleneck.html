@@ -62,7 +62,7 @@
   }
 
   .aws-topology-container.fixed-height {
-    height: 800px;
+    height: 850px;
   }
 
   .aws-topology-container svg {
@@ -72,6 +72,12 @@
 
   .aws-topology-container svg g {
     transition: opacity 0.2s ease;
+  }
+
+  /* Add drop shadow to all links */
+  .aws-topology-container svg g[data-link-type] line,
+  .aws-topology-container svg g[data-link-type] path {
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
   }
 
   .aws-topology-controls {
@@ -113,6 +119,13 @@
 
   .aws-topology-controls-buttons .button {
     flex-shrink: 0;
+  }
+
+  /* Hide controls on mobile */
+  @media (max-width: 768px) {
+    .aws-topology-controls {
+      display: none;
+    }
   }
 
   .aws-topology-legend {
@@ -1183,12 +1196,15 @@
     // ============================================================================
     // DRAW SINGLE SYSTEM (variable number of ensembles)
     // ============================================================================
-    function drawSystem(renderer, systemIndex, systemCenterX, cpuY, nvswitchY, ensembleCount = 1, drawEfaCrossLinks = false) {
+    function drawSystem(renderer, systemIndex, systemCenterX, cpuY, nvswitchY, ensembleCount = 1, systemCount = 1, drawEfaCrossLinks = false) {
+      // For internode (2 systems), only show 1 ensemble per system for clarity
+      const ensemblesToShow = (systemCount === 2) ? 1 : ensembleCount;
+
       // Calculate ensemble width (4 groups)
       const ensembleWidth = CONFIG.groupCount * CONFIG.gaps.horizontal;
 
-      // Calculate system bounding box
-      const systemWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap;
+      // Calculate system bounding box based on actual ensembles shown
+      const systemWidth = ensemblesToShow * ensembleWidth + (ensemblesToShow - 1) * CONFIG.gaps.ensembleGap;
       const systemHeight = CONFIG.sizes.cpu + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
         CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height +
         CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height;
@@ -1227,11 +1243,11 @@
       }
 
       // Draw each ensemble in the system
-      for (let ensIndex = 0; ensIndex < ensembleCount; ensIndex++) {
+      for (let ensIndex = 0; ensIndex < ensemblesToShow; ensIndex++) {
         const ensembleGlobalIndex = systemIndex * CONFIG.ensembleCount + ensIndex;
 
         // Position ensemble within system
-        const ensembleOffsetX = (ensIndex - (ensembleCount - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+        const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
         const ensembleCenterX = systemCenterX + ensembleOffsetX;
 
         drawEnsemble(renderer, ensembleGlobalIndex, ensembleCenterX, cpuY, nvswitchY);
@@ -1239,8 +1255,8 @@
 
       // Draw NUMA node borders (one per ensemble) if 2 ensembles
       if (ensembleCount === 2) {
-        for (let ensIndex = 0; ensIndex < ensembleCount; ensIndex++) {
-          const ensembleOffsetX = (ensIndex - (ensembleCount - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+        for (let ensIndex = 0; ensIndex < ensemblesToShow; ensIndex++) {
+          const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
           const ensembleCenterX = systemCenterX + ensembleOffsetX;
 
           // Calculate NUMA node bounding box (same as system but for single ensemble)
@@ -1285,8 +1301,8 @@
       const offset = getLinkOffset(bw.width);
 
       // Connect all GPUs in the system to all NVSwitches in the system
-      const totalGpusInSystem = ensembleCount * CONFIG.groupCount;
-      const totalNVSwitchesInSystem = ensembleCount * CONFIG.nvswitchCount;
+      const totalGpusInSystem = ensemblesToShow * CONFIG.groupCount;
+      const totalNVSwitchesInSystem = ensemblesToShow * CONFIG.nvswitchCount;
 
       for (let gpuIndex = 0; gpuIndex < totalGpusInSystem; gpuIndex++) {
         const gpuGlobalIndex = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + gpuIndex;
@@ -1298,8 +1314,8 @@
         }
       }
 
-      // Draw CPU-to-CPU link between ensembles (only if 2 ensembles)
-      if (ensembleCount === 2) {
+      // Draw CPU-to-CPU link between ensembles (only if 2 ensembles visible)
+      if (ensemblesToShow === 2) {
         const cpu0Id = systemIndex * CONFIG.ensembleCount === 0 ? 'cpu' : `cpu-${systemIndex * CONFIG.ensembleCount}`;
         const cpu1Id = `cpu-${systemIndex * CONFIG.ensembleCount + 1}`;
 
@@ -1310,8 +1326,8 @@
 
         renderer.drawLink(cpu0Id, cpu1Id, color, bw.width, 'right', 'left', offset, 0, 1, 0, 1, 'cpu', '16GB/s');
 
-        // Draw EFA-to-EFA link between ensembles (only if explicitly requested)
-        if (drawEfaCrossLinks) {
+        // Draw EFA-to-EFA link between ensembles (only if 2 ensembles visible and explicitly requested)
+        if (ensemblesToShow === 2 && drawEfaCrossLinks) {
           const efaExt0Id = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount === 0 ? 'efa-external' : `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount}`;
           const efaExt1Id = `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + CONFIG.groupCount}`;
 
@@ -1498,7 +1514,7 @@
 
         // Only draw EFA cross-links for intranode EFA path
         const drawEfaCrossLinks = currentActivePathId === 'gpu-gpu-efa-intranode';
-        drawSystem(renderer, sysIndex, centerX, cpuY, nvswitchY, ensembleCount, drawEfaCrossLinks);
+        drawSystem(renderer, sysIndex, centerX, cpuY, nvswitchY, ensembleCount, systemCount, drawEfaCrossLinks);
       }
 
       // Draw EFA cross-link between systems (for internode)
@@ -1564,9 +1580,34 @@
     }
 
     // ============================================================================
+    // REAL BANDWIDTH HELPERS
+    // ============================================================================
+    function getRealBandwidthForPath(pathId) {
+      const pathToRealBandwidth = {
+        'cpu-gpu': { value: '14.2', unit: 'GB/s' },
+        'gpu-gpu-cpu': { value: '14.2', unit: 'GB/s' },
+        'gpu-gpu-nvswitch': { value: '786', unit: 'GB/s' },
+        'gpu-gpu-efa-intranode': { value: '480', unit: 'GB/s' },
+        'gpu-gpu-efa-internode': { value: '42', unit: 'GB/s' },
+        'gpu-storage': { value: '26', unit: 'GB/s' },
+        'cpu-storage': { value: '26', unit: 'GB/s' },
+        'gpu-cpu-storage': { value: '14.2', unit: 'GB/s' }
+      };
+
+      const bandwidth = pathToRealBandwidth[pathId];
+      if (bandwidth) {
+        return {
+          value: bandwidth.value,
+          unit: bandwidth.unit
+        };
+      }
+      return null;
+    }
+
+    // ============================================================================
     // HIGHLIGHT HELPERS
     // ============================================================================
-    function highlightPath(path, pathLabel = '') {
+    function highlightPath(path, pathLabel = '', pathId = '') {
       const svg = getElement('aws-topology-container').querySelector('svg');
       if (!svg) return;
 
@@ -1584,6 +1625,20 @@
         // Dim text labels even more (half of element opacity)
         el.querySelectorAll('text').forEach(text => {
           text.style.opacity = '0.15';  // Much more dimmed
+        });
+      });
+
+      // Dim all cross-link elements (EFA internode/intranode links)
+      svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(el => {
+        el.style.opacity = '0.5';
+        el.querySelectorAll('line, path').forEach(linkElement => {
+          linkElement.style.opacity = '0.2';
+        });
+        el.querySelectorAll('[data-link-circle]').forEach(circle => {
+          circle.style.opacity = '0';
+        });
+        el.querySelectorAll('text').forEach(text => {
+          text.style.opacity = '0.15';
         });
       });
 
@@ -1629,6 +1684,23 @@
           }
         });
       });
+
+      // Highlight cross-link elements if they match the current path
+      const currentPathId = currentActivePathId;
+      if (currentPathId === 'gpu-gpu-efa-intranode' || currentPathId === 'gpu-gpu-efa-internode') {
+        svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(linkGroup => {
+          linkGroup.style.opacity = '1';
+          linkGroup.querySelectorAll('line, path').forEach(linkElement => {
+            linkElement.style.opacity = '1';
+          });
+          linkGroup.querySelectorAll('[data-link-circle]').forEach(circle => {
+            circle.style.opacity = '1';
+          });
+          linkGroup.querySelectorAll('text').forEach(text => {
+            text.style.opacity = '1';
+          });
+        });
+      }
 
       // Calculate and show bottleneck (minimum bandwidth in the path)
       let minBandwidth = Infinity;
@@ -1678,6 +1750,7 @@
       const bottleneckEl = getElement('aws-topology-bottleneck');
       const bottleneckValueEl = bottleneckEl.querySelector('.bottleneck-value');
       const bottleneckPathEl = bottleneckEl.querySelector('.bottleneck-path');
+      const bottleneckLabelEl = bottleneckEl.querySelector('.bottleneck-label');
       const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
 
       // Check if real bandwidths are enabled
@@ -1685,11 +1758,28 @@
       const showRealBandwidths = embedConfig.showRealBandwidths;
 
       if (showRealBandwidths) {
-        // When real bandwidths are shown, display contextual real bandwidths
-        displayContextualRealBandwidths(pathId, pathLabel);
-        bottleneckEl.classList.add('visible');
+        // When real bandwidths are shown, display real bandwidth value directly
+        const realBandwidth = getRealBandwidthForPath(pathId);
+        if (realBandwidth) {
+          bottleneckValueEl.textContent = realBandwidth.value;
+          bottleneckPathEl.textContent = `for ${pathLabel}`;
+          bottleneckLabelEl.textContent = 'Real Bandwidth';
+          bottleneckEl.classList.add('visible');
+        } else {
+          // Fallback if no real bandwidth found
+          bottleneckValueEl.textContent = '?';
+          bottleneckPathEl.textContent = `for ${pathLabel}`;
+          bottleneckLabelEl.textContent = 'Real Bandwidth';
+          bottleneckEl.classList.add('visible');
+        }
+        // Hide the detailed real bandwidths list
+        const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
+        if (realBandwidthsEl) {
+          realBandwidthsEl.style.display = 'none';
+        }
       } else {
         // Normal bottleneck display
+        bottleneckLabelEl.textContent = 'Bandwidth Max';
         if (minBandwidthValue) {
           const value = minBandwidthValue.replace('GB/s', '');
           // For EFA (12.5GB/s), add ×4 to indicate 4 links
@@ -1710,10 +1800,11 @@
       const svg = getElement('aws-topology-container').querySelector('svg');
       if (!svg) return;
 
+      // Reset all node and link elements
       svg.querySelectorAll('g[data-node-type], g[data-link-type]').forEach(el => {
         el.style.opacity = '1';
         // Reset line opacity
-        el.querySelectorAll('line').forEach(line => {
+        el.querySelectorAll('line, path').forEach(line => {
           line.style.opacity = '1';
         });
         // Reset circle opacity
@@ -1726,6 +1817,20 @@
         });
       });
 
+      // Reset all cross-link elements (EFA internode/intranode links)
+      svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(el => {
+        el.style.opacity = '1';
+        el.querySelectorAll('line, path').forEach(line => {
+          line.style.opacity = '1';
+        });
+        el.querySelectorAll('[data-link-circle]').forEach(circle => {
+          circle.style.opacity = '1';
+        });
+      });
+
+      // Clear current active path to ensure EFA cross-links are not drawn
+      currentActivePathId = null;
+
       // Reset legend opacity
       const legendContainer = getElement('aws-topology-legend');
       if (legendContainer) {
@@ -1736,17 +1841,21 @@
 
       // Hide bottleneck (unless real bandwidths are enabled)
       const bottleneckEl = getElement('aws-topology-bottleneck');
+      const bottleneckLabelEl = bottleneckEl.querySelector('.bottleneck-label');
       const embedConfig = readEmbedConfig();
       const showRealBandwidths = embedConfig.showRealBandwidths;
 
       if (!showRealBandwidths) {
+        bottleneckLabelEl.textContent = 'Bandwidth Max';
         bottleneckEl.classList.remove('visible');
       } else {
-        // When real bandwidths are enabled, show all bandwidths when no path is active
+        // When real bandwidths are enabled, hide the module when no path is active
+        bottleneckLabelEl.textContent = 'Real Bandwidth';
+        bottleneckEl.classList.remove('visible');
+        // Hide the detailed real bandwidths list
         const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
         if (realBandwidthsEl) {
-          realBandwidthsEl.style.display = 'block';
-          setupRealBandwidthsDisplay();
+          realBandwidthsEl.style.display = 'none';
         }
       }
     }
@@ -1900,12 +2009,18 @@
       // Setup real bandwidths display if enabled
       if (embedConfig.showRealBandwidths) {
         const bottleneckEl = getElement('aws-topology-bottleneck');
+        const bottleneckLabelEl = bottleneckEl.querySelector('.bottleneck-label');
         const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
+
+        // Change label to "Real Bandwidth"
+        bottleneckLabelEl.textContent = 'Real Bandwidth';
+
+        // Hide the detailed real bandwidths list initially
         if (realBandwidthsEl) {
-          realBandwidthsEl.style.display = 'block';
-          setupRealBandwidthsDisplay();
+          realBandwidthsEl.style.display = 'none';
         }
-        bottleneckEl.classList.add('visible');
+        // Don't show the module initially - only when a path is selected
+        bottleneckEl.classList.remove('visible');
       }
 
       drawTopology();
@@ -2035,10 +2150,12 @@
 
                 // Wait for fade out to complete, then redraw
                 setTimeout(() => {
+                  // Set active path BEFORE drawing topology so EFA cross-links are created
+                  currentActivePathId = pathId;
                   drawTopology(path.requiredEnsembles, path.requiredSystems);
 
                   // Highlight BEFORE fade in (while still invisible)
-                  highlightPath(path, path.label);
+                  highlightPath(path, path.label, pathId);
 
                   // Then fade in with highlight already applied
                   requestAnimationFrame(() => {
@@ -2046,14 +2163,20 @@
                   });
                 }, 150);  // Wait for CSS transition to complete
               } else {
+                // Set active path for EFA cross-links even without redraw
+                currentActivePathId = pathId;
                 // No redraw needed, just highlight immediately
-                highlightPath(path, path.label);
+                highlightPath(path, path.label, pathId);
               }
             } else {
               // Button was active, now deactivate: reset to default (2 ensembles, 1 system)
               currentActivePathId = null; // Clear active path
 
-              if (currentEnsembleCount !== 2 || currentSystemCount !== 1) {
+              // Always redraw when deactivating EFA paths to remove cross-links
+              const isEfaPath = pathId === 'gpu-gpu-efa-intranode' || pathId === 'gpu-gpu-efa-internode';
+              const needsRedraw = currentEnsembleCount !== 2 || currentSystemCount !== 1 || isEfaPath;
+
+              if (needsRedraw) {
                 const container = getElement('aws-topology-container');
                 container.style.opacity = '0';
 
@@ -2094,7 +2217,7 @@
           }
 
           // Apply highlight immediately (before fade in)
-          highlightPath(path, path.label);
+          highlightPath(path, path.label, initialPathId);
         }
       }
 

@@ -1,60 +1,66 @@
 <div class="d3-input-labels"></div>
 <style>
     .d3-input-labels {
-        font-family: 'Arial', sans-serif;
         margin: 0;
-        padding: 20px;
-        background-color: #f5f5f5;
+        padding: 10px 0;
     }
 
     .d3-input-labels .container {
-        max-width: 1200px;
+        max-width: 1000px;
         margin: 0 auto;
-        background: white;
         border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .d3-input-labels .title {
-        font-size: 28px;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 30px;
-        color: #2c3e50;
-    }
-
-    .d3-input-labels .conversation-container {
+    .d3-input-labels .sections-container {
         display: flex;
         flex-direction: column;
         gap: 20px;
+        align-items: center;
+    }
+
+    .d3-input-labels .section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .d3-input-labels .section:first-child {
         margin-bottom: 30px;
     }
 
-    .d3-input-labels .row {
-        display: flex;
-        align-items: center;
-        gap: 20px;
+    @media (max-width: 768px) {
+        .d3-input-labels .sections-container {
+            flex-direction: column;
+            gap: 30px;
+        }
     }
 
-    .d3-input-labels .row-label {
-        font-size: 18px;
+    .d3-input-labels .section {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .d3-input-labels .section-title {
+        font-size: 16px;
         font-weight: bold;
-        min-width: 120px;
-        color: #34495e;
+        color: var(--text-color, #333);
+        text-align: left;
+        margin-bottom: 15px;
     }
 
-    .d3-input-labels .tokens-container {
+    .d3-input-labels .tokens-row {
         display: flex;
-        flex-wrap: wrap;
         gap: 3px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
         flex: 1;
     }
 
     .d3-input-labels .token {
-        width: 35px;
-        height: 35px;
-        border: 2px solid #333;
+        width: 30px;
+        height: 30px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
         border-radius: 4px;
         display: flex;
         align-items: center;
@@ -62,28 +68,28 @@
         font-size: 10px;
         font-weight: bold;
         color: white;
-        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
         position: relative;
     }
 
     .d3-input-labels .user-token {
-        background-color: #e74c3c;
+        background-color: var(--color-0);
     }
 
     .d3-input-labels .assistant-token {
-        background-color: #27ae60;
+        background-color: var(--color-1);
     }
 
     .d3-input-labels .label-token {
-        background-color: #3498db;
+        background-color: var(--color-2);
     }
 
     .d3-input-labels .label-masked {
         background: repeating-linear-gradient(45deg,
-                #3498db,
-                #3498db 3px,
-                #2980b9 3px,
-                #2980b9 6px);
+                var(--color-2),
+                var(--color-2) 3px,
+                transparent 3px,
+                transparent 6px);
+        opacity: 0.6;
     }
 
     .d3-input-labels .turn-label {
@@ -91,68 +97,21 @@
         top: -25px;
         left: 50%;
         transform: translateX(-50%);
-        font-size: 12px;
+        font-size: 10px;
         font-weight: bold;
-        color: #2c3e50;
-        background: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        border: 1px solid #bdc3c7;
+        color: var(--text-color, #333);
+        background: var(--surface-bg, #fafafa);
+        padding: 2px 4px;
+        white-space: nowrap;
+        border-radius: 2px;
     }
 
     .d3-input-labels .user-label {
-        color: #e74c3c;
+        color: var(--color-0);
     }
 
     .d3-input-labels .assistant-label {
-        color: #27ae60;
-    }
-
-    .d3-input-labels .explanation {
-        background: #ecf0f1;
-        padding: 20px;
-        border-radius: 8px;
-        margin-top: 20px;
-    }
-
-    .d3-input-labels .explanation h3 {
-        margin: 0 0 15px 0;
-        color: #2c3e50;
-    }
-
-    .d3-input-labels .explanation p {
-        margin: 8px 0;
-        color: #34495e;
-        line-height: 1.5;
-    }
-
-    .d3-input-labels .legend {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        margin: 20px 0;
-        flex-wrap: wrap;
-    }
-
-    .d3-input-labels .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .d3-input-labels .legend-color {
-        width: 20px;
-        height: 20px;
-        border: 2px solid #333;
-        border-radius: 3px;
-    }
-
-    .d3-input-labels .legend-masked {
-        background: repeating-linear-gradient(45deg,
-                #3498db,
-                #3498db 2px,
-                #2980b9 2px,
-                #2980b9 4px);
+        color: var(--color-1);
     }
 </style>
 <script>
@@ -171,116 +130,94 @@
                 container.dataset.mounted = 'true';
             }
 
+            // Apply categorical color palette
+            const applyColorPalette = () => {
+                try {
+                    if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                        const colors = window.ColorPalettes.getColors('categorical', 4);
+                        colors.forEach((color, index) => {
+                            document.documentElement.style.setProperty(`--color-${index}`, color);
+                        });
+                    } else {
+                        // Fallback colors
+                        const fallbackColors = [
+                            '#E889AB', '#4EA5B7', '#E38A42', '#CEC0FA'
+                        ];
+                        fallbackColors.forEach((color, index) => {
+                            document.documentElement.style.setProperty(`--color-${index}`, color);
+                        });
+                    }
+                } catch (e) {
+                    console.warn('ColorPalettes not available, using fallback colors');
+                }
+            };
+
+            // Apply colors immediately and on theme changes
+            applyColorPalette();
+            if (window.ColorPalettes && typeof window.ColorPalettes.refresh === 'function') {
+                window.ColorPalettes.refresh();
+            }
+
+            // Data structure for input_ids and labels
+            const inputIds = [
+                { type: 'user', count: 5, label: 'U' },
+                { type: 'assistant', count: 4, label: 'A' },
+                { type: 'user', count: 5, label: 'U' },
+                { type: 'assistant', count: 4, label: 'A' }
+            ];
+
+            const labels = [
+                { type: 'masked', count: 5, label: '-100' },
+                { type: 'active', count: 4, label: 'A' },
+                { type: 'masked', count: 5, label: '-100' },
+                { type: 'active', count: 4, label: 'A' }
+            ];
+
+            // Helper function to create tokens
+            const createTokens = (tokens, rowType) => {
+                let tokenIndex = 1;
+                return tokens.map((token, groupIndex) => {
+                    const tokens = [];
+                    for (let i = 0; i < token.count; i++) {
+                        const isFirst = i === 0;
+                        const tokenClass = token.type === 'user' ? 'user-token' :
+                            token.type === 'assistant' ? 'assistant-token' :
+                                token.type === 'active' ? 'label-token' : 'label-masked';
+
+                        const labelClass = token.type === 'user' ? 'user-label' : 'assistant-label';
+                        const labelText = token.type === 'user' ? 'user' : 'assistant';
+
+                        tokens.push(`
+                            <div class="token ${tokenClass}">
+                                ${isFirst && rowType === 'input_ids' ? `<div class="turn-label ${labelClass}">${labelText}</div>` : ''}
+                            </div>
+                        `);
+                        tokenIndex++;
+                    }
+                    return tokens.join('');
+                }).join('');
+            };
+
             // Create the HTML structure
             container.innerHTML = `
-        <div class="container">
-          <h1 class="title">Input IDs and Labels in Conversational Training</h1>
-          
-          <div class="legend">
-            <div class="legend-item">
-              <div class="legend-color user-token"></div>
-              <span>User Tokens</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color assistant-token"></div>
-              <span>Assistant Tokens</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color label-token"></div>
-              <span>Active Labels</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color legend-masked"></div>
-              <span>Masked Labels (-100)</span>
-            </div>
-          </div>
-          
-          <div class="conversation-container">
-            <div class="row">
-              <div class="row-label">input_ids</div>
-              <div class="tokens-container">
-                <!-- First user turn: 5 tokens -->
-                <div class="token user-token">
-                  <div class="turn-label user-label">user</div>
-                  U1
+                <div class="container">
+                    <div class="sections-container">
+                        <div class="section">
+                            <label class="section-title">input_ids</label>
+                            <div class="tokens-row">
+                                ${createTokens(inputIds, 'input_ids')}
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <label class="section-title">labels</label>
+                            <div class="tokens-row">
+                                ${createTokens(labels, 'labels')}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="token user-token">U2</div>
-                <div class="token user-token">U3</div>
-                <div class="token user-token">U4</div>
-                <div class="token user-token">U5</div>
-                
-                <!-- First assistant turn: 4 tokens -->
-                <div class="token assistant-token">
-                  <div class="turn-label assistant-label">assistant</div>
-                  A1
-                </div>
-                <div class="token assistant-token">A2</div>
-                <div class="token assistant-token">A3</div>
-                <div class="token assistant-token">A4</div>
-                
-                <!-- Second user turn: 5 tokens -->
-                <div class="token user-token">
-                  <div class="turn-label user-label">user</div>
-                  U6
-                </div>
-                <div class="token user-token">U7</div>
-                <div class="token user-token">U8</div>
-                <div class="token user-token">U9</div>
-                <div class="token user-token">U10</div>
-                
-                <!-- Second assistant turn: 4 tokens -->
-                <div class="token assistant-token">
-                  <div class="turn-label assistant-label">assistant</div>
-                  A5
-                </div>
-                <div class="token assistant-token">A6</div>
-                <div class="token assistant-token">A7</div>
-                <div class="token assistant-token">A8</div>
-              </div>
-            </div>
-            
-            <div class="row">
-              <div class="row-label">labels</div>
-              <div class="tokens-container">
-                <!-- Masked labels for first user turn (5 tokens) -->
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                
-                <!-- Active labels for first assistant turn (4 tokens) -->
-                <div class="token label-token">A1</div>
-                <div class="token label-token">A2</div>
-                <div class="token label-token">A3</div>
-                <div class="token label-token">A4</div>
-                
-                <!-- Masked labels for second user turn (5 tokens) -->
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                <div class="token label-masked">-100</div>
-                
-                <!-- Active labels for second assistant turn (4 tokens) -->
-                <div class="token label-token">A5</div>
-                <div class="token label-token">A6</div>
-                <div class="token label-token">A7</div>
-                <div class="token label-token">A8</div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="explanation">
-            <h3>How it works:</h3>
-            <p><strong>input_ids:</strong> Complete sequence of input tokens (user + assistant)</p>
-            <p><strong>labels:</strong> Target tokens for training</p>
-            <p><strong>Masked labels (-100):</strong> User tokens are masked because the model should not learn to predict them</p>
-            <p><strong>Active labels:</strong> Only assistant tokens are used to calculate training loss</p>
-            <p><strong>Goal:</strong> The model learns to generate coherent assistant responses based on user context</p>
-          </div>
-        </div>
-      `;
+            `;
         };
 
         if (document.readyState === 'loading') {
