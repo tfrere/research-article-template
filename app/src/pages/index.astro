@@ -12,7 +12,10 @@ import "katex/dist/katex.min.css";
 import "../styles/global.css";
 const articleFM = (ArticleMod as any).frontmatter ?? {};
 const Article = (ArticleMod as any).default;
-const docTitle = articleFM?.title ?? "Untitled article";
+// Helper to strip HTML tags
+const stripHtml = (text: string) => String(text || "").replace(/<[^>]*>/g, "");
+// docTitle without HTML tags for SEO/meta
+const docTitle = stripHtml(articleFM?.title ?? "Untitled article");
 // Allow explicit line breaks in the title via "\n" or YAML newlines
 const docTitleHtml = (articleFM?.title ?? "Untitled article")
   .replace(/\\n/g, "<br/>")
@@ -121,7 +124,6 @@ const imageAbs: string =
       : (fmOg ?? ogDefaultUrl);
 
 // ---- Build citation text & BibTeX from frontmatter ----
-const stripHtml = (text: string) => String(text || "").replace(/<[^>]*>/g, "");
 const rawTitle = articleFM?.title ?? "Untitled article";
 const titleFlat = stripHtml(String(rawTitle))
   .replace(/\\n/g, " ")

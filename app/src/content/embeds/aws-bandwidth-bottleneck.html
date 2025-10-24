@@ -1499,6 +1499,12 @@
       let viewboxWidth = maxEnsembleWidthForViewbox + CONFIG.gaps.ensembleGap + 200;
       let viewboxHeight = singleSystemHeight;
 
+      // For single ensemble (CPU-GPU, GPU-GPU via CPU, storage paths), zoom in more
+      if (ensembleCount === 1 && systemCount === 1) {
+        viewboxWidth *= 0.75;  // Zoom in by reducing viewbox width
+        viewboxHeight *= 0.75; // Zoom in by reducing viewbox height
+      }
+
       // For 2 systems in vertical layout, use scaled dimensions
       if (systemCount === 2 && !isInternodeLayout) {
         viewboxHeight = singleSystemHeight * 2 + CONFIG.gaps.systemGap;
@@ -1537,6 +1543,11 @@
       const verticalPadding = 0;
       viewboxY = -verticalPadding / 2 + 100;
       paddedViewboxHeight = viewboxHeight + verticalPadding;
+
+      // For single ensemble, shift content up slightly
+      if (ensembleCount === 1 && systemCount === 1) {
+        viewboxY += 80;  // Shift up by reducing viewboxY
+      }
 
       const draw = SVG().addTo(container).size('100%', '100%').viewbox(0, viewboxY, viewboxWidth, paddedViewboxHeight);
       const renderer = new TopologyRenderer(draw);

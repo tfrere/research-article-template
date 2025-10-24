@@ -46,7 +46,7 @@ html {
 }
 
 /* External links with arrow indicator */
-.content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"])::after {
+/* .content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"])::after {
   content: "↗";
   display: inline-block;
   margin-left: 2px;
@@ -55,7 +55,7 @@ html {
   transition: opacity 0.2s ease, transform 0.2s ease;
   transform: translateY(-5px);
   font-weight: 600;
-}
+} */
 
 /* External links with arrow indicator */
 .content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"]) {

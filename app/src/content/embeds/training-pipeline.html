@@ -1,0 +1,242 @@
+<div class="training-pipeline"></div>
+<style>
+    .training-pipeline {
+        font-family: 'Arial', sans-serif;
+        margin: 20px 0;
+        padding: 0;
+    }
+
+    .training-pipeline .container {
+        display: flex;
+        gap: 30px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
+    }
+
+    .training-pipeline .phase {
+        flex: 0 1 auto;
+        border: 1px dashed #7d7d7d;
+        border-radius: 8px;
+        padding: 15px;
+    }
+
+    .training-pipeline .phase-header {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--text-color, #333);
+        margin-bottom: 20px;
+        text-align: center;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .training-pipeline .steps-row {
+        display: flex;
+        gap: 15px;
+        align-items: flex-start;
+        justify-content: center;
+        flex-wrap: nowrap;
+    }
+
+    .training-pipeline .step-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 0 1 auto;
+        min-width: 150px;
+        max-width: 240px;
+    }
+
+    .training-pipeline .step {
+        width: 100%;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .training-pipeline .step-title {
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.4;
+        margin-bottom: 5px;
+    }
+
+    .training-pipeline .step-info {
+        font-size: 11px;
+        opacity: 0.9;
+    }
+
+    .training-pipeline .arrow-right {
+        font-size: 24px;
+        color: #999;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        margin-top: 30px;
+    }
+
+    .training-pipeline .arrow-between {
+        font-size: 32px;
+        color: #999;
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .training-pipeline .model-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #FFB6B6, #FF9999);
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 11px;
+        color: #333;
+        box-shadow: 0 2px 6px rgba(255, 182, 182, 0.3);
+        position: relative;
+        margin-top: 15px;
+        white-space: nowrap;
+    }
+
+    .training-pipeline .model-badge::before {
+        content: '';
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 15px;
+        border-left: 2px dashed #FFB6B6;
+    }
+
+    .training-pipeline .model-icon {
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .training-pipeline .pre-training {
+        background: linear-gradient(135deg, #87CEEB, #6AB8DB);
+        color: #000;
+    }
+
+    .training-pipeline .sft {
+        background: linear-gradient(135deg, #F4C28F, #E6A966);
+        color: #000;
+    }
+
+    .training-pipeline .rl {
+        background: linear-gradient(135deg, #E6B8E6, #D69FD6);
+        color: #000;
+    }
+
+    @media (max-width: 1100px) {
+        .training-pipeline .container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .training-pipeline .phase {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .training-pipeline .arrow-between {
+            transform: rotate(90deg);
+            margin: 10px 0;
+            align-self: center;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .training-pipeline .steps-row {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .training-pipeline .arrow-right {
+            transform: rotate(90deg);
+            margin: 10px 0;
+        }
+
+        .training-pipeline .step-wrapper {
+            max-width: 100%;
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.querySelector('.training-pipeline');
+
+        container.innerHTML = `
+            <div class="container">
+                <!-- PRE-TRAINING -->
+                <div class="phase">
+                    <div class="phase-header">Pre-Training</div>
+                    <div class="steps-row">
+                        <div class="step-wrapper">
+                            <div class="step pre-training">
+                                <div class="step-title">General<br/>Pre-training</div>
+                                <div class="step-info">8T tokens<br/>8k context</div>
+                            </div>
+                        </div>
+                        
+                        <div class="arrow-right">→</div>
+                        
+                        <div class="step-wrapper">
+                            <div class="step pre-training">
+                                <div class="step-title">Code World Modeling<br/>Mid-training</div>
+                                <div class="step-info">5T tokens<br/>131k context</div>
+                            </div>
+                            <div class="model-badge">
+                                <span class="model-icon">📦</span>
+                                <span>CWM pretrained</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARROW BETWEEN PHASES -->
+                <div class="arrow-between">→</div>
+
+                <!-- POST-TRAINING -->
+                <div class="phase">
+                    <div class="phase-header">Post-Training</div>
+                    <div class="steps-row">
+                        <div class="step-wrapper">
+                            <div class="step sft">
+                                <div class="step-title">Supervised Fine-tuning<br/>Instruction and Reasoning</div>
+                                <div class="step-info">100B tokens<br/>32k context</div>
+                            </div>
+                            <div class="model-badge">
+                                <span class="model-icon">📦</span>
+                                <span>CWM sft</span>
+                            </div>
+                        </div>
+                        
+                        <div class="arrow-right">→</div>
+                        
+                        <div class="step-wrapper">
+                            <div class="step rl">
+                                <div class="step-title">Joint Reinforcement Learning<br/>Agentic and Reasoning</div>
+                                <div class="step-info">172B tokens<br/>131k context</div>
+                            </div>
+                            <div class="model-badge">
+                                <span class="model-icon">📦</span>
+                                <span>CWM</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+</script>
