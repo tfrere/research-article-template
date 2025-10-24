@@ -108,7 +108,7 @@ import Screenshot_2025_10_16_at_21_20_31_28e1384e_bcac_8059_83b0_c6e19a90f49c fr
 import Screenshot_2025_10_16_at_21_39_34_28e1384e_bcac_8004_9f13_c53e50cd416e from './assets/image/Screenshot_2025-10-16_at_21_39_34_28e1384e-bcac-8004-9f13-c53e50cd416e.png';
 import Screenshot_2025_10_17_at_15_32_35_28f1384e_bcac_8038_aa05_f429bd1bbf0d from './assets/image/Screenshot_2025-10-17_at_15_32_35_28f1384e-bcac-8038-aa05-f429bd1bbf0d.png';
 import Screenshot_2025_10_24_at_12_26_55_2961384e_bcac_80c9_9266_c37d8d5f4a39 from './assets/image/Screenshot_2025-10-24_at_12_26_55_2961384e-bcac-80c9-9266-c37d8d5f4a39.png';
-import Screenshot_2025_10_24_at_13_43_00_2961384e_bcac_8092_8767_c72f25ff159d from './assets/image/Screenshot_2025-10-24_at_13_43_00_2961384e-bcac-8092-8767-c72f25ff159d.png';
+import Screenshot_2025_10_24_at_14_03_09_2961384e_bcac_8092_8767_c72f25ff159d from './assets/image/Screenshot_2025-10-24_at_14_03_09_2961384e-bcac-8092-8767-c72f25ff159d.png';
 import Screenshot_2025_10_17_at_14_07_07_28f1384e_bcac_8000_b77f_d6b0627e5f54 from './assets/image/Screenshot_2025-10-17_at_14_07_07_28f1384e-bcac-8000-b77f-d6b0627e5f54.png';
 import Screenshot_2025_10_17_at_15_15_26_28f1384e_bcac_8006_a7de_ec57a503d412 from './assets/image/Screenshot_2025-10-17_at_15_15_26_28f1384e-bcac-8006-a7de-ec57a503d412.png';
 import Screenshot_2025_10_17_at_16_00_20_28f1384e_bcac_80f7_ab1c_e448a7e126b4 from './assets/image/Screenshot_2025-10-17_at_16_00_20_28f1384e-bcac-80f7-ab1c-e448a7e126b4.png';
@@ -1529,18 +1529,12 @@ Let's have a closer look how we can setup the sparsity of the MoE to improve the
 
  **TL;DR:**  more sparsity → better FLOPs efficiency → diminishing returns at very high sparsity → sweetspot depends on your compute budget.
 
-Before we get deeper into optimal efficiency it is useful to define two quantities: activation ration and its inverse the sparsity
-
-Definitions: Let activation ratio be the fraction of experts used per token:
+In this section we want to find out which MoE setting is best. Asymptotically it's easy to see that the two extremes are not ideal settings. On the one hand, activating all experts all the time brings us back to the dense setting where all parameters are used all the time. On the other hand if the active parameters are very low (as an extreme think just of just 1 paramter being active) clearly it won't be enough capacity to solve a task even in a narrow domain. So clearly we need to find some middle ground. Before we get deeper into finding the optimal setup it is useful to define two quantities:  ***activation ratio***  and its inverse the  ***sparsity***  *:* 
 
 
 $$
 \text{activation ratio} \;=\; \frac{\#\text{activated experts}}{\#\text{total experts}}
 $$
-
-
-and let  **sparsity**  be its inverse:
-
 
 $$
 \text{sparsity} \;=\; \frac{\#\text{total experts}}{\#\text{activated experts}} \;=\; \frac{1}{\text{activation ratio}}
@@ -4907,7 +4901,7 @@ To get a sense of how efficient packing is for training, below we compare the ru
 
 Depending on the batch size, we see that packing improves throughput by a factor of 3-5x! So, should you  *always*  use packing? To some extent, the answer depends on how large your dataset is, because packing reduces the number of optimisation steps per epoch by fitting more tokens into each step. You can see this in the following figure, where we plot the average number of non-padding tokens per batch:
 
-<Image src={Screenshot_2025_10_24_at_13_43_00_2961384e_bcac_8092_8767_c72f25ff159d} alt="Image" />
+<Image src={Screenshot_2025_10_24_at_14_03_09_2961384e_bcac_8092_8767_c72f25ff159d} alt="Image" />
 
 
 With packing, the number of tokens per batch scales linearly with the batch size and compared to training without packing, can include up to 33x more tokens per optimisation step! However, packing can slight alter the training dynamics: while you process more data overall, you take fewer gradient updates which can influence final performance, especially on small datasets where each sample matters more. For example, if we compare packing versus no-packing at the same effective batch size of 128, we see that some evals like IFEval take a significant performance hit:
@@ -4920,10 +4914,23 @@ More generally, we see that once the effective batch size is large than 32, ther
 <Image src={Screenshot_2025_10_17_at_15_15_26_28f1384e_bcac_8006_a7de_ec57a503d412} alt="Image" />
 
 
- **Tuning the learning rate**  
+In practice, for large-scale SFT where the dataset is massive, packing is almost always beneficial since the compute savings far outweigh any minor differences in gradient frequency. However, for smaller or more diverse datasets—like domain-specific fine-tuning or instruction-tuning on limited human-curated data—it might be worth disabling packing to preserve sample granularity and ensure every example contributes cleanly to optimization.
+
+
+Ultimately, the best strategy is empirical: start with packing enabled, monitor both throughput and downstream evals, and adjust based on whether the speed gains translate into equivalent or improved model quality.
+
+ **Tuning the learning rate** 
+
+We now come to the last, but still important hyperparameter: the learning rate. Set it too high and training may diverge; too low and convergence is painfully slow. 
+
+In SFT, the optimal learning rate is typically an order of magnitude (or more) smaller than the one used during pretraining. This is because we're initialising from a model with rich representations and aggressive updates can lead to catastrophic forgetting. 
+
+In our experiments, we've found that the "best" learning rate varies with both model family, size and the use of packing. Since a high learning rate can lead to exploding gradients, we find it's often safer to slightly decrease the learning rate when packing is enabled. You can see this below, where using a small learning rate of 3e-6 or 1e-5 gives better overall performance than 
 
 <Image src={Screenshot_2025_10_17_at_16_00_20_28f1384e_bcac_80f7_ab1c_e448a7e126b4} alt="Image" />
 
+
+ **Scaling the number of epochs** 
 
 #### When to continue pretraining (and when not to)
 

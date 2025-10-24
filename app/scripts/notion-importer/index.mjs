@@ -367,29 +367,6 @@ function copyToAstroContent(outputDir) {
 
             writeFileSync(ASTRO_CONTENT_PATH, updatedContent);
             console.log(`    ✅ Updated image paths and filtered problematic references in MDX file`);
-
-            // Clean up unused images from assets/image/ directory
-            if (existsSync(ASTRO_ASSETS_PATH)) {
-                // Get all image references that are actually used in the MDX
-                const usedImageFilenames = imageReferences.map(ref => basename(ref));
-
-                let removedCount = 0;
-                for (const imageFile of existingImages) {
-                    if (!usedImageFilenames.includes(imageFile)) {
-                        try {
-                            unlinkSync(join(ASTRO_ASSETS_PATH, imageFile));
-                            console.log(`    🗑️  Removed unused image: ${imageFile}`);
-                            removedCount++;
-                        } catch (error) {
-                            console.log(`    ⚠️  Could not remove unused image ${imageFile}: ${error.message}`);
-                        }
-                    }
-                }
-
-                if (removedCount > 0) {
-                    console.log(`    ✅ Cleaned up ${removedCount} unused image(s) from assets/image/`);
-                }
-            }
         }
 
         // Copy static bibliography.bib if it exists, otherwise create empty
