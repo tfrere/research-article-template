@@ -29,42 +29,161 @@
 -->
 <div class="d3-line-chart"></div>
 <style>
-  .d3-line-chart { position: relative; }
-  .d3-line-chart .axis-label { 
-    fill: var(--text-color); 
-    font-size: 12px; 
-    font-weight: 700; 
-    stroke: var(--page-bg, white); 
-    stroke-width: 6px; 
+  .d3-line-chart {
+    position: relative;
+  }
+
+  .d3-line-chart .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 700;
+    stroke: var(--page-bg, white);
+    stroke-width: 6px;
     paint-order: stroke fill;
   }
-  .d3-line-chart .axes path, .d3-line-chart .axes line { stroke: var(--axis-color); }
-  .d3-line-chart .axes text { fill: var(--tick-color); }
-  .d3-line-chart .grid line { stroke: var(--grid-color); }
-  .d3-line-chart .legend-bottom { display:flex; align-items:flex-start; justify-content:flex-start; font-size:12px; color: var(--text-color); flex-direction:column; gap:6px; }
-  .d3-line-chart .legend-bottom .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
-  .d3-line-chart .legend-bottom .items { display:flex; flex-wrap:wrap; gap:8px 14px; }
-  .d3-line-chart .legend-bottom .item { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer; }
-  .d3-line-chart .legend-bottom .swatch { width:14px; height:14px; border-radius:3px; border:1px solid var(--border-color); display:inline-block; }
-  .d3-line-chart path.main-line { transition: opacity 0.2s ease; }
-  .d3-line-chart path.ghost-line { transition: opacity 0.6s ease; }
+
+  .d3-line-chart .axes path,
+  .d3-line-chart .axes line {
+    stroke: var(--axis-color);
+  }
+
+  .d3-line-chart .axes text {
+    fill: var(--tick-color);
+  }
+
+  .d3-line-chart .grid line {
+    stroke: var(--grid-color);
+  }
+
+  .d3-line-chart .legend-bottom {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    font-size: 12px;
+    color: var(--text-color);
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .d3-line-chart .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-line-chart .legend-bottom .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-line-chart .legend-bottom .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .d3-line-chart .legend-bottom .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+
+  .d3-line-chart path.main-line {
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-line-chart path.ghost-line {
+    transition: opacity 0.6s ease;
+  }
+
   /* Ghosting on hover */
-  .d3-line-chart.hovering .legend-bottom .item.ghost { opacity: .35; }
-  .d3-line-chart.hovering path.main-line.ghost { opacity: .25; }
-  .d3-line-chart.hovering path.ghost-line.ghost { opacity: .05; }
+  .d3-line-chart.hovering .legend-bottom .item.ghost {
+    opacity: .35;
+  }
+
+  .d3-line-chart.hovering path.main-line.ghost {
+    opacity: .25;
+  }
+
+  .d3-line-chart.hovering path.ghost-line.ghost {
+    opacity: .05;
+  }
+
   /* Tooltip */
-  .d3-line-chart .d3-tooltip { z-index: 20; backdrop-filter: saturate(1.12) blur(8px); }
-  .d3-line-chart .d3-tooltip__inner { display:flex; flex-direction:column; gap:6px; min-width: 220px; }
-  .d3-line-chart .d3-tooltip__inner > div:first-child { font-weight: 800; letter-spacing: 0.1px; margin-bottom: 0; }
-  .d3-line-chart .d3-tooltip__inner > div:nth-child(2) { font-size: 11px; color: var(--muted-color); display: block; margin-top: -4px; margin-bottom: 2px; letter-spacing: 0.1px; }
-  .d3-line-chart .d3-tooltip__inner > div:nth-child(n+3) { padding-top: 6px; border-top: 1px solid var(--border-color); }
-  .d3-line-chart .d3-tooltip__color-dot { display:inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--border-color); }
+  .d3-line-chart .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-line-chart .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-line-chart .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
   /* Reference line */
-  .d3-line-chart .reference-line { stroke: #e15759; stroke-width: 2; stroke-dasharray: 3,3; }
-  .d3-line-chart .reference-label { fill: var(--text-color); font-size: 11px; font-weight: 600; }
+  .d3-line-chart .reference-line {
+    stroke: #e15759;
+    stroke-width: 2;
+    stroke-dasharray: 3, 3;
+  }
+
+  .d3-line-chart .reference-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
   /* Chart card */
-  .d3-line-chart .chart-card { background: var(--page-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; }
-  .d3-line-chart .chart-header { display:flex; align-items:flex-start; justify-content:flex-start; gap:12px; margin: 12px 0 0 0; flex-wrap: wrap; }
+  .d3-line-chart .chart-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .d3-line-chart .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 12px 0 0 0;
+    flex-wrap: wrap;
+  }
 </style>
 <script>
   (() => {
@@ -79,10 +198,27 @@
     const bootstrap = () => {
       const scriptEl = document.currentScript;
       let container = scriptEl ? scriptEl.previousElementSibling : null;
-      if (!(container && container.classList && container.classList.contains('d3-line-chart'))){
-        const cs = Array.from(document.querySelectorAll('.d3-line-chart')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
-        container = cs[cs.length - 1] || null;
+
+      // If the previous sibling is not a d3-line-chart, look for the closest one
+      if (!(container && container.classList && container.classList.contains('d3-line-chart'))) {
+        // First, try to find the closest d3-line-chart element by traversing up the DOM
+        let currentEl = scriptEl;
+        while (currentEl && currentEl.parentNode) {
+          currentEl = currentEl.parentNode;
+          const found = currentEl.querySelector && currentEl.querySelector('.d3-line-chart:not([data-mounted="true"])');
+          if (found) {
+            container = found;
+            break;
+          }
+        }
+
+        // If still not found, get the first unmounted d3-line-chart
+        if (!container) {
+          const cs = Array.from(document.querySelectorAll('.d3-line-chart')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+          container = cs[0] || null; // Use first instead of last
+        }
       }
+
       if (!container) return;
       if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
 
@@ -92,11 +228,11 @@
       if (!tip) {
         tip = document.createElement('div'); tip.className = 'd3-tooltip';
         Object.assign(tip.style, {
-          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
-          padding:'10px 12px', borderRadius:'12px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
-          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity:'0', transition:'opacity .12s ease'
+          position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+          padding: '10px 12px', borderRadius: '12px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity: '0', transition: 'opacity .12s ease'
         });
-        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign = 'left'; tip.appendChild(tipInner); container.appendChild(tip);
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // Header (legend)
@@ -110,7 +246,7 @@
       const chartCard = document.createElement('div');
       chartCard.className = 'chart-card';
       chartCard.style.position = 'relative';
-      
+
       // Reset button (absolute positioned in chart)
       const resetBtn = document.createElement('button');
       resetBtn.className = 'reset-button';
@@ -132,33 +268,33 @@
         cursor: 'pointer'
       });
       chartCard.appendChild(resetBtn);
-      
+
       container.appendChild(chartCard);
       container.appendChild(header);
 
       const d3 = window.d3;
-      
+
       // Read config from HtmlEmbed props
       function readEmbedConfig() {
         let mountEl = container;
         while (mountEl && !mountEl.getAttribute?.('data-config')) {
           mountEl = mountEl.parentElement;
         }
-        
+
         let providedConfig = null;
         try {
           const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
           if (cfg && cfg.trim()) {
             providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
           }
-        } catch(e) {
+        } catch (e) {
           console.warn('Failed to parse data-config:', e);
         }
         return providedConfig || {};
       }
-      
+
       const embedConfig = readEmbedConfig();
-      
+
       // Configuration (with overrides from embed config)
       const CONFIG = {
         width: 800,
@@ -209,7 +345,7 @@
       const gGrid = g.append('g').attr('class', 'grid');
       const gAxes = g.append('g').attr('class', 'axes');
       const gReference = g.append('g').attr('class', 'reference');
-      
+
       // Zoomable content layer (with clip-path)
       const gPlot = g.append('g')
         .attr('class', 'plot')
@@ -217,20 +353,20 @@
 
       // Hover layer (on top, for tooltips)
       const gHover = g.append('g').attr('class', 'hover-layer');
-      
+
       // Overlay rect for capturing zoom events (on top, transparent)
       const overlay = g.append('rect')
         .attr('class', 'overlay')
         .attr('fill', 'none')
         .attr('pointer-events', 'all')
         .style('cursor', 'grab')
-        .on('mousedown', function() { 
+        .on('mousedown', function () {
           d3.select(this).style('cursor', 'grabbing');
           // Hide tooltip during zoom/pan
-          tip.style.opacity = '0';
+          if (tip) tip.style.opacity = '0';
           if (hoverLine) hoverLine.style('display', 'none');
         })
-        .on('mouseup', function() { d3.select(this).style('cursor', 'grab'); });
+        .on('mouseup', function () { d3.select(this).style('cursor', 'grab'); });
 
       // Scales
       const xScale = (CONFIG.xScaleType === 'log' ? d3.scaleLog() : d3.scaleLinear()).domain(CONFIG.xDomain || [0.1, 1]);
@@ -240,7 +376,7 @@
       let data = [];
       let runList = [];
       let runColorMap = {};
-      
+
       // Hover state
       let hoverLine = null;
       let tokens = [];
@@ -249,7 +385,7 @@
       // Smoothing
       const getCurve = (smooth) => {
         if (!smooth) return d3.curveLinear;
-        switch(CONFIG.smoothingCurve) {
+        switch (CONFIG.smoothingCurve) {
           case 'catmullRom': return d3.curveCatmullRom.alpha(0.5);
           case 'monotoneX': return d3.curveMonotoneX;
           case 'basis': return d3.curveBasis;
@@ -284,24 +420,24 @@
       // Function to determine smart format based on data values
       function createSmartFormatter(values) {
         if (!values || values.length === 0) return (v) => v;
-        
+
         const min = d3.min(values);
         const max = d3.max(values);
         const range = max - min;
-        
+
         // Check if all values are effectively integers (within 0.001 tolerance)
         const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
-        
+
         // Large numbers (billions): format as "X.XXB"
         if (max >= 1e9) {
           return (v) => {
             const billions = v / 1e9;
-            return allIntegers && billions === Math.round(billions) 
+            return allIntegers && billions === Math.round(billions)
               ? d3.format('d')(Math.round(billions)) + 'B'
               : d3.format('.2f')(billions) + 'B';
           };
         }
-        
+
         // Millions: format as "X.XXM" or "XM"
         if (max >= 1e6) {
           return (v) => {
@@ -311,7 +447,7 @@
               : d3.format('.2f')(millions) + 'M';
           };
         }
-        
+
         // Thousands: format as "X.Xk" or "Xk"
         if (max >= 1000 && range >= 100) {
           return (v) => {
@@ -321,12 +457,12 @@
               : d3.format('.1f')(thousands) + 'k';
           };
         }
-        
+
         // Regular numbers
         if (allIntegers) {
           return (v) => d3.format('d')(Math.round(v));
         }
-        
+
         // Small decimals: use appropriate precision
         if (range < 1) {
           return (v) => d3.format('.3f')(v);
@@ -339,9 +475,9 @@
 
       // Colors
       const getRunColors = (n) => {
-        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch(_) {}
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch (_) { }
         const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
-        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6', '#16A085', ...(d3.schemeTableau10||[])].slice(0, n);
+        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6', '#16A085', ...(d3.schemeTableau10 || [])].slice(0, n);
       };
 
       // Zoom behavior
@@ -356,16 +492,51 @@
         const transform = event.transform;
         hasMoved = transform.k !== 1 || transform.x !== 0 || transform.y !== 0;
         updateResetButton();
-        
+
         // DON'T transform the group - instead redraw paths with rescaled domains
         const newXScale = transform.rescaleX(xScale);
         const newYScale = transform.rescaleY(yScale);
-        
+
         // Get current inner dimensions
         const innerWidth = xScale.range()[1];
-        
+
+        // Smart grid ticks (same as axis ticks)
+        const getGridTicks = (scale, scaleType) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(6);
+          }
+
+          const domain = scale.domain();
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          if (logRange < 2) {
+            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+          }
+
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+        };
+
         // Update grid lines
-        const gridTicks = newYScale.ticks(6);
+        const gridTicks = getGridTicks(newYScale, CONFIG.yScaleType);
         gGrid.selectAll('line')
           .data(gridTicks)
           .join('line')
@@ -374,13 +545,13 @@
           .attr('y1', d => newYScale(d))
           .attr('y2', d => newYScale(d))
           .attr('stroke', 'var(--grid-color)');
-        
+
         // Redraw lines with transformed scales
         const line = d3.line()
           .x(d => newXScale(d.tokens))
           .y(d => newYScale(d.loss))
           .curve(getCurve(smoothEnabled));
-        
+
         // Update ghost lines (raw data)
         gPlot.selectAll('path.ghost-line')
           .attr('d', d => {
@@ -390,22 +561,60 @@
               .curve(d3.curveLinear);
             return rawLine(d.values);
           });
-        
+
         // Update main lines
         gPlot.selectAll('path.main-line')
           .attr('d', d => line(applySmoothing(d.values, smoothEnabled)));
-        
+
+        // Smart tick generation for zoomed view
+        const getSmartTicksZoom = (scale, scaleType) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(6);
+          }
+
+          const domain = scale.domain();
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          if (logRange < 2) {
+            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+          }
+
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+        };
+
+        const newXTicks = getSmartTicksZoom(newXScale, CONFIG.xScaleType);
+        const newYTicks = getSmartTicksZoom(newYScale, CONFIG.yScaleType);
+
         // Update axes with rescaled domains
-        gAxes.select('.x-axis').call(d3.axisBottom(newXScale).ticks(6).tickSizeOuter(0).tickFormat(formatX));
-        gAxes.select('.y-axis').call(d3.axisLeft(newYScale).ticks(6).tickSizeOuter(0).tickFormat(formatY));
-        
+        gAxes.select('.x-axis').call(d3.axisBottom(newXScale).tickValues(newXTicks).tickSizeOuter(0).tickFormat(formatX));
+        gAxes.select('.y-axis').call(d3.axisLeft(newYScale).tickValues(newYTicks).tickSizeOuter(0).tickFormat(formatY));
+
         // Update reference line
         if (CONFIG.referenceLine) {
           const refValue = CONFIG.referenceLine.value;
           gReference.select('.reference-line')
             .attr('y1', newYScale(refValue))
             .attr('y2', newYScale(refValue));
-          
+
           gReference.select('.reference-label')
             .attr('y', newYScale(refValue) - 5);
         }
@@ -459,8 +668,52 @@
           .extent([[0, 0], [innerWidth, innerHeight]])
           .translateExtent([[0, 0], [innerWidth, innerHeight]]);
 
-        // Grid
-        gGrid.selectAll('line').data(yScale.ticks(6))
+        // Smart tick generation for log scales
+        const getSmartTicks = (scale, scaleType, targetCount = 6) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(targetCount);
+          }
+
+          // For log scale, use custom tick logic to avoid crowding
+          const domain = scale.domain();
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          // If range is small (< 2 orders of magnitude), use fewer ticks
+          if (logRange < 2) {
+            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+          }
+
+          // For larger ranges, show powers of 10 and maybe intermediate values
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          // Always include powers of 10
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          // If we have too few ticks and the range is not too large, add intermediate values
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          // Filter ticks to be within domain
+          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+        };
+
+        const xTicks = getSmartTicks(xScale, CONFIG.xScaleType, 6);
+        const yTicks = getSmartTicks(yScale, CONFIG.yScaleType, 6);
+
+        // Grid (use smart ticks)
+        gGrid.selectAll('line').data(yTicks)
           .join('line')
           .attr('x1', 0)
           .attr('x2', innerWidth)
@@ -470,16 +723,16 @@
 
         // Axes
         gAxes.selectAll('*').remove();
-        
+
         gAxes.append('g')
           .attr('class', 'x-axis')
           .attr('transform', `translate(0,${innerHeight})`)
-          .call(d3.axisBottom(xScale).ticks(6).tickSizeOuter(0).tickFormat(formatX))
+          .call(d3.axisBottom(xScale).tickValues(xTicks).tickSizeOuter(0).tickFormat(formatX))
           .selectAll('text').attr('fill', 'var(--tick-color)');
-        
+
         gAxes.append('g')
           .attr('class', 'y-axis')
-          .call(d3.axisLeft(yScale).ticks(6).tickSizeOuter(0).tickFormat(formatY))
+          .call(d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(formatY))
           .selectAll('text').attr('fill', 'var(--tick-color)');
 
         gAxes.selectAll('.domain, .tick line').attr('stroke', 'var(--axis-color)');
@@ -507,7 +760,7 @@
           const refLabel = CONFIG.referenceLine.label || null;
           const refColor = CONFIG.referenceLine.color || '#e15759';
           const refDashArray = CONFIG.referenceLine.dashArray || '3,3';
-          
+
           gReference.append('line')
             .attr('class', 'reference-line')
             .attr('x1', 0)
@@ -516,7 +769,7 @@
             .attr('y2', yScale(refValue))
             .style('stroke', refColor)
             .style('stroke-dasharray', refDashArray);
-          
+
           if (refLabel) {
             gReference.append('text')
               .attr('class', 'reference-label')
@@ -535,7 +788,7 @@
 
         // Draw lines
         const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] }));
-        
+
         // Ghost lines (raw data, always linear)
         const ghostLine = d3.line()
           .x(d => xScale(d.tokens))
@@ -551,7 +804,7 @@
           .attr('opacity', smoothEnabled ? 0.15 : 0)
           .attr('pointer-events', 'none')
           .attr('d', d => ghostLine(d.values));
-        
+
         // Main lines (smooth or raw depending on toggle)
         const mainLine = d3.line()
           .x(d => xScale(d.tokens))
@@ -566,15 +819,15 @@
           .attr('stroke-width', 2)
           .attr('opacity', 0.85)
           .attr('d', d => mainLine(applySmoothing(d.values, smoothEnabled)));
-        
+
         // Hover interactions
         setupHover(series, innerWidth, innerHeight);
       }
-      
+
       // Setup hover tooltip
       function setupHover(series, innerWidth, innerHeight) {
         gHover.selectAll('*').remove();
-        
+
         hoverLine = gHover.append('line')
           .style('stroke', 'var(--text-color)')
           .attr('stroke-opacity', 0.25)
@@ -583,47 +836,45 @@
           .attr('y2', innerHeight)
           .style('display', 'none')
           .attr('pointer-events', 'none');
-        
+
         // Build a set of all unique token values
         const tokenSet = new Set();
         series.forEach(s => s.values.forEach(v => tokenSet.add(v.tokens)));
         tokens = Array.from(tokenSet).sort((a, b) => a - b);
-        
+
         // Attach hover handlers to the overlay (which also handles zoom)
-        overlay.on('mousemove', function(ev) {
-          // Only show tooltip if not actively zooming/panning
-          if (ev.buttons === 0) { // No mouse button pressed
-            onHoverMove(ev, series);
-          }
+        overlay.on('mousemove', function (ev) {
+          // Show tooltip on mouse move (will be hidden during zoom/pan by mousedown handler)
+          onHoverMove(ev, series);
         }).on('mouseleave', onHoverLeave);
       }
-      
+
       function onHoverMove(ev, series) {
         if (hideTipTimer) {
           clearTimeout(hideTipTimer);
           hideTipTimer = null;
         }
-        
+
         const [mx, my] = d3.pointer(ev, overlay.node());
         const targetTokens = xScale.invert(mx);
-        
+
         // Find nearest actual data point for snapping the hover line
-        const nearest = tokens.reduce((best, t) => 
-          Math.abs(t - targetTokens) < Math.abs(best - targetTokens) ? t : best, 
+        const nearest = tokens.reduce((best, t) =>
+          Math.abs(t - targetTokens) < Math.abs(best - targetTokens) ? t : best,
           tokens[0]
         );
-        
+
         const xpx = xScale(nearest);
         hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
-        
+
         // Build tooltip HTML
         let html = `<div><strong>${CONFIG.title}</strong></div>`;
-        html += `<div>tokens ${formatTokens(nearest)}</div>`;
-        
+        html += `<div>tokens ${formatX(nearest)}</div>`;
+
         // Interpolate values for all series
         const entries = series.map(s => {
           const values = s.values;
-          
+
           // Find the two points to interpolate between
           let before = null, after = null;
           for (let i = 0; i < values.length; i++) {
@@ -635,9 +886,9 @@
               break;
             }
           }
-          
+
           let interpolatedLoss = null;
-          
+
           if (before && after && before.tokens !== after.tokens) {
             // Linear interpolation
             const t = (nearest - before.tokens) / (after.tokens - before.tokens);
@@ -655,26 +906,26 @@
             // Use first value
             interpolatedLoss = after.loss;
           }
-          
-          return { 
-            run: s.run, 
-            color: s.color, 
-            loss: interpolatedLoss 
+
+          return {
+            run: s.run,
+            color: s.color,
+            loss: interpolatedLoss
           };
         }).filter(e => e.loss != null);
-        
+
         entries.sort((a, b) => a.loss - b.loss);
-        
-          entries.forEach(e => {
-            html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.loss.toFixed(4)}</span></div>`;
-          });
-        
+
+        entries.forEach(e => {
+          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.loss.toFixed(4)}</span></div>`;
+        });
+
         tipInner.innerHTML = html;
         const offsetX = 12, offsetY = 12;
         tip.style.opacity = '1';
         tip.style.transform = `translate(${Math.round(mx + offsetX + margin.left)}px, ${Math.round(my + offsetY + margin.top)}px)`;
       }
-      
+
       function onHoverLeave() {
         hideTipTimer = setTimeout(() => {
           tip.style.opacity = '0';
@@ -682,30 +933,30 @@
           if (hoverLine) hoverLine.style('display', 'none');
         }, 100);
       }
-      
+
       // Toggle smoothing
       function toggleSmoothing(enabled) {
         smoothEnabled = enabled;
-        
+
         // Group data by run
         const dataByRun = {};
         runList.forEach(run => { dataByRun[run] = []; });
         data.forEach(d => { if (dataByRun[d.run]) dataByRun[d.run].push(d); });
         runList.forEach(run => { dataByRun[run].sort((a, b) => a.tokens - b.tokens); });
         const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] }));
-        
+
         // Animate ghost lines opacity
         gPlot.selectAll('path.ghost-line')
           .transition()
           .duration(CONFIG.transitionDuration)
           .attr('opacity', enabled ? 0.15 : 0);
-        
+
         // Update main lines instantly (no animation on path shape)
         const mainLine = d3.line()
           .x(d => xScale(d.tokens))
           .y(d => yScale(d.loss))
           .curve(getCurve(enabled));
-        
+
         gPlot.selectAll('path.main-line')
           .data(series, d => d.run)
           .attr('d', d => mainLine(applySmoothing(d.values, enabled)));
@@ -715,14 +966,14 @@
       async function load() {
         try {
           // Build CSV paths, prioritizing CONFIG.dataUrl if provided
-          const csvPaths = CONFIG.dataUrl 
+          const csvPaths = CONFIG.dataUrl
             ? [CONFIG.dataUrl]
             : [
-                '/data/attention_loss.csv',
-                './assets/data/attention_loss.csv',
-                '../assets/data/attention_loss.csv',
-                '../../assets/data/attention_loss.csv'
-              ];
+              '/data/attention_loss.csv',
+              './assets/data/attention_loss.csv',
+              '../assets/data/attention_loss.csv',
+              '../../assets/data/attention_loss.csv'
+            ];
 
           let csvText = null;
           for (const path of csvPaths) {
@@ -751,7 +1002,7 @@
             const xValues = data.map(d => d.tokens);
             const xMin = d3.min(xValues);
             const xMax = d3.max(xValues);
-            
+
             if (CONFIG.xScaleType === 'log') {
               // For log scale: use ratio-based padding and ensure min > 0
               const minVal = Math.max(xMin / 1.1, 0.1); // 10% below min, but > 0
@@ -762,12 +1013,12 @@
               CONFIG.xDomain = [Math.max(0, xMin - xPadding), xMax + xPadding];
             }
           }
-          
+
           if (!CONFIG.yDomain) {
             const yValues = data.map(d => d.loss);
             const yMin = d3.min(yValues);
             const yMax = d3.max(yValues);
-            
+
             if (CONFIG.yScaleType === 'log') {
               // For log scale: use ratio-based padding and ensure min > 0
               const minVal = Math.max(yMin / 1.1, 0.1); // 10% below min, but > 0
@@ -807,8 +1058,8 @@
                 el.addEventListener('mouseenter', () => {
                   const run = el.getAttribute('data-run');
                   container.classList.add('hovering');
-                  gPlot.selectAll('path.main-line').classed('ghost', function() { return d3.select(this).datum().run !== run; });
-                  gPlot.selectAll('path.ghost-line').classed('ghost', function() { return d3.select(this).datum().run !== run; });
+                  gPlot.selectAll('path.main-line').classed('ghost', function () { return d3.select(this).datum().run !== run; });
+                  gPlot.selectAll('path.ghost-line').classed('ghost', function () { return d3.select(this).datum().run !== run; });
                   legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
                 });
                 el.addEventListener('mouseleave', () => {
@@ -847,4 +1098,3 @@
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
   })();
 </script>
-

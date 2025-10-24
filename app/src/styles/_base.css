@@ -49,11 +49,11 @@ html {
 .content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"])::after {
   content: "↗";
   display: inline-block;
-  margin-left: 6px;
-  font-size: 0.9em;
+  margin-left: 2px;
+  font-size: 0.5em;
   opacity: 0.8;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  transform: translateY(-1px);
+  transform: translateY(-5px);
   font-weight: 600;
 }
 

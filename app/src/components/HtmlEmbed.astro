@@ -3,6 +3,7 @@ interface Props {
   src: string;
   title?: string;
   desc?: string;
+  caption?: string;
   frameless?: boolean;
   align?: "left" | "center" | "right";
   id?: string;
@@ -13,6 +14,7 @@ const {
   src,
   title,
   desc,
+  caption,
   frameless = false,
   align = "left",
   id,
@@ -78,11 +80,11 @@ const htmlWithId =
           set:html={htmlWithId}
         />
       </div>
-      {desc && (
+      {(desc || caption) && (
         <figcaption
           class="html-embed__desc"
           style={`text-align:${align}`}
-          set:html={desc}
+          set:html={caption || desc}
         />
       )}
     </figure>

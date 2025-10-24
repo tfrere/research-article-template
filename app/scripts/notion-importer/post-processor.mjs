@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { Client } from '@notionhq/client';
@@ -42,31 +42,50 @@ export async function postProcessMarkdown(content, notionClient = null, notionTo
     processedContent = cleanEmptyLines(processedContent);
     processedContent = fixCodeBlocks(processedContent);
     processedContent = fixCodeBlockEndings(processedContent);
+    processedContent = unwrapHtmlCodeBlocks(processedContent);
+    processedContent = fixPlainTextCodeBlocks(processedContent);
     processedContent = optimizeTables(processedContent);
 
     return processedContent;
 }
 
 /**
- * Remove <exclude> tags and their content
+ * Remove <exclude> tags and their content, plus associated media files
  * @param {string} content - Markdown content
  * @returns {string} - Content with exclude tags removed and unused imports cleaned
  */
 function removeExcludeTags(content) {
-    console.log('  🗑️  Removing <exclude> tags...');
+    console.log('  🗑️  Removing <exclude> tags and associated media...');
 
     let removedCount = 0;
     const removedImageVariables = new Set();
+    const mediaFilesToDelete = new Set();
 
-    // First, extract image variable names from exclude blocks before removing them
+    // First, extract image variable names and media files from exclude blocks before removing them
     const excludeBlocks = content.match(/<exclude>[\s\S]*?<\/exclude>/g) || [];
     excludeBlocks.forEach(match => {
+        // Extract image variables from JSX components
         const imageMatches = match.match(/src=\{([^}]+)\}/g);
         if (imageMatches) {
             imageMatches.forEach(imgMatch => {
                 const varName = imgMatch.match(/src=\{([^}]+)\}/)?.[1];
                 if (varName) {
                     removedImageVariables.add(varName);
+                }
+            });
+        }
+
+        // Extract media file paths from markdown images
+        const markdownImages = match.match(/!\[[^\]]*\]\(([^)]+)\)/g);
+        if (markdownImages) {
+            markdownImages.forEach(imgMatch => {
+                const src = imgMatch.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1];
+                if (src) {
+                    // Extract filename from path like /media/pageId/filename.png
+                    const filename = basename(src);
+                    if (filename) {
+                        mediaFilesToDelete.add(filename);
+                    }
                 }
             });
         }
@@ -77,6 +96,39 @@ function removeExcludeTags(content) {
         removedCount++;
         return '';
     });
+
+    // Delete associated media files
+    if (mediaFilesToDelete.size > 0) {
+        console.log(`    🗑️  Found ${mediaFilesToDelete.size} media file(s) to delete from exclude blocks`);
+
+        // Try to find and delete media files in common locations
+        const possibleMediaDirs = [
+            join(__dirname, 'output', 'media'),
+            join(__dirname, '..', '..', 'src', 'content', 'assets', 'image')
+        ];
+
+        mediaFilesToDelete.forEach(filename => {
+            let deleted = false;
+            for (const mediaDir of possibleMediaDirs) {
+                if (existsSync(mediaDir)) {
+                    const filePath = join(mediaDir, filename);
+                    if (existsSync(filePath)) {
+                        try {
+                            unlinkSync(filePath);
+                            console.log(`    🗑️  Deleted media file: ${filename}`);
+                            deleted = true;
+                            break;
+                        } catch (error) {
+                            console.log(`    ⚠️  Failed to delete ${filename}: ${error.message}`);
+                        }
+                    }
+                }
+            }
+            if (!deleted) {
+                console.log(`    ℹ️  Media file not found: ${filename}`);
+            }
+        });
+    }
 
     // Remove unused image imports that were only used in exclude blocks
     if (removedImageVariables.size > 0) {
@@ -203,6 +255,17 @@ async function includeNotionPages(content, notionClient, notionToken) {
             console.log(`    🖼️  Media saved to: ${mediaDir}`);
 
             if (result && result.content) {
+                // Save raw content as .raw.md file
+                const rawFileName = `${link.linkText.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${link.pageId}`;
+                const rawFilePath = join(outputDir, `${rawFileName}.raw.md`);
+
+                try {
+                    writeFileSync(rawFilePath, result.content);
+                    console.log(`    📄 Saved raw markdown: ${rawFileName}.raw.md`);
+                } catch (error) {
+                    console.log(`    ⚠️  Failed to save raw file: ${error.message}`);
+                }
+
                 // Clean the content (remove frontmatter, etc.)
                 let pageContent = result.content;
 
@@ -559,6 +622,72 @@ function optimizeTables(content) {
 
     if (optimizedCount > 0) {
         console.log(`    ✅ Optimized ${optimizedCount} table(s)`);
+    }
+
+    return content;
+}
+
+/**
+ * Unwrap HTML code blocks to allow direct HTML integration in MDX
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with unwrapped HTML code blocks
+ */
+function unwrapHtmlCodeBlocks(content) {
+    console.log('  🔧 Unwrapping HTML code blocks for MDX integration...');
+
+    let unwrappedCount = 0;
+
+    // Pattern to match ```html ... ``` blocks
+    // This regex captures the entire code block including the ```html and ``` markers
+    const htmlCodeBlockRegex = /```html\s*\n([\s\S]*?)\n```/g;
+
+    content = content.replace(htmlCodeBlockRegex, (match, htmlContent) => {
+        unwrappedCount++;
+
+        // Clean up the HTML content - remove leading/trailing whitespace
+        const cleanHtmlContent = htmlContent.trim();
+
+        console.log(`    🔧 Unwrapped HTML code block (${cleanHtmlContent.length} chars)`);
+
+        // Return the HTML content without the code block wrapper
+        return cleanHtmlContent;
+    });
+
+    if (unwrappedCount > 0) {
+        console.log(`    ✅ Unwrapped ${unwrappedCount} HTML code block(s) for MDX integration`);
+    } else {
+        console.log('    ℹ️  No HTML code blocks found to unwrap');
+    }
+
+    return content;
+}
+
+/**
+ * Fix plain text code blocks by removing the "plain text" language identifier
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with fixed plain text code blocks
+ */
+function fixPlainTextCodeBlocks(content) {
+    console.log('  🔧 Fixing plain text code blocks...');
+
+    let fixedCount = 0;
+
+    // Pattern to match ```plain text ... ``` blocks and convert them to ``` ... ```
+    const plainTextCodeBlockRegex = /```plain text\s*\n([\s\S]*?)\n```/g;
+
+    content = content.replace(plainTextCodeBlockRegex, (match, codeContent) => {
+        fixedCount++;
+
+        console.log(`    🔧 Fixed plain text code block (${codeContent.length} chars)`);
+
+        // Return the code block without the "plain text" language identifier
+        return `\`\`\`\n${codeContent}\n\`\`\``;
+    });
+
+    if (fixedCount > 0) {
+        console.log(`    ✅ Fixed ${fixedCount} plain text code block(s)`);
+    } else {
+        console.log('    ℹ️  No plain text code blocks found to fix');
     }
 
     return content;

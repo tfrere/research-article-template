@@ -1,0 +1,571 @@
+<div class="position-masking"></div>
+
+<style>
+    .position-masking {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.5;
+        color: var(--text-color);
+        padding: 20px 0;
+    }
+
+    .position-masking .sentence-display {
+        padding: 15px;
+        margin: 0 auto 30px auto;
+        text-align: center;
+        max-width: 90%;
+    }
+
+    .position-masking .section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: var(--text-color);
+    }
+
+    .position-masking .token-sequence {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-bottom: 10px;
+        justify-content: center;
+    }
+
+    .position-masking .token {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--surface-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+
+
+    .position-masking .token-index {
+        font-size: 0.65rem;
+        color: var(--muted-color);
+        margin-top: 2px;
+    }
+
+    .position-masking .controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .position-masking .controls label {
+        font-size: 14px;
+        color: var(--text-color);
+        font-weight: 700;
+    }
+
+    .position-masking .controls select {
+        width: 60%;
+    }
+
+
+    .position-masking .configs-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-top: 20px;
+    }
+
+    .position-masking .config-section {
+        text-align: center;
+    }
+
+    .position-masking .config-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+        color: var(--text-color);
+    }
+
+    .position-masking .config-description {
+        font-size: 0.85rem;
+        color: var(--muted-color);
+        margin-bottom: 10px;
+        min-height: 20px;
+    }
+
+    .position-masking .matrix-container {
+        display: grid;
+        grid-template-columns: 30px 1fr;
+        grid-template-rows: 1fr 20px;
+        gap: 4px;
+        justify-self: center;
+        align-items: center;
+        background: var(--page-bg) !important;
+        border: 0.5px solid var(--border-color);
+        border-radius: 4px;
+        padding: 8px;
+        /* box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); */
+        margin: 0 auto;
+        max-width: 600px;
+    }
+
+    .position-masking .row-labels {
+        display: grid;
+        gap: 2px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--muted-color);
+    }
+
+    .position-masking .row-label {
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+    }
+
+    .position-masking .col-labels {
+        display: grid;
+        gap: 2px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--muted-color);
+        grid-column: 2;
+    }
+
+    .position-masking .col-label {
+        width: 18px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .position-masking .attention-matrix {
+        display: grid;
+        gap: 2px;
+        justify-items: stretch;
+        align-items: stretch;
+        grid-column: 2;
+        grid-row: 1;
+        position: relative;
+    }
+
+    .position-masking .position-cell {
+        width: 18px;
+        height: 18px;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .position-masking .position-cell.empty {
+        background: var(--page-bg);
+        color: transparent;
+    }
+
+    .position-masking .position-cell.causal-mask {
+        background-color: var(--border-color);
+    }
+
+    .position-masking .tooltip {
+        position: absolute;
+        background: var(--surface-bg);
+        color: var(--text-color);
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        max-width: 280px;
+        text-align: left;
+        line-height: 1.3;
+    }
+
+    .position-masking .tooltip.show {
+        opacity: 1;
+    }
+
+    /* Color scale will be set dynamically using diverging palette */
+
+    /* Responsive design */
+    @media (max-width: 1200px) {
+        .position-masking .configs-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .position-masking .position-cell {
+            width: 18px;
+            height: 18px;
+            font-size: 8px;
+        }
+
+        .position-masking .matrix-container {
+            grid-template-columns: 40px 1fr;
+            padding: 10px;
+        }
+    }
+</style>
+
+<script>
+    (() => {
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('position-masking'))) {
+                const candidates = Array.from(document.querySelectorAll('.position-masking'))
+                    .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+                container = candidates[candidates.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            const WINDOW_SIZE = 8;
+            const CHUNK_SIZE = 4;
+            const LOCAL_WINDOW = 3;
+
+            // Define the 16 tokens
+            const tokens = [
+                'The', 'history', 'of', 'artificial', 'intelligence', 'began', 'in', 'the',
+                'twentieth', 'century', 'with', 'fundamental', 'research', 'into', 'computation', 'and'
+            ];
+
+            // Configuration definitions
+            const configs = [
+                {
+                    name: 'Causal Masking (window=8)',
+                    description: 'Model can only attend to past 8 tokens',
+                    compute: (row, col) => {
+                        if (col < WINDOW_SIZE) return null; // Columns 0-7 are empty
+                        if (col > row) return null; // Future tokens
+                        if (row - col >= WINDOW_SIZE) return null; // Beyond window
+                        return row - col;
+                    }
+                },
+                {
+                    name: 'RoPE ABF',
+                    description: 'Adjusted Base Frequency dividing by 2',
+                    compute: (row, col) => {
+                        if (col === 0) return null; // First column empty
+                        if (col > row) return null;
+                        return (row - col) * 0.5;
+                    }
+                },
+                {
+                    name: 'Chunked Attention',
+                    description: 'Process sample in chunks of size 8',
+                    compute: (row, col) => {
+                        if (col > row) return null;
+                        const rowChunk = Math.floor(row / WINDOW_SIZE);
+                        const colChunk = Math.floor(col / WINDOW_SIZE);
+                        if (rowChunk !== colChunk) return null;
+                        return row - col;
+                    }
+                },
+                {
+                    name: 'Sliding Window Attention',
+                    description: 'Each token attends to past 8 tokens',
+                    compute: (row, col) => {
+                        if (col > row) return null;
+                        if (row - col >= WINDOW_SIZE) return null;
+                        return row - col;
+                    }
+                },
+                {
+                    name: 'DCA (Dual Chunk Attention)',
+                    description: 'c=8, s=4, w=3 combining Pintra, Pinter, Successive',
+                    compute: (row, col) => {
+                        if (col > row) return null;
+
+                        const rowChunk = Math.floor(row / CHUNK_SIZE);
+                        const colChunk = Math.floor(col / CHUNK_SIZE);
+                        const posInChunk = row % CHUNK_SIZE;
+                        const colPosInChunk = col % CHUNK_SIZE;
+
+                        // First two chunks (0-7): normal causal
+                        if (rowChunk <= 1) {
+                            return row - col;
+                        }
+
+                        // For chunks 2 and beyond (rows 8+)
+                        if (rowChunk === colChunk) {
+                            // Intra-chunk (Pintra): normal causal within chunk
+                            return row - col;
+                        } else if (colChunk === rowChunk - 1) {
+                            // Previous chunk (chunk 1, positions 4-7)
+                            // For first LOCAL_WINDOW positions (0,1,2) in current chunk: modified values
+                            if (posInChunk < LOCAL_WINDOW) {
+                                // Row 8 (pos 0): 4,3,2,1 for cols 4,5,6,7
+                                // Row 9 (pos 1): 5,4,3,2 for cols 4,5,6,7
+                                // Row 10 (pos 2): 6,5,4,3 for cols 4,5,6,7
+                                return (posInChunk + CHUNK_SIZE) - colPosInChunk;
+                            } else {
+                                // Last position (3) in chunk: successive attention 7,6,5,4
+                                return 7 - colPosInChunk;
+                            }
+                        } else if (colChunk < rowChunk - 1) {
+                            // Earlier chunks (chunk 0, positions 0-3): always 7,6,5,4
+                            return 7 - colPosInChunk;
+                        }
+
+                        return null;
+                    }
+                }
+            ];
+
+            // Helper function to get color class from position value
+            function getColorClass(value) {
+                if (value === null) return 'empty';
+                if (value === 0) return 'pos-0';
+                if (value === 0.5) return 'pos-0-5';
+                if (value === 1) return 'pos-1';
+                if (value === 1.5) return 'pos-1-5';
+                if (value === 2) return 'pos-2';
+                if (value === 2.5) return 'pos-2-5';
+                if (value === 3) return 'pos-3';
+                if (value === 3.5) return 'pos-3-5';
+                if (value === 4) return 'pos-4';
+                if (value === 4.5) return 'pos-4-5';
+                if (value === 5) return 'pos-5';
+                if (value === 5.5) return 'pos-5-5';
+                if (value === 6) return 'pos-6';
+                if (value === 6.5) return 'pos-6-5';
+                if (value === 7) return 'pos-7';
+                if (value > 7) return 'pos-7-plus';
+                return 'empty';
+            }
+
+            // Create the HTML structure
+            const configSections = configs.map((config, idx) => `
+        <div class="config-section">
+          <div class="config-title">${config.name}</div>
+          <div class="config-description">${config.description}</div>
+          <div class="matrix-container">
+            <div class="row-labels" id="rowLabels${idx}"></div>
+            <div class="attention-matrix" id="matrix${idx}"></div>
+            <div class="col-labels" id="colLabels${idx}"></div>
+          </div>
+        </div>
+      `).join('');
+
+            container.innerHTML = `
+                <div class="sentence-display">
+                  <div class="section-title">Single Document (16 tokens)</div>
+                  <div class="token-sequence" id="tokenSequence">
+                    ${tokens.map((token, i) => `
+                      <span class="token">
+                        ${token}
+                        <div class="token-index">${i}</div>
+                      </span>
+                    `).join('')}
+                  </div>
+                  <div style="margin-top: 10px; font-size: 0.9rem; color: var(--muted-color);">
+                    Pre-training window = 8
+                  </div>
+                </div>
+
+                <div class="controls">
+                  <label>Attention Pattern</label>
+                  <select id="configSelect">
+                    ${configs.map((config, idx) => `<option value="${idx}">${config.name}</option>`).join('')}
+                  </select>
+                </div>
+
+                <div class="configs-grid">
+                  <div class="config-section" id="currentConfig">
+                    <!-- Will be populated dynamically -->
+                  </div>
+                </div>
+
+                <div class="tooltip" id="tooltip"></div>
+              `;
+
+            // Get diverging colors (inverted)
+            function getDivergingColors() {
+                try {
+                    if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                        const colors = window.ColorPalettes.getColors('diverging', 9);
+                        return colors.reverse(); // Invert the color order
+                    }
+                } catch (e) { }
+                // Fallback diverging colors (red to blue - inverted)
+                return [
+                    '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#f7f7f7',
+                    '#d1e5f0', '#92c5de', '#4393c3', '#2166ac'
+                ];
+            }
+
+            // Get color for a position value
+            function getColorForValue(value) {
+                if (value === null) return 'var(--page-bg)';
+
+                const colors = getDivergingColors();
+                // Map value to color index (0-8)
+                const maxValue = 7;
+                const normalizedValue = Math.min(value / maxValue, 1);
+                const colorIndex = Math.round(normalizedValue * (colors.length - 1));
+                return colors[colorIndex];
+            }
+
+            // Get text color for better contrast
+            function getTextColorForValue(value) {
+                if (value === null) return 'transparent';
+
+                const colors = getDivergingColors();
+                const maxValue = 7;
+                const normalizedValue = Math.min(value / maxValue, 1);
+                const colorIndex = Math.round(normalizedValue * (colors.length - 1));
+                const color = colors[colorIndex];
+
+                // Calculate luminance to determine if we need light or dark text
+                const hex = color.replace('#', '');
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+                return luminance > 0.5 ? '#333' : 'white';
+            }
+
+            // Create matrix for a specific configuration
+            function createMatrix(config, configIdx) {
+                const currentConfigDiv = document.getElementById('currentConfig');
+                const size = tokens.length;
+
+                currentConfigDiv.innerHTML = `
+                <div class="config-description">${config.description}</div>
+                <div class="matrix-container">
+                  <div class="row-labels" id="rowLabels"></div>
+                  <div class="attention-matrix" id="matrix"></div>
+                  <div class="col-labels" id="colLabels"></div>
+                </div>
+              `;
+
+                const matrixContainer = document.getElementById('matrix');
+                const rowLabelsContainer = document.getElementById('rowLabels');
+                const colLabelsContainer = document.getElementById('colLabels');
+
+                // Setup labels
+                rowLabelsContainer.style.gridTemplateRows = `repeat(${size}, 18px)`;
+                colLabelsContainer.style.gridTemplateColumns = `repeat(${size}, 18px)`;
+
+                for (let i = 0; i < size; i++) {
+                    const rowLabel = document.createElement('div');
+                    rowLabel.className = 'row-label';
+                    rowLabel.textContent = i;
+                    rowLabelsContainer.appendChild(rowLabel);
+
+                    const colLabel = document.createElement('div');
+                    colLabel.className = 'col-label';
+                    colLabel.textContent = i;
+                    colLabelsContainer.appendChild(colLabel);
+                }
+
+                // Create matrix
+                matrixContainer.style.gridTemplateColumns = `repeat(${size}, 18px)`;
+                matrixContainer.style.gridTemplateRows = `repeat(${size}, 18px)`;
+
+                for (let row = 0; row < size; row++) {
+                    for (let col = 0; col < size; col++) {
+                        const cell = document.createElement('div');
+                        const value = config.compute(row, col);
+                        const isCausalMask = col <= row;
+
+                        cell.className = `position-cell`;
+                        if (isCausalMask) {
+                            cell.classList.add('causal-mask');
+                        }
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        cell.dataset.value = value !== null ? value : '';
+
+                        if (value !== null) {
+                            // Set background color using diverging palette
+                            cell.style.backgroundColor = getColorForValue(value);
+                            cell.style.color = getTextColorForValue(value);
+
+                            // Format display value
+                            const displayValue = value % 1 === 0 ? value.toString() : value.toFixed(1);
+                            cell.textContent = displayValue;
+
+                            // Add hover events
+                            cell.addEventListener('mouseenter', (e) => {
+                                const tooltip = document.getElementById('tooltip');
+                                const fromToken = tokens[row];
+                                const toToken = tokens[col];
+
+                                tooltip.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 4px;">Relative Position: ${displayValue}</div>
+                        <div style="font-size: 11px; color: var(--muted-color);">
+                          Query: "${fromToken}" (pos ${row})<br>
+                          Key: "${toToken}" (pos ${col})<br>
+                          Distance: ${row - col} tokens
+                        </div>
+                      `;
+                                tooltip.classList.add('show');
+
+                                const rect = cell.getBoundingClientRect();
+                                const containerRect = document.querySelector('.position-masking').getBoundingClientRect();
+                                tooltip.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+                                tooltip.style.top = (rect.top - containerRect.top - 10) + 'px';
+                                tooltip.style.transform = 'translate(-50%, -100%)';
+                            });
+
+                            cell.addEventListener('mouseleave', () => {
+                                const tooltip = document.getElementById('tooltip');
+                                tooltip.classList.remove('show');
+                            });
+                        }
+
+                        matrixContainer.appendChild(cell);
+                    }
+                }
+            }
+
+            // Initialize with first configuration
+            createMatrix(configs[0], 0);
+
+            // Handle select change
+            const select = document.getElementById('configSelect');
+            select.addEventListener('change', (e) => {
+                const selectedIdx = parseInt(e.target.value);
+                createMatrix(configs[selectedIdx], selectedIdx);
+            });
+
+            // Load color palettes script if not already loaded
+            if (!window.ColorPalettes) {
+                const script = document.createElement('script');
+                script.src = '/scripts/color-palettes.js';
+                script.onload = () => {
+                    // Re-render with proper colors
+                    const currentIdx = parseInt(select.value);
+                    createMatrix(configs[currentIdx], currentIdx);
+                };
+                document.head.appendChild(script);
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+        } else {
+            bootstrap();
+        }
+    })();
+</script>

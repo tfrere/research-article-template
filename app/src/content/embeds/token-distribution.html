@@ -1,0 +1,411 @@
+<div class="d3-token-distribution"></div>
+
+<style>
+    .d3-token-distribution {
+        position: relative;
+    }
+
+    .d3-token-distribution .legend {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        margin: 8px 0 0 0;
+    }
+
+    .d3-token-distribution .legend .legend-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+
+    .d3-token-distribution .legend .items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+    }
+
+    .d3-token-distribution .legend .item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted-color);
+        cursor: pointer;
+    }
+
+    .d3-token-distribution .legend .swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid var(--border-color);
+    }
+
+    .d3-token-distribution .ghost {
+        opacity: .25;
+    }
+
+    .d3-token-distribution .d3-tooltip {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        transform: translate(-9999px, -9999px);
+        pointer-events: none;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.35;
+        border: 1px solid var(--border-color);
+        background: var(--surface-bg);
+        color: var(--text-color);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
+        opacity: 0;
+        transition: opacity .12s ease;
+        text-align: left;
+    }
+
+    .d3-token-distribution .chart-card {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+    }
+</style>
+
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('d3-token-distribution'))) {
+                const cs = Array.from(document.querySelectorAll('.d3-token-distribution')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+                container = cs[cs.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+            container.style.position = container.style.position || 'relative';
+            let tip = container.querySelector('.d3-tooltip'); let tipInner;
+            if (!tip) {
+                tip = document.createElement('div'); tip.className = 'd3-tooltip';
+                tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner);
+                container.appendChild(tip);
+            } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+            // header below chart
+            const header = document.createElement('div'); header.className = 'chart-header';
+
+            const makeLegend = (series, colorBySeries) => {
+                let legend = header.querySelector('.legend');
+                if (!legend) { legend = document.createElement('div'); legend.className = 'legend'; header.appendChild(legend); }
+                // Ensure title
+                let title = legend.querySelector('.legend-title');
+                if (!title) { title = document.createElement('div'); title.className = 'legend-title'; title.textContent = 'Datasets'; legend.appendChild(title); }
+                // Ensure items container
+                let items = legend.querySelector('.items');
+                if (!items) { items = document.createElement('div'); items.className = 'items'; legend.appendChild(items); }
+                items.innerHTML = '';
+                series.forEach(name => {
+                    const item = document.createElement('div'); item.className = 'item';
+                    const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = colorBySeries(name);
+                    const txt = document.createElement('span'); txt.textContent = name;
+                    item.appendChild(sw); item.appendChild(txt); items.appendChild(item);
+                    item.addEventListener('mouseenter', () => { state.highlightDataset = name; updateHighlight(); });
+                    item.addEventListener('mouseleave', () => { state.highlightDataset = null; updateHighlight(); });
+                });
+            };
+
+            // SVG scaffolding inside a card wrapper, then header appended after
+            const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
+            container.appendChild(header);
+            const svg = d3.select(card).append('svg').attr('width', '100%').style('display', 'block');
+            const gRoot = svg.append('g');
+
+            // Data from the CSV
+            const rawData = [
+                { bucket: "0-1k", "FineWeb-Edu": 69.11, "DCLM": 67.656, "FineMath": 60.076, "Python-Edu": 91.636 },
+                { bucket: "1-2k", "FineWeb-Edu": 21.602, "DCLM": 19.158, "FineMath": 22.5635, "Python-Edu": 5.906 },
+                { bucket: "2-3k", "FineWeb-Edu": 4.876, "DCLM": 5.857, "FineMath": 7.509, "Python-Edu": 1.38 },
+                { bucket: "3-4k", "FineWeb-Edu": 1.829, "DCLM": 2.471, "FineMath": 3.444, "Python-Edu": 0.473 },
+                { bucket: "4-5k", "FineWeb-Edu": 0.829, "DCLM": 1.249, "FineMath": 1.9575, "Python-Edu": 0.246 },
+                { bucket: "5-6k", "FineWeb-Edu": 0.472, "DCLM": 0.824, "FineMath": 1.1365, "Python-Edu": 0.139 },
+                { bucket: "6-7k", "FineWeb-Edu": 0.281, "DCLM": 0.608, "FineMath": 0.7575, "Python-Edu": 0.065 },
+                { bucket: "7-8k", "FineWeb-Edu": 0.233, "DCLM": 0.408, "FineMath": 0.58, "Python-Edu": 0.046 },
+                { bucket: "8-9k", "FineWeb-Edu": 0.16, "DCLM": 0.327, "FineMath": 0.3895, "Python-Edu": 0.032 },
+                { bucket: "9-10k", "FineWeb-Edu": 0.127, "DCLM": 0.24, "FineMath": 0.2695, "Python-Edu": 0.018 },
+                { bucket: "10-11k", "FineWeb-Edu": 0.08, "DCLM": 0.217, "FineMath": 0.194, "Python-Edu": 0.006 },
+                { bucket: "11-12k", "FineWeb-Edu": 0.069, "DCLM": 0.158, "FineMath": 0.1635, "Python-Edu": 0.008 },
+                { bucket: "12-13k", "FineWeb-Edu": 0.053, "DCLM": 0.145, "FineMath": 0.1495, "Python-Edu": 0.009 },
+                { bucket: "13-14k", "FineWeb-Edu": 0.045, "DCLM": 0.142, "FineMath": 0.1195, "Python-Edu": 0.004 },
+                { bucket: "14-15k", "FineWeb-Edu": 0.035, "DCLM": 0.072, "FineMath": 0.091, "Python-Edu": 0.002 },
+                { bucket: "15-16k", "FineWeb-Edu": 0.028, "DCLM": 0.061, "FineMath": 0.0715, "Python-Edu": 0.001 },
+                { bucket: "16k+", "FineWeb-Edu": 0.171, "DCLM": 0.407, "FineMath": 0.528, "Python-Edu": 0.029 }
+            ];
+
+            // Define logarithmic buckets and mapping function
+            const logBuckets = ["0-1k", "1-2k", "2-4k", "4-8k", "8-16k", "16k+"];
+
+            function mapToLogBucket(linearBucket) {
+                if (linearBucket === "0-1k") return "0-1k";
+                if (linearBucket === "1-2k") return "1-2k";
+                if (["2-3k", "3-4k"].includes(linearBucket)) return "2-4k";
+                if (["4-5k", "5-6k", "6-7k", "7-8k"].includes(linearBucket)) return "4-8k";
+                if (["8-9k", "9-10k", "10-11k", "11-12k", "12-13k", "13-14k", "14-15k", "15-16k"].includes(linearBucket)) return "8-16k";
+                return "16k+";
+            }
+
+            // Aggregate data into logarithmic buckets
+            const aggregatedData = {};
+            logBuckets.forEach(bucket => {
+                aggregatedData[bucket] = {
+                    "FineWeb-Edu": 0,
+                    "DCLM": 0,
+                    "FineMath": 0,
+                    "Python-Edu": 0
+                };
+            });
+
+            rawData.forEach(row => {
+                const logBucket = mapToLogBucket(row.bucket);
+                Object.keys(aggregatedData[logBucket]).forEach(dataset => {
+                    aggregatedData[logBucket][dataset] += row[dataset];
+                });
+            });
+
+            // Convert to array format for D3
+            const data = logBuckets.map(bucket => ({
+                bucket: bucket,
+                ...aggregatedData[bucket]
+            }));
+
+            const state = {
+                data: data,
+                colorsByDataset: null,
+                highlightDataset: null,
+            };
+
+            const margin = { top: 12, right: 28, bottom: 24, left: 56 };
+            let width = 800, height = 360;
+            const x0 = d3.scaleBand().paddingInner(0.2).paddingOuter(0.05); // group: bucket
+            const x1 = d3.scaleBand().padding(0.12); // series: dataset per bucket
+            const y = d3.scaleLinear();
+            const xAxis = d3.axisBottom(x0).tickSizeOuter(0);
+            const yAxis = d3.axisLeft(y).ticks(6).tickSizeOuter(0);
+            const yTopPadding = 2; // avoid bars touching top at max
+
+            function getPrimaryColor() {
+                try { if (window.ColorPalettes && typeof window.ColorPalettes.getPrimary === 'function') return window.ColorPalettes.getPrimary(); } catch (e) { }
+                return getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#6D4AFF';
+            }
+
+            function getCategoricalColors(n) {
+                try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch (e) { }
+                // Fallback: generate hues around the primary color (simple fallback)
+                const base = getPrimaryColor();
+                const colors = [];
+                for (let i = 0; i < n; i++) {
+                    const hue = Math.round((360 / n) * i);
+                    colors.push(`hsl(${hue}, 60%, 55%)`);
+                }
+                return colors;
+            }
+
+            function computeSeriesColors(datasets) {
+                const palette = getCategoricalColors(datasets.length);
+                const map = new Map(datasets.map((d, i) => [d, palette[i % palette.length]]));
+                return (dataset) => map.get(dataset) || getPrimaryColor();
+            }
+
+            function getDatasets(data) {
+                return ["FineWeb-Edu", "DCLM", "FineMath", "Python-Edu"];
+            }
+
+            function getBuckets(data) {
+                return Array.from(new Set(data.map(d => d.bucket)));
+            }
+
+            function updateSize() {
+                width = container.clientWidth || 800;
+                height = Math.max(240, Math.round(width / 3.4));
+                svg.attr('width', width).attr('height', height);
+                gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+                return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
+            }
+
+            function showTip(html, x, y) {
+                tip.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
+                tip.style.opacity = '1';
+                const inner = tip.querySelector('.d3-tooltip__inner') || tip;
+                inner.innerHTML = html;
+            }
+
+            function hideTip() {
+                tip.style.opacity = '0';
+                tip.style.transform = 'translate(-9999px, -9999px)';
+            }
+
+            function updateHighlight() {
+                const dataset = state.highlightDataset;
+                const bars = gRoot.selectAll('rect.bar');
+                const labels = gRoot.selectAll('text.value');
+                if (dataset) {
+                    bars.classed('ghost', d => d.dataset !== dataset);
+                    labels.classed('ghost', d => d.dataset !== dataset);
+                    const items = container.querySelectorAll('.legend .item');
+                    items.forEach((el) => {
+                        const name = el.textContent.trim();
+                        if (name !== dataset) el.classList.add('ghost'); else el.classList.remove('ghost');
+                    });
+                } else {
+                    bars.classed('ghost', false);
+                    labels.classed('ghost', false);
+                    container.querySelectorAll('.legend .item').forEach(el => el.classList.remove('ghost'));
+                }
+            }
+
+            function render() {
+                const { innerWidth, innerHeight } = updateSize();
+                const datasets = getDatasets(state.data);
+                if (!state.colorsByDataset) state.colorsByDataset = computeSeriesColors(datasets);
+                makeLegend(datasets, state.colorsByDataset);
+
+                x0.domain(getBuckets(state.data)).range([0, innerWidth]);
+                x1.domain(datasets).range([0, x0.bandwidth()]);
+
+                const yMaxRaw = d3.max(state.data, d => Math.max(d["FineWeb-Edu"], d["DCLM"], d["FineMath"], d["Python-Edu"]));
+                const yMax = yMaxRaw + yTopPadding;
+                y.domain([0, yMax]).range([innerHeight, 0]).nice();
+
+                // Axes (standardized colors)
+                gRoot
+                    .selectAll('.axis-x')
+                    .data([0])
+                    .join('g')
+                    .attr('class', 'axis-x')
+                    .attr('transform', `translate(0,${innerHeight})`)
+                    .call(xAxis)
+                    .call(g => {
+                        g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+                        g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size', '12px');
+                    });
+
+                gRoot
+                    .selectAll('.axis-y')
+                    .data([0])
+                    .join('g')
+                    .attr('class', 'axis-y')
+                    .call(yAxis)
+                    .call(g => {
+                        g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+                        g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size', '12px');
+                    });
+
+                // Gridlines (y) standardized color
+                gRoot
+                    .selectAll('.grid-y')
+                    .data([0])
+                    .join('g')
+                    .attr('class', 'grid-y')
+                    .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
+                    .call(g => g.select('.domain').remove())
+                    .call(g => g.selectAll('.tick line').attr('stroke', 'var(--grid-color)').attr('stroke-opacity', 1))
+                    .call(g => g.selectAll('.tick').filter((d, i, nodes) => i === nodes.length - 1).select('line').attr('stroke-opacity', 0));
+
+                // Groups per bucket
+                const groups = gRoot.selectAll('.group').data(getBuckets(state.data), d => d);
+                const groupsEnter = groups.enter().append('g').attr('class', 'group');
+                groupsEnter.merge(groups).attr('transform', d => `translate(${x0(d)},0)`);
+                groups.exit().remove();
+
+                // Bars per dataset
+                const nested = d3.group(state.data, d => d.bucket);
+                groupsEnter.each(function (bucket) { d3.select(this).selectAll('rect.bar').data([]).join('rect'); });
+                const allGroups = gRoot.selectAll('.group');
+                allGroups.each(function (bucket) {
+                    const dataForBucket = nested.get(bucket) || [];
+                    const bars = d3.select(this).selectAll('rect.bar').data(datasets.map(d => ({ bucket, dataset: d, value: (dataForBucket.find(dd => dd.bucket === bucket) || {})[d] || 0 })), d => d.dataset);
+                    bars.join(
+                        enter => enter.append('rect')
+                            .attr('class', 'bar')
+                            .attr('x', d => x1(d.dataset))
+                            .attr('y', innerHeight)
+                            .attr('width', x1.bandwidth())
+                            .attr('height', 0)
+                            .attr('fill', d => state.colorsByDataset(d.dataset))
+                            .attr('rx', 2)
+                            .attr('ry', 2)
+                            .on('mouseenter', (event, d) => { state.highlightDataset = d.dataset; updateHighlight(); })
+                            .on('mousemove', (event, d) => {
+                                const [mx, my] = d3.pointer(event, container);
+                                showTip(`<strong>${d.dataset}</strong><br/>${d.bucket}: <strong>${d.value.toFixed(2)}%</strong>`, mx, my);
+                            })
+                            .on('mouseleave', () => { hideTip(); state.highlightDataset = null; updateHighlight(); })
+                            .transition().duration(160)
+                            .attr('y', d => y(d.value))
+                            .attr('height', d => Math.max(0, innerHeight - y(d.value))),
+                        update => update
+                            .on('mouseenter', (event, d) => { state.highlightDataset = d.dataset; updateHighlight(); })
+                            .on('mousemove', (event, d) => {
+                                const [mx, my] = d3.pointer(event, container);
+                                showTip(`<strong>${d.dataset}</strong><br/>${d.bucket}: <strong>${d.value.toFixed(2)}%</strong>`, mx, my);
+                            })
+                            .on('mouseleave', () => { hideTip(); state.highlightDataset = null; updateHighlight(); })
+                            .transition().duration(160)
+                            .attr('x', d => x1(d.dataset))
+                            .attr('y', d => y(d.value))
+                            .attr('width', x1.bandwidth())
+                            .attr('height', d => Math.max(0, innerHeight - y(d.value)))
+                            .attr('fill', d => state.colorsByDataset(d.dataset)),
+                        exit => exit.transition().duration(120).attr('y', innerHeight).attr('height', 0).remove()
+                    );
+                });
+
+                // Axis labels
+                gRoot.selectAll('.y-label').data([0]).join('text').attr('class', 'y-label')
+                    .attr('transform', `rotate(-90)`)
+                    .attr('x', -innerHeight / 2)
+                    .attr('y', -margin.left + 24)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', 'var(--text-color)')
+                    .attr('font-size', 12)
+                    .attr('font-weight', 700)
+                    .text('Documents (%)');
+            }
+
+            // Initial render + resize handling
+            render();
+            const rerender = () => render();
+            if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); }
+            else { window.addEventListener('resize', rerender); }
+
+            // Load color palettes script if not already loaded
+            if (!window.ColorPalettes) {
+                const script = document.createElement('script');
+                script.src = '/scripts/color-palettes.js';
+                script.onload = () => {
+                    // Re-render with proper colors after palette script loads
+                    state.colorsByDataset = null;
+                    render();
+                };
+                document.head.appendChild(script);
+            }
+        };
+
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); }
+        else { ensureD3(bootstrap); }
+    })();
+</script>

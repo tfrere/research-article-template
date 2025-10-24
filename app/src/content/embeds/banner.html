@@ -1,42 +1,79 @@
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap" rel="stylesheet">
 <div class="d3-loss-curves"></div>
 <style>
-  .d3-loss-curves { 
-    margin-top:20px; 
+  .d3-loss-curves {
+    margin-top: 20px;
     width: 100%;
     height: 350px;
     padding: 0;
     position: relative;
     overflow: hidden;
   }
-  
+
   /* Ghosting on hover */
-  .d3-loss-curves.hovering .lines path.ghost { opacity: .25 !important; }
-  .d3-loss-curves.hovering .legend-item.ghost { opacity: .25 !important; }
-  
+  .d3-loss-curves.hovering .lines path.ghost {
+    opacity: .25 !important;
+  }
+
+  .d3-loss-curves.hovering .legend-item.ghost {
+    opacity: .25 !important;
+  }
+
   /* Tooltip styling */
-  .d3-loss-curves .d3-tooltip { z-index: var(--z-elevated); backdrop-filter: saturate(1.12) blur(8px); }
-  .d3-loss-curves .d3-tooltip__inner { display:flex; flex-direction:column; gap:4px; min-width: 180px; }
-  .d3-loss-curves .d3-tooltip__header { display: flex; align-items: center; gap: 8px; }
+  .d3-loss-curves .d3-tooltip {
+    z-index: var(--z-elevated);
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-loss-curves .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 180px;
+  }
+
+  .d3-loss-curves .d3-tooltip__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .d3-loss-curves .d3-tooltip__color-swatch {
     width: 12px;
     height: 12px;
     border-radius: 2px;
     flex-shrink: 0;
   }
-  .d3-loss-curves .d3-tooltip__title { font-weight: 800; letter-spacing: 0.1px; font-size: 13px; }
-  .d3-loss-curves .d3-tooltip__subtitle { font-size: 11px; color: var(--muted-color); }
-  .d3-loss-curves .d3-tooltip__divider { 
-    width: 100%; 
-    height: 1px; 
-    background: var(--border-color); 
+
+  .d3-loss-curves .d3-tooltip__title {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    font-size: 13px;
+  }
+
+  .d3-loss-curves .d3-tooltip__subtitle {
+    font-size: 11px;
+    color: var(--muted-color);
+  }
+
+  .d3-loss-curves .d3-tooltip__divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color);
     margin: 2px 0;
   }
-  .d3-loss-curves .d3-tooltip__data { font-size: 11px; line-height: 1.5; }
-  
+
+  .d3-loss-curves .d3-tooltip__data {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
   /* Container styling */
-  .d3-loss-curves { border: 1px solid var(--border-color); border-radius: 20px; }
-  
+  .d3-loss-curves {
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+  }
+
   /* Hand-drawn annotation */
   .d3-loss-curves .annotation {
     position: absolute;
@@ -47,7 +84,7 @@
     gap: 8px;
     pointer-events: none;
   }
-  
+
   .d3-loss-curves .annotation-text {
     font-family: 'Caveat', cursive, var(--default-font-family);
     font-size: 22px;
@@ -59,13 +96,13 @@
     transform: rotate(-2deg);
     transform-origin: left center;
   }
-  
+
   .d3-loss-curves .annotation-arrow {
     width: 22px;
     height: 28px;
-    margin-top:40px;
+    margin-top: 40px;
   }
-  
+
   /* Legend styling */
   .d3-loss-curves .legend {
     position: absolute;
@@ -80,7 +117,7 @@
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .d3-loss-curves .legend-title {
     font-weight: 700;
     font-size: 10px;
@@ -89,20 +126,20 @@
     color: var(--muted-color);
     margin-bottom: 4px;
   }
-  
+
   .d3-loss-curves .legend-items {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  
+
   .d3-loss-curves .legend-row {
     display: flex;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
   }
-  
+
   .d3-loss-curves .legend-item {
     display: flex;
     align-items: center;
@@ -111,14 +148,14 @@
     transition: opacity 0.2s ease;
     opacity: 1;
   }
-  
+
   .d3-loss-curves .legend-swatch {
     width: 12px;
     height: 12px;
     border-radius: 2px;
     flex-shrink: 0;
   }
-  
+
   .d3-loss-curves .legend-label {
     font-size: 11px;
     color: var(--text-color);
@@ -150,7 +187,7 @@
     const bootstrap = () => {
       const scriptEl = document.currentScript;
       let container = scriptEl ? scriptEl.previousElementSibling : null;
-      if (!(container && container.classList && container.classList.contains('d3-loss-curves'))){
+      if (!(container && container.classList && container.classList.contains('d3-loss-curves'))) {
         const cs = Array.from(document.querySelectorAll('.d3-loss-curves')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
         container = cs[cs.length - 1] || null;
       }
@@ -165,11 +202,11 @@
       if (!tip) {
         tip = document.createElement('div'); tip.className = 'd3-tooltip';
         Object.assign(tip.style, {
-          position:'absolute', top:'0px', left:'0px', transform:'translate(-9999px, -9999px)', pointerEvents:'none',
-          padding:'8px 10px', borderRadius:'8px', fontSize:'12px', lineHeight:'1.35', border:'1px solid var(--border-color)',
-          background:'var(--surface-bg)', color:'var(--text-color)', boxShadow:'0 4px 24px rgba(0,0,0,.18)', opacity:'0', transition:'opacity .12s ease'
+          position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+          padding: '8px 10px', borderRadius: '8px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 4px 24px rgba(0,0,0,.18)', opacity: '0', transition: 'opacity .12s ease'
         });
-        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign='left'; tip.appendChild(tipInner); container.appendChild(tip);
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign = 'left'; tip.appendChild(tipInner); container.appendChild(tip);
       } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
 
       // Legend
@@ -179,7 +216,7 @@
         legend.className = 'legend';
         container.appendChild(legend);
       }
-      
+
       // Hand-drawn annotation
       let annotation = container.querySelector('.annotation');
       if (!annotation) {
@@ -228,14 +265,14 @@
       //   → Ideal for seeing real training timelines
       //
       const VISUALIZATION_MODE = 'align';
-      
+
       // Log scale control: true = logarithmic, false = linear
       const USE_LOG_SCALE = true;
-      
+
       // Gap between run groups: 0.2 = doubled gap, 0.1 = normal gap
-      const CATEGORY_GAP = 0.1;
+      const CATEGORY_GAP = 0.05;
       // =======================================
-      
+
       // State/data
       const svgPaddingTop = 20;
       const svgPaddingBottom = 20;
@@ -246,12 +283,12 @@
       // SVG container
       const svg = d3.select(container).append('svg').attr('width', 800).attr('height', svgHeight).style('display', 'block');
       const gRoot = svg.append('g').attr('transform', `translate(0, ${svgPaddingTop})`);
-      const gGrid = gRoot.append('g').attr('class','grid');
-      const gAxes = gRoot.append('g').attr('class','axes');
-      const gLines = gRoot.append('g').attr('class','lines');
-      const gPoints = gRoot.append('g').attr('class','points');
-      const overlay = gRoot.append('rect').attr('fill','transparent').style('cursor','crosshair');
-      const hoverLine = gRoot.append('line').attr('stroke-width',1).style('display','none');
+      const gGrid = gRoot.append('g').attr('class', 'grid');
+      const gAxes = gRoot.append('g').attr('class', 'axes');
+      const gLines = gRoot.append('g').attr('class', 'lines');
+      const gPoints = gRoot.append('g').attr('class', 'points');
+      const overlay = gRoot.append('rect').attr('fill', 'transparent').style('cursor', 'crosshair');
+      const hoverLine = gRoot.append('line').attr('stroke-width', 1).style('display', 'none');
       const xScale = USE_LOG_SCALE ? d3.scaleLinear() : d3.scaleLinear();
       const yScale = USE_LOG_SCALE ? d3.scaleLinear() : d3.scaleLinear();
       const lineGen = d3.line().x(d => xScale(d.logTokens)).y(d => yScale(d.logLoss));
@@ -259,12 +296,12 @@
       let runOrder = [];
 
       // Colors - categorical for distinct run categories
-      function getRunColors(count){
-        try { 
+      function getRunColors(count) {
+        try {
           if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
             return window.ColorPalettes.getColors('categorical', count);
           }
-        } catch(_){}
+        } catch (_) { }
         // Fallback to categorical-like colors - evenly distributed hues
         const colors = [];
         for (let i = 0; i < count; i++) {
@@ -275,7 +312,7 @@
       }
 
       // Format helper for thousands (5000 -> 5k, 1500 -> 1.5k)
-      function formatK(v){
+      function formatK(v) {
         const abs = Math.abs(v);
         if (abs >= 1000) {
           const n = v / 1000;
@@ -284,7 +321,7 @@
         }
         return d3.format('d')(v);
       }
-      
+
       // Format numbers with K/M/B suffixes
       function formatNumber(num) {
         if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
@@ -292,28 +329,28 @@
         if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
         return num.toFixed(0);
       }
-      
+
       // Parse run name to extract type and config
       function parseRunName(runName) {
         // Format: "category_loss+date_time_config"
         const parts = runName.split('+');
         const category = parts[0] || '';
         const configPart = parts[1] || '';
-        
+
         // Extract readable category name
         const categoryName = category.replace(/_loss$/i, '').replace(/_/g, ' ')
           .replace(/\b\w/g, l => l.toUpperCase());
-        
+
         // Remove date/time part (format: DD/MM/YYYY_HH:MM:SS_)
         // This will match patterns like "22/09/2025_16:41:43_"
         let config = configPart.replace(/^\d{2}\/\d{2}\/\d{4}_\d{2}:\d{2}:\d{2}_/, '');
-        
+
         // Check if it was baseline before removing it
         const wasBaseline = /^baseline$/i.test(config) || /^baseline[-_]/i.test(config) || /[-_]baseline$/i.test(config);
-        
+
         // Remove "baseline" (case insensitive)
         config = config.replace(/^baseline$/i, '').replace(/^baseline[-_]/i, '').replace(/[-_]baseline$/i, '');
-        
+
         // Clean up and format if something remains
         if (config) {
           config = config.replace(/[_-]+/g, ' ').trim()
@@ -322,7 +359,7 @@
           // If nothing remains but it was baseline, show "Baseline"
           config = 'Baseline';
         }
-        
+
         return { categoryName, config };
       }
 
@@ -337,17 +374,44 @@
         return /^baseline$/i.test(config);
       }
 
+      // Helper function to darken a color
+      function darkenColor(color, factor = 0.2) {
+        // Handle different color formats
+        if (color.startsWith('#')) {
+          // Hex color
+          const hex = color.replace('#', '');
+          const r = parseInt(hex.substr(0, 2), 16);
+          const g = parseInt(hex.substr(2, 2), 16);
+          const b = parseInt(hex.substr(4, 2), 16);
+          const newR = Math.max(0, Math.floor(r * (1 - factor)));
+          const newG = Math.max(0, Math.floor(g * (1 - factor)));
+          const newB = Math.max(0, Math.floor(b * (1 - factor)));
+          return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+        } else if (color.startsWith('hsl(')) {
+          // HSL color
+          const match = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+          if (match) {
+            const h = parseInt(match[1]);
+            const s = parseInt(match[2]);
+            const l = Math.max(0, parseInt(match[3]) * (1 - factor));
+            return `hsl(${h}, ${s}%, ${Math.floor(l)}%)`;
+          }
+        }
+        // Fallback: return original color
+        return color;
+      }
+
       // Single aggregated CSV file
       const AGGREGATED_CSV = 'aggregated-loss-data.csv';
 
       const fetchFirstAvailable = async (paths) => {
-        for (const p of paths) { 
+        for (const p of paths) {
           try {
             // Add timestamp to bypass cache
             const url = p + (p.includes('?') ? '&' : '?') + '_=' + Date.now();
-            const r = await fetch(url, { cache: 'no-cache' }); 
-            if (r.ok) return await r.text(); 
-          } catch(_){} 
+            const r = await fetch(url, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch (_) { }
         }
         throw new Error('CSV not found');
       };
@@ -362,7 +426,7 @@
       function transformDataByMode(dataByRun, mode) {
         const runs = Array.from(dataByRun.keys());
         const transformedData = new Map();
-        
+
         if (mode === 'normalize') {
           // NORMALIZE MODE: Each run starts at X=0 (relative to its start)
           runs.forEach(r => {
@@ -376,7 +440,7 @@
               transformedData.set(r, normalizedData);
             }
           });
-          
+
         } else if (mode === 'align') {
           // ALIGN MODE: Improved alignment strategy
           // 1. Collect all start and end points
@@ -389,29 +453,29 @@
               runRanges.push({ run: r, min: minTokens, max: maxTokens, data });
             }
           });
-          
+
           if (runRanges.length === 0) return transformedData;
-          
+
           // 2. Use percentile-based alignment (70th percentile start, 30th percentile end)
           // This gives a better balance than strict min/max
           const starts = runRanges.map(r => r.min).sort((a, b) => a - b);
           const ends = runRanges.map(r => r.max).sort((a, b) => a - b);
-          
+
           const startPercentile = Math.floor(starts.length * 0.3); // Use 30th percentile as start
           const endPercentile = Math.floor(ends.length * 0.8);    // Use 80th percentile as end
-          
+
           const alignedStart = starts[Math.max(0, startPercentile)];
           const alignedEnd = ends[Math.min(ends.length - 1, endPercentile)];
-          
+
           // 3. Filter and align data
           runs.forEach(r => {
             const data = dataByRun.get(r) || [];
             if (data.length > 0) {
               // Filter to alignment window but be more permissive
-              const filtered = data.filter(d => 
+              const filtered = data.filter(d =>
                 d.logTokens >= alignedStart && d.logTokens <= alignedEnd
               );
-              
+
               // If we have very little data after filtering, be more lenient
               let finalData = filtered;
               if (filtered.length < 3) {
@@ -423,7 +487,7 @@
                 }
                 // But still normalize to the alignment start
               }
-              
+
               if (finalData.length > 0) {
                 const alignedData = finalData.map(d => ({
                   ...d,
@@ -433,7 +497,7 @@
               }
             }
           });
-          
+
         } else {
           // RAW MODE: Raw data without transformation
           runs.forEach(r => {
@@ -443,12 +507,12 @@
             }
           });
         }
-        
+
         return transformedData;
       }
       // ==================================================
 
-      function updateLayout(){
+      function updateLayout() {
         const axisColor = getComputedStyle(container).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
         width = container.clientWidth || 800;
         height = svgHeight;
@@ -456,29 +520,29 @@
         gRoot.attr('transform', `translate(0, ${svgPaddingTop})`);
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = contentHeight;
-        overlay.attr('x',0).attr('y',0).attr('width', innerWidth).attr('height', innerHeight);
-        hoverLine.attr('y1',0).attr('y2', innerHeight).attr('stroke', axisColor);
+        overlay.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+        hoverLine.attr('y1', 0).attr('y2', innerHeight).attr('stroke', axisColor);
         return { innerWidth, innerHeight };
       }
 
-      function render(){
+      function render() {
         const { innerWidth, innerHeight } = updateLayout();
-        
+
         // Transform data according to selected mode
         const transformedData = transformDataByMode(dataByRun, VISUALIZATION_MODE);
         const allRuns = Array.from(transformedData.keys()).sort();
         // Filter out debug runs
-        const runs = allRuns.filter(run => 
-          !run.toLowerCase().includes('debug') && 
-          !run.toLowerCase().includes('tp debug') && 
+        const runs = allRuns.filter(run =>
+          !run.toLowerCase().includes('debug') &&
+          !run.toLowerCase().includes('tp debug') &&
           !run.toLowerCase().includes('tp-debug') &&
           !run.toLowerCase().includes('test')
         );
-        
+
         // Compute domains from transformed data
         let minLogTokens = Infinity, maxLogTokens = -Infinity;
         let minLogLoss = Infinity, maxLogLoss = -Infinity;
-        
+
         runs.forEach(r => {
           const data = transformedData.get(r) || [];
           data.forEach(d => {
@@ -488,7 +552,7 @@
             maxLogLoss = Math.max(maxLogLoss, d.logLoss);
           });
         });
-        
+
         // No grid or axes - clean visualization
         gGrid.selectAll('*').remove();
         gAxes.selectAll('*').remove();
@@ -506,7 +570,7 @@
           }
           categoryMap.get(category).push(r);
         });
-        
+
         // Generate one color per category
         const categoryColors = getRunColors(categories.length);
         const runColorMap = {};
@@ -516,12 +580,12 @@
             runColorMap[run] = color;
           });
         });
-        
+
         // Split categories into two rows (5 on top, 6 on bottom for 11 items)
         const midPoint = Math.floor(categories.length / 2);
         const firstRow = categories.slice(0, midPoint);
         const secondRow = categories.slice(midPoint);
-        
+
         const createRow = (cats, startIdx) => cats.map((cat, i) => {
           const idx = startIdx + i;
           const prettyLabel = cat.replace(/_/g, ' ').replace(/loss/g, '').trim()
@@ -533,7 +597,7 @@
             </div>
           `;
         }).join('');
-        
+
         // Update legend with two rows
         legend.innerHTML = `
           <div class="legend-title">Run Types</div>
@@ -542,14 +606,19 @@
             <div class="legend-row">${createRow(secondRow, midPoint)}</div>
           </div>
         `;
-        
+
         // Legend interaction - highlight category on hover
         legend.querySelectorAll('.legend-item').forEach(item => {
           const cat = item.getAttribute('data-category');
           item.addEventListener('mouseenter', () => {
             container.classList.add('hovering');
-            // Ghost lines
-            gLines.selectAll('path.run').classed('ghost', function(d) {
+            // Ghost lines (both dashed and solid)
+            gLines.selectAll('path.run').classed('ghost', function (d) {
+              const parts = d.run.split('+');
+              const runCat = parts.length > 1 ? parts[0] : d.run;
+              return runCat !== cat;
+            });
+            gLines.selectAll('path.baseline-solid').classed('ghost', function (d) {
               const parts = d.run.split('+');
               const runCat = parts.length > 1 ? parts[0] : d.run;
               return runCat !== cat;
@@ -564,17 +633,18 @@
           item.addEventListener('mouseleave', () => {
             container.classList.remove('hovering');
             gLines.selectAll('path.run').classed('ghost', false);
+            gLines.selectAll('path.baseline-solid').classed('ghost', false);
             legend.querySelectorAll('.legend-item').forEach(otherItem => {
               otherItem.classList.remove('ghost');
             });
           });
         });
-        
+
         // Create vertical offset mapping with doubled gaps between categories
         const createVerticalOffsetMap = () => {
           const runToOffset = new Map();
           let runIndex = 0;
-          
+
           categories.forEach((category, catIndex) => {
             const categoryRuns = categoryMap.get(category);
             categoryRuns.forEach(run => {
@@ -584,66 +654,87 @@
               runIndex++;
             });
           });
-          
+
           return runToOffset;
         };
-        
+
         const verticalOffsetMap = createVerticalOffsetMap();
-        
+
         // Calculate max vertical offset for padding
         let maxVerticalOffset = 0;
         for (const offset of verticalOffsetMap.values()) {
           maxVerticalOffset = Math.max(maxVerticalOffset, offset);
         }
         maxLogLoss += maxVerticalOffset;
-        
+
         // Update scales with final domain
         xScale.domain([minLogTokens, maxLogTokens]).range([0, innerWidth]);
         yScale.domain([minLogLoss, maxLogLoss]).range([innerHeight, 0]);
-        
-        const series = runs.map((r) => { 
+
+        const series = runs.map((r) => {
           const data = transformedData.get(r) || [];
           // Sample data for performance - take every 5th point
           const sampledData = data.filter((_, idx) => idx % 5 === 0);
           return {
-            run: r, 
-            color: runColorMap[r], 
-            values: sampledData.sort((a,b) => a.logTokens - b.logTokens).map(d => ({
+            run: r,
+            color: runColorMap[r],
+            values: sampledData.sort((a, b) => a.logTokens - b.logTokens).map(d => ({
               ...d,
               logLoss: d.logLoss + verticalOffsetMap.get(r) // Vertical offset with doubled category gaps
             }))
           };
         });
 
-        const paths = gLines.selectAll('path.run').data(series, d=>d.run);
+        // First, add solid lines under dashed baseline lines (background)
+        const baselineSeries = series.filter(s => isBaselineRun(s.run));
+        if (baselineSeries.length > 0) {
+          const solidPaths = gLines.selectAll('path.baseline-solid').data(baselineSeries, d => `solid-${d.run}`);
+          const solidPathsEnter = solidPaths.enter().append('path')
+            .attr('class', 'baseline-solid')
+            .attr('fill', 'none')
+            .attr('stroke-width', 3)
+            .attr('stroke', d => d.color)
+            .attr('stroke-dasharray', null)
+            .attr('d', d => lineGen(d.values));
+
+          solidPathsEnter.merge(solidPaths)
+            .attr('stroke', d => d.color)
+            .attr('d', d => lineGen(d.values));
+          solidPaths.exit().remove();
+        }
+
+        // Then, add all lines (dashed baselines will be on top)
+        const paths = gLines.selectAll('path.run').data(series, d => d.run);
         const pathsEnter = paths.enter().append('path')
-          .attr('class','run')
-          .attr('fill','none')
-          .attr('stroke-width',2)
-          .attr('stroke', d=>d.color)
+          .attr('class', 'run')
+          .attr('fill', 'none')
+          .attr('stroke-width', 2)
+          .attr('stroke', d => isBaselineRun(d.run) ? darkenColor(d.color) : d.color)
           .attr('stroke-dasharray', d => isBaselineRun(d.run) ? '4,2' : null)
-          .attr('d', d=>lineGen(d.values));
-        
+          .attr('d', d => lineGen(d.values));
+
         pathsEnter.merge(paths)
-          .attr('stroke', d=>d.color)
+          .attr('stroke', d => isBaselineRun(d.run) ? darkenColor(d.color) : d.color)
           .attr('stroke-dasharray', d => isBaselineRun(d.run) ? '4,2' : null)
-          .attr('d', d=>lineGen(d.values)); // No transition for performance
+          .attr('d', d => lineGen(d.values)); // No transition for performance
         paths.exit().remove();
 
         // Hover capture paths (wider invisible stroke for easy hovering) - optimized
-        const captures = gLines.selectAll('path.run-hover').data(series, d=>`cap-${d.run}`);
-        captures.enter().append('path').attr('class','run-hover').attr('fill','none').attr('stroke','transparent').attr('stroke-width', 12).style('pointer-events','stroke')
-          .attr('d', d=>lineGen(d.values))
+        const captures = gLines.selectAll('path.run-hover').data(series, d => `cap-${d.run}`);
+        captures.enter().append('path').attr('class', 'run-hover').attr('fill', 'none').attr('stroke', 'transparent').attr('stroke-width', 12).style('pointer-events', 'stroke')
+          .attr('d', d => lineGen(d.values))
           .merge(captures)
-          .attr('d', d=>lineGen(d.values))
-          .on('mouseenter', function(ev, d){
+          .attr('d', d => lineGen(d.values))
+          .on('mouseenter', function (ev, d) {
             container.classList.add('hovering');
-            // Ghost non-hovered lines
+            // Ghost non-hovered lines (both dashed and solid)
             gLines.selectAll('path.run').classed('ghost', s => s.run !== d.run);
+            gLines.selectAll('path.baseline-solid').classed('ghost', s => s.run !== d.run);
           })
-          .on('mouseleave', function(){
+          .on('mouseleave', function () {
             container.classList.remove('hovering');
             gLines.selectAll('path.run').classed('ghost', false);
+            gLines.selectAll('path.baseline-solid').classed('ghost', false);
           });
         captures.exit().remove();
 
@@ -652,14 +743,14 @@
         // No legend needed
 
         // Hover interaction - optimized
-        function onMove(ev){
+        function onMove(ev) {
           const [mx, my] = d3.pointer(ev, overlay.node());
-          
+
           // Find nearest point on any line - optimized search
           let nearestPoint = null;
           let minDist = Infinity;
           const threshold = 20;
-          
+
           for (const s of series) {
             for (const pt of s.values) {
               const dist = Math.abs(xScale(pt.logTokens) - mx); // Only check X distance first
@@ -677,11 +768,11 @@
           if (nearestPoint && minDist < threshold) {
             // Parse run info
             const { categoryName, config } = parseRunName(nearestPoint.run);
-            
+
             // Format metrics
             const tokensFormatted = formatNumber(nearestPoint.tokens);
             const lossFormatted = nearestPoint.loss.toFixed(2);
-            
+
             // Build rich tooltip with color swatch
             let html = `
               <div class="d3-tooltip__header">
@@ -689,12 +780,12 @@
                 <div class="d3-tooltip__title">${categoryName}</div>
               </div>
             `;
-            
+
             // Only show config if it exists
             if (config) {
               html += `<div class="d3-tooltip__subtitle">Config: ${config}</div>`;
             }
-            
+
             html += `
               <div class="d3-tooltip__divider"></div>
               <div class="d3-tooltip__data">
@@ -702,54 +793,57 @@
                 Loss: ${lossFormatted}
               </div>
             `;
-            
-            tipInner.innerHTML = html; 
+
+            tipInner.innerHTML = html;
             tip.style.opacity = '1';
-            
-            // Ghost other lines (but not legend items when hovering lines)
+
+            // Ghost other lines (both dashed and solid)
             container.classList.add('hovering');
             gLines.selectAll('path.run').classed('ghost', s => s.run !== nearestPoint.run);
-            
+            gLines.selectAll('path.baseline-solid').classed('ghost', s => s.run !== nearestPoint.run);
+
             // Smart positioning - keep tooltip within container bounds
             const tooltipRect = tip.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
-            
+
             const offset = 12;
             let x = mx + margin.left + offset;
             let y = my + margin.top + offset;
-            
+
             // Check right edge
             if (x + tooltipRect.width > containerRect.width) {
               x = mx + margin.left - tooltipRect.width - offset;
             }
-            
+
             // Check bottom edge
             if (y + tooltipRect.height > containerRect.height) {
               y = my + margin.top - tooltipRect.height - offset;
             }
-            
+
             // Check left edge (if flipped to left)
             if (x < 0) {
               x = offset;
             }
-            
+
             // Check top edge (if flipped to top)
             if (y < 0) {
               y = offset;
             }
-            
+
             tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
           } else {
             tip.style.opacity = '0';
             container.classList.remove('hovering');
             gLines.selectAll('path.run').classed('ghost', false);
+            gLines.selectAll('path.baseline-solid').classed('ghost', false);
           }
         }
-        function onLeave(){ 
-          tip.style.opacity='0'; 
-          tip.style.transform='translate(-9999px, -9999px)'; 
+        function onLeave() {
+          tip.style.opacity = '0';
+          tip.style.transform = 'translate(-9999px, -9999px)';
           container.classList.remove('hovering');
           gLines.selectAll('path.run').classed('ghost', false);
+          gLines.selectAll('path.baseline-solid').classed('ghost', false);
         }
         overlay.on('mousemove', onMove).on('mouseleave', onLeave);
       }
@@ -764,16 +858,16 @@
             `../assets/data/${AGGREGATED_CSV}`,
             `../../assets/data/${AGGREGATED_CSV}`
           ];
-          
+
           const text = await fetchFirstAvailable(paths);
-          
+
           // Parse CSV - format is run_name,tokens,loss with prefixes already included
           const rows = d3.csvParse(text, d => ({
             run: (d.run_name || '').trim(),
             tokens: +d.tokens,
             loss: +d.loss
           }));
-          
+
           // Filter out invalid data and compute log values
           const allData = rows
             .filter(r => r.run && r.tokens > 0 && r.loss > 0) // Valid data only
@@ -804,4 +898,3 @@
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
   })();
 </script>
-

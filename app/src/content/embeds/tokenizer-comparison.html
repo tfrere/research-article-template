@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        .tables-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .table-wrapper {
+            flex: 1;
+        }
+
+        table {
+            background-color: var(--page-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 3px !important;
+        }
+
+        @media (max-width: 768px) {
+            .tables-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+
+        .best-value {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .worst-value {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+
+        .metric-title {
+            margin: 0;
+
+        }
+
+        .subtitle {
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="tables-container">
+        <div class="table-wrapper">
+            <h5 class="metric-title">Fertility (tokens per word)</h5>
+            <label class="subtitle">Lower is better</label>
+            <table id="fertility-table"></table>
+        </div>
+
+        <div class="table-wrapper">
+            <h5 class="metric-title">Proportion of Continued Words (%)</h5>
+            <label class="subtitle">Lower is better</label>
+            <table id="pcw-table"></table>
+        </div>
+    </div>
+
+    <script>
+        const data = [
+            { tokenizer: "Llama3", language: "English", fertility: 1.481715, pcw: 0.322058 },
+            { tokenizer: "Llama3", language: "Chinese", fertility: 1.601615, pcw: 0.425918 },
+            { tokenizer: "Llama3", language: "French", fertility: 1.728040, pcw: 0.482036 },
+            { tokenizer: "Llama3", language: "Arabic", fertility: 2.349994, pcw: 0.718284 },
+            { tokenizer: "Gemma3", language: "English", fertility: 1.412533, pcw: 0.260423 },
+            { tokenizer: "Gemma3", language: "Chinese", fertility: 1.470705, pcw: 0.330617 },
+            { tokenizer: "Gemma3", language: "French", fertility: 1.562824, pcw: 0.399101 },
+            { tokenizer: "Gemma3", language: "Arabic", fertility: 2.253702, pcw: 0.700607 },
+            { tokenizer: "Mistral Small", language: "English", fertility: 1.590875, pcw: 0.367867 },
+            { tokenizer: "Mistral Small", language: "Chinese", fertility: 1.782379, pcw: 0.471219 },
+            { tokenizer: "Mistral Small", language: "French", fertility: 1.686307, pcw: 0.465154 },
+            { tokenizer: "Mistral Small", language: "Arabic", fertility: 2.148934, pcw: 0.659853 },
+            { tokenizer: "Qwen3", language: "English", fertility: 1.543511, pcw: 0.328073 },
+            { tokenizer: "Qwen3", language: "Chinese", fertility: 1.454369, pcw: 0.307489 },
+            { tokenizer: "Qwen3", language: "French", fertility: 1.749418, pcw: 0.477866 },
+            { tokenizer: "Qwen3", language: "Arabic", fertility: 2.255253, pcw: 0.660318 }
+        ];
+
+        const vocabSizes = {
+            "Llama3": "128k",
+            "Gemma3": "262k",
+            "Mistral Small": "131k",
+            "Qwen3": "151k"
+        };
+
+        const tokenizers = ["Llama3", "Mistral Small", "Qwen3", "Gemma3"];
+        const languages = ["English", "Chinese", "French", "Arabic"];
+
+        function createTable(tableId, metric) {
+            const table = document.getElementById(tableId);
+
+            // Create header
+            let headerHTML = '<thead><tr><th>Tokenizer (Vocab Size)</th>';
+            languages.forEach(lang => {
+                headerHTML += `<th>${lang}</th>`;
+            });
+            headerHTML += '</tr></thead><tbody>';
+
+            // Create rows
+            tokenizers.forEach(tok => {
+                headerHTML += `<tr><td>${tok} <span class="vocab-size">(${vocabSizes[tok]})</span></td>`;
+
+                languages.forEach(lang => {
+                    const item = data.find(d => d.language === lang && d.tokenizer === tok);
+                    const value = item ? item[metric] : null;
+
+                    if (value !== null) {
+                        // Find min and max values for this language
+                        const langValues = tokenizers.map(t => {
+                            const i = data.find(d => d.language === lang && d.tokenizer === t);
+                            return i ? i[metric] : Infinity;
+                        });
+                        const minValue = Math.min(...langValues);
+                        const maxValue = Math.max(...langValues);
+
+                        const isBest = value === minValue;
+                        const isWorst = value === maxValue;
+
+                        const displayValue = metric === 'pcw'
+                            ? (value * 100).toFixed(1) + '%'
+                            : value.toFixed(2);
+
+                        let cellClass = '';
+                        if (isBest) cellClass = 'best-value';
+                        else if (isWorst) cellClass = 'worst-value';
+
+                        headerHTML += `<td class="${cellClass}">${displayValue}</td>`;
+                    } else {
+                        headerHTML += '<td>—</td>';
+                    }
+                });
+
+                headerHTML += '</tr>';
+            });
+
+            headerHTML += '</tbody>';
+            table.innerHTML = headerHTML;
+        }
+
+        createTable('fertility-table', 'fertility');
+        createTable('pcw-table', 'pcw');
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,380 @@
+<div class="ablation-study-charts"></div>
+<style>
+    .ablation-study-charts {
+        position: relative;
+    }
+
+    .ablation-study-charts .axis-label {
+        fill: var(--text-color);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .ablation-study-charts .axes path,
+    .ablation-study-charts .axes line {
+        stroke: var(--axis-color);
+    }
+
+    .ablation-study-charts .axes text {
+        fill: var(--tick-color);
+    }
+
+    .ablation-study-charts .grid line {
+        stroke: var(--grid-color);
+    }
+
+    .ablation-study-charts .chart-card {
+        background: var(--page-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .ablation-study-charts .chart-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #9b87d8;
+        margin-bottom: 24px;
+        letter-spacing: -0.01em;
+        text-align: center;
+    }
+
+    .ablation-study-charts .lines path {
+        stroke-width: 4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .ablation-study-charts .d3-tooltip {
+        z-index: var(--z-elevated);
+        backdrop-filter: saturate(1.12) blur(8px);
+    }
+
+    .ablation-study-charts .d3-tooltip__inner {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 220px;
+    }
+
+    .ablation-study-charts .d3-tooltip__inner>div:first-child {
+        font-weight: 800;
+        letter-spacing: 0.1px;
+        margin-bottom: 0;
+    }
+
+    .ablation-study-charts .d3-tooltip__inner>div:nth-child(2) {
+        font-size: 11px;
+        color: var(--muted-color);
+        display: block;
+        margin-top: -4px;
+        margin-bottom: 2px;
+        letter-spacing: 0.1px;
+    }
+
+    .ablation-study-charts .d3-tooltip__color-dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        border: 1px solid var(--border-color);
+    }
+</style>
+<script>
+    (() => {
+        // Prevent multiple executions
+        if (window.ablationStudyInitialized) return;
+        window.ablationStudyInitialized = true;
+
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+        };
+
+        const bootstrapAblationStudy = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('ablation-study-charts'))) {
+                const cs = Array.from(document.querySelectorAll('.ablation-study-charts')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+                container = cs[cs.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+            // Tooltip
+            container.style.position = container.style.position || 'relative';
+            let tip = container.querySelector('.d3-tooltip'); let tipInner;
+            if (!tip) {
+                tip = document.createElement('div'); tip.className = 'd3-tooltip';
+                Object.assign(tip.style, {
+                    position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+                    padding: '8px 10px', borderRadius: '8px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+                    background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 4px 24px rgba(0,0,0,.18)', opacity: '0', transition: 'opacity .12s ease'
+                });
+                tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign = 'left'; tip.appendChild(tipInner); container.appendChild(tip);
+            } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+            // Create two chart containers
+            const leftChart = document.createElement('div');
+            leftChart.className = 'chart-container';
+            leftChart.innerHTML = `
+        <div class="chart-title">From scratch ablation</div>
+        <div class="chart-card">
+          <div class="chart-svg"></div>
+        </div>
+      `;
+
+            const rightChart = document.createElement('div');
+            rightChart.className = 'chart-container';
+            rightChart.innerHTML = `
+        <div class="chart-title">Annealing ablation (vs Main pretraining)</div>
+        <div class="chart-card">
+          <div class="chart-svg"></div>
+        </div>
+      `;
+
+            // Style the containers
+            const style = document.createElement('style');
+            style.textContent = `
+        .ablation-study-charts { 
+          display: flex; 
+          gap: 20px; 
+          padding: 20px; 
+          width: 100%; 
+          box-sizing: border-box;
+        }
+        .ablation-study-charts .chart-container { 
+          text-align: center; 
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+        .ablation-study-charts .chart-container:first-child { 
+          flex: 0 0 40%; 
+        }
+        .ablation-study-charts .chart-container:last-child { 
+          flex: 0 0 60%; 
+        }
+        .ablation-study-charts .chart-svg { 
+          width: 100%; 
+          height: 200px; 
+        }
+        .ablation-study-charts .chart-title {
+          color: var(--text-color) !important;
+        }
+        .ablation-study-charts .chart-subtitle {
+          font-size: 14px;
+          color: var(--muted-color);
+          margin-bottom: 16px;
+          font-weight: 400;
+        }
+        @media (max-width: 768px) {
+          .ablation-study-charts { 
+            flex-direction: column; 
+            gap: 40px; 
+          }
+          .ablation-study-charts .chart-container:first-child,
+          .ablation-study-charts .chart-container:last-child { 
+            flex: 1 1 100%; 
+          }
+        }
+      `;
+            document.head.appendChild(style);
+
+            container.appendChild(leftChart);
+            container.appendChild(rightChart);
+
+            const d3 = window.d3;
+
+            // Colors - use categorical palette
+            let currentColors = [];
+
+            function refreshPalette() {
+                try {
+                    if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                        const colors = window.ColorPalettes.getColors('categorical', 3);
+                        if (colors && colors.length >= 3) {
+                            // Force the second color (Main pretraining) to be gray, keep first vibrant
+                            colors[1] = '#888888';
+                            currentColors = colors;
+                            return;
+                        }
+                    }
+                } catch (_) { }
+                // Fallback colors - vibrant for ablations, gray for main pretraining
+                currentColors = ['#e74c3c', '#888888', '#f39c12'];
+            }
+
+            function getColors() {
+                return currentColors;
+            }
+
+            // Initialize palette
+            refreshPalette();
+            document.addEventListener('palettes:updated', refreshPalette);
+
+            // Create chart function
+            function createChart(chartContainer, dataUrl, title, width, height) {
+                const svgContainer = chartContainer.querySelector('.chart-svg');
+                const titleEl = chartContainer.querySelector('.chart-title');
+                titleEl.textContent = title;
+
+                // Create SVG
+                const svg = d3.select(svgContainer).append('svg').attr('width', '100%').attr('height', height).style('display', 'block');
+                const gRoot = svg.append('g');
+                const gGrid = gRoot.append('g').attr('class', 'grid');
+                const gAxes = gRoot.append('g').attr('class', 'axes');
+                const gLines = gRoot.append('g').attr('class', 'lines');
+
+                // State/data
+                const margin = { top: 20, right: 40, bottom: 50, left: 60 };
+                const xScale = d3.scaleLinear();
+                const yScale = d3.scaleLinear();
+                const lineGen = d3.line().x(d => xScale(d.tokens)).y(d => yScale(d.learning_rate)).curve(d3.curveLinear);
+
+                // Simple data points
+                let data = [];
+                if (title.includes('From scratch')) {
+                    // From scratch: 0 -> plateau -> 0 at 100B
+                    data = [
+                        { run: 'From scratch', tokens: 0, learning_rate: 0 },
+                        { run: 'From scratch', tokens: 5e9, learning_rate: 0.0002 },
+                        { run: 'From scratch', tokens: 85e9, learning_rate: 0.0002 },
+                        { run: 'From scratch', tokens: 100e9, learning_rate: 0 }
+                    ];
+                } else {
+                    // Annealing: Main pretraining + Ablation decay
+                    data = [
+                        // Main pretraining (goes to 11T)
+                        { run: 'Main pretraining', tokens: 0, learning_rate: 0 },
+                        { run: 'Main pretraining', tokens: 0.12e12, learning_rate: 0.0002 },
+                        { run: 'Main pretraining', tokens: 8e12, learning_rate: 0.0002 },
+                        { run: 'Main pretraining', tokens: 11e12, learning_rate: 0 },
+
+                        // Ablation decay (starts at plateau, then decays at 7.1T)
+                        { run: 'Ablation decay', tokens: 6.4e12, learning_rate: 0.0002 },
+                        { run: 'Ablation decay', tokens: 7.1e12, learning_rate: 0 }
+                    ];
+                }
+
+                function updateLayout() {
+                    const containerWidth = svgContainer.clientWidth || width;
+                    const containerHeight = height;
+                    svg.attr('width', containerWidth).attr('height', containerHeight);
+                    gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+                    const innerWidth = containerWidth - margin.left - margin.right;
+                    const innerHeight = containerHeight - margin.top - margin.bottom;
+                    return { innerWidth, innerHeight };
+                }
+
+                function render() {
+                    const { innerWidth, innerHeight } = updateLayout();
+
+                    // Group by run
+                    const dataByRun = {};
+                    const runList = Array.from(new Set(data.map(d => d.run))).sort();
+                    runList.forEach(run => { dataByRun[run] = []; });
+                    data.forEach(d => { if (dataByRun[d.run]) dataByRun[d.run].push(d); });
+                    runList.forEach(run => { dataByRun[run].sort((a, b) => a.tokens - b.tokens); });
+
+                    // Prepare series data
+                    const series = runList.map(run => ({
+                        name: run,
+                        values: dataByRun[run]
+                    }));
+
+                    // domains
+                    const minTokens = d3.min(data, d => d.tokens);
+                    const maxTokens = d3.max(data, d => d.tokens);
+                    const minLR = 0;
+                    const maxLR = d3.max(data, d => d.learning_rate);
+
+                    xScale.domain([minTokens, maxTokens]).range([0, innerWidth]);
+                    yScale.domain([minLR, maxLR * 1.1]).range([innerHeight, 0]);
+
+                    // grid
+                    gGrid.selectAll('*').remove();
+                    gGrid.selectAll('line').data(yScale.ticks(5)).join('line')
+                        .attr('x1', 0).attr('x2', innerWidth).attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+                        .attr('stroke', 'var(--grid-color)').attr('stroke-width', 1).attr('shape-rendering', 'crispEdges');
+
+                    // axes
+                    gAxes.selectAll('*').remove();
+
+                    // Custom ticks based on chart type
+                    let xTicks;
+                    let tickFormat;
+                    if (title.includes('From scratch')) {
+                        // From scratch: 0, 100B (where data reaches 0)
+                        xTicks = [0, 100e9];
+                        tickFormat = d => d === 0 ? '0' : '100B';
+                    } else {
+                        // Annealing: 0, 7.1T, 11T (where data reaches 0)
+                        xTicks = [0, 7.1e12, 11e12];
+                        tickFormat = d => {
+                            if (d === 0) return '0';
+                            if (d === 7.1e12) return '7.1T';
+                            if (d === 11e12) return '11T';
+                            return '';
+                        };
+                    }
+
+                    gAxes.append('g').attr('transform', `translate(0,${innerHeight})`)
+                        .call(d3.axisBottom(xScale).tickValues(xTicks).tickFormat(tickFormat).tickSizeOuter(0))
+                        .call(g => {
+                            g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
+                            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size', '12px');
+                        });
+
+                    // Y-axis: no ticks, just arrows
+                    gAxes.append('g').call(d3.axisLeft(yScale).tickValues([]).tickSizeOuter(0))
+                        .call(g => { g.selectAll('path, line').attr('stroke', 'var(--axis-color)'); });
+
+                    gAxes.append('text').attr('class', 'axis-label').attr('text-anchor', 'middle').attr('x', innerWidth / 2).attr('y', innerHeight + 40).text('Tokens');
+                    gAxes.append('text').attr('class', 'axis-label').attr('text-anchor', 'middle').attr('transform', `translate(${-50}, ${innerHeight / 2}) rotate(-90)`).text('Learning rate');
+
+                    // lines
+                    gLines.selectAll('*').remove();
+                    const colors = getColors();
+                    series.forEach((s, i) => {
+                        gLines.append('path')
+                            .attr('class', `line line-${i}`)
+                            .attr('data-series', s.name)
+                            .attr('fill', 'none')
+                            .attr('stroke', colors[i % colors.length])
+                            .attr('stroke-width', 4)
+                            .attr('stroke-linecap', 'round')
+                            .attr('stroke-linejoin', 'round')
+                            .attr('d', lineGen(s.values));
+                    });
+
+                    // No hover functionality
+                }
+
+                // Initial render
+                render();
+
+                const rerender = () => render();
+                if (window.ResizeObserver) {
+                    const ro = new ResizeObserver(() => rerender());
+                    ro.observe(svgContainer);
+                } else {
+                    window.addEventListener('resize', rerender);
+                }
+            }
+
+            // Create both charts
+            createChart(leftChart, '', 'From scratch ablation', 500, 200);
+            createChart(rightChart, '', 'Annealing ablation (vs Main pretraining)', 900, 200);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrapAblationStudy), { once: true });
+        } else {
+            ensureD3(bootstrapAblationStudy);
+        }
+    })();
+</script>

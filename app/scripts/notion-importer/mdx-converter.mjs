@@ -367,6 +367,47 @@ function transformMarkdownImages(content) {
 }
 
 /**
+ * Fix smart quotes (curly quotes) and replace them with straight quotes
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with fixed quotes
+ */
+function fixSmartQuotes(content) {
+    console.log('  ✏️  Fixing smart quotes (curly quotes)...');
+
+    let fixedCount = 0;
+    const originalContent = content;
+
+    // Replace opening smart double quotes (\u201C) with straight quotes (")
+    content = content.replace(/\u201C/g, '"');
+
+    // Replace closing smart double quotes (\u201D) with straight quotes (")
+    content = content.replace(/\u201D/g, '"');
+
+    // Replace opening smart single quotes (\u2018) with straight quotes (')
+    content = content.replace(/\u2018/g, "'");
+
+    // Replace closing smart single quotes (\u2019) with straight quotes (')
+    content = content.replace(/\u2019/g, "'");
+
+    // Count the number of replacements made
+    fixedCount = 0;
+    for (let i = 0; i < originalContent.length; i++) {
+        const char = originalContent[i];
+        if (char === '\u201C' || char === '\u201D' || char === '\u2018' || char === '\u2019') {
+            fixedCount++;
+        }
+    }
+
+    if (fixedCount > 0) {
+        console.log(`    ✅ Fixed ${fixedCount} smart quote(s)`);
+    } else {
+        console.log('    ℹ️  No smart quotes found');
+    }
+
+    return content;
+}
+
+/**
  * Main MDX processing function that applies all transformations
  * @param {string} content - Raw Markdown content
  * @param {string} pageId - Notion page ID (optional)
@@ -381,6 +422,9 @@ async function processMdxContent(content, pageId = null, notionToken = null) {
     imageImports.clear();
 
     let processedContent = content;
+
+    // Fix smart quotes first
+    processedContent = fixSmartQuotes(processedContent);
 
     // Apply essential steps only
     processedContent = await ensureFrontmatter(processedContent, pageId, notionToken);
