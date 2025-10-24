@@ -9,6 +9,7 @@
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.csv filter=lfs diff=lfs merge=lfs -text
 *.json filter=lfs diff=lfs merge=lfs -text
+*.pdf filter=lfs diff=lfs merge=lfs -text
 # the package and package lock should not be tracked
 package.json -filter -diff -merge text
 package-lock.json -filter -diff -merge text
