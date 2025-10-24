@@ -578,6 +578,121 @@
     }
 
     // ============================================================================
+    // EFA CROSS-LINKS HELPER
+    // ============================================================================
+    function drawEfaCrossLinks(renderer, fromId, toId, linkType = 'efa-crosslink') {
+      const phantom0 = renderer.nodes.get(fromId);
+      const phantom1 = renderer.nodes.get(toId);
+
+      if (!phantom0 || !phantom1) return;
+
+      const efaBw = getBandwidth('12.5GB/s');
+      const efaColor = CONFIG.colors.linkColor;
+
+      // Draw 4 stacked links manually (EFA has 4 connections) - randomized order
+      const stackCount = 4;
+      const spacing = 6; // Fixed spacing between stacked links
+      const verticalShift = -95; // Shift up to align with EFA nodes
+      const horizontalShift = -40; // Shift left to better position the arrows
+      const horizontalExtension = 20; // Extend arrows horizontally on each side
+
+      // Create array of indices and randomize
+      const linkIndices = Array.from({ length: stackCount }, (_, i) => i);
+      const shuffledIndices = linkIndices.sort(() => Math.random() - 0.5);
+
+      // Draw horizontal lines with vertical offset for stacking
+      shuffledIndices.forEach(i => {
+        const offsetY = (i - (stackCount - 1) / 2) * spacing;
+
+        const efaCrossGroup = renderer.crossLinksGroup.group();
+        efaCrossGroup.attr('data-link-type', linkType);
+        efaCrossGroup.attr('data-from', fromId);
+        efaCrossGroup.attr('data-to', toId);
+        efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
+
+        // Draw line with vertical offset for stacking + shifts + horizontal extension
+        const x0 = phantom0.x + horizontalShift;
+        const x1 = phantom1.x + horizontalShift + horizontalExtension;
+        const y0 = phantom0.y + offsetY + verticalShift;
+        const y1 = phantom1.y + offsetY + verticalShift;
+
+        // Draw border
+        efaCrossGroup.line(x0, y0, x1, y1)
+          .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+
+        // Draw main line
+        efaCrossGroup.line(x0, y0, x1, y1)
+          .stroke({ color: efaColor, width: efaBw.width, opacity: 1 });
+
+        // Draw circles at both ends
+        const r = efaBw.width * 0.8;
+        const startCircle = efaCrossGroup.circle(r * 2).move(x0 - r, y0 - r);
+        startCircle.fill(efaColor);
+        startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        startCircle.attr('data-link-circle', 'true');
+
+        const endCircle = efaCrossGroup.circle(r * 2).move(x1 - r, y1 - r);
+        endCircle.fill(efaColor);
+        endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        endCircle.attr('data-link-circle', 'true');
+      });
+
+      // Add vertical bars at both ends (connect horizontal arrows to EFA phantoms)
+      const barColor = CONFIG.colors.linkColor;
+
+      shuffledIndices.forEach(i => {
+        const offsetX = (i - (stackCount - 1) / 2) * spacing + 12; // Horizontal offset for vertical bars
+        const yHorizontal = phantom0.y + verticalShift + 10;
+        const yPhantom = phantom0.y + 8; // End a bit higher (5px above phantom center)
+
+        // Left vertical bar (one per horizontal arrow)
+        const leftBarGroup = renderer.crossLinksGroup.group();
+        leftBarGroup.attr('data-link-type', linkType);
+        leftBarGroup.attr('data-from', fromId);
+        leftBarGroup.attr('data-to', toId);
+        leftBarGroup.attr('data-bandwidth', '12.5GB/s');
+
+        const x0 = phantom0.x + horizontalShift + offsetX;
+
+        // Draw border
+        leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
+          .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+
+        // Draw main line
+        leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
+          .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
+
+        const r = efaBw.width * 0.8;
+        const bottomCircle0 = leftBarGroup.circle(r * 2).move(x0 - r, yPhantom - r);
+        bottomCircle0.fill(barColor);
+        bottomCircle0.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        bottomCircle0.attr('data-link-circle', 'true');
+
+        // Right vertical bar (one per horizontal arrow)
+        const rightBarGroup = renderer.crossLinksGroup.group();
+        rightBarGroup.attr('data-link-type', linkType);
+        rightBarGroup.attr('data-from', fromId);
+        rightBarGroup.attr('data-to', toId);
+        rightBarGroup.attr('data-bandwidth', '12.5GB/s');
+
+        const x1 = phantom1.x + horizontalShift + offsetX;
+
+        // Draw border
+        rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
+          .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
+
+        // Draw main line
+        rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
+          .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
+
+        const bottomCircle1 = rightBarGroup.circle(r * 2).move(x1 - r, yPhantom - r);
+        bottomCircle1.fill(barColor);
+        bottomCircle1.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
+        bottomCircle1.attr('data-link-circle', 'true');
+      });
+    }
+
+    // ============================================================================
     // SVG HELPERS
     // ============================================================================
     class TopologyRenderer {
@@ -1193,10 +1308,11 @@
 
     }
 
+
     // ============================================================================
     // DRAW SINGLE SYSTEM (variable number of ensembles)
     // ============================================================================
-    function drawSystem(renderer, systemIndex, systemCenterX, cpuY, nvswitchY, ensembleCount = 1, systemCount = 1, drawEfaCrossLinks = false) {
+    function drawSystem(renderer, systemIndex, systemCenterX, cpuY, nvswitchY, ensembleCount = 1, systemCount = 1, shouldDrawEfaCrossLinks = false) {
       // For internode (2 systems), only show 1 ensemble per system for clarity
       const ensemblesToShow = (systemCount === 2) ? 1 : ensembleCount;
 
@@ -1304,15 +1420,33 @@
       const totalGpusInSystem = ensemblesToShow * CONFIG.groupCount;
       const totalNVSwitchesInSystem = ensemblesToShow * CONFIG.nvswitchCount;
 
+      // Collect all GPU-NVSwitch connections for randomized drawing
+      const gpuNvswitchConnections = [];
       for (let gpuIndex = 0; gpuIndex < totalGpusInSystem; gpuIndex++) {
         const gpuGlobalIndex = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + gpuIndex;
         const gpuId = gpuGlobalIndex === 0 ? 'gpu' : `gpu-${gpuGlobalIndex}`;
 
         for (let nvIndex = 0; nvIndex < totalNVSwitchesInSystem; nvIndex++) {
           const nvswitchGlobalIndex = systemIndex * CONFIG.ensembleCount * CONFIG.nvswitchCount + nvIndex;
-          renderer.drawLink(gpuId, `nvswitch-${nvswitchGlobalIndex}`, color, bw.width, linkDef.fromSide, linkDef.toSide, offset, 0, 1, 0, 1, linkDef.type, linkDef.bandwidth);
+          gpuNvswitchConnections.push({
+            fromId: gpuId,
+            toId: `nvswitch-${nvswitchGlobalIndex}`,
+            color: color,
+            width: bw.width,
+            fromSide: linkDef.fromSide,
+            toSide: linkDef.toSide,
+            offset: offset,
+            type: linkDef.type,
+            bandwidth: linkDef.bandwidth
+          });
         }
       }
+
+      // Randomize and draw GPU-NVSwitch connections
+      const shuffledGpuNvswitchConnections = gpuNvswitchConnections.sort(() => Math.random() - 0.5);
+      shuffledGpuNvswitchConnections.forEach(conn => {
+        renderer.drawLink(conn.fromId, conn.toId, conn.color, conn.width, conn.fromSide, conn.toSide, conn.offset, 0, 1, 0, 1, conn.type, conn.bandwidth);
+      });
 
       // Draw CPU-to-CPU link between ensembles (only if 2 ensembles visible)
       if (ensemblesToShow === 2) {
@@ -1327,116 +1461,12 @@
         renderer.drawLink(cpu0Id, cpu1Id, color, bw.width, 'right', 'left', offset, 0, 1, 0, 1, 'cpu', '16GB/s');
 
         // Draw EFA-to-EFA link between ensembles (only if 2 ensembles visible and explicitly requested)
-        if (ensemblesToShow === 2 && drawEfaCrossLinks) {
+        if (ensemblesToShow === 2 && shouldDrawEfaCrossLinks) {
           const efaExt0Id = systemIndex * CONFIG.ensembleCount * CONFIG.groupCount === 0 ? 'efa-external' : `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount}`;
           const efaExt1Id = `efa-external-${systemIndex * CONFIG.ensembleCount * CONFIG.groupCount + CONFIG.groupCount}`;
 
-          // Get phantom positions from renderer.nodes
-          const phantom0 = renderer.nodes.get(efaExt0Id);
-          const phantom1 = renderer.nodes.get(efaExt1Id);
-
-          if (phantom0 && phantom1) {
-            const efaBw = getBandwidth('12.5GB/s');
-            const efaColor = CONFIG.colors.linkColor;
-
-            // Draw 4 stacked links manually (EFA has 4 connections)
-            const stackCount = 4;
-            // Use fixed spacing to keep consistent visual spacing
-            const spacing = 6; // Fixed spacing between stacked links
-            const verticalShift = -95; // Shift up to align with EFA nodes
-            const horizontalShift = -40; // Shift left to better position the arrows
-            const horizontalExtension = 20; // Extend arrows horizontally on each side
-
-            for (let i = 0; i < stackCount; i++) {
-              const offsetY = (i - (stackCount - 1) / 2) * spacing;
-
-              const efaCrossGroup = renderer.crossLinksGroup.group();
-              efaCrossGroup.attr('data-link-type', 'efa-crosslink');
-              efaCrossGroup.attr('data-from', efaExt0Id);
-              efaCrossGroup.attr('data-to', efaExt1Id);
-              efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
-
-              // Draw line with vertical offset for stacking + shifts + horizontal extension
-              const x0 = phantom0.x + horizontalShift;
-              const x1 = phantom1.x + horizontalShift + horizontalExtension;
-              const y0 = phantom0.y + offsetY + verticalShift;
-              const y1 = phantom1.y + offsetY + verticalShift;
-
-              // Draw border
-              efaCrossGroup.line(x0, y0, x1, y1)
-                .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
-
-              // Draw main line
-              efaCrossGroup.line(x0, y0, x1, y1)
-                .stroke({ color: efaColor, width: efaBw.width, opacity: 1 });
-
-              // Draw circles at both ends
-              const r = efaBw.width * 0.8;
-              const startCircle = efaCrossGroup.circle(r * 2).move(x0 - r, y0 - r);
-              startCircle.fill(efaColor);
-              startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-              startCircle.attr('data-link-circle', 'true');
-
-              const endCircle = efaCrossGroup.circle(r * 2).move(x1 - r, y1 - r);
-              endCircle.fill(efaColor);
-              endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-              endCircle.attr('data-link-circle', 'true');
-            }
-
-            // Add vertical bars at both ends (connect horizontal arrows to EFA phantoms)
-            const barColor = CONFIG.colors.linkColor; // Use primary color for vertical bars
-
-            for (let i = 0; i < stackCount; i++) {
-              const offsetX = (i - (stackCount - 1) / 2) * spacing + 12; // Horizontal offset for vertical bars
-              const yHorizontal = phantom0.y + verticalShift + 10;
-              const yPhantom = phantom0.y + 8; // End a bit higher (5px above phantom center)
-
-              // Left vertical bar (one per horizontal arrow)
-              const leftBarGroup = renderer.crossLinksGroup.group();
-              leftBarGroup.attr('data-link-type', 'efa-crosslink');
-              leftBarGroup.attr('data-from', efaExt0Id);
-              leftBarGroup.attr('data-to', efaExt1Id);
-              leftBarGroup.attr('data-bandwidth', '12.5GB/s');
-
-              const x0 = phantom0.x + horizontalShift + offsetX;
-
-              // Draw border
-              leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
-                .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
-
-              // Draw main line
-              leftBarGroup.line(x0, yHorizontal, x0, yPhantom)
-                .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
-
-              const r = efaBw.width * 0.8;
-              const bottomCircle0 = leftBarGroup.circle(r * 2).move(x0 - r, yPhantom - r);
-              bottomCircle0.fill(barColor);
-              bottomCircle0.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-              bottomCircle0.attr('data-link-circle', 'true');
-
-              // Right vertical bar (one per horizontal arrow)
-              const rightBarGroup = renderer.crossLinksGroup.group();
-              rightBarGroup.attr('data-link-type', 'efa-crosslink');
-              rightBarGroup.attr('data-from', efaExt0Id);
-              rightBarGroup.attr('data-to', efaExt1Id);
-              rightBarGroup.attr('data-bandwidth', '12.5GB/s');
-
-              const x1 = phantom1.x + horizontalShift + offsetX;
-
-              // Draw border
-              rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
-                .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
-
-              // Draw main line
-              rightBarGroup.line(x1, yHorizontal, x1, yPhantom)
-                .stroke({ color: barColor, width: efaBw.width, opacity: 1 });
-
-              const bottomCircle1 = rightBarGroup.circle(r * 2).move(x1 - r, yPhantom - r);
-              bottomCircle1.fill(barColor);
-              bottomCircle1.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-              bottomCircle1.attr('data-link-circle', 'true');
-            }
-          }
+          // Use unified EFA cross-links function
+          drawEfaCrossLinks(renderer, efaExt0Id, efaExt1Id, 'efa-crosslink');
         }
       }
     }
@@ -1453,68 +1483,102 @@
       const container = getElement('aws-topology-container');
       container.innerHTML = '';
 
-      // Calculate dynamic viewbox based on what we're drawing
+      // Use FIXED viewbox size for consistent zoom across all modes
       const ensembleWidth = CONFIG.groupCount * CONFIG.gaps.horizontal;
-      let viewboxWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap + 200;  // +200 for padding
+      const isInternodeLayout = systemCount === 2 && currentActivePathId === 'gpu-gpu-efa-internode';
 
+      // Calculate single system height (used in both layouts)
       const singleSystemHeight = CONFIG.gaps.topMargin + CONFIG.sizes.cpu +
         CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
         CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height +
         CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height +
         CONFIG.gaps.bottomMargin;
-      let viewboxHeight = systemCount * singleSystemHeight + (systemCount - 1) * CONFIG.gaps.systemGap;
 
-      // Scale down more for internode (2 systems)
-      if (systemCount === 2) {
-        viewboxWidth *= 1.15;   // Increase viewbox width by 15% to scale down content
-        viewboxHeight *= 1.15;  // Increase viewbox height by 15% to scale down content
+      // Always use max viewbox dimensions for consistent zoom level
+      const maxEnsembleWidthForViewbox = 2 * ensembleWidth;
+      let viewboxWidth = maxEnsembleWidthForViewbox + CONFIG.gaps.ensembleGap + 200;
+      let viewboxHeight = singleSystemHeight;
+
+      // For 2 systems in vertical layout, use scaled dimensions
+      if (systemCount === 2 && !isInternodeLayout) {
+        viewboxHeight = singleSystemHeight * 2 + CONFIG.gaps.systemGap;
+        viewboxWidth *= 1.15;
+        viewboxHeight *= 1.15;
       }
 
-      // Adjust container height based on content if there's an initial filter
+      // Fixed height based on screen width for better consistency
       const embedConfig = readEmbedConfig();
+      const containerWidth = container.clientWidth || 800;
+
+      // Calculate fixed height: use max viewbox dimensions to determine aspect ratio
+      // Max viewbox is for 2 ensembles, 2 systems (vertical layout)
+      const maxEnsembleWidth = 2 * (CONFIG.groupCount * CONFIG.gaps.horizontal);
+      const maxSingleSystemHeight = CONFIG.gaps.topMargin + CONFIG.sizes.cpu +
+        CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
+        CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height +
+        CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height +
+        CONFIG.gaps.bottomMargin;
+      const maxViewboxHeight = maxSingleSystemHeight * 1.15; // Account for 2-system scaling
+      const maxViewboxWidth = maxEnsembleWidth + 200;
+
+      const maxAspectRatio = maxViewboxHeight / maxViewboxWidth;
+      const baseHeight = containerWidth * maxAspectRatio;
+      const legendHeight = embedConfig.initialFilter ? 150 : 200;
+
+      // Set fixed height once, won't change on filter change
+      if (!container.dataset.heightSet) {
+        container.style.height = `${baseHeight + legendHeight}px`;
+        container.dataset.heightSet = 'true';
+      }
+
+      // Viewbox will auto-center/zoom content
       let viewboxY = 0;
       let paddedViewboxHeight = viewboxHeight;
-
-      if (embedConfig.initialFilter) {
-        // Add padding to viewbox height for better centering
-        const verticalPadding = 100;
-        viewboxY = -verticalPadding / 2;
-        paddedViewboxHeight = viewboxHeight + verticalPadding;
-
-        // Calculate proportional height based on viewbox aspect ratio
-        const aspectRatio = paddedViewboxHeight / viewboxWidth;
-        const containerWidth = container.clientWidth || 800;
-        const calculatedHeight = containerWidth * aspectRatio;
-
-        // Add extra space for the legend (approximately 150px)
-        const legendHeight = 150;
-        container.style.height = `${Math.max(400, calculatedHeight + legendHeight)}px`;
-      } else {
-        // Use fixed height when interactive (with filter buttons)
-        container.classList.add('fixed-height');
-        viewboxY = 50;
-        paddedViewboxHeight = viewboxHeight;
-      }
+      const verticalPadding = 0;
+      viewboxY = -verticalPadding / 2 + 100;
+      paddedViewboxHeight = viewboxHeight + verticalPadding;
 
       const draw = SVG().addTo(container).size('100%', '100%').viewbox(0, viewboxY, viewboxWidth, paddedViewboxHeight);
       const renderer = new TopologyRenderer(draw);
 
       const centerX = viewboxWidth / 2;
 
-      // Draw each system (stacked vertically)
-      for (let sysIndex = 0; sysIndex < systemCount; sysIndex++) {
-        // Calculate Y offset for this system
-        const systemOffsetY = sysIndex * (singleSystemHeight + CONFIG.gaps.systemGap);
+      // Draw each system - horizontally for internode, vertically for others
+      const isInternodeHorizontalLayout = isInternodeLayout;
 
-        // Calculate Y positions for this system
-        const cpuY = systemOffsetY + CONFIG.gaps.topMargin + CONFIG.sizes.cpu / 2;
-        const nvswitchY = cpuY + CONFIG.sizes.cpu / 2 + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
-          CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height / 2 + CONFIG.gaps.gpuToNvswitch +
-          CONFIG.sizes.nvswitch.height / 2;
+      for (let sysIndex = 0; sysIndex < systemCount; sysIndex++) {
+        let systemCenterX, cpuY, nvswitchY;
+
+        if (isInternodeHorizontalLayout) {
+          // Horizontal layout for internode: systems side by side (rapprochés mais sans overlap)
+          // Pour internode, on affiche 1 seul ensemble (NUMA) par système, donc largeur réelle = 50%
+          const fullSystemWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap;
+          const actualSystemWidth = fullSystemWidth * 0.5; // On n'affiche qu'1 ensemble sur 2
+          const gap = 80; // Gap visible entre les systèmes
+
+          // Positionner les systèmes avec le gap
+          if (sysIndex === 0) {
+            systemCenterX = centerX - (actualSystemWidth / 2 + gap / 2); // Premier système à gauche
+          } else {
+            systemCenterX = centerX + (actualSystemWidth / 2 + gap / 2); // Deuxième système à droite
+          }
+          cpuY = CONFIG.gaps.topMargin + CONFIG.sizes.cpu / 2;
+          nvswitchY = cpuY + CONFIG.sizes.cpu / 2 + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
+            CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height / 2 + CONFIG.gaps.gpuToNvswitch +
+            CONFIG.sizes.nvswitch.height / 2;
+        } else {
+          // Vertical layout for other cases: systems stacked vertically
+          const systemOffsetY = sysIndex * (singleSystemHeight + CONFIG.gaps.systemGap);
+          systemCenterX = centerX;
+          cpuY = systemOffsetY + CONFIG.gaps.topMargin + CONFIG.sizes.cpu / 2;
+          nvswitchY = cpuY + CONFIG.sizes.cpu / 2 + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
+            CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height / 2 + CONFIG.gaps.gpuToNvswitch +
+            CONFIG.sizes.nvswitch.height / 2;
+        }
 
         // Only draw EFA cross-links for intranode EFA path
-        const drawEfaCrossLinks = currentActivePathId === 'gpu-gpu-efa-intranode';
-        drawSystem(renderer, sysIndex, centerX, cpuY, nvswitchY, ensembleCount, systemCount, drawEfaCrossLinks);
+        const shouldDrawEfaCrossLinks = currentActivePathId === 'gpu-gpu-efa-intranode';
+        drawSystem(renderer, sysIndex, systemCenterX, cpuY, nvswitchY, ensembleCount, systemCount, shouldDrawEfaCrossLinks);
       }
 
       // Draw EFA cross-link between systems (for internode)
@@ -1522,57 +1586,8 @@
         const efaExt0Id = 'efa-external';  // System 0, ensemble 0, group 0
         const efaExt1Id = 'efa-external-8';  // System 1, ensemble 0, group 0 (4 groups per ensemble, 2 ensembles per system = group 8)
 
-        const phantom0 = renderer.nodes.get(efaExt0Id);
-        const phantom1 = renderer.nodes.get(efaExt1Id);
-
-        // Only draw if both phantoms exist
-        if (phantom0 && phantom1) {
-          const efaBw = getBandwidth('12.5GB/s');  // External EFA bandwidth
-          const efaColor = CONFIG.colors.linkColor;
-
-          // Draw 4 stacked links manually (EFA has 4 connections)
-          const stackCount = 4;
-          // Use fixed spacing like intranode to keep consistent visual spacing
-          const spacing = 6; // Fixed spacing between stacked links
-          const verticalExtension = 10; // Extend arrows vertically
-          const horizontalShift = -22; // Shift left to better position the arrows
-
-          for (let i = 0; i < stackCount; i++) {
-            const offsetX = (i - (stackCount - 1) / 2) * spacing; // Horizontal offset for vertical lines
-
-            const efaCrossGroup = renderer.crossLinksGroup.group();
-            efaCrossGroup.attr('data-link-type', 'efa-crosslink-internode');
-            efaCrossGroup.attr('data-from', efaExt0Id);
-            efaCrossGroup.attr('data-to', efaExt1Id);
-            efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
-
-            // Draw line with horizontal offset for stacking + vertical extension + horizontal shift
-            const x0 = phantom0.x + offsetX + horizontalShift;
-            const x1 = phantom1.x + offsetX + horizontalShift;
-            const y0 = phantom0.y - verticalExtension;
-            const y1 = phantom1.y + verticalExtension;
-
-            // Draw border
-            efaCrossGroup.line(x0, y0, x1, y1)
-              .stroke({ color: 'rgba(0, 0, 0, 0.15)', width: efaBw.width + 1, opacity: 1 });
-
-            // Draw main line
-            efaCrossGroup.line(x0, y0, x1, y1)
-              .stroke({ color: efaColor, width: efaBw.width, opacity: 1 });
-
-            // Draw circles at both ends
-            const r = efaBw.width * 0.8;
-            const startCircle = efaCrossGroup.circle(r * 2).move(x0 - r, y0 - r);
-            startCircle.fill(efaColor);
-            startCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-            startCircle.attr('data-link-circle', 'true');
-
-            const endCircle = efaCrossGroup.circle(r * 2).move(x1 - r, y1 - r);
-            endCircle.fill(efaColor);
-            endCircle.stroke({ color: CONFIG.colors.linkCircleBorder, width: 0.5 });
-            endCircle.attr('data-link-circle', 'true');
-          }
-        }
+        // Use unified EFA cross-links function
+        drawEfaCrossLinks(renderer, efaExt0Id, efaExt1Id, 'efa-crosslink');
       }
 
       currentEnsembleCount = ensembleCount;
@@ -1628,8 +1643,8 @@
         });
       });
 
-      // Dim all cross-link elements (EFA internode/intranode links)
-      svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(el => {
+      // Dim all cross-link elements (EFA links)
+      svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(el => {
         el.style.opacity = '0.5';
         el.querySelectorAll('line, path').forEach(linkElement => {
           linkElement.style.opacity = '0.2';
@@ -1688,7 +1703,7 @@
       // Highlight cross-link elements if they match the current path
       const currentPathId = currentActivePathId;
       if (currentPathId === 'gpu-gpu-efa-intranode' || currentPathId === 'gpu-gpu-efa-internode') {
-        svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(linkGroup => {
+        svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(linkGroup => {
           linkGroup.style.opacity = '1';
           linkGroup.querySelectorAll('line, path').forEach(linkElement => {
             linkElement.style.opacity = '1';
@@ -1817,8 +1832,8 @@
         });
       });
 
-      // Reset all cross-link elements (EFA internode/intranode links)
-      svg.querySelectorAll('g[data-link-type="efa-crosslink"], g[data-link-type="efa-crosslink-internode"]').forEach(el => {
+      // Reset all cross-link elements (EFA links)
+      svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(el => {
         el.style.opacity = '1';
         el.querySelectorAll('line, path').forEach(line => {
           line.style.opacity = '1';
@@ -2215,9 +2230,6 @@
           if (needsRedraw) {
             drawTopology(path.requiredEnsembles, path.requiredSystems);
           }
-
-          // Apply highlight immediately (before fade in)
-          highlightPath(path, path.label, initialPathId);
         }
       }
 
@@ -2284,48 +2296,50 @@
     if (findWrapper()) {
       initialize();
 
-      // Add resize handler for dynamic height adjustment (only when initial filter is set)
+      // Apply initial filter highlight after legend is created
       const embedConfig = readEmbedConfig();
       if (embedConfig.initialFilter) {
-        const handleResize = () => {
-          const container = getElement('aws-topology-container');
-          if (!container) return;
+        const initialPathId = embedConfig.initialFilter;
+        const path = CONFIG.paths[initialPathId];
 
-          // Recalculate height based on current width
-          const ensembleWidth = CONFIG.groupCount * CONFIG.gaps.horizontal;
-          const ensembleCount = currentEnsembleCount;
-          const systemCount = currentSystemCount;
-
-          let viewboxWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap + 200;
-
-          const singleSystemHeight = CONFIG.gaps.topMargin + CONFIG.sizes.cpu +
-            CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
-            CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height +
-            CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height +
-            CONFIG.gaps.bottomMargin;
-          let viewboxHeight = systemCount * singleSystemHeight + (systemCount - 1) * CONFIG.gaps.systemGap;
-
-          if (systemCount === 2) {
-            viewboxWidth *= 1.15;
-            viewboxHeight *= 1.15;
-          }
-
-          const aspectRatio = viewboxHeight / viewboxWidth;
-          const containerWidth = container.clientWidth || 800;
-          const calculatedHeight = containerWidth * aspectRatio;
-
-          // Add extra space for the legend (approximately 150px)
-          const legendHeight = 150;
-          container.style.height = `${Math.max(400, calculatedHeight + legendHeight)}px`;
-        };
-
-        // Use ResizeObserver for better performance
-        if (window.ResizeObserver) {
-          const ro = new ResizeObserver(() => handleResize());
-          ro.observe(findWrapper());
-        } else {
-          window.addEventListener('resize', handleResize);
+        if (path) {
+          // Apply highlight to both topology and legend
+          highlightPath(path, path.label, initialPathId);
         }
+      }
+
+      // Add resize handler for responsive width changes (mobile/desktop)
+      const handleResize = () => {
+        const container = getElement('aws-topology-container');
+        if (!container) return;
+
+        // Recalculate fixed height based on new width (for responsive design)
+        const containerWidth = container.clientWidth || 800;
+
+        // Use max viewbox dimensions for consistent aspect ratio
+        const maxEnsembleWidth = 2 * (CONFIG.groupCount * CONFIG.gaps.horizontal);
+        const maxSingleSystemHeight = CONFIG.gaps.topMargin + CONFIG.sizes.cpu +
+          CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
+          CONFIG.gaps.pcieToGpu + CONFIG.sizes.gpu.height +
+          CONFIG.gaps.gpuToNvswitch + CONFIG.sizes.nvswitch.height +
+          CONFIG.gaps.bottomMargin;
+        const maxViewboxHeight = maxSingleSystemHeight * 1.15;
+        const maxViewboxWidth = maxEnsembleWidth + 200;
+
+        const maxAspectRatio = maxViewboxHeight / maxViewboxWidth;
+        const baseHeight = containerWidth * maxAspectRatio;
+        const legendHeight = embedConfig.initialFilter ? 150 : 200;
+
+        // Update height based on current width (responsive)
+        container.style.height = `${baseHeight + legendHeight}px`;
+      };
+
+      // Use ResizeObserver for better performance (only for window resize, not content changes)
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => handleResize());
+        ro.observe(findWrapper());
+      } else {
+        window.addEventListener('resize', handleResize);
       }
     } else {
       console.warn('AWS topology: wrapper not found, skipping initialization');
