@@ -20,6 +20,7 @@ node_modules/
 *.log
 *.env
 *.cache
+.notion-to-md
 
 app/scripts/latex-to-mdx/output/
 app/scripts/notion-importer/output/**/*
