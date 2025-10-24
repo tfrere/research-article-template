@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Packing Visualization</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #333;
+        }
+
+        .dataset {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 3px;
+            margin: 0 auto;
+            width: fit-content;
+        }
+
+        .block {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        }
+
+        .red {
+            background-color: #e74c3c;
+        }
+
+        .orange {
+            background-color: #f39c12;
+        }
+
+        .yellow {
+            background-color: #f1c40f;
+        }
+
+        .green {
+            background-color: #2ecc71;
+        }
+
+        .lightblue {
+            background-color: #3498db;
+        }
+
+        .blue {
+            background-color: #2980b9;
+        }
+
+        .purple {
+            background-color: #9b59b6;
+        }
+
+        .pink {
+            background-color: #e91e63;
+        }
+
+        .gray {
+            background-color: #bdc3c7;
+        }
+
+        .packing-false {
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .packing-true {
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .description {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .efficiency {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .efficiency h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .efficiency p {
+            margin: 5px 0;
+            color: #34495e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">Dataset</h2>
+            <div class="dataset">
+                <!-- 7 red blocks -->
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <!-- 3 orange blocks -->
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+                <!-- 4 yellow blocks -->
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <!-- 7 green blocks -->
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <!-- 10 light blue blocks -->
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <!-- 3 blue blocks -->
+                <div class="block blue">B</div>
+                <div class="block blue">B</div>
+                <div class="block blue">B</div>
+                <!-- 5 purple blocks -->
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <!-- 3 pink blocks -->
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+            </div>
+            <div class="description">42 blocs de données non organisés</div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">packing=False</h2>
+            <div class="grid packing-false">
+                <!-- Row 1: 7 red blocks -->
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <!-- Row 2: 3 orange + 4 gray -->
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <!-- Row 3: 4 yellow + 3 gray -->
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <!-- Row 4: 7 green -->
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <!-- Row 5: 7 light blue -->
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <!-- Row 6: 3 light blue + 4 gray -->
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <!-- Row 7: 3 blue + 4 gray -->
+                <div class="block blue">B</div>
+                <div class="block blue">B</div>
+                <div class="block blue">B</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+                <!-- Row 8: 5 purple + 2 gray -->
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block gray">-</div>
+                <div class="block gray">-</div>
+            </div>
+            <div class="description">Placement séquentiel avec espace perdu (17 cellules vides)</div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">packing=True</h2>
+            <div class="grid packing-true">
+                <!-- Row 1: 7 light blue -->
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <div class="block lightblue">L</div>
+                <!-- Row 2: 7 pink -->
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <div class="block pink">K</div>
+                <!-- Row 3: 7 red -->
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <div class="block red">R</div>
+                <!-- Row 4: 7 green -->
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <div class="block green">G</div>
+                <!-- Row 5: 7 purple -->
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <div class="block purple">P</div>
+                <!-- Row 6: 4 yellow + 3 orange -->
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block yellow">Y</div>
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+                <div class="block orange">O</div>
+            </div>
+            <div class="description">Optimisation complète sans espace perdu (0 cellule vide)</div>
+        </div>
+
+        <div class="efficiency">
+            <h3>Efficacité du Packing</h3>
+            <p><strong>packing=False:</strong> 39 blocs utilisés / 56 cellules = 69.6% d'efficacité</p>
+            <p><strong>packing=True:</strong> 42 blocs utilisés / 42 cellules = 100% d'efficacité</p>
+            <p><strong>Gain:</strong> +30.4% d'efficacité et 14 cellules économisées</p>
+        </div>
+    </div>
+</body>
+
+</html>

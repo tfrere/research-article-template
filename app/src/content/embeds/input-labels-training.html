@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input IDs and Labels Training Visualization</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .row-label {
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 120px;
+            color: #34495e;
+        }
+
+        .tokens-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .token {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .user-token {
+            background-color: #e74c3c;
+        }
+
+        .assistant-token {
+            background-color: #27ae60;
+        }
+
+        .label-token {
+            background-color: #3498db;
+        }
+
+        .label-masked {
+            background: repeating-linear-gradient(45deg,
+                    #3498db,
+                    #3498db 3px,
+                    #2980b9 3px,
+                    #2980b9 6px);
+        }
+
+        .turn-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #bdc3c7;
+        }
+
+        .user-label {
+            color: #e74c3c;
+        }
+
+        .assistant-label {
+            color: #27ae60;
+        }
+
+        .explanation {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .explanation h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+        }
+
+        .explanation p {
+            margin: 8px 0;
+            color: #34495e;
+            line-height: 1.5;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-radius: 3px;
+        }
+
+        .legend-masked {
+            background: repeating-linear-gradient(45deg,
+                    #3498db,
+                    #3498db 2px,
+                    #2980b9 2px,
+                    #2980b9 4px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="title">Input IDs et Labels dans l'Entraînement Conversationnel</h1>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color user-token"></div>
+                <span>Tokens Utilisateur</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color assistant-token"></div>
+                <span>Tokens Assistant</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color label-token"></div>
+                <span>Labels Actifs</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color legend-masked"></div>
+                <span>Labels Masqués (-100)</span>
+            </div>
+        </div>
+
+        <div class="conversation-container">
+            <div class="row">
+                <div class="row-label">input_ids</div>
+                <div class="tokens-container">
+                    <!-- Premier tour utilisateur -->
+                    <div class="token user-token">
+                        <div class="turn-label user-label">user</div>
+                        U1
+                    </div>
+                    <div class="token user-token">U2</div>
+                    <div class="token user-token">U3</div>
+                    <div class="token user-token">U4</div>
+                    <div class="token user-token">U5</div>
+
+                    <!-- Premier tour assistant -->
+                    <div class="token assistant-token">
+                        <div class="turn-label assistant-label">assistant</div>
+                        A1
+                    </div>
+                    <div class="token assistant-token">A2</div>
+                    <div class="token assistant-token">A3</div>
+                    <div class="token assistant-token">A4</div>
+
+                    <!-- Deuxième tour utilisateur -->
+                    <div class="token user-token">
+                        <div class="turn-label user-label">user</div>
+                        U6
+                    </div>
+                    <div class="token user-token">U7</div>
+                    <div class="token user-token">U8</div>
+                    <div class="token user-token">U9</div>
+                    <div class="token user-token">U10</div>
+
+                    <!-- Deuxième tour assistant -->
+                    <div class="token assistant-token">
+                        <div class="turn-label assistant-label">assistant</div>
+                        A5
+                    </div>
+                    <div class="token assistant-token">A6</div>
+                    <div class="token assistant-token">A7</div>
+                    <div class="token assistant-token">A8</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="row-label">labels</div>
+                <div class="tokens-container">
+                    <!-- Labels masqués pour premier tour utilisateur -->
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+
+                    <!-- Labels actifs pour premier tour assistant -->
+                    <div class="token label-token">A1</div>
+                    <div class="token label-token">A2</div>
+                    <div class="token label-token">A3</div>
+                    <div class="token label-token">A4</div>
+
+                    <!-- Labels masqués pour deuxième tour utilisateur -->
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+                    <div class="token label-masked">-100</div>
+
+                    <!-- Labels actifs pour deuxième tour assistant -->
+                    <div class="token label-token">A5</div>
+                    <div class="token label-token">A6</div>
+                    <div class="token label-token">A7</div>
+                    <div class="token label-token">A8</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="explanation">
+            <h3>Comment ça fonctionne :</h3>
+            <p><strong>input_ids :</strong> Séquence complète des tokens d'entrée (utilisateur + assistant)</p>
+            <p><strong>labels :</strong> Tokens cibles pour l'entraînement</p>
+            <p><strong>Labels masqués (-100) :</strong> Les tokens utilisateur sont masqués car le modèle ne doit pas
+                apprendre à les prédire</p>
+            <p><strong>Labels actifs :</strong> Seuls les tokens de l'assistant sont utilisés pour calculer la perte
+                d'entraînement</p>
+            <p><strong>Objectif :</strong> Le modèle apprend à générer des réponses d'assistant cohérentes en se basant
+                sur le contexte utilisateur</p>
+        </div>
+    </div>
+</body>
+
+</html>
