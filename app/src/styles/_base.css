@@ -3,6 +3,7 @@
 html {
   font-size: 16px;
   line-height: 1.6;
+  background-color: var(--page-bg);
 }
 
 .content-grid main {

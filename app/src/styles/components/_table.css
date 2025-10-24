@@ -2,6 +2,7 @@
   border-collapse: collapse;
   table-layout: auto;
   margin: 0;
+  background-color: var(--surface-bg);
 }
 
 .content-grid main th,

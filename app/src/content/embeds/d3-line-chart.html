@@ -36,13 +36,18 @@
   .d3-line-chart .axis-label {
     fill: var(--text-color);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 300;
+    opacity: 0.7;
     stroke: var(--page-bg, white);
+    background-color: var(--surface-bg) !important;
     stroke-width: 6px;
     paint-order: stroke fill;
   }
 
-  .d3-line-chart .axes path,
+  .d3-line-chart .axes path {
+    display: none;
+  }
+
   .d3-line-chart .axes line {
     stroke: var(--axis-color);
   }
@@ -54,6 +59,7 @@
   .d3-line-chart .grid line {
     stroke: var(--grid-color);
   }
+
 
   .d3-line-chart .legend-bottom {
     display: flex;
@@ -170,10 +176,7 @@
 
   /* Chart card */
   .d3-line-chart .chart-card {
-    background: var(--page-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 12px;
+    padding: 0;
   }
 
   .d3-line-chart .chart-header {
@@ -299,7 +302,7 @@
       const CONFIG = {
         width: 800,
         height: 320,
-        margin: { top: 20, right: 38, bottom: 52, left: 64 },
+        margin: { top: 20, right: 10, bottom: 52, left: 52 },
         xDomain: embedConfig.xDomain || null,  // Auto-calculated if null
         yDomain: embedConfig.yDomain || null,  // Auto-calculated if null
         zoomExtent: [1.0, 8],
@@ -749,7 +752,7 @@
           .attr('class', 'axis-label')
           .attr('transform', 'rotate(-90)')
           .attr('x', -innerHeight / 2)
-          .attr('y', -44)
+          .attr('y', -43)
           .attr('text-anchor', 'middle')
           .text(CONFIG.yAxisLabel);
 

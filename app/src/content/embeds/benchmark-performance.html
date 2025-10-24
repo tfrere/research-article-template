@@ -1,0 +1,447 @@
+<div class="benchmark-performance"></div>
+<style>
+    .benchmark-performance {
+        font-family: 'Arial', sans-serif;
+        margin: 20px 0;
+        padding: 0;
+    }
+
+    .benchmark-performance__grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    @media (max-width: 1000px) {
+        .benchmark-performance__grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .benchmark-performance__chart {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        background: var(--page-bg);
+    }
+
+    .benchmark-performance__title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 16px;
+        text-align: center;
+    }
+
+    .benchmark-performance__legend {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .benchmark-performance__legend-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted-color);
+    }
+
+    .benchmark-performance__legend-items {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .benchmark-performance__legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-color);
+    }
+
+    .benchmark-performance__legend-swatch {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+    }
+
+    .benchmark-performance svg {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .benchmark-performance .axis path,
+    .benchmark-performance .axis line {
+        stroke: var(--axis-color);
+    }
+
+    .benchmark-performance .axis text {
+        fill: var(--text-color);
+        font-size: 11px;
+    }
+
+    .benchmark-performance .grid line {
+        stroke: var(--grid-color);
+    }
+
+    .benchmark-performance .bar {
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+    }
+
+    .benchmark-performance.hovering .bar.ghost {
+        opacity: 0.15;
+    }
+
+    .benchmark-performance.hovering .benchmark-performance__legend-item.ghost {
+        opacity: 0.3;
+    }
+
+    .benchmark-performance__legend-item {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+</style>
+<script>
+    (() => {
+        // Données extraites de l'image
+        const data = {
+            '410M': {
+                'PIQA': { 'Softmax Attention': 67.5, 'Lightning Attention': 67.5, 'Hybrid-lightning': 67.5 },
+                'H5': { 'Softmax Attention': 39.6, 'Lightning Attention': 39.6, 'Hybrid-lightning': 39.6 },
+                'WG': { 'Softmax Attention': 51.8, 'Lightning Attention': 51.8, 'Hybrid-lightning': 52.1 },
+                'ARC-E': { 'Softmax Attention': 52.1, 'Lightning Attention': 52.1, 'Hybrid-lightning': 52.1 },
+                'ARC-C': { 'Softmax Attention': 26.2, 'Lightning Attention': 26.2, 'Hybrid-lightning': 26.2 },
+                'OBQA': { 'Softmax Attention': 30.0, 'Lightning Attention': 30.0, 'Hybrid-lightning': 30.0 },
+                'CSR-AVG': { 'Softmax Attention': 44.5, 'Lightning Attention': 44.5, 'Hybrid-lightning': 44.5 },
+                'NIAH': { 'Softmax Attention': 84.2, 'Lightning Attention': 84.2, 'Hybrid-lightning': 84.2 },
+                'SCR': { 'Softmax Attention': 10.9, 'Lightning Attention': 10.9, 'Hybrid-lightning': 10.9 }
+            },
+            '1B': {
+                'PIQA': { 'Softmax Attention': 70.7, 'Lightning Attention': 70.7, 'Hybrid-lightning': 70.7 },
+                'H5': { 'Softmax Attention': 50.4, 'Lightning Attention': 50.4, 'Hybrid-lightning': 50.4 },
+                'WG': { 'Softmax Attention': 55.8, 'Lightning Attention': 55.8, 'Hybrid-lightning': 55.8 },
+                'ARC-E': { 'Softmax Attention': 59.9, 'Lightning Attention': 59.9, 'Hybrid-lightning': 59.9 },
+                'ARC-C': { 'Softmax Attention': 27.6, 'Lightning Attention': 27.6, 'Hybrid-lightning': 27.6 },
+                'OBQA': { 'Softmax Attention': 32.8, 'Lightning Attention': 32.8, 'Hybrid-lightning': 32.8 },
+                'CSR-AVG': { 'Softmax Attention': 49.5, 'Lightning Attention': 49.5, 'Hybrid-lightning': 49.5 },
+                'NIAH': { 'Softmax Attention': 95.7, 'Lightning Attention': 44.0, 'Hybrid-lightning': 95.7 },
+                'SCR': { 'Softmax Attention': 13.3, 'Lightning Attention': 13.3, 'Hybrid-lightning': 13.3 }
+            },
+            '3B': {
+                'PIQA': { 'Softmax Attention': 74.2, 'Lightning Attention': 74.2, 'Hybrid-lightning': 74.2 },
+                'H5': { 'Softmax Attention': 61.1, 'Lightning Attention': 61.1, 'Hybrid-lightning': 61.1 },
+                'WG': { 'Softmax Attention': 59.5, 'Lightning Attention': 59.5, 'Hybrid-lightning': 59.5 },
+                'ARC-E': { 'Softmax Attention': 65.5, 'Lightning Attention': 65.5, 'Hybrid-lightning': 65.5 },
+                'ARC-C': { 'Softmax Attention': 34.9, 'Lightning Attention': 34.9, 'Hybrid-lightning': 34.9 },
+                'OBQA': { 'Softmax Attention': 35.8, 'Lightning Attention': 35.8, 'Hybrid-lightning': 35.8 },
+                'CSR-AVG': { 'Softmax Attention': 55.2, 'Lightning Attention': 46.0, 'Hybrid-lightning': 55.2 },
+                'NIAH': { 'Softmax Attention': 98.0, 'Lightning Attention': 46.0, 'Hybrid-lightning': 98.0 },
+                'SCR': { 'Softmax Attention': 14.7, 'Lightning Attention': 14.7, 'Hybrid-lightning': 14.7 }
+            },
+            '7B': {
+                'PIQA': { 'Softmax Attention': 76.5, 'Lightning Attention': 76.5, 'Hybrid-lightning': 76.5 },
+                'H5': { 'Softmax Attention': 66.3, 'Lightning Attention': 66.3, 'Hybrid-lightning': 66.3 },
+                'WG': { 'Softmax Attention': 62.4, 'Lightning Attention': 62.4, 'Hybrid-lightning': 62.4 },
+                'ARC-E': { 'Softmax Attention': 68.5, 'Lightning Attention': 68.5, 'Hybrid-lightning': 68.5 },
+                'ARC-C': { 'Softmax Attention': 38.9, 'Lightning Attention': 38.9, 'Hybrid-lightning': 38.9 },
+                'OBQA': { 'Softmax Attention': 37.2, 'Lightning Attention': 37.2, 'Hybrid-lightning': 37.2 },
+                'CSR-AVG': { 'Softmax Attention': 58.3, 'Lightning Attention': 58.0, 'Hybrid-lightning': 58.3 },
+                'NIAH': { 'Softmax Attention': 97.7, 'Lightning Attention': 20.0, 'Hybrid-lightning': 97.7 },
+                'SCR': { 'Softmax Attention': 15.5, 'Lightning Attention': 15.5, 'Hybrid-lightning': 15.5 }
+            }
+        };
+
+        const methods = ['Softmax Attention', 'Lightning Attention', 'Hybrid-lightning'];
+
+        // Get categorical colors with fallback
+        function getMethodColors(count) {
+            try {
+                if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                    return window.ColorPalettes.getColors('categorical', count);
+                }
+            } catch (_) { }
+            // Fallback colors
+            return ['#FFD97D', '#B4A7D6', '#E74C3C'];
+        }
+
+        const ensureD3AndColors = (cb) => {
+            // Wait for both D3 and ColorPalettes
+            const checkReady = () => {
+                const d3Ready = window.d3 && typeof window.d3.select === 'function';
+                const colorsReady = window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function';
+
+                if (d3Ready && colorsReady) {
+                    cb();
+                } else if (!d3Ready) {
+                    // Load D3 if needed
+                    let s = document.getElementById('d3-cdn-script');
+                    if (!s) {
+                        s = document.createElement('script');
+                        s.id = 'd3-cdn-script';
+                        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                        document.head.appendChild(s);
+                        s.addEventListener('load', () => setTimeout(checkReady, 100), { once: true });
+                    } else {
+                        setTimeout(checkReady, 100);
+                    }
+                } else {
+                    // D3 is ready but ColorPalettes isn't yet, wait a bit
+                    setTimeout(checkReady, 100);
+                }
+            };
+            checkReady();
+        };
+
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => {
+                if (window.d3 && typeof window.d3.select === 'function') cb();
+            };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('benchmark-performance'))) {
+                const cs = Array.from(document.querySelectorAll('.benchmark-performance')).filter(
+                    el => !(el.dataset && el.dataset.mounted === 'true')
+                );
+                container = cs[cs.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Get colors
+            const colors = getMethodColors(methods.length);
+
+            // Create legend
+            const legend = document.createElement('div');
+            legend.className = 'benchmark-performance__legend';
+            legend.innerHTML = `
+                <div class="benchmark-performance__legend-title">Attention Methods</div>
+                <div class="benchmark-performance__legend-items">
+                    ${methods
+                    .map(
+                        (method, i) => `
+                        <div class="benchmark-performance__legend-item" data-method="${method}">
+                          <div class="benchmark-performance__legend-swatch" style="background: ${colors[i]}"></div>
+                          <span>${method}</span>
+                        </div>
+                      `
+                    )
+                    .join('')}
+                </div>
+            `;
+            container.appendChild(legend);
+
+            // Legend hover interactions
+            const legendItems = legend.querySelectorAll('.benchmark-performance__legend-item');
+            legendItems.forEach(item => {
+                const method = item.getAttribute('data-method');
+                item.addEventListener('mouseenter', () => {
+                    container.classList.add('hovering');
+                    // Ghost all bars and legend items except this method
+                    document.querySelectorAll('.benchmark-performance .bar').forEach(bar => {
+                        if (bar.getAttribute('data-method') !== method) {
+                            bar.classList.add('ghost');
+                        }
+                    });
+                    legendItems.forEach(otherItem => {
+                        if (otherItem.getAttribute('data-method') !== method) {
+                            otherItem.classList.add('ghost');
+                        }
+                    });
+                });
+                item.addEventListener('mouseleave', () => {
+                    container.classList.remove('hovering');
+                    document.querySelectorAll('.benchmark-performance .bar').forEach(bar => {
+                        bar.classList.remove('ghost');
+                    });
+                    legendItems.forEach(otherItem => {
+                        otherItem.classList.remove('ghost');
+                    });
+                });
+            });
+
+            // Create grid
+            const grid = document.createElement('div');
+            grid.className = 'benchmark-performance__grid';
+            container.appendChild(grid);
+
+            // Create chart for each model size
+            Object.keys(data).forEach(modelSize => {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'benchmark-performance__chart';
+
+                const title = document.createElement('div');
+                title.className = 'benchmark-performance__title';
+                title.textContent = `${modelSize} Benchmark Performance`;
+                chartDiv.appendChild(title);
+
+                grid.appendChild(chartDiv);
+
+                // Render chart
+                renderChart(chartDiv, data[modelSize], modelSize, colors);
+            });
+        };
+
+        const renderChart = (container, chartData, modelSize, colors) => {
+            const margin = { top: 20, right: 10, bottom: 60, left: 50 };
+            const width = 400;
+            const height = 300;
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            const svg = d3
+                .select(container)
+                .append('svg')
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const benchmarks = Object.keys(chartData);
+            const x0 = d3.scaleBand().domain(benchmarks).range([0, innerWidth]).padding(0.2);
+
+            const x1 = d3.scaleBand().domain(methods).range([0, x0.bandwidth()]).padding(0.15);
+
+            const y = d3.scaleLinear().domain([0, 100]).range([innerHeight, 0]);
+
+            // Grid
+            const grid = g.append('g').attr('class', 'grid');
+            grid
+                .selectAll('line')
+                .data(y.ticks(5))
+                .enter()
+                .append('line')
+                .attr('x1', 0)
+                .attr('x2', innerWidth)
+                .attr('y1', d => y(d))
+                .attr('y2', d => y(d))
+                .attr('stroke', 'var(--grid-color, #e0e0e0)')
+                .attr('stroke-dasharray', '2,2');
+
+            // X axis
+            const xAxis = g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerHeight})`);
+
+            xAxis
+                .call(d3.axisBottom(x0))
+                .selectAll('text')
+                .attr('transform', 'rotate(-45)')
+                .style('text-anchor', 'end')
+                .attr('dx', '-0.8em')
+                .attr('dy', '0.15em');
+
+            // Y axis
+            g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(5));
+
+            // Bars
+            const groups = g
+                .selectAll('.benchmark-group')
+                .data(benchmarks)
+                .enter()
+                .append('g')
+                .attr('class', 'benchmark-group')
+                .attr('transform', d => `translate(${x0(d)},0)`);
+
+            // Helper function to create rounded top bar path
+            const roundedTopBarPath = (x, y, width, height, radius) => {
+                const r = Math.min(radius, height / 2, width / 2);
+                return `
+                    M ${x},${y + height}
+                    L ${x},${y + r}
+                    Q ${x},${y} ${x + r},${y}
+                    L ${x + width - r},${y}
+                    Q ${x + width},${y} ${x + width},${y + r}
+                    L ${x + width},${y + height}
+                    Z
+                `;
+            };
+
+            groups
+                .selectAll('.bar')
+                .data(benchmark => {
+                    return methods.map(method => ({
+                        method,
+                        value: chartData[benchmark][method],
+                        benchmark
+                    }));
+                })
+                .enter()
+                .append('path')
+                .attr('class', 'bar')
+                .attr('data-method', d => d.method)
+                .attr('d', d => {
+                    const x = x1(d.method);
+                    const yPos = y(d.value);
+                    const width = x1.bandwidth();
+                    const height = innerHeight - yPos;
+                    return roundedTopBarPath(x, yPos, width, height, 1.5);
+                })
+                .attr('fill', (d, i) => colors[methods.indexOf(d.method)])
+                .on('mouseenter', function (event, d) {
+                    const mainContainer = container.closest('.benchmark-performance');
+                    if (!mainContainer) return;
+
+                    mainContainer.classList.add('hovering');
+
+                    // Ghost all bars and legend items except this method
+                    document.querySelectorAll('.benchmark-performance .bar').forEach(bar => {
+                        if (bar.getAttribute('data-method') !== d.method) {
+                            bar.classList.add('ghost');
+                        }
+                    });
+
+                    const legendItems = document.querySelectorAll('.benchmark-performance__legend-item');
+                    legendItems.forEach(item => {
+                        if (item.getAttribute('data-method') !== d.method) {
+                            item.classList.add('ghost');
+                        }
+                    });
+                })
+                .on('mouseleave', function (event, d) {
+                    const mainContainer = container.closest('.benchmark-performance');
+                    if (!mainContainer) return;
+
+                    mainContainer.classList.remove('hovering');
+
+                    document.querySelectorAll('.benchmark-performance .bar').forEach(bar => {
+                        bar.classList.remove('ghost');
+                    });
+
+                    const legendItems = document.querySelectorAll('.benchmark-performance__legend-item');
+                    legendItems.forEach(item => {
+                        item.classList.remove('ghost');
+                    });
+                });
+
+            // Bar labels removed for better readability
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3AndColors(bootstrap), { once: true });
+        } else {
+            ensureD3AndColors(bootstrap);
+        }
+    })();
+</script>

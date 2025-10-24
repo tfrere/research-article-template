@@ -163,7 +163,7 @@ const htmlWithId =
     z-index: var(--z-elevated);
   }
   .html-embed__card {
-    background: var(--code-bg);
+    background-color: var(--surface-bg);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 24px;
@@ -311,10 +311,6 @@ const htmlWithId =
     min-width: 16px;
   }
   /* Dark mode overrides for Plotly readability */
-  [data-theme="dark"] .html-embed__card:not(.is-frameless) {
-    background: #12151b;
-    border-color: rgba(255, 255, 255, 0.15);
-  }
   [data-theme="dark"] .html-embed__card .xaxislayer-above text,
   [data-theme="dark"] .html-embed__card .yaxislayer-above text,
   [data-theme="dark"] .html-embed__card .infolayer text,

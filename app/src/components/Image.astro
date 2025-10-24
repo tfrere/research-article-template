@@ -50,7 +50,7 @@ const hasCaption =
 const hasTitle = Astro.slots.has("title");
 const uid = `ri_${Math.random().toString(36).slice(2)}`;
 const dataZoomable =
-  zoomable === true || (imgProps as any)["data-zoomable"] ? "1" : undefined;
+  zoomable !== false || (imgProps as any)["data-zoomable"] ? "1" : undefined;
 const dataDownloadable =
   downloadable === true || (imgProps as any)["data-downloadable"]
     ? "1"
@@ -504,5 +504,15 @@ const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
     width: 100% !important;
     min-width: 100%;
     max-width: 100%;
+  }
+
+  /* Dark mode: invert luminosity while preserving color harmony */
+  :global([data-theme="dark"]) .ri-root img {
+    filter: invert(0.925) hue-rotate(180deg);
+  }
+
+  /* Apply same filter to zoomed images in dark mode */
+  :global([data-theme="dark"]) :global(.medium-zoom-image--opened) {
+    filter: invert(0.925) hue-rotate(180deg);
   }
 </style>

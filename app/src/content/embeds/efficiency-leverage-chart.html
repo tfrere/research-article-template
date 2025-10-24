@@ -1,0 +1,540 @@
+<!-- 
+  Efficiency Leverage Chart
+  
+  Graphique spécifique montrant la définition de l'Efficiency Leverage (EL)
+  avec deux courbes de scaling de loss (Ling-Dense et Ling-MoE)
+-->
+<div class="efficiency-leverage-chart"></div>
+<style>
+    .efficiency-leverage-chart {
+        position: relative;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .efficiency-leverage-chart .axis-label {
+        fill: var(--text-color);
+        font-size: 13px;
+        font-weight: 500;
+        opacity: 0.9;
+        stroke: var(--page-bg, white);
+        stroke-width: 6px;
+        paint-order: stroke fill;
+    }
+
+    .efficiency-leverage-chart .axes path {
+        display: none;
+    }
+
+    .efficiency-leverage-chart .axes line {
+        stroke: var(--axis-color, #999);
+    }
+
+    .efficiency-leverage-chart .axes text {
+        fill: var(--tick-color, #666);
+        font-size: 11px;
+    }
+
+    .efficiency-leverage-chart .grid line {
+        stroke: var(--grid-color, #e0e0e0);
+        stroke-opacity: 0.5;
+    }
+
+    .efficiency-leverage-chart .loss-curve {
+        fill: none;
+        stroke-width: 2.5;
+    }
+
+    .efficiency-leverage-chart .reference-line {
+        stroke: #333;
+        stroke-width: 2;
+        stroke-dasharray: 8, 4;
+    }
+
+    .efficiency-leverage-chart .marker-circle {
+        stroke-width: 2.5;
+        fill: white;
+    }
+
+    .efficiency-leverage-chart .marker-line {
+        stroke-width: 1.5;
+        stroke-dasharray: 4, 3;
+    }
+
+    .efficiency-leverage-chart .curve-label {
+        font-size: 12px;
+        font-weight: 600;
+        stroke: var(--page-bg, white);
+        stroke-width: 4px;
+        paint-order: stroke fill;
+    }
+
+    .efficiency-leverage-chart .formula-container {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 18px;
+        color: var(--text-color);
+    }
+
+    .efficiency-leverage-chart .formula-container sub {
+        font-size: 0.7em;
+        vertical-align: sub;
+        line-height: 0;
+    }
+
+    .efficiency-leverage-chart .formula-fraction {
+        display: inline-block;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .efficiency-leverage-chart .formula-numerator,
+    .efficiency-leverage-chart .formula-denominator {
+        display: block;
+        padding: 3px 8px;
+        font-weight: 600;
+    }
+
+    .efficiency-leverage-chart .formula-numerator {
+        border-bottom: 2px solid var(--text-color);
+        background: #4c8bb8;
+        color: white;
+        border-radius: 6px 6px 0 0;
+    }
+
+    .efficiency-leverage-chart .formula-denominator {
+        background: #e8904f;
+        color: white;
+        border-radius: 0 0 6px 6px;
+    }
+
+    .efficiency-leverage-chart .chart-title {
+        text-align: center;
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 16px;
+        color: var(--text-color);
+    }
+
+    .efficiency-leverage-chart__header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .efficiency-leverage-chart__header .legend-bottom {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-color);
+    }
+
+    .efficiency-leverage-chart__header .legend-bottom .legend-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+
+    .efficiency-leverage-chart__header .legend-bottom .items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        justify-content: center;
+    }
+
+    .efficiency-leverage-chart__header .legend-bottom .item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    .efficiency-leverage-chart__header .legend-bottom .swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        border: 1px solid var(--border-color);
+        display: inline-block;
+    }
+</style>
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+
+            if (!(container && container.classList && container.classList.contains('efficiency-leverage-chart'))) {
+                let currentEl = scriptEl;
+                while (currentEl && currentEl.parentNode) {
+                    currentEl = currentEl.parentNode;
+                    const found = currentEl.querySelector && currentEl.querySelector('.efficiency-leverage-chart:not([data-mounted="true"])');
+                    if (found) {
+                        container = found;
+                        break;
+                    }
+                }
+
+                if (!container) {
+                    const cs = Array.from(document.querySelectorAll('.efficiency-leverage-chart')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+                    container = cs[0] || null;
+                }
+            }
+
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            const d3 = window.d3;
+
+            // Les deux courbes sont parallèles (même forme) mais décalées horizontalement
+            // MoE est plus efficace = atteint la même loss avec moins de FLOPs
+
+            const denseFlopMarker = 5e22;
+            const moeFlopMarker = 1e22;
+            const targetLoss = 1.6;
+
+            // Décalage horizontal en log-space (MoE est ~5x plus efficace)
+            const efficiencyRatio = denseFlopMarker / moeFlopMarker; // ~5
+
+            // Coefficients pour Ling-Dense (bleue)
+            // Points: (10^19, 2.65), (5e22, 1.6), (10^25, 1.15)
+            const x1_dense = 19, y1_dense = 2.85;
+            const x2_dense = Math.log10(5e22), y2_dense = 1.6;
+            const x3_dense = 25, y3_dense = 1.15;
+
+            const denom_dense = (x1_dense - x2_dense) * (x1_dense - x3_dense) * (x2_dense - x3_dense);
+            const a_dense = (x3_dense * (y2_dense - y1_dense) + x2_dense * (y1_dense - y3_dense) + x1_dense * (y3_dense - y2_dense)) / denom_dense;
+            const b_dense = (x3_dense * x3_dense * (y1_dense - y2_dense) + x2_dense * x2_dense * (y3_dense - y1_dense) + x1_dense * x1_dense * (y2_dense - y3_dense)) / denom_dense;
+            const c_dense = (x2_dense * x3_dense * (x2_dense - x3_dense) * y1_dense + x3_dense * x1_dense * (x3_dense - x1_dense) * y2_dense + x1_dense * x2_dense * (x1_dense - x2_dense) * y3_dense) / denom_dense;
+
+            // Coefficients pour Ling-MoE (orange) - descend plus vite
+            // Points: (10^19, 2.5), (1e22, 1.6), (10^25, 1.02)
+            const x1_moe = 19.4, y1_moe = 2.5;
+            const x2_moe = Math.log10(1e22), y2_moe = 1.6;
+            const x3_moe = 25, y3_moe = 1.01;
+
+            const denom_moe = (x1_moe - x2_moe) * (x1_moe - x3_moe) * (x2_moe - x3_moe);
+            const a_moe = (x3_moe * (y2_moe - y1_moe) + x2_moe * (y1_moe - y3_moe) + x1_moe * (y3_moe - y2_moe)) / denom_moe;
+            const b_moe = (x3_moe * x3_moe * (y1_moe - y2_moe) + x2_moe * x2_moe * (y3_moe - y1_moe) + x1_moe * x1_moe * (y2_moe - y3_moe)) / denom_moe;
+            const c_moe = (x2_moe * x3_moe * (x2_moe - x3_moe) * y1_moe + x3_moe * x1_moe * (x3_moe - x1_moe) * y2_moe + x1_moe * x2_moe * (x1_moe - x2_moe) * y3_moe) / denom_moe;
+
+            // Génération de courbe Dense
+            const generateDenseCurve = (numPoints = 200) => {
+                const data = [];
+                const logStart = 19;
+                const logEnd = 25;  // Limité à 10^25
+                const step = (logEnd - logStart) / (numPoints - 1);
+
+                for (let i = 0; i < numPoints; i++) {
+                    const logFlops = logStart + i * step;
+                    const flops = Math.pow(10, logFlops);
+                    const logF = Math.log10(flops);
+                    const loss = a_dense * logF * logF + b_dense * logF + c_dense;
+
+                    // Ne garder que les points dans les limites du graphique
+                    if (loss >= 0.9 && loss <= 2.6) {
+                        data.push({ flops, loss });
+                    }
+                }
+                return data;
+            };
+
+            // Génération de courbe MoE (utilise ses propres coefficients)
+            const generateMoeCurve = (numPoints = 200) => {
+                const data = [];
+                const logStart = 19;
+                const logEnd = 25;  // Limité à 10^25
+                const step = (logEnd - logStart) / (numPoints - 1);
+
+                for (let i = 0; i < numPoints; i++) {
+                    const logFlops = logStart + i * step;
+                    const flops = Math.pow(10, logFlops);
+                    const logF = Math.log10(flops);
+                    const loss = a_moe * logF * logF + b_moe * logF + c_moe;
+
+                    // Ne garder que les points dans les limites du graphique
+                    if (loss >= 0.9 && loss <= 2.6) {
+                        data.push({ flops, loss });
+                    }
+                }
+                return data;
+            };
+
+            const lingDenseData = generateDenseCurve();
+            const lingMoeData = generateMoeCurve();
+
+            // Points marqués (calculés avec les fonctions pour être précis)
+            const denseMarker = {
+                flops: denseFlopMarker,
+                loss: targetLoss
+            };
+            const moeMarker = {
+                flops: moeFlopMarker,
+                loss: targetLoss
+            };
+
+            // Couleurs
+            const denseColor = '#4c8bb8';  // Bleu
+            const moeColor = '#e8904f';    // Orange
+
+            // Dimensions
+            const margin = { top: 30, right: 40, bottom: 60, left: 60 };
+            let width = 700;
+            let height = 420;
+
+            function render() {
+                container.innerHTML = '';
+
+                // Légende en haut (créée en premier)
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'efficiency-leverage-chart__header';
+                headerDiv.innerHTML = `
+          <div class="legend-bottom">
+            <div class="legend-title">Loss Scaling Curve</div>
+            <div class="items">
+              <span class="item">
+                <span class="swatch" style="background: ${denseColor}"></span>
+                <span>Ling-Dense</span>
+              </span>
+              <span class="item">
+                <span class="swatch" style="background: ${moeColor}"></span>
+                <span>Ling-MoE</span>
+              </span>
+            </div>
+          </div>
+        `;
+                container.appendChild(headerDiv);
+
+                const rect = container.getBoundingClientRect();
+                width = Math.max(500, Math.round(rect && rect.width ? rect.width : (container.clientWidth || 700)));
+                height = Math.max(380, Math.round(width / 1.75));
+
+                const innerWidth = width - margin.left - margin.right;
+                const innerHeight = height - margin.top - margin.bottom;
+
+                // SVG
+                const svg = d3.select(container)
+                    .append('svg')
+                    .attr('width', width)
+                    .attr('height', height);
+
+                const g = svg.append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                // Échelles
+                const xScale = d3.scaleLog()
+                    .domain([1e19, 1e25])
+                    .range([0, innerWidth]);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0.9, 2.6])
+                    .range([innerHeight, 0]);
+
+                // Grille horizontale
+                const yTicks = [1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4];
+                g.append('g')
+                    .attr('class', 'grid')
+                    .selectAll('line')
+                    .data(yTicks)
+                    .join('line')
+                    .attr('x1', 0)
+                    .attr('x2', innerWidth)
+                    .attr('y1', d => yScale(d))
+                    .attr('y2', d => yScale(d));
+
+                // Axes
+                const xAxis = d3.axisBottom(xScale)
+                    .tickValues([1e19, 1e20, 1e21, 1e22, 1e23, 1e24]);
+
+                const yAxis = d3.axisLeft(yScale)
+                    .tickValues(yTicks)
+                    .tickFormat(d3.format('.1f'));
+
+                const xAxisG = g.append('g')
+                    .attr('class', 'axes')
+                    .attr('transform', `translate(0,${innerHeight})`)
+                    .call(xAxis);
+
+                // Remplacer les labels de l'axe X par des tspans avec exposants
+                xAxisG.selectAll('.tick text')
+                    .text('')
+                    .each(function (d) {
+                        const exp = Math.round(Math.log10(d));
+                        const textEl = d3.select(this);
+                        textEl.append('tspan').text('10');
+                        textEl.append('tspan')
+                            .attr('font-size', '0.7em')
+                            .attr('dy', '-0.5em')
+                            .text(exp);
+                    });
+
+                g.append('g')
+                    .attr('class', 'axes')
+                    .call(yAxis);
+
+                // Labels des axes
+                g.append('text')
+                    .attr('class', 'axis-label')
+                    .attr('x', innerWidth / 2)
+                    .attr('y', innerHeight + 45)
+                    .attr('text-anchor', 'middle')
+                    .text('FLOPs');
+
+                g.append('text')
+                    .attr('class', 'axis-label')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('x', -innerHeight / 2)
+                    .attr('y', -45)
+                    .attr('text-anchor', 'middle')
+                    .text('Loss');
+
+                // Ligne de référence à 1.6
+                g.append('line')
+                    .attr('class', 'reference-line')
+                    .attr('x1', 0)
+                    .attr('x2', innerWidth)
+                    .attr('y1', yScale(1.6))
+                    .attr('y2', yScale(1.6));
+
+                // Générateur de courbe
+                const lineGen = d3.line()
+                    .x(d => xScale(d.flops))
+                    .y(d => yScale(d.loss))
+                    .curve(d3.curveMonotoneX);
+
+                // Courbe Ling-Dense
+                g.append('path')
+                    .datum(lingDenseData)
+                    .attr('class', 'loss-curve')
+                    .attr('d', lineGen)
+                    .attr('stroke', denseColor);
+
+                // Courbe Ling-MoE
+                g.append('path')
+                    .datum(lingMoeData)
+                    .attr('class', 'loss-curve')
+                    .attr('d', lineGen)
+                    .attr('stroke', moeColor);
+
+                // Lignes verticales pointillées pour les marqueurs
+                g.append('line')
+                    .attr('class', 'marker-line')
+                    .attr('x1', xScale(denseMarker.flops))
+                    .attr('x2', xScale(denseMarker.flops))
+                    .attr('y1', yScale(denseMarker.loss))
+                    .attr('y2', innerHeight)
+                    .attr('stroke', denseColor);
+
+                g.append('line')
+                    .attr('class', 'marker-line')
+                    .attr('x1', xScale(moeMarker.flops))
+                    .attr('x2', xScale(moeMarker.flops))
+                    .attr('y1', yScale(moeMarker.loss))
+                    .attr('y2', innerHeight)
+                    .attr('stroke', moeColor);
+
+                // Cercles marqueurs
+                g.append('circle')
+                    .attr('class', 'marker-circle')
+                    .attr('cx', xScale(denseMarker.flops))
+                    .attr('cy', yScale(denseMarker.loss))
+                    .attr('r', 7)
+                    .attr('stroke', denseColor);
+
+                g.append('circle')
+                    .attr('class', 'marker-circle')
+                    .attr('cx', xScale(moeMarker.flops))
+                    .attr('cy', yScale(moeMarker.loss))
+                    .attr('r', 7)
+                    .attr('stroke', moeColor);
+
+                // Labels des courbes (avec fond blanc)
+                const denseLabel = g.append('text')
+                    .attr('class', 'curve-label')
+                    .attr('x', xScale(5e22))
+                    .attr('y', yScale(1.1))
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', denseColor);
+                denseLabel.append('tspan').text('C');
+                denseLabel.append('tspan')
+                    .attr('font-size', '9px')
+                    .attr('dy', '4')
+                    .text('dense');
+
+                const moeLabel = g.append('text')
+                    .attr('class', 'curve-label')
+                    .attr('x', xScale(1e22))
+                    .attr('y', yScale(1.1))
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', moeColor);
+                moeLabel.append('tspan').text('C');
+                moeLabel.append('tspan')
+                    .attr('font-size', '9px')
+                    .attr('dy', '4')
+                    .text('moe');
+
+                // Formule en dessous
+                const formulaDiv = document.createElement('div');
+                formulaDiv.className = 'formula-container';
+                formulaDiv.innerHTML = `
+          <div style="display: inline-flex; align-items: center; gap: 12px;">
+            <span style="font-style: italic; font-size: 16px;">EL</span>
+            <span style="font-size: 16px;">(</span>
+            <span style="display: inline-flex; align-items: baseline;">
+              <span style="font-style: italic; font-size: 14px;">𝒳</span>
+              <span style="font-size: 10px; transform: translateY(3px); display: inline-block;">MoE</span>
+            </span>
+            <span style="font-size: 16px;">|</span>
+            <span style="display: inline-flex; align-items: baseline;">
+              <span style="font-style: italic; font-size: 14px;">𝒳</span>
+              <span style="font-size: 10px; transform: translateY(3px); display: inline-block;">Dense</span>
+            </span>
+            <span style="font-size: 16px;">) =</span>
+            <div class="formula-fraction">
+              <span class="formula-numerator">C<sub>Dense</sub></span>
+              <span class="formula-denominator">C<sub>MoE</sub></span>
+            </div>
+          </div>
+        `;
+                container.appendChild(formulaDiv);
+
+                // Titre
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'chart-title';
+                titleDiv.textContent = 'Definition of Efficiency Leverage (EL)';
+                container.appendChild(titleDiv);
+            }
+
+            render();
+
+            // Responsive
+            const ro = window.ResizeObserver ? new ResizeObserver(() => render()) : null;
+            if (ro) ro.observe(container);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+        } else {
+            ensureD3(bootstrap);
+        }
+    })();
+</script>

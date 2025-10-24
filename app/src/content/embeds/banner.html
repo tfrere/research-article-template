@@ -72,16 +72,21 @@
   .d3-loss-curves {
     border: 1px solid var(--border-color);
     border-radius: 20px;
+    background-color: var(--surface-bg);
+    /* background: linear-gradient(to right,
+        rgba(232, 137, 171, 0.005) 0%,
+        rgba(227, 138, 66, 0.02) 60%,
+        rgba(232, 137, 171, 0.04) 100%); */
   }
 
   /* Hand-drawn annotation */
   .d3-loss-curves .annotation {
     position: absolute;
-    top: 70px;
+    top: 55px;
     right: 120px;
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 3px;
     pointer-events: none;
   }
 
@@ -95,12 +100,15 @@
     max-width: 160px;
     transform: rotate(-2deg);
     transform-origin: left center;
+    filter: drop-shadow(0 0 8px var(--page-bg)) drop-shadow(0 0 12px var(--page-bg)) drop-shadow(0 0 16px var(--page-bg)) drop-shadow(0 0 20px var(--page-bg));
   }
 
   .d3-loss-curves .annotation-arrow {
-    width: 22px;
-    height: 28px;
-    margin-top: 40px;
+    width: 28px;
+    height: 34px;
+    margin-top: 28px;
+    margin-left: 6px;
+    filter: drop-shadow(0 0 6px var(--page-bg)) drop-shadow(0 0 10px var(--page-bg)) drop-shadow(0 0 14px var(--page-bg)) drop-shadow(0 0 18px var(--page-bg));
   }
 
   /* Legend styling */
