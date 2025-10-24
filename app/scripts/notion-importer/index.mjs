@@ -421,6 +421,23 @@ async function main() {
         console.log('🧹 Cleaning output directory to avoid conflicts...');
         await cleanDirectory(config.output);
 
+        // Clean assets/image directory and ensure proper permissions
+        console.log('🧹 Cleaning assets/image directory and setting permissions...');
+        if (existsSync(ASTRO_ASSETS_PATH)) {
+            await cleanDirectory(ASTRO_ASSETS_PATH);
+        } else {
+            ensureDirectory(ASTRO_ASSETS_PATH);
+        }
+
+        // Ensure proper permissions for assets directory
+        const { execSync } = await import('child_process');
+        try {
+            execSync(`chmod -R 755 "${ASTRO_ASSETS_PATH}"`, { stdio: 'inherit' });
+            console.log('    ✅ Set permissions for assets/image directory');
+        } catch (error) {
+            console.log('    ⚠️  Could not set permissions (non-critical):', error.message);
+        }
+
         if (config.mdxOnly) {
             // Only convert existing Markdown to MDX
             console.log('📝 MDX conversion only mode');

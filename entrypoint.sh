@@ -3,6 +3,10 @@ set -e
 
 echo "🚀 Starting Hugging Face Space..."
 
+# Ensure proper permissions for the app directory at runtime
+echo "🔧 Setting up permissions..."
+chmod -R 755 /app/src/content/assets 2>/dev/null || echo "⚠️  Could not set permissions (non-critical)"
+
 # Check if Notion import is enabled and token is available
 if [ "${ENABLE_NOTION_IMPORT:-false}" = "true" ] && [ -n "$NOTION_TOKEN" ] && [ -n "$NOTION_PAGE_ID" ]; then
     echo "🔄 Notion import enabled - fetching content from Notion..."
