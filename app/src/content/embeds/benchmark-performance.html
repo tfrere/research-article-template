@@ -2,7 +2,7 @@
 <style>
     .benchmark-performance {
         font-family: 'Arial', sans-serif;
-        margin: 20px 0;
+        margin: 0px 0;
         padding: 0;
     }
 
@@ -77,18 +77,23 @@
         display: block;
     }
 
-    .benchmark-performance .axis path,
+    .benchmark-performance .axis path {
+        display: none;
+    }
+
     .benchmark-performance .axis line {
         stroke: var(--axis-color);
     }
 
     .benchmark-performance .axis text {
-        fill: var(--text-color);
+        fill: var(--tick-color);
         font-size: 11px;
     }
 
     .benchmark-performance .grid line {
         stroke: var(--grid-color);
+        stroke-opacity: 1;
+        stroke-width: 1.5;
     }
 
     .benchmark-performance .bar {
@@ -96,7 +101,15 @@
         cursor: pointer;
     }
 
+    .benchmark-performance .bar-label {
+        transition: opacity 0.2s ease;
+    }
+
     .benchmark-performance.hovering .bar.ghost {
+        opacity: 0.15;
+    }
+
+    .benchmark-performance.hovering .bar-label.ghost {
         opacity: 0.15;
     }
 
@@ -114,48 +127,48 @@
         // Données extraites de l'image
         const data = {
             '410M': {
-                'PIQA': { 'Softmax Attention': 67.5, 'Lightning Attention': 67.5, 'Hybrid-lightning': 67.5 },
-                'H5': { 'Softmax Attention': 39.6, 'Lightning Attention': 39.6, 'Hybrid-lightning': 39.6 },
-                'WG': { 'Softmax Attention': 51.8, 'Lightning Attention': 51.8, 'Hybrid-lightning': 52.1 },
-                'ARC-E': { 'Softmax Attention': 52.1, 'Lightning Attention': 52.1, 'Hybrid-lightning': 52.1 },
-                'ARC-C': { 'Softmax Attention': 26.2, 'Lightning Attention': 26.2, 'Hybrid-lightning': 26.2 },
-                'OBQA': { 'Softmax Attention': 30.0, 'Lightning Attention': 30.0, 'Hybrid-lightning': 30.0 },
-                'CSR-AVG': { 'Softmax Attention': 44.5, 'Lightning Attention': 44.5, 'Hybrid-lightning': 44.5 },
-                'NIAH': { 'Softmax Attention': 84.2, 'Lightning Attention': 84.2, 'Hybrid-lightning': 84.2 },
-                'SCR': { 'Softmax Attention': 10.9, 'Lightning Attention': 10.9, 'Hybrid-lightning': 10.9 }
+                'PIQA': { 'Softmax Attention': 67.0, 'Lightning Attention': 67.0, 'Hybrid-lightning': 67.5 },
+                'H5': { 'Softmax Attention': 39.0, 'Lightning Attention': 39.2, 'Hybrid-lightning': 39.6 },
+                'WG': { 'Softmax Attention': 52, 'Lightning Attention': 51.6, 'Hybrid-lightning': 51.8 },
+                'ARC-E': { 'Softmax Attention': 50.0, 'Lightning Attention': 52.5, 'Hybrid-lightning': 52.1 },
+                'ARC-C': { 'Softmax Attention': 24.0, 'Lightning Attention': 25.5, 'Hybrid-lightning': 26.2 },
+                'OBQA': { 'Softmax Attention': 29.5, 'Lightning Attention': 29.8, 'Hybrid-lightning': 30.0 },
+                'CSR-AVG': { 'Softmax Attention': 43.5, 'Lightning Attention': 44.0, 'Hybrid-lightning': 44.5 },
+                'NIAH': { 'Softmax Attention': 52.0, 'Lightning Attention': 14.0, 'Hybrid-lightning': 84.2 },
+                'SCR': { 'Softmax Attention': 10.0, 'Lightning Attention': 8.0, 'Hybrid-lightning': 10.9 }
             },
             '1B': {
-                'PIQA': { 'Softmax Attention': 70.7, 'Lightning Attention': 70.7, 'Hybrid-lightning': 70.7 },
-                'H5': { 'Softmax Attention': 50.4, 'Lightning Attention': 50.4, 'Hybrid-lightning': 50.4 },
-                'WG': { 'Softmax Attention': 55.8, 'Lightning Attention': 55.8, 'Hybrid-lightning': 55.8 },
-                'ARC-E': { 'Softmax Attention': 59.9, 'Lightning Attention': 59.9, 'Hybrid-lightning': 59.9 },
-                'ARC-C': { 'Softmax Attention': 27.6, 'Lightning Attention': 27.6, 'Hybrid-lightning': 27.6 },
-                'OBQA': { 'Softmax Attention': 32.8, 'Lightning Attention': 32.8, 'Hybrid-lightning': 32.8 },
-                'CSR-AVG': { 'Softmax Attention': 49.5, 'Lightning Attention': 49.5, 'Hybrid-lightning': 49.5 },
-                'NIAH': { 'Softmax Attention': 95.7, 'Lightning Attention': 44.0, 'Hybrid-lightning': 95.7 },
-                'SCR': { 'Softmax Attention': 13.3, 'Lightning Attention': 13.3, 'Hybrid-lightning': 13.3 }
+                'PIQA': { 'Softmax Attention': 70.0, 'Lightning Attention': 71.0, 'Hybrid-lightning': 70.7 },
+                'H5': { 'Softmax Attention': 47.5, 'Lightning Attention': 48.5, 'Hybrid-lightning': 50.4 },
+                'WG': { 'Softmax Attention': 52.0, 'Lightning Attention': 51.5, 'Hybrid-lightning': 55.8 },
+                'ARC-E': { 'Softmax Attention': 57.5, 'Lightning Attention': 57.5, 'Hybrid-lightning': 59.9 },
+                'ARC-C': { 'Softmax Attention': 28.0, 'Lightning Attention': 28.0, 'Hybrid-lightning': 27.6 },
+                'OBQA': { 'Softmax Attention': 33.0, 'Lightning Attention': 33.5, 'Hybrid-lightning': 32.8 },
+                'CSR-AVG': { 'Softmax Attention': 47.5, 'Lightning Attention': 48.0, 'Hybrid-lightning': 49.5 },
+                'NIAH': { 'Softmax Attention': 44.0, 'Lightning Attention': 29.0, 'Hybrid-lightning': 95.7 },
+                'SCR': { 'Softmax Attention': 11.5, 'Lightning Attention': 10.5, 'Hybrid-lightning': 13.3 }
             },
             '3B': {
-                'PIQA': { 'Softmax Attention': 74.2, 'Lightning Attention': 74.2, 'Hybrid-lightning': 74.2 },
-                'H5': { 'Softmax Attention': 61.1, 'Lightning Attention': 61.1, 'Hybrid-lightning': 61.1 },
-                'WG': { 'Softmax Attention': 59.5, 'Lightning Attention': 59.5, 'Hybrid-lightning': 59.5 },
-                'ARC-E': { 'Softmax Attention': 65.5, 'Lightning Attention': 65.5, 'Hybrid-lightning': 65.5 },
-                'ARC-C': { 'Softmax Attention': 34.9, 'Lightning Attention': 34.9, 'Hybrid-lightning': 34.9 },
-                'OBQA': { 'Softmax Attention': 35.8, 'Lightning Attention': 35.8, 'Hybrid-lightning': 35.8 },
-                'CSR-AVG': { 'Softmax Attention': 55.2, 'Lightning Attention': 46.0, 'Hybrid-lightning': 55.2 },
-                'NIAH': { 'Softmax Attention': 98.0, 'Lightning Attention': 46.0, 'Hybrid-lightning': 98.0 },
-                'SCR': { 'Softmax Attention': 14.7, 'Lightning Attention': 14.7, 'Hybrid-lightning': 14.7 }
+                'PIQA': { 'Softmax Attention': 72.2, 'Lightning Attention': 76.2, 'Hybrid-lightning': 74.2 },
+                'H5': { 'Softmax Attention': 58.5, 'Lightning Attention': 60.5, 'Hybrid-lightning': 61.1 },
+                'WG': { 'Softmax Attention': 59.0, 'Lightning Attention': 61.0, 'Hybrid-lightning': 59.5 },
+                'ARC-E': { 'Softmax Attention': 63.0, 'Lightning Attention': 65.0, 'Hybrid-lightning': 65.0 },
+                'ARC-C': { 'Softmax Attention': 33.0, 'Lightning Attention': 34.0, 'Hybrid-lightning': 34.9 },
+                'OBQA': { 'Softmax Attention': 33.0, 'Lightning Attention': 36.2, 'Hybrid-lightning': 35.8 },
+                'CSR-AVG': { 'Softmax Attention': 50.5, 'Lightning Attention': 55.2, 'Hybrid-lightning': 55.2 },
+                'NIAH': { 'Softmax Attention': 46.0, 'Lightning Attention': 11.0, 'Hybrid-lightning': 98.0 },
+                'SCR': { 'Softmax Attention': 13.7, 'Lightning Attention': 13.2, 'Hybrid-lightning': 14.7 }
             },
             '7B': {
-                'PIQA': { 'Softmax Attention': 76.5, 'Lightning Attention': 76.5, 'Hybrid-lightning': 76.5 },
-                'H5': { 'Softmax Attention': 66.3, 'Lightning Attention': 66.3, 'Hybrid-lightning': 66.3 },
-                'WG': { 'Softmax Attention': 62.4, 'Lightning Attention': 62.4, 'Hybrid-lightning': 62.4 },
-                'ARC-E': { 'Softmax Attention': 68.5, 'Lightning Attention': 68.5, 'Hybrid-lightning': 68.5 },
-                'ARC-C': { 'Softmax Attention': 38.9, 'Lightning Attention': 38.9, 'Hybrid-lightning': 38.9 },
-                'OBQA': { 'Softmax Attention': 37.2, 'Lightning Attention': 37.2, 'Hybrid-lightning': 37.2 },
-                'CSR-AVG': { 'Softmax Attention': 58.3, 'Lightning Attention': 58.0, 'Hybrid-lightning': 58.3 },
-                'NIAH': { 'Softmax Attention': 97.7, 'Lightning Attention': 20.0, 'Hybrid-lightning': 97.7 },
-                'SCR': { 'Softmax Attention': 15.5, 'Lightning Attention': 15.5, 'Hybrid-lightning': 15.5 }
+                'PIQA': { 'Softmax Attention': 74.5, 'Lightning Attention': 76.25, 'Hybrid-lightning': 76.5 },
+                'H5': { 'Softmax Attention': 64.3, 'Lightning Attention': 66.4, 'Hybrid-lightning': 66.3 },
+                'WG': { 'Softmax Attention': 62, 'Lightning Attention': 61.4, 'Hybrid-lightning': 62.4 },
+                'ARC-E': { 'Softmax Attention': 67.1, 'Lightning Attention': 67.5, 'Hybrid-lightning': 68.5 },
+                'ARC-C': { 'Softmax Attention': 36.9, 'Lightning Attention': 38.4, 'Hybrid-lightning': 38.9 },
+                'OBQA': { 'Softmax Attention': 35.2, 'Lightning Attention': 38, 'Hybrid-lightning': 37.2 },
+                'CSR-AVG': { 'Softmax Attention': 55.0, 'Lightning Attention': 57.5, 'Hybrid-lightning': 58.3 },
+                'NIAH': { 'Softmax Attention': 60.0, 'Lightning Attention': 20.0, 'Hybrid-lightning': 97.7 },
+                'SCR': { 'Softmax Attention': 14, 'Lightning Attention': 12.5, 'Hybrid-lightning': 15.5 }
             }
         };
 
@@ -306,9 +319,9 @@
         };
 
         const renderChart = (container, chartData, modelSize, colors) => {
-            const margin = { top: 20, right: 10, bottom: 60, left: 50 };
+            const margin = { top: 40, right: 10, bottom: 60, left: 50 };
             const width = 400;
-            const height = 300;
+            const height = 270;
             const innerWidth = width - margin.left - margin.right;
             const innerHeight = height - margin.top - margin.bottom;
 
@@ -418,6 +431,13 @@
                             item.classList.add('ghost');
                         }
                     });
+
+                    // Ghost labels if not hovering Hybrid-lightning
+                    document.querySelectorAll('.benchmark-performance .bar-label').forEach(label => {
+                        if (label.getAttribute('data-method') !== d.method) {
+                            label.classList.add('ghost');
+                        }
+                    });
                 })
                 .on('mouseleave', function (event, d) {
                     const mainContainer = container.closest('.benchmark-performance');
@@ -433,9 +453,29 @@
                     legendItems.forEach(item => {
                         item.classList.remove('ghost');
                     });
+
+                    document.querySelectorAll('.benchmark-performance .bar-label').forEach(label => {
+                        label.classList.remove('ghost');
+                    });
                 });
 
-            // Bar labels removed for better readability
+            // Bar labels - afficher uniquement sur Hybrid-lightning
+            groups.each(function (benchmark) {
+                const hybridLightningValue = chartData[benchmark]['Hybrid-lightning'];
+
+                // Ajouter le label uniquement pour Hybrid-lightning
+                d3.select(this)
+                    .append('text')
+                    .attr('class', 'bar-label')
+                    .attr('data-method', 'Hybrid-lightning')
+                    .attr('x', x1('Hybrid-lightning') + x1.bandwidth() / 2)
+                    .attr('y', y(hybridLightningValue) - 5)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10px')
+                    .attr('font-weight', '600')
+                    .attr('fill', 'var(--text-color)')
+                    .text(hybridLightningValue.toFixed(1));
+            });
         };
 
         if (document.readyState === 'loading') {

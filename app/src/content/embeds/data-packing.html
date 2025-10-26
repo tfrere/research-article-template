@@ -61,7 +61,7 @@
     .d3-data-packing .block {
         width: 30px;
         height: 30px;
-        border: none;
+        border: 1px solid;
         border-radius: 4px;
         display: flex;
         align-items: center;
@@ -69,46 +69,57 @@
         font-size: 10px;
         font-weight: bold;
         color: white;
+        position: relative;
     }
 
     .d3-data-packing .red {
-        background-color: var(--color-0);
+        background-color: color-mix(in srgb, var(--color-0) 60%, transparent);
+        border-color: var(--color-0);
     }
 
     .d3-data-packing .orange {
-        background-color: var(--color-1);
+        background-color: color-mix(in srgb, var(--color-1) 60%, transparent);
+        border-color: var(--color-1);
     }
 
     .d3-data-packing .yellow {
-        background-color: var(--color-2);
+        background-color: color-mix(in srgb, var(--color-2) 60%, transparent);
+        border-color: var(--color-2);
     }
 
     .d3-data-packing .green {
-        background-color: var(--color-3);
+        background-color: color-mix(in srgb, var(--color-3) 60%, transparent);
+        border-color: var(--color-3);
     }
 
     .d3-data-packing .lightgreen {
-        background-color: var(--color-4);
+        background-color: color-mix(in srgb, var(--color-4) 60%, transparent);
+        border-color: var(--color-4);
     }
 
     .d3-data-packing .lightblue {
-        background-color: var(--color-5);
+        background-color: color-mix(in srgb, var(--color-5) 60%, transparent);
+        border-color: var(--color-5);
     }
 
     .d3-data-packing .blue {
-        background-color: var(--color-6);
+        background-color: color-mix(in srgb, var(--color-6) 60%, transparent);
+        border-color: var(--color-6);
     }
 
     .d3-data-packing .purple {
-        background-color: var(--color-7);
+        background-color: color-mix(in srgb, var(--color-7) 60%, transparent);
+        border-color: var(--color-7);
     }
 
     .d3-data-packing .pink {
-        background-color: var(--color-8);
+        background-color: color-mix(in srgb, var(--color-8) 60%, transparent);
+        border-color: var(--color-8);
     }
 
     .d3-data-packing .gray {
-        background-color: #bdc3c7;
+        background-color: var(--surface-bg);
+        border-color: color-mix(in srgb, var(--text-color) 30%, transparent);
     }
 
     .d3-data-packing .packing-false {
@@ -244,14 +255,14 @@
             </div>
 
             <div class="section">
-              <label class="section-title">packing=False</label>
+              <label class="section-title">Packing = False</label>
               <div class="grid packing-false">
                 ${createBlocks(packingFalse)}
               </div>
             </div>
 
             <div class="section">
-              <label class="section-title">packing=True</label>
+              <label class="section-title">Packing = True</label>
               <div class="grid packing-true">
                 ${createBlocks(packingTrue)}
               </div>

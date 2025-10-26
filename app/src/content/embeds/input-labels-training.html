@@ -60,7 +60,7 @@
     .d3-input-labels .token {
         width: 30px;
         height: 30px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        border: 1px solid;
         border-radius: 4px;
         display: flex;
         align-items: center;
@@ -72,24 +72,39 @@
     }
 
     .d3-input-labels .user-token {
-        background-color: var(--color-0);
+        background-color: color-mix(in srgb, var(--color-0) 60%, transparent);
+        border-color: var(--color-0);
     }
 
     .d3-input-labels .assistant-token {
-        background-color: var(--color-1);
+        background-color: color-mix(in srgb, var(--color-1) 60%, transparent);
+        border-color: var(--color-1);
     }
 
     .d3-input-labels .label-token {
-        background-color: var(--color-2);
+        background-color: color-mix(in srgb, var(--color-2) 40%, transparent);
+        border-color: var(--color-2);
+        position: relative;
     }
 
     .d3-input-labels .label-masked {
-        background: repeating-linear-gradient(45deg,
-                var(--color-2),
-                var(--color-2) 3px,
+        background-color: transparent;
+        border-color: var(--color-2);
+        position: relative;
+        opacity: 0.5;
+    }
+
+    .d3-input-labels .label-masked::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 4px;
+        background-image: repeating-linear-gradient(135deg,
+                transparent,
                 transparent 3px,
-                transparent 6px);
-        opacity: 0.6;
+                var(--color-2) 3px,
+                var(--color-2) 4px);
+        opacity: 0.5;
     }
 
     .d3-input-labels .turn-label {
