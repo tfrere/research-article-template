@@ -16,7 +16,7 @@
 
     .training-pipeline .phase {
         flex: 0 1 auto;
-        border: 1px dashed #7d7d7d;
+        border: 1px dashed color-mix(in srgb, var(--text-color, #333) 40%, transparent);
         border-radius: 8px;
         padding: 15px;
     }
@@ -26,7 +26,7 @@
         font-weight: bold;
         color: var(--text-color, #333);
         margin-bottom: 20px;
-        text-align: center;
+        text-align: left;
         letter-spacing: 1px;
         text-transform: uppercase;
         opacity: 0.6;
@@ -53,7 +53,7 @@
         width: 100%;
         padding: 16px;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -77,7 +77,7 @@
         display: flex;
         align-items: center;
         flex-shrink: 0;
-        margin-top: 30px;
+        margin-top: 40px;
     }
 
     .training-pipeline .arrow-between {
@@ -122,18 +122,21 @@
     }
 
     .training-pipeline .pre-training {
-        background: linear-gradient(135deg, #87CEEB, #6AB8DB);
-        color: #000;
+        background: color-mix(in srgb, #87CEEB 60%, transparent);
+        border-color: #87CEEB;
+        color: var(--text-color, #000);
     }
 
     .training-pipeline .sft {
-        background: linear-gradient(135deg, #F4C28F, #E6A966);
-        color: #000;
+        background: color-mix(in srgb, #F4C28F 60%, transparent);
+        border-color: #F4C28F;
+        color: var(--text-color, #000);
     }
 
     .training-pipeline .rl {
-        background: linear-gradient(135deg, #E6B8E6, #D69FD6);
-        color: #000;
+        background: color-mix(in srgb, #E6B8E6 60%, transparent);
+        border-color: #E6B8E6;
+        color: var(--text-color, #000);
     }
 
     @media (max-width: 1100px) {

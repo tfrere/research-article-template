@@ -47,56 +47,62 @@
     .rl-training-sync .box {
         padding: 8px 14px;
         border-radius: 8px;
+        border: 1px solid;
         font-weight: 600;
         font-size: 11px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         text-align: center;
         position: absolute;
         z-index: 2;
         line-height: 1.3;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease;
         cursor: default;
     }
 
     .rl-training-sync .rewards {
-        background: var(--color-0, #E889AB);
-        color: #000;
+        background: color-mix(in srgb, var(--color-0, #E889AB) 60%, transparent);
+        border-color: var(--color-0, #E889AB);
+        color: var(--text-color, #000);
         top: 10px;
         left: 10px;
     }
 
     .rl-training-sync .verifier {
-        background: var(--color-1, #4EA5B7);
-        color: #000;
+        background: color-mix(in srgb, var(--color-1, #4EA5B7) 60%, transparent);
+        border-color: var(--color-1, #4EA5B7);
+        color: var(--text-color, #000);
         top: 10px;
         right: 10px;
     }
 
     .rl-training-sync .rollouts {
-        background: var(--color-2, #E38A42);
-        color: #000;
+        background: color-mix(in srgb, var(--color-2, #E38A42) 60%, transparent);
+        border-color: var(--color-2, #E38A42);
+        color: var(--text-color, #000);
         top: 50%;
         right: 10px;
         transform: translateY(-50%);
     }
 
     .rl-training-sync .trainer {
-        background: var(--color-3, #CEC0FA);
-        color: #000;
+        background: color-mix(in srgb, var(--color-3, #CEC0FA) 60%, transparent);
+        border-color: var(--color-3, #CEC0FA);
+        color: var(--text-color, #000);
         bottom: 60px;
         left: 10px;
     }
 
     .rl-training-sync .generator {
-        background: var(--color-0, #E889AB);
-        color: #000;
+        background: color-mix(in srgb, var(--color-0, #E889AB) 60%, transparent);
+        border-color: var(--color-0, #E889AB);
+        color: var(--text-color, #000);
         bottom: 60px;
         right: 10px;
     }
 
     .rl-training-sync .prompt {
-        background: var(--color-1, #4EA5B7);
-        color: #000;
+        background: color-mix(in srgb, var(--color-1, #4EA5B7) 60%, transparent);
+        border-color: var(--color-1, #4EA5B7);
+        color: var(--text-color, #000);
         bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
@@ -149,23 +155,25 @@
 
     .rl-training-sync .node {
         padding: 7px 15px;
-        border-radius: 14px;
+        border-radius: 8px;
+        border: 1px solid;
         font-weight: 600;
         font-size: 11px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         min-width: 38px;
         text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.2s ease;
     }
 
     .rl-training-sync .node-t {
-        background: var(--color-3, #CEC0FA);
-        color: #000;
+        background: color-mix(in srgb, var(--color-3, #CEC0FA) 60%, transparent);
+        border-color: var(--color-3, #CEC0FA);
+        color: var(--text-color, #000);
     }
 
     .rl-training-sync .node-g {
-        background: var(--color-0, #E889AB);
-        color: #000;
+        background: color-mix(in srgb, var(--color-0, #E889AB) 60%, transparent);
+        border-color: var(--color-0, #E889AB);
+        color: var(--text-color, #000);
     }
 
     .rl-training-sync .sync-arrow {
@@ -504,13 +512,13 @@
                         <div class="mode-header">Offline (s=∞)</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k+1:</span>
+                            <span class="step-label">Step k+1</span>
                             <span class="node node-t">T</span>
                             <span class="node node-g">G</span>
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k:</span>
+                            <span class="step-label">Step k</span>
                             <span class="node node-t">T</span>
                             <span class="node node-g">G</span>
                         </div>
@@ -518,13 +526,13 @@
                         <div class="dots">⋯</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 1:</span>
+                            <span class="step-label">Step 1</span>
                             <span class="node node-t">T</span>
                             <span class="node node-g">G</span>
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 0:</span>
+                            <span class="step-label">Step 0</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -539,13 +547,13 @@
                         <div class="mode-header">Semi-Online (s=k)</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k+1:</span>
+                            <span class="step-label">Step k+1</span>
                             <span class="node node-t">T</span>
                             <span class="node node-g">G</span>
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k:</span>
+                            <span class="step-label">Step k</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -557,13 +565,13 @@
                         <div class="dots">⋯</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 1:</span>
+                            <span class="step-label">Step 1</span>
                             <span class="node node-t">T</span>
                             <span class="node node-g">G</span>
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 0:</span>
+                            <span class="step-label">Step 0</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -578,7 +586,7 @@
                         <div class="mode-header">Online (s=1)</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k+1:</span>
+                            <span class="step-label">Step k+1</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -588,7 +596,7 @@
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step k:</span>
+                            <span class="step-label">Step k</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -600,7 +608,7 @@
                         <div class="dots">⋯</div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 1:</span>
+                            <span class="step-label">Step 1</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
@@ -610,7 +618,7 @@
                         </div>
                         
                         <div class="step-row">
-                            <span class="step-label">Step 0:</span>
+                            <span class="step-label">Step 0</span>
                             <span class="node node-t">T</span>
                             <span class="sync-arrow">
                                 <span class="sync-label">sync</span>
