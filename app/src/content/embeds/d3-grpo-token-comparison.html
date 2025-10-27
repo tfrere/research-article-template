@@ -279,10 +279,10 @@
 
       const fetchFirstAvailable = async (filename) => {
         const paths = [
-          `/data/histograms/${filename}`,
-          `./assets/data/histograms/${filename}`,
-          `../assets/data/histograms/${filename}`,
-          `../../assets/data/histograms/${filename}`
+          `/data/${filename}`,
+          `./assets/data/${filename}`,
+          `../assets/data/${filename}`,
+          `../../assets/data/${filename}`
         ];
 
         for (const p of paths) {
