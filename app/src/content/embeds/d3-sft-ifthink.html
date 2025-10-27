@@ -1,0 +1,419 @@
+<div class="d3-sft-ifthink"></div>
+<style>
+  .d3-sft-ifthink {
+    width: 100%;
+    min-height: 600px;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  }
+
+  .d3-sft-ifthink svg {
+    display: block;
+    width: 100%;
+  }
+
+  .d3-sft-ifthink .node-rect {
+    stroke-width: 2px;
+    rx: 8px;
+    ry: 8px;
+  }
+
+  .d3-sft-ifthink .node-text {
+    font-size: 13px;
+    font-weight: 500;
+    text-anchor: middle;
+    pointer-events: none;
+    fill: var(--text-color);
+  }
+
+  .d3-sft-ifthink .link-path {
+    fill: none;
+    stroke: var(--muted-color);
+    stroke-width: 2px;
+    marker-end: url(#arrowhead);
+  }
+
+  .d3-sft-ifthink .link-label {
+    font-size: 11px;
+    fill: var(--muted-color);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+
+  .d3-sft-ifthink .subgraph-rect {
+    fill: #f8f9fa;
+    stroke: #dee2e6;
+    stroke-width: 1px;
+    rx: 12px;
+    ry: 12px;
+  }
+
+  [data-theme="dark"] .d3-sft-ifthink .subgraph-rect {
+    fill: rgba(255,255,255,0.03);
+    stroke: rgba(255,255,255,0.1);
+  }
+
+  .d3-sft-ifthink .subgraph-label {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--text-color);
+    text-anchor: start;
+  }
+
+  .d3-sft-ifthink .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .d3-sft-ifthink .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-sft-ifthink .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-sft-ifthink .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+
+  .d3-sft-ifthink .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sft-ifthink'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sft-ifthink'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Get colors from ColorPalettes
+      const getColors = () => {
+        if (window.ColorPalettes) {
+          const colors = window.ColorPalettes.getColors('categorical', 5);
+          return {
+            input: colors[0],      // Green
+            generation: colors[1], // Blue
+            turn: colors[2],       // Light blue
+            output: colors[3],     // Red/pink
+            subgraph: colors[4]    // Gray
+          };
+        }
+        // Fallback colors
+        return {
+          input: '#4caf50',
+          generation: '#2196f3',
+          turn: '#64b5f6',
+          output: '#f44336',
+          subgraph: '#dee2e6'
+        };
+      };
+
+      // Define the flowchart structure
+      const nodes = [
+        { id: 'ifeval', label: 'Tülu3 IF Dataset', type: 'input', x: 150, y: 80 },
+        { id: 'types', label: 'Set of instruction types', type: 'input', x: 400, y: 80 },
+        { id: 'single', label: 'Single turn prompt', type: 'generation', x: 150, y: 180 },
+        { id: 'llm', label: 'LLM sampled\ninstruction type', type: 'generation', x: 400, y: 180 },
+        { id: 'turn1', label: 'Prompt @ turn 1', type: 'turn', x: 150, y: 300 },
+        { id: 'turn2', label: 'Prompt @ turn 2', type: 'turn', x: 300, y: 300 },
+        { id: 'turn3', label: 'Prompt @ turn 3', type: 'turn', x: 450, y: 300 },
+        { id: 'multi', label: 'English multi-turn prompt', type: 'generation', x: 300, y: 420 },
+        { id: 'ifthink', label: 'IFThink', type: 'output', x: 300, y: 520 }
+      ];
+
+      const links = [
+        { source: 'ifeval', target: 'single', label: '' },
+        { source: 'ifeval', target: 'types', label: '' },
+        { source: 'single', target: 'turn1', label: '' },
+        { source: 'types', target: 'llm', label: 'Sampled instruction type' },
+        { source: 'llm', target: 'turn2', label: 'Synthesis' },
+        { source: 'llm', target: 'turn3', label: 'Synthesis' },
+        { source: 'turn1', target: 'multi', label: '' },
+        { source: 'turn2', target: 'multi', label: '' },
+        { source: 'turn3', target: 'multi', label: '' },
+        { source: 'multi', target: 'ifthink', label: '' }
+      ];
+
+      const subgraph = {
+        label: 'Multi-turn prompts',
+        nodes: ['turn1', 'turn2', 'turn3'],
+        padding: 20
+      };
+
+      // Create SVG
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      // Define arrowhead marker
+      const defs = svg.append('defs');
+      const marker = defs.append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '0 0 10 10')
+        .attr('refX', 9)
+        .attr('refY', 5)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto');
+      marker.append('path')
+        .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+        .attr('fill', 'var(--muted-color)');
+
+      let width = 800, height = 600;
+
+      function render() {
+        width = container.clientWidth || 800;
+        height = Math.max(600, Math.round(width * 0.75));
+        svg.attr('width', width).attr('height', height);
+
+        const colors = getColors();
+
+        // Calculate scale to fit content
+        const nodeExtent = {
+          minX: d3.min(nodes, d => d.x),
+          maxX: d3.max(nodes, d => d.x),
+          minY: d3.min(nodes, d => d.y),
+          maxY: d3.max(nodes, d => d.y)
+        };
+
+        const contentWidth = nodeExtent.maxX - nodeExtent.minX + 200;
+        const contentHeight = nodeExtent.maxY - nodeExtent.minY + 150;
+
+        const scale = Math.min(width / contentWidth, height / contentHeight, 1.2);
+        const offsetX = (width - contentWidth * scale) / 2;
+        const offsetY = (height - contentHeight * scale) / 2 + 30;
+
+        gRoot.attr('transform', `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+
+        // Draw subgraph background
+        const subgraphNodes = nodes.filter(n => subgraph.nodes.includes(n.id));
+        const subgraphBounds = {
+          minX: d3.min(subgraphNodes, d => d.x) - subgraph.padding,
+          maxX: d3.max(subgraphNodes, d => d.x) + subgraph.padding,
+          minY: d3.min(subgraphNodes, d => d.y) - subgraph.padding,
+          maxY: d3.max(subgraphNodes, d => d.y) + subgraph.padding
+        };
+
+        const subgraphRect = gRoot.selectAll('.subgraph-rect').data([subgraph]);
+        subgraphRect.join('rect')
+          .attr('class', 'subgraph-rect')
+          .attr('x', subgraphBounds.minX - 60)
+          .attr('y', subgraphBounds.minY - 30)
+          .attr('width', subgraphBounds.maxX - subgraphBounds.minX + 120)
+          .attr('height', subgraphBounds.maxY - subgraphBounds.minY + 60);
+
+        const subgraphLabel = gRoot.selectAll('.subgraph-label').data([subgraph]);
+        subgraphLabel.join('text')
+          .attr('class', 'subgraph-label')
+          .attr('x', subgraphBounds.minX - 50)
+          .attr('y', subgraphBounds.minY - 10)
+          .text(subgraph.label);
+
+        // Draw links
+        const linkGroup = gRoot.selectAll('.link-group').data(links);
+        const linkEnter = linkGroup.enter().append('g').attr('class', 'link-group');
+
+        linkEnter.append('path').attr('class', 'link-path');
+        linkEnter.append('text').attr('class', 'link-label');
+
+        const linkMerge = linkEnter.merge(linkGroup);
+
+        linkMerge.select('.link-path')
+          .attr('d', d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+
+            const sx = sourceNode.x;
+            const sy = sourceNode.y + 20;
+            const tx = targetNode.x;
+            const ty = targetNode.y - 20;
+
+            const midY = (sy + ty) / 2;
+
+            return `M ${sx} ${sy}
+                    C ${sx} ${midY}, ${tx} ${midY}, ${tx} ${ty}`;
+          });
+
+        linkMerge.select('.link-label')
+          .attr('x', d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            return (sourceNode.x + targetNode.x) / 2;
+          })
+          .attr('y', d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            return (sourceNode.y + targetNode.y) / 2 - 5;
+          })
+          .text(d => d.label);
+
+        // Draw nodes
+        const nodeWidth = 140;
+        const nodeHeight = 40;
+
+        const nodeGroup = gRoot.selectAll('.node-group').data(nodes);
+        const nodeEnter = nodeGroup.enter().append('g').attr('class', 'node-group');
+
+        nodeEnter.append('rect').attr('class', 'node-rect');
+        nodeEnter.append('text').attr('class', 'node-text');
+
+        const nodeMerge = nodeEnter.merge(nodeGroup);
+
+        nodeMerge.select('.node-rect')
+          .attr('x', d => d.x - nodeWidth / 2)
+          .attr('y', d => d.y - nodeHeight / 2)
+          .attr('width', nodeWidth)
+          .attr('height', nodeHeight)
+          .attr('fill', d => {
+            switch(d.type) {
+              case 'input': return colors.input;
+              case 'generation': return colors.generation;
+              case 'turn': return colors.turn;
+              case 'output': return colors.output;
+              default: return colors.generation;
+            }
+          })
+          .attr('fill-opacity', 0.15)
+          .attr('stroke', d => {
+            switch(d.type) {
+              case 'input': return colors.input;
+              case 'generation': return colors.generation;
+              case 'turn': return colors.turn;
+              case 'output': return colors.output;
+              default: return colors.generation;
+            }
+          });
+
+        nodeMerge.select('.node-text')
+          .attr('x', d => d.x)
+          .attr('y', d => d.y)
+          .each(function(d) {
+            const lines = d.label.split('\n');
+            const textEl = d3.select(this);
+            textEl.selectAll('tspan').remove();
+
+            lines.forEach((line, i) => {
+              textEl.append('tspan')
+                .attr('x', d.x)
+                .attr('dy', i === 0 ? '0.35em' : '1.1em')
+                .text(line);
+            });
+          });
+      }
+
+      // Create legend
+      const legend = document.createElement('div');
+      legend.className = 'legend';
+
+      const legendTitle = document.createElement('div');
+      legendTitle.className = 'legend-title';
+      legendTitle.textContent = 'Legend';
+      legend.appendChild(legendTitle);
+
+      const items = document.createElement('div');
+      items.className = 'items';
+
+      const legendItems = [
+        { label: 'Input', type: 'input' },
+        { label: 'Generation', type: 'generation' },
+        { label: 'Multi-turn', type: 'turn' },
+        { label: 'Output', type: 'output' }
+      ];
+
+      legendItems.forEach(item => {
+        const colors = getColors();
+        const itemEl = document.createElement('span');
+        itemEl.className = 'item';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        swatch.style.background = colors[item.type];
+        swatch.style.opacity = '0.15';
+        swatch.style.borderColor = colors[item.type];
+
+        const text = document.createElement('span');
+        text.textContent = item.label;
+
+        itemEl.appendChild(swatch);
+        itemEl.appendChild(text);
+        items.appendChild(itemEl);
+      });
+
+      legend.appendChild(items);
+      container.appendChild(legend);
+
+      // Initial render + resize handling
+      render();
+      const rerender = () => render();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+
+      // Listen for theme changes to update colors
+      if (window.ColorPalettes && window.ColorPalettes.onChange) {
+        window.ColorPalettes.onChange(() => {
+          render();
+          // Update legend swatches
+          const colors = getColors();
+          const swatches = container.querySelectorAll('.legend .swatch');
+          swatches.forEach((swatch, i) => {
+            if (legendItems[i]) {
+              swatch.style.background = colors[legendItems[i].type];
+              swatch.style.borderColor = colors[legendItems[i].type];
+            }
+          });
+        });
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

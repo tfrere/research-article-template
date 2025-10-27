@@ -1340,9 +1340,8 @@
           .fill('none')
           .stroke({
             color: CONFIG.colors.groupBorder,
-            width: 5,
-            dasharray: '8,5',
-            opacity: 0.8
+            width: 3,
+            opacity: 1
           })
           .radius(12);
 
@@ -1391,8 +1390,7 @@
             .stroke({
               color: CONFIG.colors.groupBorder,
               width: 3,
-              dasharray: '6,4',
-              opacity: 0.7
+              opacity: 1
             })
             .radius(8);
 
@@ -2090,137 +2088,132 @@
         controlsContainer.style.display = 'none';
       } else {
         // Categorize paths
-        const intranodePaths = [
-          { id: 'cpu-gpu', label: CONFIG.paths['cpu-gpu'].label },
-          { id: 'gpu-gpu-cpu', label: CONFIG.paths['gpu-gpu-cpu'].label },
-          { id: 'gpu-gpu-nvswitch', label: CONFIG.paths['gpu-gpu-nvswitch'].label },
-          { id: 'gpu-gpu-efa-intranode', label: CONFIG.paths['gpu-gpu-efa-intranode'].label }
-        ];
-
-        const internodePaths = [
-          { id: 'gpu-gpu-efa-internode', label: CONFIG.paths['gpu-gpu-efa-internode'].label }
-        ];
-
-        const storagePaths = [
-          { id: 'gpu-storage', label: CONFIG.paths['gpu-storage'].label },
-          { id: 'cpu-storage', label: CONFIG.paths['cpu-storage'].label },
-          { id: 'gpu-cpu-storage', label: CONFIG.paths['gpu-cpu-storage'].label }
-        ];
+        const pathsByCategory = {
+          intranode: [
+            { id: 'cpu-gpu', label: CONFIG.paths['cpu-gpu'].label },
+            { id: 'gpu-gpu-cpu', label: CONFIG.paths['gpu-gpu-cpu'].label },
+            { id: 'gpu-gpu-nvswitch', label: CONFIG.paths['gpu-gpu-nvswitch'].label },
+            { id: 'gpu-gpu-efa-intranode', label: CONFIG.paths['gpu-gpu-efa-intranode'].label }
+          ],
+          internode: [
+            { id: 'gpu-gpu-efa-internode', label: CONFIG.paths['gpu-gpu-efa-internode'].label }
+          ],
+          storage: [
+            { id: 'gpu-storage', label: CONFIG.paths['gpu-storage'].label },
+            { id: 'cpu-storage', label: CONFIG.paths['cpu-storage'].label },
+            { id: 'gpu-cpu-storage', label: CONFIG.paths['gpu-cpu-storage'].label }
+          ]
+        };
 
         const controlsHTML = `
-          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 4px;">Filters</div>
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 8px;">Filters</div>
           
-          <div class="aws-topology-controls-section">
-            <div class="aws-topology-controls-label">Intranode</div>
-            <div class="aws-topology-controls-buttons">
-              ${intranodePaths.map(ctrl => `
-                <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
-              `).join('')}
-            </div>
-          </div>
-          
-          <div class="aws-topology-controls-row">
-            <div class="aws-topology-controls-section">
-              <div class="aws-topology-controls-label">Internode</div>
-              <div class="aws-topology-controls-buttons">
-                ${internodePaths.map(ctrl => `
-                  <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
-                `).join('')}
-              </div>
-            </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="category-select">
+              <option value="">Select category...</option>
+              <option value="intranode">Intranode</option>
+              <option value="internode">Internode</option>
+              <option value="storage">Storage</option>
+            </select>
             
-            <div class="aws-topology-controls-section">
-              <div class="aws-topology-controls-label">Storage</div>
-              <div class="aws-topology-controls-buttons">
-                ${storagePaths.map(ctrl => `
-                  <button class="button button--ghost" data-highlight="${ctrl.id}">${ctrl.label}</button>
-                `).join('')}
-              </div>
-            </div>
+            <select id="path-select" style="min-width: 200px;" disabled>
+              <option value="">Select path...</option>
+            </select>
           </div>
         `;
         controlsContainer.innerHTML = controlsHTML;
 
-        // Add click handlers
-        controlsContainer.querySelectorAll('.button').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const pathId = btn.dataset.highlight;
-            const path = CONFIG.paths[pathId];
+        const categorySelect = controlsContainer.querySelector('#category-select');
+        const pathSelect = controlsContainer.querySelector('#path-select');
 
-            if (!path) return;
+        // Function to update path select options based on category
+        const updatePathSelect = (category) => {
+          pathSelect.innerHTML = '<option value="">Select path...</option>';
 
-            // Check if this button is currently active BEFORE toggling
-            const isActive = btn.classList.contains('button--ghost') === false;
-
-            // Deactivate all buttons
-            controlsContainer.querySelectorAll('.button').forEach(b => {
-              b.classList.remove('button--ghost');
-              b.classList.add('button--ghost');
+          if (category && pathsByCategory[category]) {
+            pathSelect.disabled = false;
+            pathsByCategory[category].forEach(path => {
+              const option = document.createElement('option');
+              option.value = path.id;
+              option.textContent = path.label;
+              pathSelect.appendChild(option);
             });
+          } else {
+            pathSelect.disabled = true;
+          }
+        };
 
-            // If button was NOT active, activate it and show path
-            if (!isActive) {
-              btn.classList.remove('button--ghost');
-              currentActivePathId = pathId; // Track active path
+        // Function to activate a path
+        const activatePath = (pathId) => {
+          if (!pathId) {
+            // Reset to default
+            currentActivePathId = null;
+            const needsRedraw = currentEnsembleCount !== 2 || currentSystemCount !== 1;
 
-              // Check if we need to redraw (either different config OR EFA paths that need cross-links)
-              const needsRedraw = path.requiredEnsembles !== currentEnsembleCount ||
-                path.requiredSystems !== currentSystemCount ||
-                pathId === 'gpu-gpu-efa-intranode' ||
-                pathId === 'gpu-gpu-efa-internode';
+            if (needsRedraw) {
+              const container = getElement('aws-topology-container');
+              container.style.opacity = '0';
 
-              if (needsRedraw) {
-                // Fade out first
-                const container = getElement('aws-topology-container');
-                container.style.opacity = '0';
-
-                // Wait for fade out to complete, then redraw
-                setTimeout(() => {
-                  // Set active path BEFORE drawing topology so EFA cross-links are created
-                  currentActivePathId = pathId;
-                  drawTopology(path.requiredEnsembles, path.requiredSystems);
-
-                  // Highlight BEFORE fade in (while still invisible)
-                  highlightPath(path, path.label, pathId);
-
-                  // Then fade in with highlight already applied
-                  requestAnimationFrame(() => {
-                    container.style.opacity = '1';
-                  });
-                }, 150);  // Wait for CSS transition to complete
-              } else {
-                // Set active path for EFA cross-links even without redraw
-                currentActivePathId = pathId;
-                // No redraw needed, just highlight immediately
-                highlightPath(path, path.label, pathId);
-              }
-            } else {
-              // Button was active, now deactivate: reset to default (2 ensembles, 1 system)
-              currentActivePathId = null; // Clear active path
-
-              // Always redraw when deactivating EFA paths to remove cross-links
-              const isEfaPath = pathId === 'gpu-gpu-efa-intranode' || pathId === 'gpu-gpu-efa-internode';
-              const needsRedraw = currentEnsembleCount !== 2 || currentSystemCount !== 1 || isEfaPath;
-
-              if (needsRedraw) {
-                const container = getElement('aws-topology-container');
-                container.style.opacity = '0';
-
-                setTimeout(() => {
-                  drawTopology(2, 1);
-                  resetHighlight(); // Reset highlight after redraw
-
-                  // Fade in after redraw
-                  requestAnimationFrame(() => {
-                    container.style.opacity = '1';
-                  });
-                }, 150);
-              } else {
-                // Just reset highlight without redrawing
+              setTimeout(() => {
+                drawTopology(2, 1);
                 resetHighlight();
-              }
+
+                requestAnimationFrame(() => {
+                  container.style.opacity = '1';
+                });
+              }, 150);
+            } else {
+              resetHighlight();
             }
-          });
+            return;
+          }
+
+          const path = CONFIG.paths[pathId];
+          if (!path) return;
+
+          currentActivePathId = pathId;
+
+          // Check if we need to redraw
+          const needsRedraw = path.requiredEnsembles !== currentEnsembleCount ||
+            path.requiredSystems !== currentSystemCount ||
+            pathId === 'gpu-gpu-efa-intranode' ||
+            pathId === 'gpu-gpu-efa-internode';
+
+          if (needsRedraw) {
+            const container = getElement('aws-topology-container');
+            container.style.opacity = '0';
+
+            setTimeout(() => {
+              currentActivePathId = pathId;
+              drawTopology(path.requiredEnsembles, path.requiredSystems);
+              highlightPath(path, path.label, pathId);
+
+              requestAnimationFrame(() => {
+                container.style.opacity = '1';
+              });
+            }, 150);
+          } else {
+            currentActivePathId = pathId;
+            highlightPath(path, path.label, pathId);
+          }
+        };
+
+        // Category select change handler
+        categorySelect.addEventListener('change', (e) => {
+          const category = e.target.value;
+          updatePathSelect(category);
+
+          // Reset path select
+          pathSelect.value = '';
+
+          // Reset to default view when category changes
+          activatePath(null);
+        });
+
+        // Path select change handler
+        pathSelect.addEventListener('change', (e) => {
+          const pathId = e.target.value;
+          activatePath(pathId);
         });
       }
 

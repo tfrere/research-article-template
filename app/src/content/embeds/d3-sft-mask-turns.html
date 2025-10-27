@@ -1,0 +1,433 @@
+<div class="d3-sft-mask-turns"></div>
+<style>
+  .d3-sft-mask-turns {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    position: relative;
+  }
+  .d3-sft-mask-turns svg { display: block; }
+  .d3-sft-mask-turns .axes path,
+  .d3-sft-mask-turns .axes line { stroke: var(--axis-color); }
+  .d3-sft-mask-turns .axes text { fill: var(--tick-color); font-size: 11px; }
+  .d3-sft-mask-turns .grid line { stroke: var(--grid-color); stroke-dasharray: 2,2; }
+  .d3-sft-mask-turns .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 600; }
+
+  .d3-sft-mask-turns .header { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 16px; flex-wrap: wrap; }
+  .d3-sft-mask-turns .legend { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .d3-sft-mask-turns .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
+  .d3-sft-mask-turns .legend .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .d3-sft-mask-turns .legend .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; color: var(--text-color); cursor: pointer; user-select: none; opacity: 1; transition: opacity 0.15s ease; }
+  .d3-sft-mask-turns .legend .item.dimmed { opacity: 0.3; }
+  .d3-sft-mask-turns .legend .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
+
+  .d3-sft-mask-turns .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .d3-sft-mask-turns .controls .control-group { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .d3-sft-mask-turns .controls label { font-size: 12px; font-weight: 700; color: var(--text-color); }
+  .d3-sft-mask-turns .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="grey" d="M6 9L1 4h10z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 0.15s ease;
+  }
+  .d3-sft-mask-turns .controls select:hover { border-color: var(--primary-color); }
+  .d3-sft-mask-turns .controls select:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+  .d3-sft-mask-turns .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .d3-sft-mask-turns .d3-tooltip__inner { text-align: left; }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sft-mask-turns'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sft-mask-turns'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip setup
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // Data loading
+      const DEFAULT_CSV = '/data/tech_report/sft_mask-turns.csv';
+      const CSV_PATHS = [
+        DEFAULT_CSV,
+        './assets/data/tech_report/sft_mask-turns.csv',
+        '../assets/data/tech_report/sft_mask-turns.csv',
+        '../../assets/data/tech_report/sft_mask-turns.csv'
+      ];
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch(_) {}
+        }
+        throw new Error('CSV not found at any path');
+      };
+
+      fetchFirstAvailable(CSV_PATHS).then((csvText) => {
+        const rawData = d3.csvParse(csvText);
+
+        // Parse data
+        const data = rawData.map(d => ({
+          mask: d.Mask === 'TRUE',
+          reasoningMode: d['Reasoning mode'],
+          aime25: +d.AIME25,
+          gpqaD: +d['GPQA-D'],
+          lcbV4: +d['LiveCodeBench v4'],
+          ifeval: +d.IFEval,
+          globalMMLULite: +d['Global MMLU Lite']
+        }));
+
+        const benchmarks = [
+          { key: 'aime25', label: 'AIME25' },
+          { key: 'gpqaD', label: 'GPQA-D' },
+          { key: 'lcbV4', label: 'LiveCodeBench v4' },
+          { key: 'ifeval', label: 'IFEval' },
+          { key: 'globalMMLULite', label: 'Global MMLU Lite' }
+        ];
+
+        const reasoningModes = ['/think', '/no_think'];
+        const maskValues = [true, false];
+        const maskLabels = { true: 'Mask', false: 'No mask' };
+
+        // State
+        let selectedMode = '/no_think';
+        let hiddenSeries = new Set();
+
+        // Color palette
+        const getColors = () => {
+          if (window.ColorPalettes && window.ColorPalettes.getColors) {
+            return window.ColorPalettes.getColors('categorical', 2);
+          }
+          return ['#4E79A7', '#F28E2B'];
+        };
+
+        let colors = getColors();
+        const colorScale = d3.scaleOrdinal()
+          .domain([true, false])
+          .range(colors);
+
+        // Listen for color palette changes
+        if (window.ColorPalettes && window.ColorPalettes.addListener) {
+          window.ColorPalettes.addListener(() => {
+            colors = getColors();
+            colorScale.range(colors);
+            render();
+          });
+        }
+
+        // SVG setup
+        const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+        const gRoot = svg.append('g');
+        const gBars = gRoot.append('g').attr('class', 'bars');
+        const gAxes = gRoot.append('g').attr('class', 'axes');
+
+        let width = 800;
+        let height = 360;
+        const margin = { top: 16, right: 28, bottom: 56, left: 64 };
+
+        const x0 = d3.scaleBand().padding(0.2);
+        const x1 = d3.scaleBand().padding(0.05);
+        const y = d3.scaleLinear();
+
+        function updateSize() {
+          width = container.clientWidth || 800;
+          height = Math.max(260, Math.round(width / 2.5));
+          svg.attr('width', width).attr('height', height);
+          gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+          return {
+            innerWidth: width - margin.left - margin.right,
+            innerHeight: height - margin.top - margin.bottom
+          };
+        }
+
+        function render() {
+          const { innerWidth, innerHeight } = updateSize();
+
+          // Filter data by selected mode
+          const filteredData = data.filter(d => d.reasoningMode === selectedMode);
+
+          // Prepare data for grouped bars
+          const chartData = benchmarks.map(b => {
+            const obj = { benchmark: b.label };
+            maskValues.forEach(mask => {
+              const entry = filteredData.find(d => d.mask === mask);
+              obj[mask] = entry ? entry[b.key] : 0;
+            });
+            return obj;
+          });
+
+          // Update scales
+          x0.domain(benchmarks.map(b => b.label)).range([0, innerWidth]);
+          x1.domain(maskValues).range([0, x0.bandwidth()]);
+
+          const maxVal = d3.max(chartData, d => d3.max(maskValues, mask => d[mask])) || 100;
+          y.domain([0, maxVal]).range([innerHeight, 0]).nice();
+
+          // Draw bars
+          const groups = gBars.selectAll('g.group').data(chartData, d => d.benchmark);
+
+          groups.exit().remove();
+
+          const groupsEnter = groups.enter().append('g').attr('class', 'group');
+          const groupsMerge = groupsEnter.merge(groups);
+
+          groupsMerge.attr('transform', d => `translate(${x0(d.benchmark)},0)`);
+
+          // Bars within groups
+          const bars = groupsMerge.selectAll('rect.bar').data(d => {
+            return maskValues.map(mask => ({
+              benchmark: d.benchmark,
+              mask: mask,
+              value: d[mask]
+            }));
+          }, d => `${d.benchmark}-${d.mask}`);
+
+          bars.exit().remove();
+
+          const barsEnter = bars.enter().append('rect').attr('class', 'bar');
+          const barsMerge = barsEnter.merge(bars);
+
+          barsMerge
+            .attr('x', d => x1(d.mask))
+            .attr('width', x1.bandwidth())
+            .attr('y', d => y(d.value))
+            .attr('height', d => Math.max(0, innerHeight - y(d.value)))
+            .attr('fill', d => colorScale(d.mask))
+            .attr('opacity', d => hiddenSeries.has(d.mask) ? 0.1 : 1)
+            .style('cursor', 'pointer')
+            .on('mouseenter', function(event, d) {
+              if (hiddenSeries.has(d.mask)) return;
+              d3.select(this).attr('opacity', 0.8);
+              tipInner.innerHTML = `<strong>${d.benchmark}</strong><br/>${maskLabels[d.mask]}<br/>Score: ${d.value.toFixed(2)}%`;
+              tip.style.opacity = '1';
+              const [mx, my] = d3.pointer(event, container);
+              tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
+            })
+            .on('mouseleave', function(event, d) {
+              d3.select(this).attr('opacity', hiddenSeries.has(d.mask) ? 0.1 : 1);
+              tip.style.opacity = '0';
+              tip.style.transform = 'translate(-9999px, -9999px)';
+            });
+
+          // Axes
+          const xAxisG = gAxes.selectAll('.x-axis').data([0]);
+          xAxisG.enter().append('g').attr('class', 'x-axis').merge(xAxisG)
+            .attr('transform', `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x0).tickSizeOuter(0));
+
+          const yAxisG = gAxes.selectAll('.y-axis').data([0]);
+          yAxisG.enter().append('g').attr('class', 'y-axis').merge(yAxisG)
+            .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+
+          // Y-axis label
+          const yLabelG = gAxes.selectAll('.y-axis-label').data([0]);
+          yLabelG.enter().append('text').attr('class', 'y-axis-label axis-label').merge(yLabelG)
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -innerHeight / 2)
+            .attr('y', -margin.left + 16)
+            .attr('text-anchor', 'middle')
+            .text('Score (%)');
+
+          // Grid
+          const gridG = gAxes.selectAll('.grid').data([0]);
+          gridG.enter().append('g').attr('class', 'grid').merge(gridG)
+            .call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(''))
+            .call(g => g.select('.domain').remove());
+        }
+
+        function makeLegend() {
+          let legend = container.querySelector('.legend');
+          if (!legend) {
+            legend = document.createElement('div');
+            legend.className = 'legend';
+            container.appendChild(legend);
+          }
+
+          let title = legend.querySelector('.legend-title');
+          if (!title) {
+            title = document.createElement('div');
+            title.className = 'legend-title';
+            title.textContent = 'Legend';
+            legend.appendChild(title);
+          }
+
+          let items = legend.querySelector('.items');
+          if (!items) {
+            items = document.createElement('div');
+            items.className = 'items';
+            legend.appendChild(items);
+          }
+
+          items.innerHTML = '';
+          maskValues.forEach(mask => {
+            const el = document.createElement('span');
+            el.className = 'item';
+            if (hiddenSeries.has(mask)) el.classList.add('dimmed');
+
+            const sw = document.createElement('span');
+            sw.className = 'swatch';
+            sw.style.background = colorScale(mask);
+
+            const txt = document.createElement('span');
+            txt.textContent = maskLabels[mask];
+
+            el.appendChild(sw);
+            el.appendChild(txt);
+            items.appendChild(el);
+
+            el.addEventListener('click', () => {
+              if (hiddenSeries.has(mask)) {
+                hiddenSeries.delete(mask);
+              } else {
+                hiddenSeries.add(mask);
+              }
+              makeLegend();
+              render();
+            });
+          });
+
+          return legend;
+        }
+
+        function makeControls() {
+          let controls = container.querySelector('.controls');
+          if (!controls) {
+            controls = document.createElement('div');
+            controls.className = 'controls';
+            container.appendChild(controls);
+          }
+
+          controls.innerHTML = '';
+
+          const group = document.createElement('div');
+          group.className = 'control-group';
+
+          const label = document.createElement('label');
+          label.textContent = 'Reasoning mode';
+          label.setAttribute('for', 'mode-select-mask-turns');
+
+          const select = document.createElement('select');
+          select.id = 'mode-select-mask-turns';
+
+          reasoningModes.forEach(mode => {
+            const opt = document.createElement('option');
+            opt.value = mode;
+            opt.textContent = mode;
+            if (mode === selectedMode) opt.selected = true;
+            select.appendChild(opt);
+          });
+
+          select.addEventListener('change', (e) => {
+            selectedMode = e.target.value;
+            render();
+          });
+
+          group.appendChild(label);
+          group.appendChild(select);
+          controls.appendChild(group);
+
+          return controls;
+        }
+
+        function makeHeader() {
+          let header = container.querySelector('.header');
+          if (!header) {
+            header = document.createElement('div');
+            header.className = 'header';
+            container.appendChild(header);
+          }
+          header.innerHTML = '';
+          header.appendChild(makeLegend());
+          header.appendChild(makeControls());
+        }
+
+        // Initial render
+        makeHeader();
+        render();
+
+        // Resize handling
+        const rerender = () => render();
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => rerender());
+          ro.observe(container);
+        } else {
+          window.addEventListener('resize', rerender);
+        }
+
+      }).catch((err) => {
+        const pre = document.createElement('pre');
+        pre.style.color = 'red';
+        pre.style.fontSize = '12px';
+        pre.style.padding = '12px';
+        pre.textContent = 'Error loading data: ' + err.message;
+        container.appendChild(pre);
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

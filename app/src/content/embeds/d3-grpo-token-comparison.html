@@ -1,0 +1,504 @@
+<div class="d3-grpo-token-comparison"></div>
+<style>
+  .d3-grpo-token-comparison {
+    width: 100%;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .d3-grpo-token-comparison svg {
+    display: block;
+    width: 100%;
+  }
+  .d3-grpo-token-comparison .bar {
+    stroke: none;
+  }
+  .d3-grpo-token-comparison .axes path,
+  .d3-grpo-token-comparison .axes line {
+    stroke: var(--axis-color, var(--text-color));
+  }
+  .d3-grpo-token-comparison .axes text {
+    fill: var(--tick-color, var(--muted-color));
+    font-size: 11px;
+  }
+  .d3-grpo-token-comparison .grid line {
+    stroke: var(--grid-color, rgba(0,0,0,.08));
+  }
+  .d3-grpo-token-comparison .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--text-color);
+  }
+  .d3-grpo-token-comparison .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .d3-grpo-token-comparison .d3-tooltip__inner {
+    text-align: left;
+  }
+  .d3-grpo-token-comparison .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .d3-grpo-token-comparison .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-grpo-token-comparison .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-grpo-token-comparison .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .d3-grpo-token-comparison .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-grpo-token-comparison .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .d3-grpo-token-comparison .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-grpo-token-comparison .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-grpo-token-comparison .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+  }
+  .d3-grpo-token-comparison .slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 300px;
+  }
+  .d3-grpo-token-comparison .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .d3-grpo-token-comparison input[type="range"] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-color);
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  .d3-grpo-token-comparison input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+  }
+  .d3-grpo-token-comparison input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    border: none;
+  }
+  .d3-grpo-token-comparison .slider-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color);
+    min-width: 60px;
+    text-align: right;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-grpo-token-comparison'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-grpo-token-comparison'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      const showTooltip = (html, event) => {
+        tipInner.innerHTML = html;
+        tip.style.opacity = '1';
+        const [mx, my] = d3.pointer(event, container);
+        tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
+      };
+
+      const hideTooltip = () => {
+        tip.style.opacity = '0';
+        setTimeout(() => {
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        }, 120);
+      };
+
+      // SVG scaffolding
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      let width = 800, height = 400;
+      const margin = { top: 40, right: 16, bottom: 56, left: 60 };
+
+      // Dataset configurations
+      const datasetConfigs = [
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_00-step-000000400_aime25_2025-10-16T01-18-56.json',
+          name: '1.5-2k',
+          id: 'grpo-1.5-2k'
+        },
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_01-step-000000400_aime25_2025-10-16T01-22-56.json',
+          name: '2-2.5k',
+          id: 'grpo-2-2.5k'
+        },
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_02-step-000000400_aime25_2025-10-16T01-23-56.json',
+          name: '2.5-3k',
+          id: 'grpo-2.5-3k'
+        },
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_03-step-000000400_aime25_2025-10-16T01-58-31.json',
+          name: '3-3.5k',
+          id: 'grpo-3-3.5k'
+        },
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_04-step-000000400_aime25_2025-10-16T04-55-04.json',
+          name: '3.5-4k',
+          id: 'grpo-3.5-4k'
+        },
+        {
+          file: 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-GRPO-no-think_v27_05-step-000000400_aime25_2025-10-16T06-12-05.json',
+          name: '4-4.5k',
+          id: 'grpo-4-4.5k'
+        }
+      ];
+
+      const fetchFirstAvailable = async (filename) => {
+        const paths = [
+          `/data/grpo/histograms/${filename}`,
+          `./assets/data/grpo/histograms/${filename}`,
+          `../assets/data/grpo/histograms/${filename}`,
+          `../../assets/data/grpo/histograms/${filename}`
+        ];
+
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.json();
+          } catch (e) {}
+        }
+        throw new Error(`JSON not found: ${filename}`);
+      };
+
+      // Load baseline (APO No-Think)
+      const baselineFile = 'HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-no-think_main_aime25_2025-10-02T13-20-35.json';
+
+      fetchFirstAvailable(baselineFile)
+        .then(async (baselineData) => {
+          // Load all comparison datasets
+          const comparisonData = await Promise.all(
+            datasetConfigs.map(async (config) => ({
+              ...config,
+              data: await fetchFirstAvailable(config.file)
+            }))
+          );
+
+          // Get colors
+          const colors = window.ColorPalettes
+            ? window.ColorPalettes.getColors('categorical', 2)
+            : ['#4e79a7', '#f28e2c'];
+
+          let selectedComparison = comparisonData[0];
+          let currentIndex = 0;
+
+          // Create controls
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+
+          const sliderContainer = document.createElement('div');
+          sliderContainer.className = 'slider-container';
+
+          const label = document.createElement('label');
+          label.textContent = 'Overlong Penalty';
+          label.style.fontSize = '12px';
+          label.style.fontWeight = '700';
+          label.style.color = 'var(--text-color)';
+
+          const sliderRow = document.createElement('div');
+          sliderRow.className = 'slider-row';
+
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.min = '0';
+          slider.max = String(comparisonData.length - 1);
+          slider.value = '0';
+          slider.step = '1';
+
+          const sliderValue = document.createElement('span');
+          sliderValue.className = 'slider-value';
+          sliderValue.textContent = comparisonData[0].name;
+
+          slider.addEventListener('input', (e) => {
+            currentIndex = parseInt(e.target.value);
+            selectedComparison = comparisonData[currentIndex];
+            sliderValue.textContent = selectedComparison.name;
+            render();
+          });
+
+          sliderRow.appendChild(slider);
+          sliderRow.appendChild(sliderValue);
+          sliderContainer.appendChild(label);
+          sliderContainer.appendChild(sliderRow);
+          controls.appendChild(sliderContainer);
+          container.appendChild(controls);
+
+          // Create legend
+          const legend = document.createElement('div');
+          legend.className = 'legend';
+
+          const legendTitle = document.createElement('div');
+          legendTitle.className = 'legend-title';
+          legendTitle.textContent = 'Legend';
+
+          const legendItems = document.createElement('div');
+          legendItems.className = 'items';
+
+          ['APO No-Think (Baseline)', 'GRPO on Math with Overlong Penalty'].forEach((name, idx) => {
+            const item = document.createElement('span');
+            item.className = 'item';
+
+            const swatch = document.createElement('span');
+            swatch.className = 'swatch';
+            swatch.style.background = colors[idx];
+
+            const text = document.createElement('span');
+            text.textContent = name;
+
+            item.appendChild(swatch);
+            item.appendChild(text);
+            legendItems.appendChild(item);
+          });
+
+          legend.appendChild(legendTitle);
+          legend.appendChild(legendItems);
+          container.appendChild(legend);
+
+          function updateSize() {
+            width = container.clientWidth || 800;
+            height = Math.max(400, Math.round(width / 2.2));
+            svg.attr('width', width).attr('height', height);
+            gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+            return {
+              innerWidth: width - margin.left - margin.right,
+              innerHeight: height - margin.top - margin.bottom
+            };
+          }
+
+          function render() {
+            const { innerWidth, innerHeight } = updateSize();
+
+            // Clear previous
+            gRoot.selectAll('*').remove();
+
+            const datasets = [
+              { name: 'APO No-Think (Baseline)', data: baselineData, idx: 0 },
+              { name: selectedComparison.name, data: selectedComparison.data, idx: 1 }
+            ];
+
+            // Use 0-4k for both to keep scales comparable
+            const xDomain = [0, 4000];
+
+            // Create bins for both datasets
+            const allBins = datasets.map(ds => {
+              const tokens = ds.data.token_counts;
+              const bins = d3.bin()
+                .domain(xDomain)
+                .thresholds(30)(tokens);
+              return { ...ds, bins };
+            });
+
+            // Find max frequency across both datasets for shared y-scale
+            const maxFreq = d3.max(allBins.flatMap(d => d.bins.map(b => b.length)));
+
+            const xScale = d3.scaleLinear()
+              .domain(xDomain)
+              .range([0, innerWidth]);
+
+            const yScale = d3.scaleLinear()
+              .domain([0, maxFreq])
+              .range([innerHeight, 0])
+              .nice();
+
+            // Grid
+            gRoot.append('g')
+              .attr('class', 'grid')
+              .call(
+                d3.axisLeft(yScale)
+                  .ticks(5)
+                  .tickSize(-innerWidth)
+                  .tickFormat('')
+              )
+              .call(g => g.select('.domain').remove());
+
+            // Draw histograms (comparison first, baseline second so baseline is on top)
+            allBins.reverse().forEach(({ name, bins, idx, data }) => {
+              gRoot.selectAll(`rect.bar-${idx}`)
+                .data(bins)
+                .join('rect')
+                .attr('class', `bar bar-${idx}`)
+                .attr('x', d => xScale(d.x0))
+                .attr('y', d => yScale(d.length))
+                .attr('width', d => Math.max(1, xScale(d.x1) - xScale(d.x0) - 1))
+                .attr('height', d => Math.max(0, innerHeight - yScale(d.length)))
+                .attr('fill', colors[idx])
+                .attr('opacity', 0.6)
+                .on('mouseenter', (event, d) => {
+                  const stats = data.statistics;
+                  const html = `<strong>${name}</strong><br/>Tokens: ${d.x0.toFixed(0)} - ${d.x1.toFixed(0)}<br/>Count: ${d.length}<br/>Mean: ${stats.mean.toFixed(0)} | Median: ${stats.median.toFixed(0)}`;
+                  showTooltip(html, event);
+                })
+                .on('mouseleave', hideTooltip);
+            });
+
+            // X axis
+            const xAxis = gRoot.append('g')
+              .attr('class', 'axes')
+              .attr('transform', `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(xScale).ticks(8).tickFormat(d3.format(',d')));
+
+            xAxis.select('.domain').remove();
+
+            // Y axis
+            const yAxis = gRoot.append('g')
+              .attr('class', 'axes')
+              .call(d3.axisLeft(yScale).ticks(6));
+
+            yAxis.select('.domain').remove();
+
+            // X axis label
+            gRoot.append('text')
+              .attr('class', 'axes')
+              .attr('x', innerWidth / 2)
+              .attr('y', innerHeight + 40)
+              .attr('text-anchor', 'middle')
+              .style('font-size', '12px')
+              .style('fill', 'var(--text-color)')
+              .text('Token count');
+
+            // Y axis label
+            gRoot.append('text')
+              .attr('class', 'axes')
+              .attr('transform', 'rotate(-90)')
+              .attr('x', -innerHeight / 2)
+              .attr('y', -45)
+              .attr('text-anchor', 'middle')
+              .style('font-size', '12px')
+              .style('fill', 'var(--text-color)')
+              .text('Frequency');
+          }
+
+          render();
+
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch((err) => {
+          const pre = document.createElement('pre');
+          pre.textContent = 'Error loading data: ' + err.message;
+          pre.style.cssText = 'color:red;font-size:12px;padding:12px;margin:0;';
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

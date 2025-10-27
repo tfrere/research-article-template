@@ -1,0 +1,321 @@
+<div class="d3-grpo-token-histogram"></div>
+<style>
+  .d3-grpo-token-histogram {
+    width: 100%;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .d3-grpo-token-histogram svg {
+    display: block;
+    width: 100%;
+  }
+  .d3-grpo-token-histogram .bar {
+    stroke: none;
+  }
+  .d3-grpo-token-histogram .axes path,
+  .d3-grpo-token-histogram .axes line {
+    stroke: var(--axis-color, var(--text-color));
+  }
+  .d3-grpo-token-histogram .axes text {
+    fill: var(--tick-color, var(--muted-color));
+    font-size: 11px;
+  }
+  .d3-grpo-token-histogram .grid line {
+    stroke: var(--grid-color, rgba(0,0,0,.08));
+  }
+  .d3-grpo-token-histogram .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--text-color);
+  }
+  .d3-grpo-token-histogram .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .d3-grpo-token-histogram .d3-tooltip__inner {
+    text-align: left;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-grpo-token-histogram'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-grpo-token-histogram'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      const showTooltip = (html, event) => {
+        tipInner.innerHTML = html;
+        tip.style.opacity = '1';
+        const [mx, my] = d3.pointer(event, container);
+        tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
+      };
+
+      const hideTooltip = () => {
+        tip.style.opacity = '0';
+        setTimeout(() => {
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        }, 120);
+      };
+
+      // SVG scaffolding
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      let width = 800, height = 400;
+      const margin = { top: 40, right: 16, bottom: 56, left: 60 };
+
+      // Data loading
+      const JSON_PATHS = [
+        '/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-no-think_main_aime25_2025-10-02T13-20-35.json',
+        './assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-no-think_main_aime25_2025-10-02T13-20-35.json',
+        '../assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-no-think_main_aime25_2025-10-02T13-20-35.json',
+        '../../assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-no-think_main_aime25_2025-10-02T13-20-35.json'
+      ];
+
+      const JSON_PATHS_THINK = [
+        '/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-think_main_aime25_2025-10-17T09-02-45.json',
+        './assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-think_main_aime25_2025-10-17T09-02-45.json',
+        '../assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-think_main_aime25_2025-10-17T09-02-45.json',
+        '../../assets/data/grpo/histograms/HuggingFaceH4_details_HuggingFaceH4__SmolLM3-3B-APO-think_main_aime25_2025-10-17T09-02-45.json'
+      ];
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.json();
+          } catch (e) {}
+        }
+        throw new Error('JSON not found');
+      };
+
+      Promise.all([
+        fetchFirstAvailable(JSON_PATHS),
+        fetchFirstAvailable(JSON_PATHS_THINK)
+      ])
+        .then(([dataNoThink, dataThink]) => {
+          const datasets = [
+            { name: 'No-Think', data: dataNoThink, title: 'APO No-Think' },
+            { name: 'Think', data: dataThink, title: 'APO Think' }
+          ];
+
+          // Get colors
+          const colors = window.ColorPalettes
+            ? window.ColorPalettes.getColors('categorical', 2)
+            : ['#4e79a7', '#f28e2c'];
+
+          function updateSize() {
+            width = container.clientWidth || 800;
+            height = Math.max(400, Math.round(width / 2.2));
+            svg.attr('width', width).attr('height', height);
+            gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+            return {
+              innerWidth: width - margin.left - margin.right,
+              innerHeight: height - margin.top - margin.bottom
+            };
+          }
+
+          function render() {
+            const { innerWidth, innerHeight } = updateSize();
+
+            // Clear previous
+            gRoot.selectAll('*').remove();
+
+            // Calculate histogram bins for each dataset
+            const chartWidth = (innerWidth - 40) / 2;
+            const histograms = datasets.map((ds, idx) => {
+              const tokens = ds.data.token_counts;
+              const xOffset = idx * (chartWidth + 40);
+
+              // Use independent x-axis ranges optimized for each dataset
+              // No-Think: most data is 0-4k range (median 723)
+              // Think: data is spread around median 16,769
+              const xDomain = idx === 0
+                ? [0, 4000]   // No-Think: focus on 0-4k range
+                : [0, 32000]; // Think: show full range
+
+              // Create bins
+              const bins = d3.bin()
+                .domain(xDomain)
+                .thresholds(30)(tokens);
+
+              const xScale = d3.scaleLinear()
+                .domain(xDomain)
+                .range([0, chartWidth]);
+
+              const yScale = d3.scaleLinear()
+                .domain([0, d3.max(bins, d => d.length)])
+                .range([innerHeight, 0])
+                .nice();
+
+              return { ds, bins, xScale, yScale, xOffset, idx };
+            });
+
+            // Draw each histogram
+            histograms.forEach(({ ds, bins, xScale, yScale, xOffset, idx }) => {
+              const g = gRoot.append('g').attr('transform', `translate(${xOffset},0)`);
+
+              // Title
+              g.append('text')
+                .attr('class', 'chart-title')
+                .attr('x', chartWidth / 2)
+                .attr('y', -12)
+                .attr('text-anchor', 'middle')
+                .text(ds.title);
+
+              // Bars
+              g.selectAll('rect.bar')
+                .data(bins)
+                .join('rect')
+                .attr('class', 'bar')
+                .attr('x', d => xScale(d.x0))
+                .attr('y', d => yScale(d.length))
+                .attr('width', d => Math.max(1, xScale(d.x1) - xScale(d.x0) - 1))
+                .attr('height', d => Math.max(0, innerHeight - yScale(d.length)))
+                .attr('fill', colors[idx])
+                .attr('opacity', 0.8)
+                .on('mouseenter', (event, d) => {
+                  const html = `<strong>Tokens: ${d.x0.toFixed(0)} - ${d.x1.toFixed(0)}</strong><br/>Count: ${d.length}`;
+                  showTooltip(html, event);
+                })
+                .on('mouseleave', hideTooltip);
+
+              // X axis
+              const xAxis = g.append('g')
+                .attr('class', 'axes')
+                .attr('transform', `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(xScale).ticks(5).tickFormat(d3.format(',d')));
+
+              xAxis.select('.domain').remove();
+
+              // Y axis
+              const yAxis = g.append('g')
+                .attr('class', 'axes')
+                .call(d3.axisLeft(yScale).ticks(5));
+
+              yAxis.select('.domain').remove();
+
+              // Grid
+              g.append('g')
+                .attr('class', 'grid')
+                .call(
+                  d3.axisLeft(yScale)
+                    .ticks(5)
+                    .tickSize(-chartWidth)
+                    .tickFormat('')
+                )
+                .call(g => g.select('.domain').remove());
+
+              // X axis label
+              g.append('text')
+                .attr('class', 'axes')
+                .attr('x', chartWidth / 2)
+                .attr('y', innerHeight + 40)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '12px')
+                .style('fill', 'var(--text-color)')
+                .text('Token count');
+
+              // Y axis label (only for left chart)
+              if (idx === 0) {
+                g.append('text')
+                  .attr('class', 'axes')
+                  .attr('transform', 'rotate(-90)')
+                  .attr('x', -innerHeight / 2)
+                  .attr('y', -45)
+                  .attr('text-anchor', 'middle')
+                  .style('font-size', '12px')
+                  .style('fill', 'var(--text-color)')
+                  .text('Frequency');
+              }
+
+              // Statistics text
+              const stats = ds.data.statistics;
+              const statsText = `Mean: ${stats.mean.toFixed(0)} | Median: ${stats.median.toFixed(0)}`;
+              g.append('text')
+                .attr('x', chartWidth / 2)
+                .attr('y', innerHeight + 54)
+                .attr('text-anchor', 'middle')
+                .style('font-size', '11px')
+                .style('fill', 'var(--muted-color)')
+                .text(statsText);
+            });
+          }
+
+          render();
+
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch((err) => {
+          const pre = document.createElement('pre');
+          pre.textContent = 'Error loading data: ' + err.message;
+          pre.style.cssText = 'color:red;font-size:12px;padding:12px;margin:0;';
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
