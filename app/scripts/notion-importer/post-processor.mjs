@@ -272,7 +272,10 @@ async function includeNotionPages(content, notionClient, notionToken) {
                 // Remove YAML frontmatter if present
                 pageContent = pageContent.replace(/^---[\s\S]*?---\s*\n/, '');
 
-                // Keep the original page content with its own title (no need to add a header)
+                // Remove the first markdown heading (H1, H2, H3, etc.) from the included page
+                pageContent = pageContent.replace(/^#+ .+\n\n?/, '');
+
+                // Keep the page content without title
                 const finalContent = '\n\n' + pageContent.trim() + '\n\n';
 
                 // Replace the link with the content
