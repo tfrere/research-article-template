@@ -27,7 +27,7 @@
 
   .d3-grpo-full-length .grid line {
     stroke: var(--grid-color);
-    stroke-dasharray: 2,2;
+    stroke-dasharray: 2, 2;
   }
 
   .d3-grpo-full-length .confidence-band {
@@ -194,9 +194,9 @@
         if (attr && attr.trim()) {
           providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
         }
-      } catch (_) {}
+      } catch (_) { }
 
-      const DEFAULT_CSV = '/data/grpo/rl_reward_curves.csv';
+      const DEFAULT_CSV = '/data/rl_reward_curves.csv';
       const ensureDataPrefix = (p) => {
         if (typeof p !== 'string' || !p) return p;
         // If it starts with /, it's already absolute
@@ -211,11 +211,11 @@
       const CSV_PATHS = Array.isArray(providedData)
         ? normalizeInput(providedData)
         : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
-            DEFAULT_CSV,
-            './assets/data/grpo/rl_reward_curves.csv',
-            '../assets/data/grpo/rl_reward_curves.csv',
-            '../../assets/data/grpo/rl_reward_curves.csv'
-          ]);
+          DEFAULT_CSV,
+          './assets/data/rl_reward_curves.csv',
+          '../assets/data/rl_reward_curves.csv',
+          '../../assets/data/rl_reward_curves.csv'
+        ]);
 
       const fetchFirstAvailable = async (paths) => {
         const errors = [];
@@ -481,7 +481,7 @@
         // Tooltip interactions
         const bisect = d3.bisector(d => d.step).left;
 
-        svg.on('mousemove', function(event) {
+        svg.on('mousemove', function (event) {
           const [mx] = d3.pointer(event, gRoot.node());
           const step = xScale.invert(mx);
 
@@ -679,17 +679,17 @@
 
       // Load both datasets
       const REWARD_PATHS = [
-        '/data/grpo/rl_reward_full_length.csv',
-        './assets/data/grpo/rl_reward_full_length.csv',
-        '../assets/data/grpo/rl_reward_full_length.csv',
-        '../../assets/data/grpo/rl_reward_full_length.csv'
+        '/data/rl_reward_full_length.csv',
+        './assets/data/rl_reward_full_length.csv',
+        '../assets/data/rl_reward_full_length.csv',
+        '../../assets/data/rl_reward_full_length.csv'
       ];
 
       const LENGTH_PATHS = [
-        '/data/grpo/rl_mean_terminated_length_full_length.csv',
-        './assets/data/grpo/rl_mean_terminated_length_full_length.csv',
-        '../assets/data/grpo/rl_mean_terminated_length_full_length.csv',
-        '../../assets/data/grpo/rl_mean_terminated_length_full_length.csv'
+        '/data/rl_mean_terminated_length_full_length.csv',
+        './assets/data/rl_mean_terminated_length_full_length.csv',
+        '../assets/data/rl_mean_terminated_length_full_length.csv',
+        '../../assets/data/rl_mean_terminated_length_full_length.csv'
       ];
 
       Promise.all([

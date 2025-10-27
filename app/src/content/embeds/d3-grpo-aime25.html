@@ -27,7 +27,7 @@
 
   .d3-grpo-aime25 .grid line {
     stroke: var(--grid-color);
-    stroke-dasharray: 2,2;
+    stroke-dasharray: 2, 2;
   }
 
   .d3-grpo-aime25 .line {
@@ -190,9 +190,9 @@
         if (attr && attr.trim()) {
           providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
         }
-      } catch (_) {}
+      } catch (_) { }
 
-      const DEFAULT_CSV = '/data/grpo/aime25_perf.csv';
+      const DEFAULT_CSV = '/data/aime25_perf.csv';
       const ensureDataPrefix = (p) => {
         if (typeof p !== 'string' || !p) return p;
         if (p.startsWith('/')) return p;
@@ -205,11 +205,11 @@
       const CSV_PATHS = Array.isArray(providedData)
         ? normalizeInput(providedData)
         : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
-            DEFAULT_CSV,
-            './assets/data/grpo/aime25_perf.csv',
-            '../assets/data/grpo/aime25_perf.csv',
-            '../../assets/data/grpo/aime25_perf.csv'
-          ]);
+          DEFAULT_CSV,
+          './assets/data/aime25_perf.csv',
+          '../assets/data/aime25_perf.csv',
+          '../../assets/data/aime25_perf.csv'
+        ]);
 
       const fetchFirstAvailable = async (paths) => {
         const errors = [];
@@ -398,7 +398,7 @@
         // Tooltip interactions
         const bisect = d3.bisector(d => d.step).left;
 
-        svg.on('mousemove', function(event) {
+        svg.on('mousemove', function (event) {
           const [mx] = d3.pointer(event, gRoot.node());
           const step = xScale.invert(mx);
 

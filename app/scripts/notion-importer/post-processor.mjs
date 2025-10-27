@@ -272,9 +272,8 @@ async function includeNotionPages(content, notionClient, notionToken) {
                 // Remove YAML frontmatter if present
                 pageContent = pageContent.replace(/^---[\s\S]*?---\s*\n/, '');
 
-                // Add a header for the included page
-                const pageHeader = `\n\n## ${link.linkText}\n\n`;
-                const finalContent = pageHeader + pageContent.trim() + '\n\n';
+                // Keep the original page content with its own title (no need to add a header)
+                const finalContent = '\n\n' + pageContent.trim() + '\n\n';
 
                 // Replace the link with the content
                 processedContent = processedContent.substring(0, link.startPos) +

@@ -1,12 +1,16 @@
 <div class="d3-aime25-scores"></div>
 <style>
-  .d3-aime25-scores { position: relative; }
+  .d3-aime25-scores {
+    position: relative;
+  }
+
   .d3-aime25-scores .chart-card {
     background: var(--page-bg);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 8px;
   }
+
   .d3-aime25-scores .d3-tooltip {
     position: absolute;
     top: 0px;
@@ -20,7 +24,7 @@
     border: 1px solid var(--border-color);
     background: var(--surface-bg);
     color: var(--text-color);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
     opacity: 0;
     transition: opacity .12s ease;
     text-align: left;
@@ -46,12 +50,12 @@
     const bootstrap = () => {
       const scriptEl = document.currentScript;
       let container = scriptEl ? scriptEl.previousElementSibling : null;
-      if (!(container && container.classList && container.classList.contains('d3-aime25-scores'))){
-        const cs = Array.from(document.querySelectorAll('.d3-aime25-scores')).filter(el => !(el.dataset && el.dataset.mounted==='true'));
-        container = cs[cs.length-1] || null;
+      if (!(container && container.classList && container.classList.contains('d3-aime25-scores'))) {
+        const cs = Array.from(document.querySelectorAll('.d3-aime25-scores')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
       }
       if (!container) return;
-      if (container.dataset) { if (container.dataset.mounted==='true') return; container.dataset.mounted='true'; }
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
 
       container.style.position = container.style.position || 'relative';
       let tip = container.querySelector('.d3-tooltip'); let tipInner;
@@ -63,7 +67,7 @@
 
       // SVG scaffolding inside a card wrapper
       const card = document.createElement('div'); card.className = 'chart-card'; container.appendChild(card);
-      const svg = d3.select(card).append('svg').attr('width','100%').style('display','block');
+      const svg = d3.select(card).append('svg').attr('width', '100%').style('display', 'block');
       const gRoot = svg.append('g');
 
       // Data for AIME25 scores
@@ -81,13 +85,13 @@
         }
         return getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
       };
-      
+
       const primaryColor = getPrimaryColor();
-      
+
       // All methods use the same primary color
       const methodColors = {
         'SFT': primaryColor,
-        'SFT + DPO': primaryColor, 
+        'SFT + DPO': primaryColor,
         'SFT + DPO (reasoning on)': primaryColor,
         'SFT + DPO + GRPO': primaryColor
       };
@@ -100,7 +104,7 @@
       const yAxis = d3.axisLeft(y).ticks(6).tickSizeOuter(0);
       const yTopPadding = 2; // avoid bars touching top at max
 
-      function updateSize(){
+      function updateSize() {
         width = container.clientWidth || 800;
         height = Math.max(240, Math.round(width / 3.4));
         svg.attr('width', width).attr('height', height);
@@ -108,18 +112,18 @@
         return { innerWidth: width - margin.left - margin.right, innerHeight: height - margin.top - margin.bottom };
       }
 
-      function showTip(html, x, y){
+      function showTip(html, x, y) {
         tip.style.transform = `translate(${x + 12}px, ${y + 12}px)`;
         tip.style.opacity = '1';
         const inner = tip.querySelector('.d3-tooltip__inner') || tip;
         inner.innerHTML = html;
       }
-      function hideTip(){
+      function hideTip() {
         tip.style.opacity = '0';
         tip.style.transform = 'translate(-9999px, -9999px)';
       }
 
-      function render(){
+      function render() {
         const { innerWidth, innerHeight } = updateSize();
 
         x.domain(data.map(d => d.method)).range([0, innerWidth]);
@@ -132,14 +136,14 @@
           .selectAll('.axis-x')
           .data([0])
           .join('g')
-          .attr('class','axis-x')
-          .attr('transform',`translate(0,${innerHeight})`)
+          .attr('class', 'axis-x')
+          .attr('transform', `translate(0,${innerHeight})`)
           .call(xAxis)
           .call(g => {
             g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
-            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size', '12px');
             // Handle multi-line labels for specific method
-            g.selectAll('text').each(function(d) {
+            g.selectAll('text').each(function (d) {
               const text = d3.select(this);
               const label = text.text();
               if (label === 'SFT + DPO (reasoning on)') {
@@ -155,11 +159,11 @@
           .selectAll('.axis-y')
           .data([0])
           .join('g')
-          .attr('class','axis-y')
+          .attr('class', 'axis-y')
           .call(yAxis)
           .call(g => {
             g.selectAll('path, line').attr('stroke', 'var(--axis-color)');
-            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size','12px');
+            g.selectAll('text').attr('fill', 'var(--tick-color)').style('font-size', '12px');
           });
 
         // Gridlines (y) standardized color
@@ -167,17 +171,17 @@
           .selectAll('.grid-y')
           .data([0])
           .join('g')
-          .attr('class','grid-y')
+          .attr('class', 'grid-y')
           .call(d3.axisLeft(y).ticks(6).tickSize(-innerWidth).tickFormat(''))
           .call(g => g.select('.domain').remove())
-          .call(g => g.selectAll('.tick line').attr('stroke','var(--grid-color)').attr('stroke-opacity',1))
+          .call(g => g.selectAll('.tick line').attr('stroke', 'var(--grid-color)').attr('stroke-opacity', 1))
           .call(g => g.selectAll('.tick').filter((d, i, nodes) => i === nodes.length - 1).select('line').attr('stroke-opacity', 0));
 
         // Bars
         const bars = gRoot.selectAll('.bar').data(data, d => d.method);
         bars.join(
           enter => enter.append('rect')
-            .attr('class','bar')
+            .attr('class', 'bar')
             .attr('x', d => x(d.method))
             .attr('y', innerHeight)
             .attr('width', x.bandwidth())
@@ -210,31 +214,31 @@
         const labels = gRoot.selectAll('.value-label').data(data, d => d.method);
         labels.join(
           enter => enter.append('text')
-            .attr('class','value')
-            .attr('x', d => x(d.method) + x.bandwidth()/2)
+            .attr('class', 'value-label')
+            .attr('x', d => x(d.method) + x.bandwidth() / 2)
             .attr('y', d => y(d.score) - 4)
-            .attr('text-anchor','middle')
-            .attr('fill','var(--text-color)')
-            .attr('opacity',0.9)
-            .attr('font-size',10)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-color)')
+            .attr('opacity', 0.9)
+            .attr('font-size', 10)
             .text(d => d.score),
           update => update
             .transition().duration(160)
-            .attr('x', d => x(d.method) + x.bandwidth()/2)
+            .attr('x', d => x(d.method) + x.bandwidth() / 2)
             .attr('y', d => y(d.score) - 4)
             .text(d => d.score),
           exit => exit.remove()
         );
 
         // Axis labels
-        gRoot.selectAll('.y-label').data([0]).join('text').attr('class','y-label')
-          .attr('transform', `rotate(-90)`) 
+        gRoot.selectAll('.y-label').data([0]).join('text').attr('class', 'y-label')
+          .attr('transform', `rotate(-90)`)
           .attr('x', -innerHeight / 2)
           .attr('y', -margin.left + 24)
-          .attr('text-anchor','middle')
-          .attr('fill','var(--text-color)')
-          .attr('font-size',12)
-          .attr('font-weight',700)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'var(--text-color)')
+          .attr('font-size', 12)
+          .attr('font-weight', 700)
           .text('AIME25 Score');
       }
 
@@ -245,10 +249,10 @@
       else { window.addEventListener('resize', rerender); }
     };
 
-    if (document.readyState === 'loading') { 
-      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); 
-    } else { 
-      ensureD3(bootstrap); 
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
     }
   })();
 </script>
