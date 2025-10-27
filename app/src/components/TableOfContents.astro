@@ -165,55 +165,215 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       return h;
     };
 
+    // Tracker les animations en cours pour pouvoir les annuler
+    const activeAnimations = new Map();
+
+    const cancelAnimation = (el) => {
+      if (!el) return;
+      const animData = activeAnimations.get(el);
+      if (animData) {
+        // Nettoyer le listener de l'animation précédente
+        el.removeEventListener("transitionend", animData.onEnd);
+        activeAnimations.delete(el);
+      }
+    };
+
     const animateTo = (el, target) => {
       if (!el) return;
+
+      // Annuler toute animation en cours sur cet élément
+      cancelAnimation(el);
+
+      // Obtenir la hauteur ACTUELLE (même si une animation est en cours)
       const current = parseFloat(getComputedStyle(el).height) || 0;
+
+      // Si on est déjà proche de la cible, pas besoin d'animer
       if (Math.abs(current - target) < 1) {
         el.style.height = target ? "auto" : "0px";
         return;
       }
+
+      // Démarrer depuis la hauteur actuelle
       el.style.height = current + "px";
       // Force reflow
       void el.offsetHeight;
+
+      // Aller vers la cible
       el.style.height = target + "px";
+
+      // Créer le listener de fin
       const onEnd = (e) => {
         if (e.propertyName !== "height") return;
         el.removeEventListener("transitionend", onEnd);
+        activeAnimations.delete(el);
         if (target > 0) el.style.height = "auto";
       };
+
+      // Sauvegarder le listener pour pouvoir l'annuler plus tard
+      activeAnimations.set(el, { onEnd });
       el.addEventListener("transitionend", onEnd);
     };
 
     let prevActiveIdx = -1;
+    let prevPath = [];
+
     const setCollapsedState = (activeIdx) => {
       if (!autoCollapse) return;
       if (activeIdx == null || activeIdx < 0) activeIdx = 0;
       const { sideItems, mobileItems } = getAllItemsWithChildren();
 
-      // Fonction pour déterminer si un item doit être expanded (lui-même ou un de ses descendants est actif)
-      const shouldExpand = (li, activeIdx) => {
-        const idx = Number(li.getAttribute("data-heading-idx") || "-1");
-        if (idx === activeIdx) return true;
-        // Vérifier si un descendant est actif
-        const descendants = li.querySelectorAll("li[data-heading-idx]");
-        return Array.from(descendants).some(
-          (desc) => Number(desc.getAttribute("data-heading-idx")) === activeIdx,
-        );
+      // Trouver le chemin exact (path) des ancêtres du heading actif - retourner un array ordonné
+      const getAncestorPath = (items, targetIdx) => {
+        const path = [];
+
+        const findPath = (li, currentPath) => {
+          const idx = Number(li.getAttribute("data-heading-idx") || "-1");
+          const newPath = [...currentPath, idx];
+
+          if (idx === targetIdx) {
+            path.push(...newPath);
+            return true;
+          }
+
+          // Vérifier les descendants directs
+          const childUl = li.querySelector(":scope > ul");
+          if (!childUl) return false;
+
+          const childLis = childUl.querySelectorAll(
+            ":scope > li[data-heading-idx]",
+          );
+          for (const child of childLis) {
+            if (findPath(child, newPath)) {
+              return true;
+            }
+          }
+          return false;
+        };
+
+        items.forEach((li) => findPath(li, []));
+        return path;
       };
 
-      const update = (items) =>
+      const update = (items) => {
+        const newPath = getAncestorPath(items, activeIdx);
+        const newPathSet = new Set(newPath);
+
+        // Étape 0 : Annuler TOUTES les animations en cours avant de commencer
+        // Cela évite les conflits si l'utilisateur scroll rapidement
+        items.forEach((li) => {
+          const sub = li.querySelector(":scope > ul");
+          if (sub) cancelAnimation(sub);
+        });
+
+        // Étape 1 : Identifier TOUS les éléments qui vont changer d'état
+        const allChanges = [];
         items.forEach((li) => {
           const sub = li.querySelector(":scope > ul");
           if (!sub) return;
-          if (shouldExpand(li, activeIdx)) {
-            li.classList.remove("collapsed");
-            const target = measure(sub);
-            animateTo(sub, target);
-          } else {
-            li.classList.add("collapsed");
-            animateTo(sub, 0);
+
+          const idx = Number(li.getAttribute("data-heading-idx") || "-1");
+          const shouldBeExpanded = newPathSet.has(idx);
+          const isCurrentlyCollapsed = li.classList.contains("collapsed");
+
+          const isChanging =
+            (shouldBeExpanded && isCurrentlyCollapsed) ||
+            (!shouldBeExpanded && !isCurrentlyCollapsed);
+
+          if (isChanging) {
+            allChanges.push({ li, sub, shouldBeExpanded, idx });
           }
         });
+
+        // Étape 2 : Parmi tous les changements, trouver ceux qui sont des "top-level"
+        // (= n'ont PAS d'ancêtre qui change aussi)
+        const topLevelChanges = [];
+        const descendantChanges = [];
+
+        allChanges.forEach((change) => {
+          let hasAncestorChanging = false;
+
+          // Remonter l'arbre pour voir si un ancêtre change aussi
+          let currentLi = change.li;
+          while (currentLi) {
+            const parentLi = currentLi.parentElement?.closest(
+              "li[data-heading-idx]",
+            );
+            if (!parentLi) break;
+
+            const parentIdx = Number(
+              parentLi.getAttribute("data-heading-idx") || "-1",
+            );
+
+            // Vérifier si ce parent est dans la liste des changements
+            const parentIsChanging = allChanges.some(
+              (c) => c.idx === parentIdx,
+            );
+            if (parentIsChanging) {
+              hasAncestorChanging = true;
+              break;
+            }
+
+            currentLi = parentLi;
+          }
+
+          if (hasAncestorChanging) {
+            descendantChanges.push(change);
+          } else {
+            topLevelChanges.push(change);
+          }
+        });
+
+        // Étape 3 : Appliquer TOUS les descendants instantanément (sans animation)
+        // Ceci doit être fait AVANT toute animation pour que les hauteurs soient correctes
+        if (descendantChanges.length > 0) {
+          descendantChanges.forEach(({ li, sub, shouldBeExpanded }) => {
+            const oldTransition = sub.style.transition;
+            sub.style.transition = "none";
+
+            if (shouldBeExpanded) {
+              li.classList.remove("collapsed");
+              sub.style.height = "auto";
+            } else {
+              li.classList.add("collapsed");
+              sub.style.height = "0px";
+            }
+
+            // Forcer un reflow immédiat pour cet élément
+            void sub.offsetHeight;
+            sub.style.transition = oldTransition || "";
+          });
+
+          // Forcer un reflow global pour que TOUS les changements soient appliqués
+          void document.body.offsetHeight;
+
+          // IMPORTANT : Attendre un frame pour que le navigateur ait fini tous les calculs
+          // avant de mesurer les hauteurs des parents
+        }
+
+        // Étape 4 : Animer SEULEMENT les top-level avec requestAnimationFrame
+        // Les descendants sont déjà dans leur état final, donc la hauteur du parent sera correcte
+        if (topLevelChanges.length > 0) {
+          // Double requestAnimationFrame pour être sûr que le DOM est stabilisé
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              topLevelChanges.forEach(({ li, sub, shouldBeExpanded }) => {
+                if (shouldBeExpanded) {
+                  li.classList.remove("collapsed");
+                  // Maintenant on peut mesurer avec confiance
+                  const target = measure(sub);
+                  animateTo(sub, target);
+                } else {
+                  li.classList.add("collapsed");
+                  animateTo(sub, 0);
+                }
+              });
+            });
+          });
+        }
+
+        prevPath = newPath;
+      };
+
       update(sideItems);
       update(mobileItems);
       setNavCollapsible();
@@ -244,6 +404,10 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     if (mq.addEventListener) mq.addEventListener("change", onMqChange);
     else if (mq.addListener) mq.addListener(onMqChange);
 
+    // Throttle pour éviter trop d'appels pendant le scroll
+    let scrollTimeout = null;
+    let isScrolling = false;
+
     const onScroll = () => {
       // active link highlight
       let activeIdx = -1;
@@ -261,7 +425,18 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
           break;
         }
       }
-      if (activeIdx !== prevActiveIdx) setCollapsedState(activeIdx);
+
+      // Throttle : mettre à jour le collapse seulement si l'index change ET qu'on n'est pas déjà en train de traiter
+      if (activeIdx !== prevActiveIdx && !isScrolling) {
+        isScrolling = true;
+        setCollapsedState(activeIdx);
+
+        // Permettre une nouvelle mise à jour après un délai minimal
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          isScrolling = false;
+        }, 50); // 50ms entre chaque traitement
+      }
     };
 
     // If auto-collapse, collapse immediately (expand first section) before any scroll
