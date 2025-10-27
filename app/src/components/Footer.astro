@@ -130,7 +130,10 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
       };
 
       const referencesEl = findFirstOutsideFooter([
+        "#bibliography-references-list",
+        "[data-bibliography-block]",
         "#references",
+        "#refs",
         ".references",
         ".bibliography",
       ]);

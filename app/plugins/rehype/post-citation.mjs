@@ -103,7 +103,7 @@ export default function rehypeReferencesAndFootnotes() {
             type: 'element',
             tagName: 'a',
             properties: { href: `#${keys[0]}`, 'aria-label': ariaLabel },
-            children: [ createBackIcon() ]
+            children: [createBackIcon()]
           };
           small.children.push(a);
         } else {
@@ -115,7 +115,7 @@ export default function rehypeReferencesAndFootnotes() {
               type: 'element',
               tagName: 'a',
               properties: { href: `#${backId}`, 'aria-label': ariaLabel },
-              children: [ { type: 'text', value: String(idx + 1) } ]
+              children: [{ type: 'text', value: String(idx + 1) }]
             });
             if (idx < keys.length - 1) small.children.push({ type: 'text', value: ', ' });
           });
@@ -278,8 +278,12 @@ export default function rehypeReferencesAndFootnotes() {
       walk(tree, null, (node) => {
         if (found) return;
         if (!isElement(node)) return;
+        
+        // Ignore headers (h1, h2, h3, h4, h5, h6) - we only want container elements
+        if (/^h[1-6]$/i.test(node.tagName)) return;
+        
         const id = getAttr(node, 'id');
-        if (id === 'references' || hasClass(node, 'references') || hasClass(node, 'bibliography')) {
+        if (id === 'references' || id === 'refs' || hasClass(node, 'references') || hasClass(node, 'bibliography')) {
           found = node;
         }
       });
@@ -319,6 +323,10 @@ export default function rehypeReferencesAndFootnotes() {
     const refIdToExternalHref = new Map();
 
     if (refsRoot) {
+      // Add a unique id to avoid collisions with user-created headers
+      setAttr(refsRoot, 'id', 'bibliography-references-list');
+      setAttr(refsRoot, 'data-bibliography-block', 'true');
+
       refsOl = toOrderedList(refsRoot);
       // Collect item ids and linkify their content
       for (const li of getChildren(refsOl)) {

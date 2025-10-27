@@ -160,6 +160,11 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       // Temporarily set height to auto to measure scrollHeight reliably
       const prev = el.style.height;
       el.style.height = "auto";
+
+      // Force un reflow pour que le navigateur calcule les wraps de texte
+      void el.offsetHeight;
+
+      // Maintenant scrollHeight inclut la vraie hauteur avec tous les line wraps
       const h = el.scrollHeight;
       el.style.height = prev || "";
       return h;
@@ -401,7 +406,53 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
               topLevelChanges.forEach(({ li, sub, shouldBeExpanded }) => {
                 if (shouldBeExpanded) {
                   li.classList.remove("collapsed");
-                  // Maintenant on peut mesurer avec confiance
+
+                  // CRITIQUE : Avant de mesurer, mettre ABSOLUMENT TOUS les sous-éléments
+                  // dans leur état final (expanded OU collapsed) de manière synchrone
+                  const allInnerItems = sub.querySelectorAll(
+                    "li[data-heading-idx]",
+                  );
+
+                  // D'abord, désactiver toutes les transitions
+                  allInnerItems.forEach((innerLi) => {
+                    const innerSub = innerLi.querySelector(":scope > ul");
+                    if (innerSub) {
+                      innerSub.style.transition = "none";
+                    }
+                  });
+
+                  // Ensuite, mettre chaque élément dans son état final
+                  allInnerItems.forEach((innerLi) => {
+                    const innerIdx = Number(
+                      innerLi.getAttribute("data-heading-idx") || "-1",
+                    );
+                    const innerSub = innerLi.querySelector(":scope > ul");
+                    if (innerSub) {
+                      if (newActiveAncestors.has(innerIdx)) {
+                        // Cet élément devrait être expanded
+                        innerLi.classList.remove("collapsed");
+                        innerSub.style.height = "auto";
+                      } else {
+                        // Cet élément devrait être collapsed
+                        innerLi.classList.add("collapsed");
+                        innerSub.style.height = "0px";
+                      }
+                    }
+                  });
+
+                  // Forcer un reflow global pour que TOUT soit calculé
+                  void sub.offsetHeight;
+
+                  // Réactiver les transitions
+                  allInnerItems.forEach((innerLi) => {
+                    const innerSub = innerLi.querySelector(":scope > ul");
+                    if (innerSub) {
+                      innerSub.style.transition = "";
+                    }
+                  });
+
+                  // Maintenant on peut mesurer avec confiance : tous les éléments
+                  // sont dans leur état final définitif
                   const target = measure(sub);
                   animateTo(sub, target);
                 } else {
@@ -446,9 +497,10 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     if (mq.addEventListener) mq.addEventListener("change", onMqChange);
     else if (mq.addListener) mq.addListener(onMqChange);
 
-    // Throttle pour éviter trop d'appels pendant le scroll
-    let scrollTimeout = null;
-    let isScrolling = false;
+    // Debounce pour traiter la dernière mise à jour après que le scroll se stabilise
+    let scrollDebounceTimer = null;
+    let lastRequestedIdx = -1;
+    let isProcessing = false;
 
     const onScroll = () => {
       // active link highlight
@@ -468,17 +520,31 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
         }
       }
 
-      // Throttle : mettre à jour le collapse seulement si l'index change ET qu'on n'est pas déjà en train de traiter
-      if (activeIdx !== prevActiveIdx && !isScrolling) {
-        isScrolling = true;
-        setCollapsedState(activeIdx);
+      if (activeIdx === prevActiveIdx) return;
 
-        // Permettre une nouvelle mise à jour après un délai minimal
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          isScrolling = false;
-        }, 50); // 50ms entre chaque traitement
-      }
+      // Sauvegarder la dernière demande
+      lastRequestedIdx = activeIdx;
+
+      // Si on est en train de traiter, ne rien faire (on traitera la dernière demande après)
+      if (isProcessing) return;
+
+      // Debounce : attendre un peu que le scroll se stabilise
+      clearTimeout(scrollDebounceTimer);
+      scrollDebounceTimer = setTimeout(() => {
+        // Traiter la dernière demande
+        if (lastRequestedIdx !== prevActiveIdx) {
+          isProcessing = true;
+          setCollapsedState(lastRequestedIdx);
+          // Le processing flag sera réinitialisé après les animations
+          setTimeout(() => {
+            isProcessing = false;
+            // Si une nouvelle demande est arrivée pendant qu'on traitait, la traiter maintenant
+            if (lastRequestedIdx !== prevActiveIdx) {
+              onScroll();
+            }
+          }, 250); // Attendre que les animations soient lancées
+        }
+      }, 100); // Debounce de 100ms
     };
 
     // If auto-collapse, collapse immediately (expand first section) before any scroll

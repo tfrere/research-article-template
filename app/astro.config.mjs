@@ -12,6 +12,7 @@ import rehypeCitation from 'rehype-citation';
 import rehypeCodeCopy from './plugins/rehype/code-copy.mjs';
 import rehypeReferencesAndFootnotes from './plugins/rehype/post-citation.mjs';
 import remarkIgnoreCitationsInCode from './plugins/remark/ignore-citations-in-code.mjs';
+import remarkUnwrapCitationLinks from './plugins/remark/unwrap-citation-links.mjs';
 import remarkDirective from 'remark-directive';
 import remarkOutputContainer from './plugins/remark/output-container.mjs';
 import rehypeRestoreAtInCode from './plugins/rehype/restore-at-in-code.mjs';
@@ -47,6 +48,7 @@ export default defineConfig({
       }
     },
     remarkPlugins: [
+      remarkUnwrapCitationLinks,
       remarkIgnoreCitationsInCode,
       remarkMath,
       [remarkFootnotes, { inlineNotes: true }],
@@ -63,6 +65,8 @@ export default defineConfig({
         bibliography: 'src/content/bibliography.bib',
         linkCitations: true,
         csl: "apa",
+        noCite: false,
+        suppressBibliography: false,
       }],
       rehypeReferencesAndFootnotes,
       rehypeRestoreAtInCode,
