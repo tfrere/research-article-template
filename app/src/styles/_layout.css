@@ -107,9 +107,9 @@
 /* ============================================================================ */
 
 #theme-toggle {
-  position: fixed;
-  top: calc(var(--spacing-4) + var(--hf-spaces-topbar, 0px));
-  right: var(--spacing-3);
+  position: absolute;
+  top: var(--spacing-4);
+  left: var(--spacing-3);
   margin: 0;
   z-index: var(--z-overlay);
 }

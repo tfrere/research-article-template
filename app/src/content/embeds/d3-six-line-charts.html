@@ -696,7 +696,7 @@
           hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
 
           let html = `<div><strong>${chartConfig.title}</strong></div>`;
-          html += `<div>tokens ${formatStep(nearest)}</div>`;
+          html += `<div>${formatStep(nearest)}</div>`;
 
           const entries = series.map(s => {
             const values = s.values;

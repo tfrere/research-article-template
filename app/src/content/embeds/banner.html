@@ -160,6 +160,22 @@
     color: var(--text-color);
     white-space: nowrap;
   }
+
+  /* Mobile: hide annotation and legend, reduce height */
+  @media (max-width: 768px) {
+    .d3-loss-curves {
+      height: 250px;
+    }
+
+    .d3-loss-curves .annotation {
+      display: none;
+    }
+
+    .d3-loss-curves .legend {
+      display: none;
+    }
+
+  }
 </style>
 <script>
   (() => {
@@ -296,8 +312,13 @@
       // State/data
       const svgPaddingTop = 20;
       const svgPaddingBottom = 20;
-      const svgHeight = 330;
-      const contentHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
+      // Get initial height from container instead of fixed value
+      const getContainerHeight = () => {
+        const containerHeight = container.clientHeight || 350;
+        return Math.max(containerHeight - 20, 200); // Minimum 200px
+      };
+      let svgHeight = getContainerHeight();
+      let contentHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
       let width = 800, height = svgHeight; const margin = { top: 0, right: 0, bottom: 0, left: 0 };
 
       // SVG container
@@ -553,6 +574,9 @@
       function updateLayout() {
         const axisColor = getComputedStyle(container).getPropertyValue('--axis-color').trim() || 'rgba(0,0,0,0.25)';
         width = container.clientWidth || 800;
+        // Update height based on current container size
+        svgHeight = getContainerHeight();
+        contentHeight = svgHeight - svgPaddingTop - svgPaddingBottom;
         height = svgHeight;
         svg.attr('width', width).attr('height', height);
         gRoot.attr('transform', `translate(0, ${svgPaddingTop})`);

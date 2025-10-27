@@ -38,6 +38,10 @@
     <div class="bottleneck-path">for CPU → GPU</div>
     <div class="bottleneck-value">-</div>
     <div class="bottleneck-unit">GB/s</div>
+    <div class="bottleneck-efficiency" style="display: none;">
+      <div class="efficiency-value">-</div>
+      <div class="efficiency-label">Efficiency</div>
+    </div>
     <div class="real-bandwidths" style="display: none;">
       <div class="real-bandwidths-title">Real Bandwidths</div>
       <div class="real-bandwidths-content"></div>
@@ -218,6 +222,40 @@
       0 0 8px var(--page-bg),
       0 0 8px var(--page-bg),
       0 0 8px var(--page-bg);
+  }
+
+  .bottleneck-efficiency {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+
+  .efficiency-label {
+    font-size: 9px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    text-shadow:
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg),
+      0 0 8px var(--page-bg);
+  }
+
+  .efficiency-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    text-shadow:
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg),
+      0 0 10px var(--page-bg);
   }
 
   .real-bandwidths {
@@ -543,12 +581,13 @@
       realBandwidths: {
         'cpu-gpu': '14.2GB/s',
         'gpu-gpu-same-node': '786GB/s',
+        'gpu-gpu-efa-intranode': '40GB/s',
+        'gpu-gpu-efa-internode': '40GB/s',
         'allreduce-same-node': '480GB/s',
         'all2all-same-node': '340GB/s',
-        'gpu-gpu-internode': '42GB/s',
         'allreduce-internode': '320GB/s',
         'alltoall-internode': '45GB/s',
-        'gpu-storage': '26GB/s'
+        'gpu-storage': '14.2GB/s'
       }
     };
 
@@ -1328,11 +1367,17 @@
       const systemBgCenterY = cpuY + (nvswitchY - cpuY) / 2;
       const systemPadding = 30;
 
+      // In internode mode, extend the rectangle slightly to the right
+      const isInternode = systemCount === 2;
+      const extraWidth = isInternode && ensembleCount === 2 ? 210 : 0;
+
       // Draw system background ONLY if 2 ensembles (intra-node vs inter-node distinction)
       if (ensembleCount === 2) {
-        const rectX = systemCenterX - (systemWidth + systemPadding * 2) / 2;
+        // Adjust rectX to center the extended rectangle
+        const totalWidth = systemWidth + systemPadding * 2 + extraWidth;
+        const rectX = systemCenterX - totalWidth / 2;
         const rectY = systemBgCenterY - (systemHeight + systemPadding * 2) / 2;
-        const rectWidth = systemWidth + systemPadding * 2;
+        const rectWidth = totalWidth;
         const rectHeight = systemHeight + systemPadding * 2;
 
         renderer.linksGroup.rect(rectWidth, rectHeight)
@@ -1355,6 +1400,53 @@
             fill: CONFIG.colors.textSecondary
           })
           .opacity(0.8);
+
+        // Add NUMA 1 group with "..." in the extended area for internode mode
+        if (isInternode) {
+          const numaPadding = 15;
+          const numaWidth = extraWidth - 15; // Margin for spacing
+          const numaHeight = systemHeight;
+
+          const numaX = rectX + rectWidth - extraWidth; // Left margin
+          const numaY = systemBgCenterY - (numaHeight + numaPadding * 2) / 2;
+          const numaRectWidth = numaWidth;
+          const numaRectHeight = numaHeight + numaPadding * 2;
+
+          // Draw NUMA 1 border
+          renderer.linksGroup.rect(numaRectWidth, numaRectHeight)
+            .move(numaX, numaY)
+            .fill('none')
+            .stroke({
+              color: CONFIG.colors.groupBorder,
+              width: 3,
+              opacity: 1
+            })
+            .radius(8);
+
+          // Add "NUMA 1" label at top right
+          renderer.nodesGroup.text('NUMA 1')
+            .move(numaX + numaRectWidth - 15, numaY + 15)
+            .font({
+              size: 14,
+              family: 'var(--font-family)',
+              weight: 600,
+              fill: CONFIG.colors.textSecondary,
+              anchor: 'end'
+            })
+            .opacity(0.7);
+
+          // Add "..." centered in NUMA 1
+          renderer.nodesGroup.text('...')
+            .move(numaX + numaRectWidth / 2, numaY + numaRectHeight / 2)
+            .font({
+              size: 40,
+              family: 'var(--font-family)',
+              weight: 900,
+              fill: CONFIG.colors.textSecondary,
+              anchor: 'middle'
+            })
+            .opacity(0.6);
+        }
       }
 
       // Draw each ensemble in the system
@@ -1362,8 +1454,16 @@
         const ensembleGlobalIndex = systemIndex * CONFIG.ensembleCount + ensIndex;
 
         // Position ensemble within system
-        const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
-        const ensembleCenterX = systemCenterX + ensembleOffsetX;
+        let ensembleCenterX;
+        if (isInternode) {
+          // In internode mode, align NUMA 0 to the left of the Node rectangle
+          const rectX = systemCenterX - (systemWidth + systemPadding * 2 + extraWidth) / 2;
+          ensembleCenterX = rectX + systemPadding + ensembleWidth / 2;
+        } else {
+          // Normal centered positioning
+          const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+          ensembleCenterX = systemCenterX + ensembleOffsetX;
+        }
 
         drawEnsemble(renderer, ensembleGlobalIndex, ensembleCenterX, cpuY, nvswitchY);
       }
@@ -1371,8 +1471,16 @@
       // Draw NUMA node borders (one per ensemble) if 2 ensembles
       if (ensembleCount === 2) {
         for (let ensIndex = 0; ensIndex < ensemblesToShow; ensIndex++) {
-          const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
-          const ensembleCenterX = systemCenterX + ensembleOffsetX;
+          let ensembleCenterX;
+          if (isInternode) {
+            // In internode mode, align NUMA 0 to the left
+            const rectX = systemCenterX - (systemWidth + systemPadding * 2 + extraWidth) / 2;
+            ensembleCenterX = rectX + systemPadding + ensembleWidth / 2;
+          } else {
+            // Normal centered positioning
+            const ensembleOffsetX = (ensIndex - (ensemblesToShow - 1) / 2) * (ensembleWidth + CONFIG.gaps.ensembleGap);
+            ensembleCenterX = systemCenterX + ensembleOffsetX;
+          }
 
           // Calculate NUMA node bounding box (same as system but for single ensemble)
           const numaWidth = ensembleWidth;
@@ -1475,6 +1583,7 @@
     let currentEnsembleCount = 2;  // Start with 2 ensembles (1 complete node)
     let currentSystemCount = 1;    // Start with 1 system
     let currentActivePathId = null; // Track active path for conditional rendering
+    let showRealBandwidthsOverride = null; // User override via checkbox (null = use config)
 
     function drawTopology(ensembleCount = currentEnsembleCount, systemCount = currentSystemCount) {
       // Clear existing
@@ -1508,6 +1617,16 @@
         viewboxHeight = singleSystemHeight * 2 + CONFIG.gaps.systemGap;
         viewboxWidth *= 1.15;
         viewboxHeight *= 1.15;
+      }
+
+      // For internode horizontal layout, extend viewbox width to accommodate both extended systems
+      if (isInternodeLayout) {
+        const extraWidth = 210; // Extension per system for NUMA 1
+        const systemPadding = 30;
+        const singleEnsembleWidth = ensembleWidth;
+        const totalSystemWidth = singleEnsembleWidth + systemPadding * 2 + extraWidth;
+        const gap = 80;
+        viewboxWidth = totalSystemWidth * 2 + gap + 200; // Extra margin for comfort
       }
 
       // Fixed height based on screen width for better consistency
@@ -1563,13 +1682,16 @@
           // Pour internode, on affiche 1 seul ensemble (NUMA) par système, donc largeur réelle = 50%
           const fullSystemWidth = ensembleCount * ensembleWidth + (ensembleCount - 1) * CONFIG.gaps.ensembleGap;
           const actualSystemWidth = fullSystemWidth * 0.5; // On n'affiche qu'1 ensemble sur 2
+          const extraWidth = 210; // Extension pour le groupe NUMA 1
+          const systemPadding = 10;
+          const totalSystemWidth = actualSystemWidth + systemPadding * 2 + extraWidth; // Largeur totale incluant l'extension
           const gap = 80; // Gap visible entre les systèmes
 
-          // Positionner les systèmes avec le gap
+          // Positionner les systèmes avec le gap (en prenant en compte la largeur totale)
           if (sysIndex === 0) {
-            systemCenterX = centerX - (actualSystemWidth / 2 + gap / 2); // Premier système à gauche
+            systemCenterX = centerX - (totalSystemWidth / 2 + gap / 2); // Premier système à gauche
           } else {
-            systemCenterX = centerX + (actualSystemWidth / 2 + gap / 2); // Deuxième système à droite
+            systemCenterX = centerX + (totalSystemWidth / 2 + gap / 2); // Deuxième système à droite
           }
           cpuY = CONFIG.gaps.topMargin + CONFIG.sizes.cpu / 2;
           nvswitchY = cpuY + CONFIG.sizes.cpu / 2 + CONFIG.gaps.cpuToPcie + CONFIG.sizes.pcie.height +
@@ -1611,10 +1733,10 @@
         'cpu-gpu': { value: '14.2', unit: 'GB/s' },
         'gpu-gpu-cpu': { value: '14.2', unit: 'GB/s' },
         'gpu-gpu-nvswitch': { value: '786', unit: 'GB/s' },
-        'gpu-gpu-efa-intranode': { value: '480', unit: 'GB/s' },
-        'gpu-gpu-efa-internode': { value: '42', unit: 'GB/s' },
-        'gpu-storage': { value: '26', unit: 'GB/s' },
-        'cpu-storage': { value: '26', unit: 'GB/s' },
+        'gpu-gpu-efa-intranode': { value: '40', unit: 'GB/s' },
+        'gpu-gpu-efa-internode': { value: '40', unit: 'GB/s' },
+        'gpu-storage': { value: '14.2', unit: 'GB/s' },
+        'cpu-storage': { value: '14.2', unit: 'GB/s' },
         'gpu-cpu-storage': { value: '14.2', unit: 'GB/s' }
       };
 
@@ -1776,6 +1898,8 @@
       const bottleneckPathEl = bottleneckEl.querySelector('.bottleneck-path');
       const bottleneckLabelEl = bottleneckEl.querySelector('.bottleneck-label');
       const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
+      const efficiencyEl = bottleneckEl.querySelector('.bottleneck-efficiency');
+      const efficiencyValueEl = bottleneckEl.querySelector('.efficiency-value');
 
       // Check if real bandwidths are enabled
       const embedConfig = readEmbedConfig();
@@ -1789,12 +1913,28 @@
           bottleneckPathEl.textContent = `for ${pathLabel}`;
           bottleneckLabelEl.textContent = 'Real Bandwidth';
           bottleneckEl.classList.add('visible');
+
+          // Calculate and display efficiency
+          if (minBandwidthValue && efficiencyEl && efficiencyValueEl) {
+            const theoreticalBandwidth = parseFloat(minBandwidthValue.replace('GB/s', ''));
+            const realBandwidthNum = parseFloat(realBandwidth.value);
+
+            // For EFA (12.5GB/s), multiply by 4 to get total theoretical bandwidth
+            const adjustedTheoretical = minBandwidthValue === '12.5GB/s' ? theoreticalBandwidth * 4 : theoreticalBandwidth;
+
+            const efficiency = (realBandwidthNum / adjustedTheoretical) * 100;
+            efficiencyValueEl.textContent = `${efficiency.toFixed(1)}%`;
+            efficiencyEl.style.display = 'block';
+          }
         } else {
           // Fallback if no real bandwidth found
           bottleneckValueEl.textContent = '?';
           bottleneckPathEl.textContent = `for ${pathLabel}`;
           bottleneckLabelEl.textContent = 'Real Bandwidth';
           bottleneckEl.classList.add('visible');
+          if (efficiencyEl) {
+            efficiencyEl.style.display = 'none';
+          }
         }
         // Hide the detailed real bandwidths list
         const realBandwidthsEl = bottleneckEl.querySelector('.real-bandwidths');
@@ -1806,8 +1946,8 @@
         bottleneckLabelEl.textContent = 'Bandwidth Max';
         if (minBandwidthValue) {
           const value = minBandwidthValue.replace('GB/s', '');
-          // For EFA (12.5GB/s), add ×4 to indicate 4 links
-          const displayValue = value === '12.5' ? `${value} ×4` : value;
+          // For EFA (12.5GB/s), display as 50 (4 links × 12.5)
+          const displayValue = value === '12.5' ? '50' : value;
           bottleneckValueEl.textContent = displayValue;
           bottleneckPathEl.textContent = `for ${pathLabel}`;
           bottleneckEl.classList.add('visible');
@@ -1816,6 +1956,10 @@
           bottleneckValueEl.textContent = '?';
           bottleneckPathEl.textContent = `for ${pathLabel}`;
           bottleneckEl.classList.add('visible');
+        }
+        // Hide efficiency in normal mode
+        if (efficiencyEl) {
+          efficiencyEl.style.display = 'none';
         }
       }
     }
@@ -1882,6 +2026,12 @@
           realBandwidthsEl.style.display = 'none';
         }
       }
+
+      // Hide efficiency display
+      const efficiencyEl = bottleneckEl.querySelector('.bottleneck-efficiency');
+      if (efficiencyEl) {
+        efficiencyEl.style.display = 'none';
+      }
     }
 
     // ============================================================================
@@ -1904,7 +2054,14 @@
         console.error('Error parsing embed config:', e);
       }
 
-      return providedConfig || {};
+      const config = providedConfig || {};
+
+      // Apply user override from checkbox if set
+      if (showRealBandwidthsOverride !== null) {
+        config.showRealBandwidths = showRealBandwidthsOverride;
+      }
+
+      return config;
     }
 
     // ============================================================================
@@ -1935,12 +2092,12 @@
           { label: 'GPU-GPU (NVSwitch)', value: CONFIG.realBandwidths['gpu-gpu-same-node'] }
         ],
         'gpu-gpu-efa-intranode': [
-          { label: 'GPU-GPU (EFA)', value: CONFIG.realBandwidths['gpu-gpu-same-node'] },
+          { label: 'GPU-GPU (EFA)', value: CONFIG.realBandwidths['gpu-gpu-efa-intranode'] },
           { label: 'AllReduce', value: CONFIG.realBandwidths['allreduce-same-node'] },
           { label: 'All2All', value: CONFIG.realBandwidths['all2all-same-node'] }
         ],
         'gpu-gpu-efa-internode': [
-          { label: 'GPU-GPU (EFA)', value: CONFIG.realBandwidths['gpu-gpu-internode'] },
+          { label: 'GPU-GPU (EFA)', value: CONFIG.realBandwidths['gpu-gpu-efa-internode'] },
           { label: 'AllReduce', value: CONFIG.realBandwidths['allreduce-internode'] },
           { label: 'All2All', value: CONFIG.realBandwidths['alltoall-internode'] }
         ],
@@ -2027,7 +2184,28 @@
       const container = getElement('aws-topology-container');
       const tooltip = getElement('aws-topology-tooltip');
 
-      // Read config from HtmlEmbed props
+      // Read initial config from HtmlEmbed props (before any override)
+      let mountEl = getElement('aws-topology-container');
+      while (mountEl && !mountEl.getAttribute?.('data-config')) {
+        mountEl = mountEl.parentElement;
+      }
+
+      let initialConfig = null;
+      try {
+        const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+        if (cfg && cfg.trim()) {
+          initialConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+        }
+      } catch (e) {
+        console.error('Error parsing embed config:', e);
+      }
+
+      // Initialize override with initial config value (so checkbox is in sync)
+      if (initialConfig && initialConfig.showRealBandwidths !== undefined) {
+        showRealBandwidthsOverride = initialConfig.showRealBandwidths;
+      }
+
+      // Now read config (which will use override if set)
       const embedConfig = readEmbedConfig();
 
       // Setup real bandwidths display if enabled
@@ -2105,49 +2283,75 @@
           ]
         };
 
+        // Create single select with prefixed options and checkbox
+        const isChecked = showRealBandwidthsOverride === true || (showRealBandwidthsOverride === null && embedConfig.showRealBandwidths);
         const controlsHTML = `
-          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin-bottom: 8px;">Filters</div>
+          <div>
+            <label id="real-bandwidth-label" style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-color); cursor: pointer; opacity: 0.3; transition: opacity 0.2s;">
+              <input type="checkbox" id="real-bandwidth-toggle" ${isChecked ? 'checked' : ''} style="cursor: pointer;" disabled>
+              <span>Show Real Bandwidths</span>
+            </label>
+          </div>
           
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <select id="category-select">
-              <option value="">Select category...</option>
-              <option value="intranode">Intranode</option>
-              <option value="internode">Internode</option>
-              <option value="storage">Storage</option>
-            </select>
-            
-            <select id="path-select" style="min-width: 200px;" disabled>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+            <select id="path-select" style="min-width: 250px;">
               <option value="">Select path...</option>
             </select>
           </div>
         `;
         controlsContainer.innerHTML = controlsHTML;
 
-        const categorySelect = controlsContainer.querySelector('#category-select');
         const pathSelect = controlsContainer.querySelector('#path-select');
+        const realBandwidthToggle = controlsContainer.querySelector('#real-bandwidth-toggle');
+        const realBandwidthLabel = controlsContainer.querySelector('#real-bandwidth-label');
 
-        // Function to update path select options based on category
-        const updatePathSelect = (category) => {
-          pathSelect.innerHTML = '<option value="">Select path...</option>';
+        // Populate single select with prefixed options
+        Object.entries(pathsByCategory).forEach(([category, paths]) => {
+          const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
 
-          if (category && pathsByCategory[category]) {
-            pathSelect.disabled = false;
-            pathsByCategory[category].forEach(path => {
-              const option = document.createElement('option');
-              option.value = path.id;
-              option.textContent = path.label;
-              pathSelect.appendChild(option);
-            });
+          paths.forEach(path => {
+            const option = document.createElement('option');
+            option.value = path.id;
+            option.textContent = `${categoryLabel}: ${path.label}`;
+            pathSelect.appendChild(option);
+          });
+        });
+
+        // Helper function to enable/disable real bandwidth toggle
+        const updateRealBandwidthToggleState = (enabled) => {
+          if (enabled) {
+            realBandwidthToggle.disabled = false;
+            realBandwidthLabel.style.opacity = '1';
+            realBandwidthLabel.style.cursor = 'pointer';
           } else {
-            pathSelect.disabled = true;
+            realBandwidthToggle.disabled = true;
+            realBandwidthLabel.style.opacity = '0.3';
+            realBandwidthLabel.style.cursor = 'default';
           }
         };
+
+        // Real bandwidth toggle handler
+        realBandwidthToggle.addEventListener('change', (e) => {
+          showRealBandwidthsOverride = e.target.checked;
+
+          // Re-apply highlight if a path is active
+          if (currentActivePathId) {
+            const path = CONFIG.paths[currentActivePathId];
+            if (path) {
+              highlightPath(path, path.label, currentActivePathId);
+            }
+          } else {
+            // If no path active, just reset to clear any displayed values
+            resetHighlight();
+          }
+        });
 
         // Function to activate a path
         const activatePath = (pathId) => {
           if (!pathId) {
             // Reset to default
             currentActivePathId = null;
+            updateRealBandwidthToggleState(false); // Disable toggle when no path selected
             const needsRedraw = currentEnsembleCount !== 2 || currentSystemCount !== 1;
 
             if (needsRedraw) {
@@ -2172,6 +2376,7 @@
           if (!path) return;
 
           currentActivePathId = pathId;
+          updateRealBandwidthToggleState(true); // Enable toggle when path is selected
 
           // Check if we need to redraw
           const needsRedraw = path.requiredEnsembles !== currentEnsembleCount ||
@@ -2197,18 +2402,6 @@
             highlightPath(path, path.label, pathId);
           }
         };
-
-        // Category select change handler
-        categorySelect.addEventListener('change', (e) => {
-          const category = e.target.value;
-          updatePathSelect(category);
-
-          // Reset path select
-          pathSelect.value = '';
-
-          // Reset to default view when category changes
-          activatePath(null);
-        });
 
         // Path select change handler
         pathSelect.addEventListener('change', (e) => {

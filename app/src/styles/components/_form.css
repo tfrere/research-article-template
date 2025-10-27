@@ -7,7 +7,7 @@ select {
   background-color: var(--page-bg);
   border: 1px solid color-mix(in srgb, var(--primary-color) 50%, var(--border-color));
   border-radius: var(--button-radius);
-  padding: var(--button-padding-y) var(--button-padding-x) var(--button-padding-y) var(--button-padding-x);
+  padding: var(--button-padding-y) calc(var(--button-padding-x)*2) var(--button-padding-y) var(--button-padding-x);
   font-family: var(--default-font-family);
   font-size: var(--button-font-size);
   color: var(--text-color);

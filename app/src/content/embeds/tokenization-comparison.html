@@ -326,22 +326,22 @@
 
       }
 
+      // Load color palettes script if not already loaded
+      if (!window.ColorPalettes) {
+        const script = document.createElement('script');
+        script.src = '/scripts/color-palettes.js';
+        script.onload = () => {
+          // Re-render with proper colors after palette script loads
+          if (container && container.querySelector) {
+            updateVisualization(sampleData);
+          }
+        };
+        document.head.appendChild(script);
+      }
+
       // Initialize with sample data
       updateVisualization(sampleData);
     };
-
-    // Load color palettes script if not already loaded
-    if (!window.ColorPalettes) {
-      const script = document.createElement('script');
-      script.src = '/scripts/color-palettes.js';
-      script.onload = () => {
-        // Re-render with proper colors after palette script loads
-        if (container && container.querySelector) {
-          updateVisualization(sampleData);
-        }
-      };
-      document.head.appendChild(script);
-    }
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bootstrap, { once: true });

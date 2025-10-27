@@ -278,10 +278,10 @@ export default function rehypeReferencesAndFootnotes() {
       walk(tree, null, (node) => {
         if (found) return;
         if (!isElement(node)) return;
-        
+
         // Ignore headers (h1, h2, h3, h4, h5, h6) - we only want container elements
         if (/^h[1-6]$/i.test(node.tagName)) return;
-        
+
         const id = getAttr(node, 'id');
         if (id === 'references' || id === 'refs' || hasClass(node, 'references') || hasClass(node, 'bibliography')) {
           found = node;
