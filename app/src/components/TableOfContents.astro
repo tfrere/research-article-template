@@ -215,48 +215,72 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     };
 
     let prevActiveIdx = -1;
-    let prevPath = [];
+    let prevActiveElements = new Set();
 
     const setCollapsedState = (activeIdx) => {
       if (!autoCollapse) return;
       if (activeIdx == null || activeIdx < 0) activeIdx = 0;
       const { sideItems, mobileItems } = getAllItemsWithChildren();
 
-      // Trouver le chemin exact (path) des ancêtres du heading actif - retourner un array ordonné
-      const getAncestorPath = (items, targetIdx) => {
-        const path = [];
+      // Trouver l'élément <li> correspondant au heading actif et tous ses ancêtres
+      const getActiveAndAncestors = (items, targetIdx) => {
+        const toExpand = new Set();
 
-        const findPath = (li, currentPath) => {
+        // Trouver le <li> qui correspond au targetIdx
+        const findActiveLi = (li) => {
           const idx = Number(li.getAttribute("data-heading-idx") || "-1");
-          const newPath = [...currentPath, idx];
-
           if (idx === targetIdx) {
-            path.push(...newPath);
-            return true;
+            return li;
           }
 
-          // Vérifier les descendants directs
           const childUl = li.querySelector(":scope > ul");
-          if (!childUl) return false;
+          if (!childUl) return null;
 
           const childLis = childUl.querySelectorAll(
             ":scope > li[data-heading-idx]",
           );
           for (const child of childLis) {
-            if (findPath(child, newPath)) {
-              return true;
-            }
+            const found = findActiveLi(child);
+            if (found) return found;
           }
-          return false;
+          return null;
         };
 
-        items.forEach((li) => findPath(li, []));
-        return path;
+        let activeLi = null;
+        for (const li of items) {
+          activeLi = findActiveLi(li);
+          if (activeLi) break;
+        }
+
+        if (!activeLi) return toExpand;
+
+        // Collecter l'élément actif lui-même
+        const activeIdx = Number(
+          activeLi.getAttribute("data-heading-idx") || "-1",
+        );
+        toExpand.add(activeIdx);
+
+        // Remonter et collecter TOUS les ancêtres, sans condition
+        // La structure de la TOC détermine automatiquement qui doit être ouvert
+        let current = activeLi;
+        while (current) {
+          const parent = current.parentElement?.closest("li[data-heading-idx]");
+          if (parent) {
+            const parentIdx = Number(
+              parent.getAttribute("data-heading-idx") || "-1",
+            );
+            toExpand.add(parentIdx);
+            current = parent;
+          } else {
+            break;
+          }
+        }
+
+        return toExpand;
       };
 
       const update = (items) => {
-        const newPath = getAncestorPath(items, activeIdx);
-        const newPathSet = new Set(newPath);
+        const newActiveAncestors = getActiveAndAncestors(items, activeIdx);
 
         // Étape 0 : Annuler TOUTES les animations en cours avant de commencer
         // Cela évite les conflits si l'utilisateur scroll rapidement
@@ -272,7 +296,25 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
           if (!sub) return;
 
           const idx = Number(li.getAttribute("data-heading-idx") || "-1");
-          const shouldBeExpanded = newPathSet.has(idx);
+
+          // Un élément doit être expanded SI il contient (directement ou indirectement) le heading actif
+          // Donc soit il est dans newActiveAncestors, soit un de ses descendants l'est
+          let shouldBeExpanded = false;
+
+          // Vérifier si cet élément ou un de ses descendants est dans le chemin actif
+          const allDescendants = li.querySelectorAll("li[data-heading-idx]");
+          const allRelatedIndices = [
+            idx,
+            ...Array.from(allDescendants).map((d) =>
+              Number(d.getAttribute("data-heading-idx") || "-1"),
+            ),
+          ];
+
+          // Si au moins un de ces indices est dans newActiveAncestors, garder ouvert
+          shouldBeExpanded = allRelatedIndices.some((i) =>
+            newActiveAncestors.has(i),
+          );
+
           const isCurrentlyCollapsed = li.classList.contains("collapsed");
 
           const isChanging =
@@ -371,7 +413,7 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
           });
         }
 
-        prevPath = newPath;
+        prevActiveElements = newActiveAncestors;
       };
 
       update(sideItems);

@@ -47,7 +47,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     </section>
     <div class="template-credit">
       <p>
-        made with love with <a
+        Made with ❤️ with <a
           href="https://huggingface.co/spaces/tfrere/research-article-template"
           target="_blank"
           rel="noopener noreferrer">research article template</a
@@ -102,6 +102,20 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
           firstHeading.remove();
         }
       }
+
+      // Move footnote backref links inside paragraphs
+      if (element.classList && element.classList.contains("footnotes")) {
+        const footnoteItems = element.querySelectorAll("li");
+        footnoteItems.forEach((item) => {
+          const backrefContainer = item.querySelector("small.backrefs");
+          const lastP = item.querySelector("p:last-of-type");
+          if (backrefContainer && lastP && !lastP.contains(backrefContainer)) {
+            lastP.appendChild(document.createTextNode(" "));
+            lastP.appendChild(backrefContainer);
+          }
+        });
+      }
+
       ensureHeading(headingText);
       target.appendChild(element);
       return true;
