@@ -1,0 +1,538 @@
+<div class="d3-apo-beta-ablation"></div>
+<style>
+  .d3-apo-beta-ablation {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+    --axis-color: var(--text-color, #333);
+    --tick-color: var(--muted-color, #666);
+    --grid-color: rgba(0,0,0,.08);
+  }
+  [data-theme="dark"] .d3-apo-beta-ablation {
+    --axis-color: var(--text-color, #ccc);
+    --tick-color: var(--muted-color, #999);
+    --grid-color: rgba(255,255,255,.10);
+  }
+  .d3-apo-beta-ablation svg {
+    display: block;
+    overflow: visible;
+  }
+  .d3-apo-beta-ablation .axes path,
+  .d3-apo-beta-ablation .axes line {
+    stroke: var(--axis-color);
+    shape-rendering: crispEdges;
+  }
+  .d3-apo-beta-ablation .axes text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
+  .d3-apo-beta-ablation .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2,2;
+    shape-rendering: crispEdges;
+  }
+  .d3-apo-beta-ablation .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .d3-apo-beta-ablation .line-think {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .d3-apo-beta-ablation .line-no-think {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .d3-apo-beta-ablation .reference-line {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-dasharray: 5, 5;
+    opacity: 0.4;
+  }
+  .d3-apo-beta-ablation .dot {
+    stroke: var(--surface-bg);
+    stroke-width: 2;
+  }
+  .d3-apo-beta-ablation .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .d3-apo-beta-ablation .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-apo-beta-ablation .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-apo-beta-ablation .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-apo-beta-ablation .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .d3-apo-beta-ablation .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-apo-beta-ablation .legend .swatch-line {
+    width: 20px;
+    height: 2px;
+    border: none;
+  }
+  .d3-apo-beta-ablation .legend .swatch-dashed {
+    width: 20px;
+    height: 2px;
+    border: none;
+    background: repeating-linear-gradient(
+      to right,
+      var(--text-color) 0,
+      var(--text-color) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+  .d3-apo-beta-ablation .controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .d3-apo-beta-ablation .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-apo-beta-ablation .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-apo-beta-ablation .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .d3-apo-beta-ablation .controls select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  .d3-apo-beta-ablation .d3-tooltip {
+    position: absolute;
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    font-size: 12px;
+    z-index: 1000;
+  }
+  .d3-apo-beta-ablation .tooltip-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-color);
+  }
+  .d3-apo-beta-ablation .tooltip-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    color: var(--text-color);
+  }
+  .d3-apo-beta-ablation .tooltip-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-apo-beta-ablation'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-apo-beta-ablation'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Data embedded inline
+      const data = [{"system_prompt":"/think","Evaluation":"AIME25","Score":45.47,"Beta":0.05},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":7.92,"Beta":0.05},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":42.49,"Beta":0.05},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":32.58,"Beta":0.05},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":69.88,"Beta":0.05},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":74.46,"Beta":0.05},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":23.76,"Beta":0.05},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":13.86,"Beta":0.05},{"system_prompt":"/think","Evaluation":"Average","Score":45.4,"Beta":0.05},{"system_prompt":"/no_think","Evaluation":"Average","Score":32.205,"Beta":0.05},{"system_prompt":"/think","Evaluation":"AIME25","Score":43.28,"Beta":0.01},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":6.77,"Beta":0.01},{"system_prompt":"/think","Evaluation":"AIME25","Score":46.82,"Beta":0.1},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":8.02,"Beta":0.1},{"system_prompt":"/think","Evaluation":"AIME25","Score":44.95,"Beta":0.2},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":7.6,"Beta":0.2},{"system_prompt":"/think","Evaluation":"AIME25","Score":47.45,"Beta":0.5},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":7.29,"Beta":0.5},{"system_prompt":"/think","Evaluation":"AIME25","Score":47.45,"Beta":0.75},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":7.29,"Beta":0.75},{"system_prompt":"/think","Evaluation":"AIME25","Score":45.36,"Beta":0.99},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":8.8,"Beta":0.99},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":39.77,"Beta":0.01},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":32.95,"Beta":0.01},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":44.38,"Beta":0.1},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":33.27,"Beta":0.1},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":42.05,"Beta":0.2},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":31.57,"Beta":0.2},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":41.54,"Beta":0.5},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":31.63,"Beta":0.5},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":41.54,"Beta":0.75},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":31.63,"Beta":0.75},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":42.36,"Beta":0.99},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":30.43,"Beta":0.99},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":69.04,"Beta":0.01},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":77.02,"Beta":0.01},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":71.47,"Beta":0.1},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":75.36,"Beta":0.1},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":71.55,"Beta":0.2},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":75.33,"Beta":0.2},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":73.58,"Beta":0.5},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":75.91,"Beta":0.5},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":73.58,"Beta":0.75},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":75.91,"Beta":0.75},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":69.13,"Beta":0.99},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":75.41,"Beta":0.99},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":12.87,"Beta":0.01},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":10.89,"Beta":0.01},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":29.7,"Beta":0.1},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":16.83,"Beta":0.1},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":26.73,"Beta":0.2},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":16.83,"Beta":0.2},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":28.71,"Beta":0.5},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":11.88,"Beta":0.5},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":28.71,"Beta":0.75},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":11.88,"Beta":0.75},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":34.65,"Beta":0.99},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":19.8,"Beta":0.99},{"system_prompt":"/think","Evaluation":"Average","Score":41.24,"Beta":0.01},{"system_prompt":"/no_think","Evaluation":"Average","Score":31.9075,"Beta":0.01},{"system_prompt":"/think","Evaluation":"Average","Score":48.0925,"Beta":0.1},{"system_prompt":"/no_think","Evaluation":"Average","Score":33.37,"Beta":0.1},{"system_prompt":"/think","Evaluation":"Average","Score":46.32,"Beta":0.2},{"system_prompt":"/no_think","Evaluation":"Average","Score":32.8325,"Beta":0.2},{"system_prompt":"/think","Evaluation":"Average","Score":47.82,"Beta":0.5},{"system_prompt":"/no_think","Evaluation":"Average","Score":31.6775,"Beta":0.5},{"system_prompt":"/think","Evaluation":"Average","Score":47.82,"Beta":0.75},{"system_prompt":"/no_think","Evaluation":"Average","Score":31.6775,"Beta":0.75},{"system_prompt":"/think","Evaluation":"Average","Score":47.875,"Beta":0.99},{"system_prompt":"/no_think","Evaluation":"Average","Score":33.61,"Beta":0.99}];
+      const sftData = [{"system_prompt":"/think","Evaluation":"AIME25","Score":36.56},{"system_prompt":"/no_think","Evaluation":"AIME25","Score":4.01},{"system_prompt":"/think","Evaluation":"GPQA Diamond","Score":42.23},{"system_prompt":"/no_think","Evaluation":"GPQA Diamond","Score":30.43},{"system_prompt":"/think","Evaluation":"IF-Eval","Score":70.03},{"system_prompt":"/no_think","Evaluation":"IF-Eval","Score":67.29},{"system_prompt":"/think","Evaluation":"LiveCodeBench v4","Score":36.63},{"system_prompt":"/no_think","Evaluation":"LiveCodeBench v4","Score":12.87},{"system_prompt":"/think","Evaluation":"Average","Score":46.3625},{"system_prompt":"/no_think","Evaluation":"Average","Score":28.65}];
+
+      // Get colors from ColorPalettes or fallback
+      const getColors = () => {
+        if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+          const colors = window.ColorPalettes.getColors('categorical', 2);
+          return { think: colors[0], noThink: colors[1] };
+        }
+        return { think: '#E377C2', noThink: '#7FC97F' };
+      };
+
+      let colors = getColors();
+
+      // Set up dimensions
+      const margin = { top: 16, right: 28, bottom: 56, left: 64 };
+
+      // Create SVG
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const g = svg.append('g');
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease',
+          zIndex: '1000'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      const showTooltip = (html, event) => {
+        tipInner.innerHTML = html;
+        const [mx, my] = d3.pointer(event, container);
+        const offsetX = 12, offsetY = 12;
+        tip.style.transform = `translate(${mx + offsetX}px, ${my + offsetY}px)`;
+        tip.style.opacity = '1';
+      };
+
+      const hideTooltip = () => {
+        tip.style.opacity = '0';
+        setTimeout(() => {
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        }, 120);
+      };
+
+      // Get unique evaluations
+      const evaluations = [...new Set(data.map(d => d.Evaluation))];
+
+      // Create header with legend and controls
+      const header = d3.select(container).append('div').attr('class', 'header');
+
+      const legend = header.append('div').attr('class', 'legend');
+      legend.append('div').attr('class', 'legend-title').text('Legend');
+      const legendItems = legend.append('div').attr('class', 'items');
+
+      const controls = header.append('div').attr('class', 'controls');
+      const controlGroup = controls.append('div').attr('class', 'control-group');
+      controlGroup.append('label').attr('for', 'metric-select-beta').text('Metric');
+      const select = controlGroup.append('select').attr('id', 'metric-select-beta');
+
+      // Populate dropdown
+      select.selectAll('option')
+        .data(evaluations)
+        .enter()
+        .append('option')
+        .text(d => d)
+        .attr('value', d => d);
+
+      // Build legend
+      const buildLegend = () => {
+        legendItems.html('');
+
+        const thinkItem = legendItems.append('span').attr('class', 'item');
+        thinkItem.append('span').attr('class', 'swatch-line').style('background', colors.think);
+        thinkItem.append('span').text('/think');
+
+        const noThinkItem = legendItems.append('span').attr('class', 'item');
+        noThinkItem.append('span').attr('class', 'swatch-line').style('background', colors.noThink);
+        noThinkItem.append('span').text('/no_think');
+
+        const sftItem = legendItems.append('span').attr('class', 'item');
+        sftItem.append('span').attr('class', 'swatch-dashed');
+        sftItem.append('span').text('SFT checkpoint');
+      };
+
+      buildLegend();
+
+      // Update chart function
+      function updateChart(evaluation) {
+        const filtered = data.filter(d => d.Evaluation === evaluation);
+        const thinkData = filtered.filter(d => d.system_prompt === "/think").sort((a, b) => a.Beta - b.Beta);
+        const noThinkData = filtered.filter(d => d.system_prompt === "/no_think").sort((a, b) => a.Beta - b.Beta);
+
+        g.selectAll("*").remove();
+
+        const sftThink = sftData.find(d => d.Evaluation === evaluation && d.system_prompt === "/think");
+        const sftNoThink = sftData.find(d => d.Evaluation === evaluation && d.system_prompt === "/no_think");
+
+        const width = container.clientWidth || 800;
+        const height = Math.max(320, Math.round(width / 2.5));
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        svg.attr('width', width).attr('height', height);
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Scales
+        const xScale = d3.scaleLog()
+          .domain([d3.min(filtered, d => d.Beta), d3.max(filtered, d => d.Beta)])
+          .range([0, innerWidth]);
+
+        const allScores = filtered.map(d => d.Score);
+        if (sftThink) allScores.push(sftThink.Score);
+        if (sftNoThink) allScores.push(sftNoThink.Score);
+        const maxScore = d3.max(allScores);
+
+        const yScale = d3.scaleLinear()
+          .domain([0, maxScore * 1.1])
+          .range([innerHeight, 0]);
+
+        // Grid
+        g.append("g")
+          .attr("class", "grid")
+          .attr("transform", `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickSize(-innerHeight).tickFormat("").tickSizeOuter(0));
+
+        g.append("g")
+          .attr("class", "grid")
+          .call(d3.axisLeft(yScale).tickSize(-innerWidth).tickFormat("").tickSizeOuter(0));
+
+        // Axes
+        const tickValues = [0.01, 0.05, 0.1, 0.5, 1.0];
+        g.append("g")
+          .attr("class", "axes")
+          .attr("transform", `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickValues(tickValues).tickFormat(d3.format(".2f")).tickSizeOuter(0))
+          .call(gAxis => {
+            gAxis.selectAll(".tick line").attr("stroke", "var(--axis-color)").style("opacity", 1);
+            gAxis.selectAll(".tick text").attr("fill", "var(--tick-color)").style("opacity", 1);
+            gAxis.select(".domain").attr("stroke", "var(--axis-color)");
+          });
+
+        g.append("g")
+          .attr("class", "axes")
+          .call(d3.axisLeft(yScale).ticks(6).tickSizeOuter(0))
+          .call(gAxis => {
+            gAxis.selectAll(".tick line").attr("stroke", "var(--axis-color)").style("opacity", 1);
+            gAxis.selectAll(".tick text").attr("fill", "var(--tick-color)").style("opacity", 1);
+            gAxis.select(".domain").attr("stroke", "var(--axis-color)");
+          });
+
+        // Axis labels
+        g.append("text")
+          .attr("class", "axis-label")
+          .attr("text-anchor", "middle")
+          .attr("x", innerWidth / 2)
+          .attr("y", innerHeight + 40)
+          .text("Beta");
+
+        g.append("text")
+          .attr("class", "axis-label")
+          .attr("text-anchor", "middle")
+          .attr("transform", "rotate(-90)")
+          .attr("y", -45)
+          .attr("x", -innerHeight / 2)
+          .text("Score (%)");
+
+        // Line generator
+        const line = d3.line()
+          .x(d => xScale(d.Beta))
+          .y(d => yScale(d.Score));
+
+        // Reference lines
+        if (sftThink) {
+          g.append("line")
+            .attr("class", "reference-line")
+            .style("stroke", colors.think)
+            .attr("x1", 0)
+            .attr("x2", innerWidth)
+            .attr("y1", yScale(sftThink.Score))
+            .attr("y2", yScale(sftThink.Score));
+        }
+
+        if (sftNoThink) {
+          g.append("line")
+            .attr("class", "reference-line")
+            .style("stroke", colors.noThink)
+            .attr("x1", 0)
+            .attr("x2", innerWidth)
+            .attr("y1", yScale(sftNoThink.Score))
+            .attr("y2", yScale(sftNoThink.Score));
+        }
+
+        // Lines
+        g.append("path")
+          .datum(thinkData)
+          .attr("class", "line-think")
+          .style("stroke", colors.think)
+          .attr("d", line);
+
+        g.append("path")
+          .datum(noThinkData)
+          .attr("class", "line-no-think")
+          .style("stroke", colors.noThink)
+          .attr("d", line);
+
+        // Dots for /think
+        g.selectAll(".dot-think")
+          .data(thinkData)
+          .enter()
+          .append("circle")
+          .attr("class", "dot")
+          .style("fill", colors.think)
+          .attr("cx", d => xScale(d.Beta))
+          .attr("cy", d => yScale(d.Score))
+          .attr("r", 4)
+          .on("mouseenter", function(event, d) {
+            const noThinkValue = noThinkData.find(item => item.Beta === d.Beta);
+            const html = `
+              <div class="tooltip-title">Beta ${d.Beta.toFixed(2)}</div>
+              <div class="tooltip-item">
+                <div class="tooltip-color" style="background-color: ${colors.think};"></div>
+                <span>/think: ${d.Score.toFixed(2)}%</span>
+              </div>
+              ${noThinkValue ? `
+              <div class="tooltip-item">
+                <div class="tooltip-color" style="background-color: ${colors.noThink};"></div>
+                <span>/no_think: ${noThinkValue.Score.toFixed(2)}%</span>
+              </div>` : ''}
+            `;
+            showTooltip(html, event);
+          })
+          .on("mouseleave", hideTooltip);
+
+        // Dots for /no_think
+        g.selectAll(".dot-no-think")
+          .data(noThinkData)
+          .enter()
+          .append("circle")
+          .attr("class", "dot")
+          .style("fill", colors.noThink)
+          .attr("cx", d => xScale(d.Beta))
+          .attr("cy", d => yScale(d.Score))
+          .attr("r", 4)
+          .on("mouseenter", function(event, d) {
+            const thinkValue = thinkData.find(item => item.Beta === d.Beta);
+            const html = `
+              <div class="tooltip-title">Beta ${d.Beta.toFixed(2)}</div>
+              ${thinkValue ? `
+              <div class="tooltip-item">
+                <div class="tooltip-color" style="background-color: ${colors.think};"></div>
+                <span>/think: ${thinkValue.Score.toFixed(2)}%</span>
+              </div>` : ''}
+              <div class="tooltip-item">
+                <div class="tooltip-color" style="background-color: ${colors.noThink};"></div>
+                <span>/no_think: ${d.Score.toFixed(2)}%</span>
+              </div>
+            `;
+            showTooltip(html, event);
+          })
+          .on("mouseleave", hideTooltip);
+      }
+
+      // Set default value to "Average" if it exists
+      const defaultEval = evaluations.includes("Average") ? "Average" : evaluations[0];
+      select.property("value", defaultEval);
+
+      // Initial chart
+      updateChart(defaultEval);
+
+      // Update on dropdown change
+      select.on("change", function() {
+        updateChart(this.value);
+      });
+
+      // Resize handling
+      const rerender = () => updateChart(select.property("value"));
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+
+      // Listen for ColorPalettes changes
+      if (window.ColorPalettes && typeof window.ColorPalettes.addListener === 'function') {
+        window.ColorPalettes.addListener(() => {
+          colors = getColors();
+          buildLegend();
+          updateChart(select.property("value"));
+        });
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

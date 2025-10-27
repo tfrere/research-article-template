@@ -1,0 +1,536 @@
+<div class="d3-grpo-aime25"></div>
+<style>
+  .d3-grpo-aime25 {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    position: relative;
+  }
+
+  .d3-grpo-aime25 svg {
+    display: block;
+    width: 100%;
+  }
+
+  .d3-grpo-aime25 .axis path {
+    stroke: none;
+  }
+
+  .d3-grpo-aime25 .axis line {
+    stroke: var(--axis-color);
+    shape-rendering: crispEdges;
+  }
+
+  .d3-grpo-aime25 .axis text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
+
+  .d3-grpo-aime25 .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2,2;
+  }
+
+  .d3-grpo-aime25 .line {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .d3-grpo-aime25 .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .d3-grpo-aime25 .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-grpo-aime25 .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .d3-grpo-aime25 .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-grpo-aime25 .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-grpo-aime25 .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    user-select: none;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-grpo-aime25 .legend .item.dimmed {
+    opacity: 0.3;
+  }
+
+  .d3-grpo-aime25 .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  .d3-grpo-aime25 .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .d3-grpo-aime25 .controls .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .d3-grpo-aime25 .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-grpo-aime25 .controls .toggle-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .d3-grpo-aime25 .controls .toggle-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .d3-grpo-aime25 .controls .toggle-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  .d3-grpo-aime25 .controls .toggle-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-grpo-aime25'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-grpo-aime25'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Data loading configuration
+      let mountEl = container;
+      while (mountEl && !mountEl.getAttribute?.('data-datafiles')) {
+        mountEl = mountEl.parentElement;
+      }
+      let providedData = null;
+      try {
+        const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null;
+        if (attr && attr.trim()) {
+          providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
+        }
+      } catch (_) {}
+
+      const DEFAULT_CSV = '/data/grpo/aime25_perf.csv';
+      const ensureDataPrefix = (p) => {
+        if (typeof p !== 'string' || !p) return p;
+        if (p.startsWith('/')) return p;
+        return `/data/${p}`;
+      };
+      const normalizeInput = (inp) => Array.isArray(inp)
+        ? inp.map(ensureDataPrefix)
+        : (typeof inp === 'string' ? [ensureDataPrefix(inp)] : null);
+
+      const CSV_PATHS = Array.isArray(providedData)
+        ? normalizeInput(providedData)
+        : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
+            DEFAULT_CSV,
+            './assets/data/grpo/aime25_perf.csv',
+            '../assets/data/grpo/aime25_perf.csv',
+            '../../assets/data/grpo/aime25_perf.csv'
+          ]);
+
+      const fetchFirstAvailable = async (paths) => {
+        const errors = [];
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+            errors.push(`${p}: ${r.status}`);
+          } catch (e) {
+            errors.push(`${p}: ${e.message}`);
+          }
+        }
+        throw new Error(`CSV not found. Tried:\n${errors.join('\n')}`);
+      };
+
+      // Tooltip setup
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease',
+          zIndex: '1000'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // SVG setup
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class', 'grid');
+      const gLines = gRoot.append('g').attr('class', 'lines');
+      const gAxes = gRoot.append('g').attr('class', 'axes');
+
+      // State
+      let width = 800, height = 400;
+      const margin = { top: 16, right: 28, bottom: 56, left: 64 };
+      let series = [];
+      let hiddenSeries = new Set();
+
+      // Color setup
+      const getColors = (count) => {
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          return window.ColorPalettes.getColors('categorical', count);
+        }
+        return ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948'];
+      };
+
+      function parseData(csvText) {
+        const rows = d3.csvParse(csvText);
+
+        // Get column names (excluding 'step')
+        const headers = Object.keys(rows[0]).filter(h => h !== 'step');
+
+        // Build series data
+        series = headers.map(header => {
+          const points = rows
+            .map(row => ({
+              step: +row.step,
+              value: +row[header]
+            }))
+            .filter(p => !isNaN(p.step) && !isNaN(p.value));
+
+          return {
+            name: header,
+            points
+          };
+        });
+      }
+
+      function updateSize() {
+        width = container.clientWidth || 800;
+        height = Math.max(320, Math.round(width / 2.5));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return {
+          innerWidth: width - margin.left - margin.right,
+          innerHeight: height - margin.top - margin.bottom
+        };
+      }
+
+      function render() {
+        const { innerWidth, innerHeight } = updateSize();
+        if (series.length === 0) return;
+
+        // Filter visible series
+        const visibleSeries = series.filter(s => !hiddenSeries.has(s.name));
+        if (visibleSeries.length === 0) return;
+
+        // Get all points
+        const allPoints = visibleSeries.flatMap(s => s.points);
+
+        // Scales
+        const xScale = d3.scaleLinear()
+          .domain([0, d3.max(allPoints, d => d.step) || 1])
+          .range([0, innerWidth])
+          .nice();
+
+        const minVal = d3.min(allPoints, d => d.value);
+        const maxVal = d3.max(allPoints, d => d.value);
+        const yScale = d3.scaleLinear()
+          .domain([minVal * 0.95, maxVal * 1.05])
+          .range([innerHeight, 0]);
+
+        // Grid
+        gGrid.selectAll('.grid-y').data([0])
+          .join('g')
+          .attr('class', 'grid grid-y')
+          .call(d3.axisLeft(yScale)
+            .tickSize(-innerWidth)
+            .tickFormat('')
+          )
+          .call(g => g.select('.domain').remove());
+
+        // Colors
+        const colors = getColors(series.length);
+        const colorScale = (name) => {
+          const idx = series.findIndex(s => s.name === name);
+          return colors[idx % colors.length];
+        };
+
+        // Line generator
+        const line = d3.line()
+          .x(d => xScale(d.step))
+          .y(d => yScale(d.value))
+          .curve(d3.curveMonotoneX);
+
+        // Render lines
+        gLines.selectAll('.line')
+          .data(visibleSeries, d => d.name)
+          .join('path')
+          .attr('class', 'line')
+          .attr('d', d => line(d.points))
+          .attr('stroke', d => colorScale(d.name));
+
+        // Axes
+        gAxes.selectAll('.x-axis').data([0])
+          .join('g')
+          .attr('class', 'x-axis axis')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).ticks(Math.min(10, Math.floor(innerWidth / 80))));
+
+        gAxes.selectAll('.y-axis').data([0])
+          .join('g')
+          .attr('class', 'y-axis axis')
+          .call(d3.axisLeft(yScale).ticks(8));
+
+        // Axis labels
+        gAxes.selectAll('.x-label').data([0])
+          .join('text')
+          .attr('class', 'x-label axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + 45)
+          .text('Training step');
+
+        gAxes.selectAll('.y-label').data([0])
+          .join('text')
+          .attr('class', 'y-label axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('transform', `translate(-48,${innerHeight / 2}) rotate(-90)`)
+          .text('AIME 2025 Score (%)');
+
+        // Tooltip interactions
+        const bisect = d3.bisector(d => d.step).left;
+
+        svg.on('mousemove', function(event) {
+          const [mx] = d3.pointer(event, gRoot.node());
+          const step = xScale.invert(mx);
+
+          let tooltipHtml = `<strong>Step: ${Math.round(step)}</strong><br/>`;
+
+          visibleSeries.forEach(s => {
+            const idx = bisect(s.points, step);
+            if (idx > 0 && idx < s.points.length) {
+              const p = s.points[idx];
+              const color = colorScale(s.name);
+              tooltipHtml += `<div style="margin-top:4px"><span style="color:${color}">●</span> ${s.name}: ${p.value.toFixed(2)}%</div>`;
+            }
+          });
+
+          tipInner.innerHTML = tooltipHtml;
+          const tipBounds = tip.getBoundingClientRect();
+          const [px, py] = d3.pointer(event, container);
+
+          let tipX = px + 12;
+          let tipY = py - 12;
+
+          if (tipX + tipBounds.width > width - 10) {
+            tipX = px - tipBounds.width - 12;
+          }
+          if (tipY - tipBounds.height < 10) {
+            tipY = py + 20;
+          }
+
+          tip.style.transform = `translate(${tipX}px, ${tipY}px)`;
+          tip.style.opacity = '1';
+        });
+
+        svg.on('mouseleave', () => {
+          tip.style.opacity = '0';
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        });
+      }
+
+      function makeLegend() {
+        let header = container.querySelector('.header');
+        if (!header) {
+          header = document.createElement('div');
+          header.className = 'header';
+          container.appendChild(header);
+        }
+
+        let legend = header.querySelector('.legend');
+        if (!legend) {
+          legend = document.createElement('div');
+          legend.className = 'legend';
+          header.appendChild(legend);
+        }
+
+        let title = legend.querySelector('.legend-title');
+        if (!title) {
+          title = document.createElement('div');
+          title.className = 'legend-title';
+          title.textContent = 'Overlong Penalty';
+          legend.appendChild(title);
+        } else {
+          title.textContent = 'Overlong Penalty';
+        }
+
+        let items = legend.querySelector('.items');
+        if (!items) {
+          items = document.createElement('div');
+          items.className = 'items';
+          legend.appendChild(items);
+        }
+
+        const colors = getColors(series.length);
+
+        items.innerHTML = '';
+        series.forEach((s, i) => {
+          const item = document.createElement('span');
+          item.className = 'item';
+          if (hiddenSeries.has(s.name)) {
+            item.classList.add('dimmed');
+          }
+
+          const swatch = document.createElement('span');
+          swatch.className = 'swatch';
+          swatch.style.background = colors[i % colors.length];
+
+          const text = document.createElement('span');
+          text.textContent = s.name;
+
+          item.appendChild(swatch);
+          item.appendChild(text);
+          items.appendChild(item);
+
+          item.addEventListener('click', () => {
+            if (hiddenSeries.has(s.name)) {
+              hiddenSeries.delete(s.name);
+            } else {
+              hiddenSeries.add(s.name);
+            }
+            makeLegend();
+            render();
+          });
+        });
+      }
+
+      // Load data and initialize
+      fetchFirstAvailable(CSV_PATHS)
+        .then(csvText => {
+          parseData(csvText);
+          makeLegend();
+          render();
+
+          // Responsiveness
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch(err => {
+          const pre = document.createElement('pre');
+          pre.style.color = '#f44336';
+          pre.style.fontSize = '12px';
+          pre.style.padding = '12px';
+          pre.textContent = `Error loading data: ${err.message}`;
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

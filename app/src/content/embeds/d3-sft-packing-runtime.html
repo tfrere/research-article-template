@@ -1,0 +1,425 @@
+<div class="d3-sft-packing-runtime"></div>
+<style>
+  .d3-sft-packing-runtime {
+    position: relative;
+    width: 100%;
+    min-height: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .d3-sft-packing-runtime svg {
+    display: block;
+    width: 100%;
+  }
+  .d3-sft-packing-runtime .axes path,
+  .d3-sft-packing-runtime .axes line {
+    stroke: var(--axis-color);
+  }
+  .d3-sft-packing-runtime .axes text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
+  .d3-sft-packing-runtime .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2,2;
+  }
+  .d3-sft-packing-runtime .bar {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .d3-sft-packing-runtime .bar:hover {
+    opacity: 0.85;
+  }
+  .d3-sft-packing-runtime .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .d3-sft-packing-runtime .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .d3-sft-packing-runtime .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-sft-packing-runtime .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-sft-packing-runtime .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .d3-sft-packing-runtime .legend .item:hover {
+    opacity: 0.7;
+  }
+  .d3-sft-packing-runtime .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  .d3-sft-packing-runtime .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .d3-sft-packing-runtime .d3-tooltip__inner {
+    text-align: left;
+  }
+  .d3-sft-packing-runtime .d3-tooltip .label {
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+  .d3-sft-packing-runtime .d3-tooltip .value {
+    color: var(--muted-color);
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sft-packing-runtime'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sft-packing-runtime'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // Data loading
+      let mountEl = container;
+      while (mountEl && !mountEl.getAttribute?.('data-datafiles')) {
+        mountEl = mountEl.parentElement;
+      }
+      let providedData = null;
+      try {
+        const attr = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-datafiles') : null;
+        if (attr && attr.trim()) {
+          providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
+        }
+      } catch(_) {}
+
+      const DEFAULT_CSV = '/data/tech_report/sft-packing-vs-no-packing-runtime.csv';
+      const ensureDataPrefix = (p) => {
+        if (typeof p !== 'string' || !p) return p;
+        // If path doesn't start with / or ./, add /data/ prefix
+        if (!p.startsWith('/') && !p.startsWith('./') && !p.startsWith('../')) {
+          return `/data/${p}`;
+        }
+        return p;
+      };
+      const normalizeInput = (inp) => Array.isArray(inp)
+        ? inp.map(ensureDataPrefix)
+        : (typeof inp === 'string' ? [ensureDataPrefix(inp)] : null);
+
+      const CSV_PATHS = Array.isArray(providedData)
+        ? normalizeInput(providedData)
+        : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
+            DEFAULT_CSV,
+            './assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
+            '../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
+            '../../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv'
+          ]);
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch(_) {}
+        }
+        throw new Error('CSV not found at any of: ' + paths.join(', '));
+      };
+
+      fetchFirstAvailable(CSV_PATHS)
+        .then((text) => {
+          const parsed = d3.csvParse(text);
+          if (!parsed || parsed.length === 0) throw new Error('Empty CSV');
+
+          // Process data
+          const data = parsed.map(d => ({
+            packing: d.Packing === 'TRUE' ? 'Packing' : 'No Packing',
+            batchSize: +d['Batch size'],
+            runtime: +d['Runtime (min)']
+          })).filter(d => !isNaN(d.batchSize) && !isNaN(d.runtime));
+
+          render(data);
+        })
+        .catch((err) => {
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'color:#c00; font-size:11px; padding:12px; white-space:pre-wrap;';
+          pre.textContent = 'Error loading data:\n' + err.message;
+          container.appendChild(pre);
+        });
+
+      function render(data) {
+        // SVG setup
+        const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+        const gRoot = svg.append('g');
+        const gGrid = gRoot.append('g').attr('class', 'grid');
+        const gBars = gRoot.append('g').attr('class', 'bars');
+        const gAxes = gRoot.append('g').attr('class', 'axes');
+
+        let width = 800;
+        let height = 360;
+        const margin = { top: 16, right: 28, bottom: 56, left: 64 };
+
+        // Get color palette
+        const getColors = () => {
+          if (window.ColorPalettes && window.ColorPalettes.getColors) {
+            return window.ColorPalettes.getColors('categorical', 2);
+          }
+          // Fallback colors
+          return ['#4e79a7', '#f28e2c'];
+        };
+
+        let colors = getColors();
+        const colorScale = d3.scaleOrdinal()
+          .domain(['No Packing', 'Packing'])
+          .range(colors);
+
+        // Listen for color palette changes
+        if (window.ColorPalettes && window.ColorPalettes.addListener) {
+          window.ColorPalettes.addListener(() => {
+            colors = getColors();
+            colorScale.range(colors);
+            updateChart();
+          });
+        }
+
+        // Sort data: No Packing first, then Packing in ascending batch size order
+        const sortedData = [
+          ...data.filter(d => d.packing === 'No Packing').sort((a, b) => a.batchSize - b.batchSize),
+          ...data.filter(d => d.packing === 'Packing').sort((a, b) => a.batchSize - b.batchSize)
+        ];
+
+        // Create labels for x-axis
+        const xLabels = sortedData.map(d => `${d.packing}\nBS ${d.batchSize}`);
+
+        // Scales
+        const x = d3.scaleBand().padding(0.2);
+        const y = d3.scaleLinear();
+
+        function updateSize() {
+          width = container.clientWidth || 800;
+          height = Math.max(280, Math.round(width / 2.8));
+          svg.attr('width', width).attr('height', height);
+          gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+          return {
+            innerWidth: width - margin.left - margin.right,
+            innerHeight: height - margin.top - margin.bottom
+          };
+        }
+
+        function updateChart() {
+          const { innerWidth, innerHeight } = updateSize();
+
+          x.domain(sortedData.map((d, i) => i)).range([0, innerWidth]);
+          y.domain([0, d3.max(sortedData, d => d.runtime) * 1.1]).range([innerHeight, 0]).nice();
+
+          // Grid
+          gGrid.selectAll('line').remove();
+          gGrid.selectAll('line')
+            .data(y.ticks(5))
+            .join('line')
+            .attr('x1', 0)
+            .attr('x2', innerWidth)
+            .attr('y1', d => y(d))
+            .attr('y2', d => y(d));
+
+          // Bars
+          const bars = gBars.selectAll('.bar')
+            .data(sortedData, (d, i) => i);
+
+          bars.exit().remove();
+
+          const barsEnter = bars.enter()
+            .append('rect')
+            .attr('class', 'bar')
+            .on('mouseenter', function(event, d) {
+              const [mx, my] = d3.pointer(event, container);
+              tipInner.innerHTML = `
+                <div class="label">${d.packing} - Batch Size ${d.batchSize}</div>
+                <div class="value">Runtime: ${d.runtime.toFixed(1)} min</div>
+              `;
+              tip.style.opacity = '1';
+              tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
+            })
+            .on('mouseleave', function() {
+              tip.style.opacity = '0';
+              tip.style.transform = 'translate(-9999px, -9999px)';
+            });
+
+          barsEnter.merge(bars)
+            .attr('x', (d, i) => x(i))
+            .attr('y', d => y(d.runtime))
+            .attr('width', x.bandwidth())
+            .attr('height', d => Math.max(0, innerHeight - y(d.runtime)))
+            .attr('fill', d => colorScale(d.packing));
+
+          // Axes
+          const xAxis = d3.axisBottom(x)
+            .tickFormat((d, i) => {
+              const item = sortedData[i];
+              return `${item.batchSize}`;
+            })
+            .tickSizeOuter(0);
+          const yAxis = d3.axisLeft(y).ticks(5).tickSizeOuter(0);
+
+          gAxes.selectAll('.x-axis').remove();
+          gAxes.selectAll('.y-axis').remove();
+
+          gAxes.append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', `translate(0,${innerHeight})`)
+            .call(xAxis);
+
+          gAxes.append('g')
+            .attr('class', 'y-axis')
+            .call(yAxis);
+
+          // Axis labels
+          gAxes.selectAll('.x-label').remove();
+          gAxes.selectAll('.y-label').remove();
+
+          gAxes.append('text')
+            .attr('class', 'axis-label x-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', innerWidth / 2)
+            .attr('y', innerHeight + 50)
+            .text('Effective batch size');
+
+          gAxes.append('text')
+            .attr('class', 'axis-label y-label')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -innerHeight / 2)
+            .attr('y', -48)
+            .text('Runtime (min)');
+        }
+
+        // Legend
+        function makeLegend() {
+          let legend = container.querySelector('.legend');
+          if (!legend) {
+            legend = document.createElement('div');
+            legend.className = 'legend';
+            container.appendChild(legend);
+          }
+          let title = legend.querySelector('.legend-title');
+          if (!title) {
+            title = document.createElement('div');
+            title.className = 'legend-title';
+            title.textContent = 'Legend';
+            legend.appendChild(title);
+          }
+          let items = legend.querySelector('.items');
+          if (!items) {
+            items = document.createElement('div');
+            items.className = 'items';
+            legend.appendChild(items);
+          }
+          items.innerHTML = '';
+          ['No Packing', 'Packing'].forEach(name => {
+            const el = document.createElement('span');
+            el.className = 'item';
+            const sw = document.createElement('span');
+            sw.className = 'swatch';
+            sw.style.background = colorScale(name);
+            const txt = document.createElement('span');
+            txt.textContent = name;
+            el.appendChild(sw);
+            el.appendChild(txt);
+            items.appendChild(el);
+          });
+        }
+
+        // Initial render
+        updateChart();
+        makeLegend();
+
+        // Resize handling
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => updateChart());
+          ro.observe(container);
+        } else {
+          window.addEventListener('resize', updateChart);
+        }
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

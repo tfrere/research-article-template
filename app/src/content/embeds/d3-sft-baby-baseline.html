@@ -1,0 +1,517 @@
+<div class="d3-sft-baby-baseline"></div>
+<style>
+  .d3-sft-baby-baseline {
+    position: relative;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  .d3-sft-baby-baseline svg {
+    display: block;
+    width: 100%;
+  }
+
+  .d3-sft-baby-baseline .axes path,
+  .d3-sft-baby-baseline .axes line {
+    stroke: var(--axis-color);
+  }
+
+  .d3-sft-baby-baseline .axes text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
+
+  .d3-sft-baby-baseline .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2,2;
+  }
+
+  .d3-sft-baby-baseline .bar {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .d3-sft-baby-baseline .bar:hover {
+    opacity: 0.8;
+  }
+
+  .d3-sft-baby-baseline .legend-controls-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .d3-sft-baby-baseline .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .d3-sft-baby-baseline .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-sft-baby-baseline .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-sft-baby-baseline .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+
+  .d3-sft-baby-baseline .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  .d3-sft-baby-baseline .controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-shrink: 0;
+  }
+
+  .d3-sft-baby-baseline .controls .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .d3-sft-baby-baseline .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-sft-baby-baseline .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+
+  .d3-sft-baby-baseline .controls select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  .d3-sft-baby-baseline .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    z-index: 1000;
+  }
+
+  .d3-sft-baby-baseline .d3-tooltip.visible {
+    opacity: 1;
+  }
+
+  .d3-sft-baby-baseline .d3-tooltip__inner {
+    text-align: left;
+  }
+
+  .d3-sft-baby-baseline .d3-tooltip__inner strong {
+    color: var(--text-color);
+    font-weight: 700;
+  }
+
+  .d3-sft-baby-baseline .axis-label {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--text-color);
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sft-baby-baseline'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sft-baby-baseline'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Data loading helpers
+      const CSV_PATHS = [
+        '/data/tech_report/sft_baby-baseline.csv',
+        './assets/data/tech_report/sft_baby-baseline.csv',
+        '../assets/data/tech_report/sft_baby-baseline.csv',
+        '../../assets/data/tech_report/sft_baby-baseline.csv'
+      ];
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch (_) {}
+        }
+        throw new Error('CSV not found at any of the specified paths');
+      };
+
+      // Tooltip setup
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      // SVG setup
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class', 'grid');
+      const gBars = gRoot.append('g').attr('class', 'bars');
+      const gAxes = gRoot.append('g').attr('class', 'axes');
+
+      // State
+      let data = [];
+      let currentMode = '/no_think';
+      let width = 800;
+      let height = 400;
+      const margin = { top: 20, right: 40, bottom: 80, left: 64 };
+
+      // Color palette
+      let uniqueSubsets = [];
+      const subsetColors = {};
+
+      const getColors = (n) => {
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          return window.ColorPalettes.getColors('categorical', n);
+        }
+        // Fallback to Tableau10-inspired colors
+        return ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2'];
+      };
+
+      function updateColors() {
+        const colors = getColors(uniqueSubsets.length);
+        uniqueSubsets.forEach((subset, i) => {
+          subsetColors[subset] = colors[i];
+        });
+      }
+
+      // Listen for palette changes
+      if (window.ColorPalettes && window.ColorPalettes.onChange) {
+        window.ColorPalettes.onChange(() => {
+          updateColors();
+          render();
+        });
+      }
+
+      function updateSize() {
+        width = container.clientWidth || 800;
+        height = Math.max(320, Math.round(width / 2.2));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return {
+          innerWidth: width - margin.left - margin.right,
+          innerHeight: height - margin.top - margin.bottom
+        };
+      }
+
+      function makeLegendAndControls() {
+        // Create wrapper if it doesn't exist
+        let wrapper = container.querySelector('.legend-controls-wrapper');
+        if (!wrapper) {
+          wrapper = document.createElement('div');
+          wrapper.className = 'legend-controls-wrapper';
+          container.appendChild(wrapper);
+        }
+
+        // Create legend
+        let legend = wrapper.querySelector('.legend');
+        if (!legend) {
+          legend = document.createElement('div');
+          legend.className = 'legend';
+          wrapper.appendChild(legend);
+        }
+        let title = legend.querySelector('.legend-title');
+        if (!title) {
+          title = document.createElement('div');
+          title.className = 'legend-title';
+          title.textContent = 'Legend';
+          legend.appendChild(title);
+        }
+        let items = legend.querySelector('.items');
+        if (!items) {
+          items = document.createElement('div');
+          items.className = 'items';
+          legend.appendChild(items);
+        }
+        items.innerHTML = '';
+
+        uniqueSubsets.forEach((subset) => {
+          const el = document.createElement('span');
+          el.className = 'item';
+          const sw = document.createElement('span');
+          sw.className = 'swatch';
+          sw.style.background = subsetColors[subset];
+          const txt = document.createElement('span');
+          txt.textContent = subset;
+          el.appendChild(sw);
+          el.appendChild(txt);
+          items.appendChild(el);
+        });
+
+        // Create controls
+        let controls = wrapper.querySelector('.controls');
+        if (!controls) {
+          controls = document.createElement('div');
+          controls.className = 'controls';
+          wrapper.appendChild(controls);
+        }
+
+        let group = controls.querySelector('.control-group');
+        if (!group) {
+          group = document.createElement('div');
+          group.className = 'control-group';
+          controls.appendChild(group);
+        }
+
+        let label = group.querySelector('label');
+        if (!label) {
+          label = document.createElement('label');
+          label.setAttribute('for', 'reasoning-mode-select');
+          label.textContent = 'Reasoning mode';
+          group.appendChild(label);
+        }
+
+        let select = group.querySelector('select');
+        if (!select) {
+          select = document.createElement('select');
+          select.id = 'reasoning-mode-select';
+          select.innerHTML = `
+            <option value="/no_think">/no_think</option>
+            <option value="/think">/think</option>
+          `;
+          select.addEventListener('change', (e) => {
+            currentMode = e.target.value;
+            render();
+          });
+          group.appendChild(select);
+        }
+      }
+
+      function render() {
+        if (!data || data.length === 0) return;
+
+        const { innerWidth, innerHeight } = updateSize();
+
+        // Filter data by current mode
+        const filteredData = data.filter(d => d['Reasoning mode'] === currentMode);
+
+        // Get unique benchmarks
+        const benchmarks = ['AIME25', 'GPQA-D', 'LiveCodeBench v4', 'IFEval', 'Global MMLU Lite'];
+
+        // Transform data for grouped bars
+        const groupedData = benchmarks.map(benchmark => {
+          const values = filteredData.map(d => ({
+            subset: d.Subset,
+            value: +d[benchmark] || 0
+          }));
+          return { benchmark, values };
+        });
+
+        // Scales
+        const x0 = d3.scaleBand()
+          .domain(benchmarks)
+          .range([0, innerWidth])
+          .padding(0.2);
+
+        const x1 = d3.scaleBand()
+          .domain(filteredData.map(d => d.Subset))
+          .range([0, x0.bandwidth()])
+          .padding(0.05);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(filteredData, d => d3.max(benchmarks, b => +d[b] || 0)) || 100])
+          .range([innerHeight, 0])
+          .nice();
+
+        // Grid
+        gGrid
+          .attr('transform', `translate(0,0)`)
+          .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat(''))
+          .call(g => g.select('.domain').remove());
+
+        // Bars
+        const groups = gBars.selectAll('g.benchmark-group')
+          .data(groupedData, d => d.benchmark);
+
+        const groupsEnter = groups.enter()
+          .append('g')
+          .attr('class', 'benchmark-group');
+
+        groups.exit().remove();
+
+        const groupsMerge = groupsEnter.merge(groups)
+          .attr('transform', d => `translate(${x0(d.benchmark)},0)`);
+
+        const bars = groupsMerge.selectAll('rect.bar')
+          .data(d => d.values, d => d.subset);
+
+        bars.enter()
+          .append('rect')
+          .attr('class', 'bar')
+          .merge(bars)
+          .attr('x', d => x1(d.subset))
+          .attr('width', x1.bandwidth())
+          .attr('fill', d => subsetColors[d.subset])
+          .attr('stroke', 'none')
+          .transition()
+          .duration(200)
+          .attr('y', d => y(d.value))
+          .attr('height', d => Math.max(0, innerHeight - y(d.value)));
+
+        bars.exit().remove();
+
+        // Hover interactions
+        groupsMerge.selectAll('rect.bar')
+          .on('mouseenter', function(event, d) {
+            const benchmark = d3.select(this.parentNode).datum().benchmark;
+            tipInner.innerHTML = `<strong>${d.subset}</strong><br/>${benchmark}: <strong>${d.value.toFixed(2)}</strong>`;
+            tip.classList.add('visible');
+          })
+          .on('mousemove', function(event) {
+            const [mx, my] = d3.pointer(event, container);
+            const offsetX = 10;
+            const offsetY = -10;
+            tip.style.transform = `translate(${mx + offsetX}px, ${my + offsetY}px)`;
+          })
+          .on('mouseleave', function() {
+            tip.classList.remove('visible');
+            tip.style.transform = 'translate(-9999px, -9999px)';
+          });
+
+        // Axes
+        gAxes.selectAll('.x-axis').remove();
+        gAxes.selectAll('.y-axis').remove();
+
+        const xAxis = gAxes.append('g')
+          .attr('class', 'x-axis')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(x0).tickSizeOuter(0));
+
+        xAxis.selectAll('text')
+          .style('text-anchor', 'middle');
+
+        gAxes.append('g')
+          .attr('class', 'y-axis')
+          .call(d3.axisLeft(y).ticks(6).tickSizeOuter(0));
+
+        // Y-axis label
+        gAxes.selectAll('.y-label').remove();
+        gAxes.append('text')
+          .attr('class', 'y-label axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -margin.left + 20)
+          .style('text-anchor', 'middle')
+          .text('Score (%)');
+      }
+
+      // Load data
+      fetchFirstAvailable(CSV_PATHS)
+        .then(csvText => {
+          data = d3.csvParse(csvText);
+
+          // Extract unique subsets from data
+          uniqueSubsets = [...new Set(data.map(d => d.Subset))];
+          updateColors();
+
+          makeLegendAndControls();
+          render();
+
+          // Resize handling
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch(err => {
+          const pre = document.createElement('pre');
+          pre.style.color = 'red';
+          pre.style.fontSize = '12px';
+          pre.style.padding = '12px';
+          pre.textContent = `Error loading data: ${err.message}`;
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

@@ -1,0 +1,527 @@
+<div class="d3-dpo-ablations"></div>
+<style>
+  .d3-dpo-ablations {
+    width: 100%;
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .d3-dpo-ablations svg {
+    display: block;
+    width: 100%;
+  }
+  .d3-dpo-ablations .bar {
+    stroke: none;
+  }
+  .d3-dpo-ablations .axes path,
+  .d3-dpo-ablations .axes line {
+    stroke: var(--axis-color, var(--text-color));
+  }
+  .d3-dpo-ablations .axes text {
+    fill: var(--tick-color, var(--muted-color));
+    font-size: 11px;
+  }
+  .d3-dpo-ablations .grid line {
+    stroke: var(--grid-color, rgba(0,0,0,.08));
+  }
+  .d3-dpo-ablations .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .d3-dpo-ablations .d3-tooltip__inner {
+    text-align: left;
+  }
+  .d3-dpo-ablations .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .d3-dpo-ablations .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-dpo-ablations .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-dpo-ablations .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .d3-dpo-ablations .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-dpo-ablations .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .d3-dpo-ablations .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-dpo-ablations .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-dpo-ablations .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+  }
+  .d3-dpo-ablations .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .d3-dpo-ablations .checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .d3-dpo-ablations .checkbox-group label {
+    font-size: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    font-weight: 400;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-dpo-ablations'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-dpo-ablations'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      const showTooltip = (html, event) => {
+        tipInner.innerHTML = html;
+        tip.style.opacity = '1';
+        const [mx, my] = d3.pointer(event, container);
+        tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
+      };
+
+      const hideTooltip = () => {
+        tip.style.opacity = '0';
+        setTimeout(() => {
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        }, 120);
+      };
+
+      // SVG scaffolding
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      let width = 800, height = 400;
+      const margin = { top: 16, right: 16, bottom: 80, left: 60 };
+
+      // Data loading
+      const CSV_PATHS = [
+        '/data/apo/smollm3_dpo_ablations.csv',
+        './assets/data/apo/smollm3_dpo_ablations.csv',
+        '../assets/data/apo/smollm3_dpo_ablations.csv',
+        '../../assets/data/apo/smollm3_dpo_ablations.csv'
+      ];
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch (e) {}
+        }
+        throw new Error('CSV not found');
+      };
+
+      fetchFirstAvailable(CSV_PATHS)
+        .then((csvText) => {
+          const data = d3.csvParse(csvText);
+
+          // Get unique methods and benchmarks
+          const methods = ['SFT', 'DPO', 'IPO', 'APO-zero', 'APO-down', 'DiscoPOP'];
+          const benchmarks = ['aime25', 'gpqa_d', 'ifeval', 'lcb_v4'];
+          const benchmarkNames = {
+            'aime25': 'AIME 2025',
+            'gpqa_d': 'GPQA Diamond',
+            'ifeval': 'IFEval',
+            'lcb_v4': 'LiveCodeBench v4'
+          };
+
+          let selectedMode = 'no_think';
+          let selectedBenchmark = 'ifeval';
+          let showDelta = false;
+
+          // Get colors
+          const colors = window.ColorPalettes
+            ? window.ColorPalettes.getColors('categorical', methods.length)
+            : ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949'];
+
+          // Create controls
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+
+          // Reasoning mode select
+          const modeGroup = document.createElement('div');
+          modeGroup.className = 'control-group';
+
+          const modeLabel = document.createElement('label');
+          modeLabel.textContent = 'Reasoning mode';
+          modeLabel.setAttribute('for', 'mode-select-' + Date.now());
+
+          const modeSelect = document.createElement('select');
+          modeSelect.id = modeLabel.getAttribute('for');
+
+          const thinkOption = document.createElement('option');
+          thinkOption.value = 'think';
+          thinkOption.textContent = '/think';
+
+          const noThinkOption = document.createElement('option');
+          noThinkOption.value = 'no_think';
+          noThinkOption.textContent = '/no_think';
+          noThinkOption.selected = true;
+
+          modeSelect.appendChild(thinkOption);
+          modeSelect.appendChild(noThinkOption);
+
+          modeSelect.addEventListener('change', (e) => {
+            selectedMode = e.target.value;
+            render();
+          });
+
+          modeGroup.appendChild(modeLabel);
+          modeGroup.appendChild(modeSelect);
+
+          // Benchmark select
+          const benchmarkGroup = document.createElement('div');
+          benchmarkGroup.className = 'control-group';
+
+          const benchmarkLabel = document.createElement('label');
+          benchmarkLabel.textContent = 'Benchmark';
+          benchmarkLabel.setAttribute('for', 'benchmark-select-' + Date.now());
+
+          const benchmarkSelect = document.createElement('select');
+          benchmarkSelect.id = benchmarkLabel.getAttribute('for');
+
+          benchmarks.forEach(bench => {
+            const option = document.createElement('option');
+            option.value = bench;
+            option.textContent = benchmarkNames[bench];
+            if (bench === 'ifeval') option.selected = true;
+            benchmarkSelect.appendChild(option);
+          });
+
+          benchmarkSelect.addEventListener('change', (e) => {
+            selectedBenchmark = e.target.value;
+            render();
+          });
+
+          benchmarkGroup.appendChild(benchmarkLabel);
+          benchmarkGroup.appendChild(benchmarkSelect);
+
+          // Delta checkbox
+          const deltaGroup = document.createElement('div');
+          deltaGroup.className = 'control-group';
+
+          const deltaCheckboxGroup = document.createElement('div');
+          deltaCheckboxGroup.className = 'checkbox-group';
+
+          const deltaCheckbox = document.createElement('input');
+          deltaCheckbox.type = 'checkbox';
+          deltaCheckbox.id = 'delta-checkbox-' + Date.now();
+
+          const deltaLabel = document.createElement('label');
+          deltaLabel.textContent = 'Show Δ vs SFT';
+          deltaLabel.setAttribute('for', deltaCheckbox.id);
+
+          deltaCheckbox.addEventListener('change', (e) => {
+            showDelta = e.target.checked;
+            render();
+          });
+
+          deltaCheckboxGroup.appendChild(deltaCheckbox);
+          deltaCheckboxGroup.appendChild(deltaLabel);
+          deltaGroup.appendChild(deltaCheckboxGroup);
+
+          controls.appendChild(modeGroup);
+          controls.appendChild(benchmarkGroup);
+          controls.appendChild(deltaGroup);
+          container.appendChild(controls);
+
+          // Create legend
+          const legend = document.createElement('div');
+          legend.className = 'legend';
+
+          const legendTitle = document.createElement('div');
+          legendTitle.className = 'legend-title';
+          legendTitle.textContent = 'Legend';
+
+          const legendItems = document.createElement('div');
+          legendItems.className = 'items';
+
+          methods.forEach((method, idx) => {
+            const item = document.createElement('span');
+            item.className = 'item';
+
+            const swatch = document.createElement('span');
+            swatch.className = 'swatch';
+            swatch.style.background = colors[idx];
+
+            const text = document.createElement('span');
+            text.textContent = method;
+
+            item.appendChild(swatch);
+            item.appendChild(text);
+            legendItems.appendChild(item);
+          });
+
+          legend.appendChild(legendTitle);
+          legend.appendChild(legendItems);
+          container.appendChild(legend);
+
+          function updateSize() {
+            width = container.clientWidth || 800;
+            height = Math.max(360, Math.round(width / 2.5));
+            svg.attr('width', width).attr('height', height);
+            gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+            return {
+              innerWidth: width - margin.left - margin.right,
+              innerHeight: height - margin.top - margin.bottom
+            };
+          }
+
+          function render() {
+            const { innerWidth, innerHeight } = updateSize();
+
+            // Clear previous
+            gRoot.selectAll('*').remove();
+
+            // Filter data for selected mode
+            const filteredData = data.filter(d => d['reasoning mode'] === selectedMode);
+
+            // Create data for chart
+            let chartData = methods.map(method => {
+              const row = filteredData.find(d => d.Method === method);
+              const absoluteValue = row ? parseFloat(row[selectedBenchmark]) : 0;
+              return {
+                method,
+                absoluteValue,
+                value: absoluteValue
+              };
+            });
+
+            // Get SFT baseline value
+            const sftValue = chartData.find(d => d.method === 'SFT').absoluteValue;
+
+            // Calculate delta if checkbox is checked
+            if (showDelta) {
+              chartData = chartData.map(d => ({
+                ...d,
+                value: d.method === 'SFT' ? 0 : d.absoluteValue - sftValue
+              }));
+            }
+
+            // Separate SFT and sort others by descending value
+            const sftData = chartData.find(d => d.method === 'SFT');
+            const otherData = chartData.filter(d => d.method !== 'SFT')
+              .sort((a, b) => b.value - a.value);
+
+            // Recombine with SFT first (unless showing delta)
+            chartData = showDelta ? otherData : [sftData, ...otherData];
+
+            // Get ordered methods for color mapping and x-axis
+            const orderedMethods = chartData.map(d => d.method);
+
+            // Scales
+            const xScale = d3.scaleBand()
+              .domain(orderedMethods)
+              .range([0, innerWidth])
+              .padding(0.3);
+
+            // Set y-axis domain based on whether we're showing delta
+            const yMin = showDelta ? Math.min(0, d3.min(chartData, d => d.value)) : 0;
+            const yMax = showDelta
+              ? Math.max(Math.abs(yMin), d3.max(chartData, d => d.value)) * 1.1
+              : d3.max(chartData, d => d.value) * 1.1;
+
+            const yScale = d3.scaleLinear()
+              .domain(showDelta ? [yMin * 1.1, yMax] : [0, yMax])
+              .range([innerHeight, 0])
+              .nice();
+
+            // Grid
+            gRoot.append('g')
+              .attr('class', 'grid')
+              .call(
+                d3.axisLeft(yScale)
+                  .ticks(6)
+                  .tickSize(-innerWidth)
+                  .tickFormat('')
+              )
+              .call(g => g.select('.domain').remove());
+
+            // Create color map based on original method order
+            const colorMap = {};
+            methods.forEach((method, idx) => {
+              colorMap[method] = colors[idx];
+            });
+
+            // Add zero line if showing delta
+            if (showDelta) {
+              gRoot.append('line')
+                .attr('x1', 0)
+                .attr('x2', innerWidth)
+                .attr('y1', yScale(0))
+                .attr('y2', yScale(0))
+                .attr('stroke', 'var(--text-color)')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '4,4')
+                .attr('opacity', 0.5);
+            }
+
+            // Bars
+            gRoot.selectAll('rect.bar')
+              .data(chartData)
+              .join('rect')
+              .attr('class', 'bar')
+              .attr('x', d => xScale(d.method))
+              .attr('y', d => d.value >= 0 ? yScale(d.value) : yScale(0))
+              .attr('width', xScale.bandwidth())
+              .attr('height', d => Math.abs(yScale(d.value) - yScale(0)))
+              .attr('fill', d => colorMap[d.method])
+              .attr('opacity', 0.85)
+              .on('mouseenter', (event, d) => {
+                const deltaText = showDelta && d.method !== 'SFT'
+                  ? `Δ: ${d.value >= 0 ? '+' : ''}${d.value.toFixed(2)}%`
+                  : '';
+                const absoluteText = `${benchmarkNames[selectedBenchmark]}: ${d.absoluteValue.toFixed(2)}%`;
+                const html = `<strong>${d.method}</strong><br/>${absoluteText}${deltaText ? '<br/>' + deltaText : ''}`;
+                showTooltip(html, event);
+              })
+              .on('mouseleave', hideTooltip);
+
+            // X axis
+            const xAxis = gRoot.append('g')
+              .attr('class', 'axes')
+              .attr('transform', `translate(0,${innerHeight})`)
+              .call(d3.axisBottom(xScale));
+
+            xAxis.select('.domain').remove();
+
+            xAxis.selectAll('text')
+              .style('text-anchor', 'middle');
+
+            // Y axis
+            const yAxis = gRoot.append('g')
+              .attr('class', 'axes')
+              .call(d3.axisLeft(yScale).ticks(6));
+
+            yAxis.select('.domain').remove();
+
+            // Y axis label
+            gRoot.append('text')
+              .attr('class', 'axes')
+              .attr('transform', 'rotate(-90)')
+              .attr('x', -innerHeight / 2)
+              .attr('y', -45)
+              .attr('text-anchor', 'middle')
+              .style('font-size', '12px')
+              .style('fill', 'var(--text-color)')
+              .text(showDelta ? 'Δ Score vs SFT (%)' : 'Score (%)');
+          }
+
+          render();
+
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch((err) => {
+          const pre = document.createElement('pre');
+          pre.textContent = 'Error loading data: ' + err.message;
+          pre.style.cssText = 'color:red;font-size:12px;padding:12px;margin:0;';
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
