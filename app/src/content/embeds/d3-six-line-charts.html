@@ -91,20 +91,22 @@
   /* Grid */
   .d3-multi-charts__grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
 
-  @media (max-width: 1400px) {
-    .d3-multi-charts__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  /* Default: 3 columns */
+  .d3-multi-charts__grid.columns-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (max-width: 900px) {
-    .d3-multi-charts__grid {
-      grid-template-columns: 1fr;
-    }
+  /* 2 columns */
+  .d3-multi-charts__grid.columns-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* 1 column */
+  .d3-multi-charts__grid.columns-1 {
+    grid-template-columns: 1fr;
   }
 
   .chart-cell {
@@ -324,8 +326,25 @@
       // Create grid
       const grid = document.createElement('div');
       grid.className = 'd3-multi-charts__grid';
-      grid.style.gridTemplateColumns = `repeat(${CONFIG.gridColumns}, minmax(0, 1fr))`;
       container.appendChild(grid);
+
+      // Function to update grid columns based on container width
+      function updateGridColumns() {
+        const width = container.clientWidth || 800;
+        let columns;
+
+        if (width < 600) {
+          columns = 1;
+        } else if (width < 900) {
+          columns = 2;
+        } else {
+          columns = Math.min(CONFIG.gridColumns, 3);
+        }
+
+        grid.className = `d3-multi-charts__grid columns-${columns}`;
+      }
+
+      updateGridColumns();
 
       // Create chart cells
       CONFIG.charts.forEach((chartConfig, idx) => {
@@ -498,6 +517,10 @@
         let steps = [];
         let hideTipTimer = null;
 
+        // Formatters (will be set in render())
+        let formatStep = (v) => v;
+        let formatValue = (v) => v;
+
         // Zoom
         const zoom = d3.zoom().scaleExtent(CONFIG.zoomExtent).on('zoom', zoomed);
         overlay.call(zoom);
@@ -580,8 +603,8 @@
           // Create smart formatters based on actual data
           const stepValues = metricData.map(d => d.step);
           const metricValues = metricData.map(d => d[metric]);
-          const formatStep = createSmartFormatter(stepValues);
-          const formatValue = createSmartFormatter(metricValues);
+          formatStep = createSmartFormatter(stepValues);
+          formatValue = createSmartFormatter(metricValues);
 
           // Update clip
           clipRect.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
@@ -836,11 +859,29 @@
           // Render all
           chartInstances.forEach(chart => chart.render());
 
-          // Responsive
-          const ro = window.ResizeObserver ? new ResizeObserver(() => {
+          // Responsive - observe the grid and individual chart cells
+          let resizeTimer;
+          const handleResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+              updateGridColumns();
+              chartInstances.forEach(chart => chart.render());
+            }, 100);
+          };
+
+          const ro = window.ResizeObserver ? new ResizeObserver(handleResize) : null;
+          if (ro) {
+            ro.observe(container);
+          }
+
+          // Also observe window resize as fallback
+          window.addEventListener('resize', handleResize);
+
+          // Force a re-render after a short delay to ensure proper sizing
+          setTimeout(() => {
+            updateGridColumns();
             chartInstances.forEach(chart => chart.render());
-          }) : null;
-          if (ro) ro.observe(container);
+          }, 100);
 
         } catch (e) {
           const pre = document.createElement('pre');
