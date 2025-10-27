@@ -13,7 +13,7 @@
   white-space: nowrap;
   /* prevent squashing; allow horizontal scroll instead */
   word-break: auto-phrase;
-  white-space: break-spaces;
+  /* white-space: break-spaces; */
   vertical-align: top;
 }
 
