@@ -35,6 +35,7 @@ export async function postProcessMarkdown(content, notionClient = null, notionTo
     processedContent = removeExcludeTags(processedContent);
     processedContent = await includeNotionPages(processedContent, notionClient, notionToken);
     processedContent = cleanNotionArtifacts(processedContent);
+    processedContent = fixImageAltTextWithLinks(processedContent);
     processedContent = fixNotionLinks(processedContent);
     processedContent = fixJsxAttributes(processedContent);
     processedContent = optimizeImages(processedContent);
@@ -348,6 +349,45 @@ function cleanNotionArtifacts(content) {
 
     if (cleanedCount > 0) {
         console.log(`    ✅ Cleaned ${cleanedCount} Notion artifact(s)`);
+    }
+
+    return content;
+}
+
+/**
+ * Fix image alt text that contains markdown links
+ * notion-to-md v4 sometimes generates: ![alt with [link](url)](image_path)
+ * This breaks MDX parsing. Clean it to: ![alt with @mention](image_path)
+ * @param {string} content - Markdown content
+ * @returns {string} - Content with fixed image alt text
+ */
+function fixImageAltTextWithLinks(content) {
+    console.log('  🖼️  Fixing image alt text with embedded links...');
+
+    let fixedCount = 0;
+
+    // Pattern: ![text [link](url) more_text](image_path)
+    // This regex finds images where the alt text contains markdown links
+    const imageWithLinksPattern = /!\[([^\]]*\[[^\]]+\]\([^)]+\)[^\]]*)\]\(([^)]+)\)/g;
+
+    content = content.replace(imageWithLinksPattern, (match, altText, imagePath) => {
+        fixedCount++;
+
+        // Remove all markdown links from alt text: [text](url) -> text
+        const cleanedAlt = altText.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+        // Also clean up any remaining brackets
+        const finalAlt = cleanedAlt.replace(/[\[\]]/g, '');
+
+        console.log(`    🔧 Fixed: "${altText.substring(0, 50)}..." -> "${finalAlt.substring(0, 50)}..."`);
+
+        return `![${finalAlt}](${imagePath})`;
+    });
+
+    if (fixedCount > 0) {
+        console.log(`    ✅ Fixed ${fixedCount} image(s) with embedded links in alt text`);
+    } else {
+        console.log('    ℹ️  No images with embedded links found');
     }
 
     return content;

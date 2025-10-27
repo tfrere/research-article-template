@@ -78,9 +78,13 @@
   width: min(1100px, 100vw - var(--content-padding-x) * 2);
   margin-left: 50%;
   transform: translateX(-50%);
-  padding: var(--content-padding-x);
-  border-radius: var(--button-radius);
+  padding: calc(var(--content-padding-x)*2);
+  border-radius: calc(var(--button-radius)*2);
   background-color: var(--page-bg);
+}
+
+.wide>* {
+  margin-bottom: 0 !important;
 }
 
 .full-width {

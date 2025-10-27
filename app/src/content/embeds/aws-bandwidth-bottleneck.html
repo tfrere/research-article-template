@@ -144,7 +144,7 @@
 
   .aws-topology-tooltip {
     position: absolute;
-    padding: 6px 10px;
+    padding: 8px 12px;
     background: var(--surface-bg);
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -155,10 +155,24 @@
     transition: opacity 0.2s;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .aws-topology-tooltip.visible {
     opacity: 1;
+  }
+
+  .tooltip-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .tooltip-bandwidth {
+    font-size: 11px;
+    color: var(--text-secondary);
   }
 
   .aws-topology-bottleneck {
@@ -648,6 +662,7 @@
         efaCrossGroup.attr('data-from', fromId);
         efaCrossGroup.attr('data-to', toId);
         efaCrossGroup.attr('data-bandwidth', '12.5GB/s');
+        efaCrossGroup.attr('data-label', 'EFA Link');
 
         // Draw line with vertical offset for stacking + shifts + horizontal extension
         const x0 = phantom0.x + horizontalShift;
@@ -690,6 +705,7 @@
         leftBarGroup.attr('data-from', fromId);
         leftBarGroup.attr('data-to', toId);
         leftBarGroup.attr('data-bandwidth', '12.5GB/s');
+        leftBarGroup.attr('data-label', 'EFA Link');
 
         const x0 = phantom0.x + horizontalShift + offsetX;
 
@@ -713,6 +729,7 @@
         rightBarGroup.attr('data-from', fromId);
         rightBarGroup.attr('data-to', toId);
         rightBarGroup.attr('data-bandwidth', '12.5GB/s');
+        rightBarGroup.attr('data-label', 'EFA Link');
 
         const x1 = phantom1.x + horizontalShift + offsetX;
 
@@ -738,10 +755,18 @@
       constructor(draw) {
         this.draw = draw;
         this.nodes = new Map();
-        this.linksGroup = draw.group();   // Links layer (bottom)
+        this.structuralGroup = draw.group();  // Structural elements (Node/NUMA borders, never ghosted)
+        this.structuralGroup.attr('data-group', 'structural');
+        this.baseLinksGroup = draw.group();   // Base links layer (will be ghosted)
+        this.baseLinksGroup.attr('data-group', 'base-links');
+        this.linksGroup = this.baseLinksGroup; // Alias for compatibility
         this.nodesGroup = draw.group();   // Nodes layer (middle)
         this.phantomsGroup = draw.group(); // Phantoms layer (for debug)
-        this.crossLinksGroup = draw.group(); // EFA cross-links layer (top)
+        this.baseCrossLinksGroup = draw.group(); // Base EFA cross-links layer
+        this.baseCrossLinksGroup.attr('data-group', 'base-cross-links');
+        this.crossLinksGroup = this.baseCrossLinksGroup; // Alias for compatibility
+        this.activeLinksGroup = draw.group(); // Active (duplicated) links layer (top, non-ghosted)
+        this.activeLinksGroup.attr('data-group', 'active-links');
       }
 
       // Draw a simple rectangular node
@@ -1091,7 +1116,14 @@
 
         const group = this.linksGroup.group();
         if (linkType) group.attr('data-link-type', linkType);
-        if (bandwidth) group.attr('data-bandwidth', bandwidth);
+        if (bandwidth) {
+          group.attr('data-bandwidth', bandwidth);
+          // Find label from bandwidth config
+          const bwConfig = getBandwidth(bandwidth);
+          if (bwConfig && bwConfig.label) {
+            group.attr('data-label', bwConfig.label);
+          }
+        }
         group.attr('data-from', fromId);
         group.attr('data-to', toId);
 
@@ -1166,7 +1198,14 @@
 
           const group = this.linksGroup.group();
           if (linkType) group.attr('data-link-type', linkType);
-          if (bandwidth) group.attr('data-bandwidth', bandwidth);
+          if (bandwidth) {
+            group.attr('data-bandwidth', bandwidth);
+            // Find label from bandwidth config
+            const bwConfig = getBandwidth(bandwidth);
+            if (bwConfig && bwConfig.label) {
+              group.attr('data-label', bwConfig.label);
+            }
+          }
           group.attr('data-from', fromId);
           group.attr('data-to', toId);
 
@@ -1380,7 +1419,7 @@
         const rectWidth = totalWidth;
         const rectHeight = systemHeight + systemPadding * 2;
 
-        renderer.linksGroup.rect(rectWidth, rectHeight)
+        renderer.structuralGroup.rect(rectWidth, rectHeight)
           .move(rectX, rectY)
           .fill('none')
           .stroke({
@@ -1388,7 +1427,8 @@
             width: 3,
             opacity: 1
           })
-          .radius(12);
+          .radius(12)
+          .attr('data-group-border', 'node');
 
         // Add "Node" label at top left of the system box
         renderer.nodesGroup.text('Node')
@@ -1413,7 +1453,7 @@
           const numaRectHeight = numaHeight + numaPadding * 2;
 
           // Draw NUMA 1 border
-          renderer.linksGroup.rect(numaRectWidth, numaRectHeight)
+          renderer.structuralGroup.rect(numaRectWidth, numaRectHeight)
             .move(numaX, numaY)
             .fill('none')
             .stroke({
@@ -1421,7 +1461,8 @@
               width: 3,
               opacity: 1
             })
-            .radius(8);
+            .radius(8)
+            .attr('data-group-border', 'numa');
 
           // Add "NUMA 1" label at top right
           renderer.nodesGroup.text('NUMA 1')
@@ -1492,7 +1533,7 @@
           const numaRectWidth = numaWidth + numaPadding * 2;
           const numaRectHeight = numaHeight + numaPadding * 2;
 
-          renderer.linksGroup.rect(numaRectWidth, numaRectHeight)
+          renderer.structuralGroup.rect(numaRectWidth, numaRectHeight)
             .move(numaX, numaY)
             .fill('none')
             .stroke({
@@ -1500,7 +1541,8 @@
               width: 3,
               opacity: 1
             })
-            .radius(8);
+            .radius(8)
+            .attr('data-group-border', 'numa');
 
           // Add "NUMA" label at top right
           renderer.nodesGroup.text(`NUMA ${ensIndex}`)
@@ -1666,6 +1708,14 @@
         viewboxY += 80;  // Shift up by reducing viewboxY
       }
 
+      // For single node mode (no Node/NUMA groups), shift content down by 50px
+      // BUT only if: 1) not an EFA filter, 2) a filter is active
+      const isEfaFilter = currentActivePathId === 'gpu-gpu-efa-intranode' || currentActivePathId === 'gpu-gpu-efa-internode';
+      const hasActiveFilter = currentActivePathId && currentActivePathId !== '';
+      if (!isInternodeLayout && hasActiveFilter && !isEfaFilter) {
+        viewboxY -= 50;  // Shift down by decreasing viewboxY
+      }
+
       const draw = SVG().addTo(container).size('100%', '100%').viewbox(0, viewboxY, viewboxWidth, paddedViewboxHeight);
       const renderer = new TopologyRenderer(draw);
 
@@ -1757,32 +1807,33 @@
       const svg = getElement('aws-topology-container').querySelector('svg');
       if (!svg) return;
 
-      // Dim all elements
-      svg.querySelectorAll('g[data-node-type], g[data-link-type]').forEach(el => {
-        el.style.opacity = '0.5';
-        // Dim all link elements (lines, paths, circles) consistently
-        el.querySelectorAll('line, path').forEach(linkElement => {
-          linkElement.style.opacity = '0.2';  // Much more dimmed
-        });
-        // Also dim link circles more
-        el.querySelectorAll('[data-link-circle]').forEach(circle => {
-          circle.style.opacity = '0';
-        });
-        // Dim text labels even more (half of element opacity)
-        el.querySelectorAll('text').forEach(text => {
-          text.style.opacity = '0.15';  // Much more dimmed
-        });
-      });
+      // Clear previous active links
+      const activeLinksGroup = svg.querySelector('g[data-group="active-links"]');
+      if (activeLinksGroup) {
+        activeLinksGroup.innerHTML = '';
+      }
 
-      // Dim all cross-link elements (EFA links)
-      svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(el => {
+      // Ghost all base links and cross-links groups at once
+      const baseLinksGroup = svg.querySelector('g[data-group="base-links"]');
+      const baseCrossLinksGroup = svg.querySelector('g[data-group="base-cross-links"]');
+
+      if (baseLinksGroup) {
+        baseLinksGroup.style.opacity = '0.2';
+
+        // Increase stroke width of group borders to make them more visible when ghosted
+        baseLinksGroup.querySelectorAll('[data-group-border]').forEach(border => {
+          border.setAttribute('stroke-width', '5');
+          // border.setAttribute('stroke-opacity', '0.8');
+        });
+      }
+      if (baseCrossLinksGroup) {
+        baseCrossLinksGroup.style.opacity = '0.1';
+      }
+
+      // Dim nodes individually (they're not in a group)
+      svg.querySelectorAll('g[data-node-type]').forEach(el => {
         el.style.opacity = '0.5';
-        el.querySelectorAll('line, path').forEach(linkElement => {
-          linkElement.style.opacity = '0.2';
-        });
-        el.querySelectorAll('[data-link-circle]').forEach(circle => {
-          circle.style.opacity = '0';
-        });
+        // Dim text labels
         el.querySelectorAll('text').forEach(text => {
           text.style.opacity = '0.15';
         });
@@ -1804,48 +1855,39 @@
         }
       });
 
-      // Highlight path links
-      path.links.forEach(linkSpec => {
-        svg.querySelectorAll('g[data-link-type]').forEach(linkGroup => {
-          const linkFrom = linkGroup.getAttribute('data-from');
-          const linkTo = linkGroup.getAttribute('data-to');
+      // Duplicate active links into activeLinksGroup
+      if (activeLinksGroup) {
+        path.links.forEach(linkSpec => {
+          // Find matching links in base groups
+          const allBaseLinks = [
+            ...svg.querySelectorAll('g[data-group="base-links"] > g[data-link-type]'),
+            ...svg.querySelectorAll('g[data-group="base-cross-links"] > g[data-link-type]')
+          ];
 
-          const matchesFrom = linkFrom === linkSpec.from || linkFrom === `${linkSpec.from}`;
-          const matchesTo = linkTo === linkSpec.to || linkTo === `${linkSpec.to}`;
+          allBaseLinks.forEach(linkGroup => {
+            const linkFrom = linkGroup.getAttribute('data-from');
+            const linkTo = linkGroup.getAttribute('data-to');
 
-          if (matchesFrom && matchesTo) {
-            linkGroup.style.opacity = '1';
-            // Restore line and path opacity for active links
-            linkGroup.querySelectorAll('line, path').forEach(linkElement => {
-              linkElement.style.opacity = '1';
-            });
-            // Restore circle opacity for active links
-            linkGroup.querySelectorAll('[data-link-circle]').forEach(circle => {
-              circle.style.opacity = '1';
-            });
-            // Restore text opacity for active links
-            linkGroup.querySelectorAll('text').forEach(text => {
-              text.style.opacity = '1';
-            });
-          }
-        });
-      });
+            const matchesFrom = linkFrom === linkSpec.from || linkFrom === `${linkSpec.from}`;
+            const matchesTo = linkTo === linkSpec.to || linkTo === `${linkSpec.to}`;
 
-      // Highlight cross-link elements if they match the current path
-      const currentPathId = currentActivePathId;
-      if (currentPathId === 'gpu-gpu-efa-intranode' || currentPathId === 'gpu-gpu-efa-internode') {
-        svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(linkGroup => {
-          linkGroup.style.opacity = '1';
-          linkGroup.querySelectorAll('line, path').forEach(linkElement => {
-            linkElement.style.opacity = '1';
-          });
-          linkGroup.querySelectorAll('[data-link-circle]').forEach(circle => {
-            circle.style.opacity = '1';
-          });
-          linkGroup.querySelectorAll('text').forEach(text => {
-            text.style.opacity = '1';
+            if (matchesFrom && matchesTo) {
+              // Clone the link and append to active group
+              const clonedLink = linkGroup.cloneNode(true);
+              activeLinksGroup.appendChild(clonedLink);
+            }
           });
         });
+
+        // Duplicate EFA cross-links if they match the current path
+        const currentPathId = currentActivePathId;
+        if (currentPathId === 'gpu-gpu-efa-intranode' || currentPathId === 'gpu-gpu-efa-internode') {
+          const efaCrossLinks = svg.querySelectorAll('g[data-group="base-cross-links"] > g[data-link-type="efa-crosslink"]');
+          efaCrossLinks.forEach(linkGroup => {
+            const clonedLink = linkGroup.cloneNode(true);
+            activeLinksGroup.appendChild(clonedLink);
+          });
+        }
       }
 
       // Calculate and show bottleneck (minimum bandwidth in the path)
@@ -1968,31 +2010,35 @@
       const svg = getElement('aws-topology-container').querySelector('svg');
       if (!svg) return;
 
-      // Reset all node and link elements
-      svg.querySelectorAll('g[data-node-type], g[data-link-type]').forEach(el => {
+      // Clear active links
+      const activeLinksGroup = svg.querySelector('g[data-group="active-links"]');
+      if (activeLinksGroup) {
+        activeLinksGroup.innerHTML = '';
+      }
+
+      // Restore opacity to base links groups
+      const baseLinksGroup = svg.querySelector('g[data-group="base-links"]');
+      const baseCrossLinksGroup = svg.querySelector('g[data-group="base-cross-links"]');
+
+      if (baseLinksGroup) {
+        baseLinksGroup.style.opacity = '1';
+
+        // Restore original stroke width for group borders
+        baseLinksGroup.querySelectorAll('[data-group-border]').forEach(border => {
+          border.setAttribute('stroke-width', '3');
+          border.setAttribute('stroke-opacity', '1');
+        });
+      }
+      if (baseCrossLinksGroup) {
+        baseCrossLinksGroup.style.opacity = '1';
+      }
+
+      // Reset nodes opacity
+      svg.querySelectorAll('g[data-node-type]').forEach(el => {
         el.style.opacity = '1';
-        // Reset line opacity
-        el.querySelectorAll('line, path').forEach(line => {
-          line.style.opacity = '1';
-        });
-        // Reset circle opacity
-        el.querySelectorAll('[data-link-circle]').forEach(circle => {
-          circle.style.opacity = '1';
-        });
         // Reset text opacity
         el.querySelectorAll('text').forEach(text => {
           text.style.opacity = '1';
-        });
-      });
-
-      // Reset all cross-link elements (EFA links)
-      svg.querySelectorAll('g[data-link-type="efa-crosslink"]').forEach(el => {
-        el.style.opacity = '1';
-        el.querySelectorAll('line, path').forEach(line => {
-          line.style.opacity = '1';
-        });
-        el.querySelectorAll('[data-link-circle]').forEach(circle => {
-          circle.style.opacity = '1';
         });
       });
 
@@ -2238,7 +2284,23 @@
         const target = e.target.closest('[data-bandwidth]');
         if (target) {
           const bandwidth = target.getAttribute('data-bandwidth');
-          tooltip.textContent = bandwidth;
+          const label = target.getAttribute('data-label');
+
+          // Clear and rebuild tooltip content
+          tooltip.innerHTML = '';
+
+          if (label) {
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'tooltip-label';
+            labelDiv.textContent = label;
+            tooltip.appendChild(labelDiv);
+          }
+
+          const bandwidthDiv = document.createElement('div');
+          bandwidthDiv.className = 'tooltip-bandwidth';
+          bandwidthDiv.textContent = bandwidth;
+          tooltip.appendChild(bandwidthDiv);
+
           tooltip.classList.add('visible');
         }
       });

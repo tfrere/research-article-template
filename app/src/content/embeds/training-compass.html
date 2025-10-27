@@ -29,10 +29,11 @@
   }
 
   .training-compass .stage-header {
-    background: var(--primary-color);
-    color: var(--on-primary);
+    background: oklch(from var(--primary-color) calc(l + 0.35) calc(c * 0.6) h / 0.50);
+    color: oklch(from var(--primary-color) calc(l - 0.15) calc(c * 1.2) h);
     padding: var(--spacing-3) var(--spacing-4);
-    border-radius: 8px;
+    border-radius: 6px;
+    border: 1.5px solid oklch(from var(--primary-color) calc(l + 0.05) calc(c * 1) h / 0.9);
     font-size: 16px;
     font-weight: 600;
     text-align: center;
@@ -44,7 +45,7 @@
 
   .training-compass .arrow-right {
     font-size: 32px;
-    color: var(--primary-color);
+    color: oklch(from var(--primary-color) l c h / 0.5);
     flex-shrink: 0;
     margin: 0 var(--spacing-2);
     font-weight: 300;
@@ -53,26 +54,27 @@
   .training-compass .stage-items {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-1);
+    gap: var(--spacing-2);
     width: 100%;
   }
 
   .training-compass .stage-item {
     background: var(--page-bg);
-    border: 1px solid var(--border-color);
-    padding: var(--spacing-1) var(--spacing-1);
-    border-radius: 6px;
+    border: 1px solid oklch(from var(--text-color) l c h / 0.2);
+    padding: var(--spacing-2) var(--spacing-3);
+    border-radius: 4px;
     font-size: 14px;
-    color: var(--text-color);
+    color: var(--muted-color);
     font-weight: 500;
   }
 
   .training-compass .stage-dots {
-    color: var(--muted-color);
+    color: var(--text-color);
     font-size: 16px;
     font-weight: 600;
-    padding: var(--spacing-1);
-    text-align: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    text-align: left;
+    opacity: 0.5;
   }
 
   @media (max-width: 768px) {

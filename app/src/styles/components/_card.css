@@ -19,7 +19,8 @@
     color: inherit;
 }
 
-.card.no-padding {
+.card.no-padding,
+.card.card--p0 {
     padding: 0;
 }
 

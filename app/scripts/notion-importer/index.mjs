@@ -283,57 +283,65 @@ function copyToAstroContent(outputDir) {
             console.log(`    ✅ Copied and cleaned MDX to ${ASTRO_CONTENT_PATH}`);
         }
 
-        // Copy images
-        const mediaDir = join(outputDir, 'media');
-        if (existsSync(mediaDir)) {
-            const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg'];
-            let imageCount = 0;
+        // Copy images from both media and external-images directories
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.html'];
+        let totalImageCount = 0;
 
-            function copyImagesRecursively(dir) {
-                const files = readdirSync(dir);
-                for (const file of files) {
-                    const filePath = join(dir, file);
-                    const stat = statSync(filePath);
+        function copyImagesRecursively(dir, sourceName) {
+            if (!existsSync(dir)) return;
 
-                    if (stat.isDirectory()) {
-                        copyImagesRecursively(filePath);
-                    } else if (imageExtensions.some(ext => file.toLowerCase().endsWith(ext))) {
-                        const filename = basename(filePath);
-                        const destPath = join(ASTRO_ASSETS_PATH, filename);
+            const files = readdirSync(dir);
+            for (const file of files) {
+                const filePath = join(dir, file);
+                const stat = statSync(filePath);
 
-                        try {
-                            // Validate image by checking file size and basic structure
-                            const stats = statSync(filePath);
-                            if (stats.size === 0) {
-                                console.log(`    ⚠️  Skipping empty image: ${filename}`);
-                                return;
-                            }
+                if (stat.isDirectory()) {
+                    copyImagesRecursively(filePath, sourceName);
+                } else if (imageExtensions.some(ext => file.toLowerCase().endsWith(ext))) {
+                    const filename = basename(filePath);
+                    const destPath = join(ASTRO_ASSETS_PATH, filename);
 
-                            // Try to copy and validate the result
-                            copyFileSync(filePath, destPath);
-
-                            // Additional validation - check if the copied file has reasonable size
-                            const destStats = statSync(destPath);
-                            if (destStats.size === 0) {
-                                console.log(`    ❌ Failed to copy corrupted image: ${filename}`);
-                                // Remove the empty file
-                                try {
-                                    unlinkSync(destPath);
-                                } catch (e) { }
-                                return;
-                            }
-
-                            console.log(`    ✅ Copied: ${filename} (${destStats.size} bytes)`);
-                            imageCount++;
-                        } catch (error) {
-                            console.log(`    ❌ Failed to copy ${filename}: ${error.message}`);
+                    try {
+                        // Validate image by checking file size and basic structure
+                        const stats = statSync(filePath);
+                        if (stats.size === 0) {
+                            console.log(`    ⚠️  Skipping empty image: ${filename}`);
+                            return;
                         }
+
+                        // Try to copy and validate the result
+                        copyFileSync(filePath, destPath);
+
+                        // Additional validation - check if the copied file has reasonable size
+                        const destStats = statSync(destPath);
+                        if (destStats.size === 0) {
+                            console.log(`    ❌ Failed to copy corrupted image: ${filename}`);
+                            // Remove the empty file
+                            try {
+                                unlinkSync(destPath);
+                            } catch (e) { }
+                            return;
+                        }
+
+                        console.log(`    ✅ Copied ${sourceName}: ${filename} (${destStats.size} bytes)`);
+                        totalImageCount++;
+                    } catch (error) {
+                        console.log(`    ❌ Failed to copy ${filename}: ${error.message}`);
                     }
                 }
             }
+        }
 
-            copyImagesRecursively(mediaDir);
-            console.log(`    ✅ Copied ${imageCount} image(s) to ${ASTRO_ASSETS_PATH}`);
+        // Copy images from media directory (Notion images)
+        const mediaDir = join(outputDir, 'media');
+        copyImagesRecursively(mediaDir, 'Notion image');
+
+        // Copy images from external-images directory (downloaded external images)
+        const externalImagesDir = join(outputDir, 'external-images');
+        copyImagesRecursively(externalImagesDir, 'external image');
+
+        if (totalImageCount > 0) {
+            console.log(`    ✅ Copied ${totalImageCount} total image(s) to ${ASTRO_ASSETS_PATH}`);
         }
 
         // Always update image paths and filter problematic references in MDX file
@@ -346,7 +354,7 @@ function copyToAstroContent(outputDir) {
             // Check which images actually exist and remove references to missing/corrupted ones
             const imageReferences = updatedContent.match(/\.\/assets\/image\/[^\s\)]+/g) || [];
             const existingImages = existsSync(ASTRO_ASSETS_PATH) ? readdirSync(ASTRO_ASSETS_PATH).filter(f =>
-                ['.png', '.jpg', '.jpeg', '.gif', '.svg'].some(ext => f.toLowerCase().endsWith(ext))
+                ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.tiff'].some(ext => f.toLowerCase().endsWith(ext))
             ) : [];
 
             for (const imgRef of imageReferences) {

@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join, dirname, basename, extname } from 'path';
 import { fileURLToPath } from 'url';
 import matter from 'gray-matter';
+import fetch from 'node-fetch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,6 +69,11 @@ const usedComponents = new Set();
 const imageImports = new Map(); // src -> varName
 
 /**
+ * Track external images that need to be downloaded
+ */
+const externalImagesToDownload = new Map(); // url -> localPath
+
+/**
  * Generate a variable name from image path
  * @param {string} src - Image source path
  * @returns {string} - Valid variable name
@@ -76,6 +82,214 @@ function generateImageVarName(src) {
     // Extract filename without extension and make it a valid JS variable
     const filename = src.split('/').pop().replace(/\.[^.]+$/, '');
     return filename.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, 'img_$&');
+}
+
+/**
+ * Check if a URL is an external URL (HTTP/HTTPS)
+ * @param {string} url - URL to check
+ * @returns {boolean} - True if it's an external URL
+ */
+function isExternalImageUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        // Just check if it's HTTP/HTTPS - we'll try to download everything
+        return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Extract image URL from Twitter/X page
+ * @param {string} tweetUrl - URL of the tweet
+ * @returns {Promise<string|null>} - URL of the image or null if not found
+ */
+async function extractTwitterImageUrl(tweetUrl) {
+    try {
+        const response = await fetch(tweetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const html = await response.text();
+
+        // Try to find image URLs in meta tags (Twitter Card)
+        const metaImageMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+        if (metaImageMatch) {
+            let imageUrl = metaImageMatch[1];
+            // Try to get the large version
+            if (imageUrl.includes('?')) {
+                imageUrl = imageUrl.split('?')[0] + '?format=jpg&name=large';
+            }
+            return imageUrl;
+        }
+
+        // Fallback: try to find pbs.twimg.com URLs in the HTML
+        const pbsMatch = html.match(/https:\/\/pbs\.twimg\.com\/media\/([^"?]+)/);
+        if (pbsMatch) {
+            return `https://pbs.twimg.com/media/${pbsMatch[1]}?format=jpg&name=large`;
+        }
+
+        return null;
+    } catch (error) {
+        console.log(`    ⚠️  Failed to extract Twitter image: ${error.message}`);
+        return null;
+    }
+}
+
+/**
+ * Download an external URL and save it locally
+ * @param {string} imageUrl - External URL
+ * @param {string} outputDir - Directory to save the file
+ * @returns {Promise<string>} - Local path to the downloaded file
+ */
+async function downloadExternalImage(imageUrl, outputDir) {
+    try {
+        console.log(`    🌐 Downloading external URL: ${imageUrl}`);
+
+        // Create output directory if it doesn't exist
+        if (!existsSync(outputDir)) {
+            mkdirSync(outputDir, { recursive: true });
+        }
+
+        let actualImageUrl = imageUrl;
+
+        // Check if it's a Twitter/X URL
+        if (imageUrl.includes('twitter.com/') || imageUrl.includes('x.com/')) {
+            console.log(`    🐦 Detected Twitter/X URL, attempting to extract image...`);
+            const extractedUrl = await extractTwitterImageUrl(imageUrl);
+            if (extractedUrl) {
+                actualImageUrl = extractedUrl;
+                console.log(`    ✅ Extracted image URL: ${extractedUrl}`);
+            } else {
+                console.log(`    ⚠️  Could not automatically extract image from Twitter/X`);
+                console.log(`    💡 Manual download required:`);
+                console.log(`       1. Open ${imageUrl} in your browser`);
+                console.log(`       2. Right-click on the image and "Save image as..."`);
+                console.log(`       3. Save it to: app/src/content/assets/image/`);
+                throw new Error('Twitter/X images require manual download');
+            }
+        }
+
+        // Generate filename from URL
+        const urlObj = new URL(actualImageUrl);
+        const pathname = urlObj.pathname;
+
+        // Determine file extension - try to get it from URL, default to jpg
+        let extension = 'jpg';
+        if (pathname.includes('.')) {
+            const urlExtension = pathname.split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'tiff'].includes(urlExtension)) {
+                extension = urlExtension;
+            }
+        }
+
+        // Generate unique filename
+        const filename = `external_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${extension}`;
+        const localPath = join(outputDir, filename);
+
+        // Try to download the URL
+        const response = await fetch(actualImageUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const buffer = await response.buffer();
+
+        // Validate that we actually got data
+        if (buffer.length === 0) {
+            throw new Error('Empty response');
+        }
+
+        // Validate that it's actually an image, not HTML
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            throw new Error('Downloaded content is HTML, not an image');
+        }
+
+        // Save to local file
+        writeFileSync(localPath, buffer);
+
+        console.log(`    ✅ Downloaded: ${filename} (${buffer.length} bytes)`);
+        return localPath;
+
+    } catch (error) {
+        console.log(`    ❌ Failed to download ${imageUrl}: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * Process external images in content and download them
+ * @param {string} content - Markdown content
+ * @param {string} outputDir - Directory to save downloaded images
+ * @returns {Promise<string>} - Content with external images replaced by local paths
+ */
+async function processExternalImages(content, outputDir) {
+    console.log('  🌐 Processing external images...');
+
+    let processedCount = 0;
+    let downloadedCount = 0;
+
+    // Find all external image URLs in markdown format: ![alt](url)
+    const externalImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    let match;
+    const externalImages = new Map(); // url -> alt text
+
+    // First pass: collect all external image URLs
+    while ((match = externalImageRegex.exec(content)) !== null) {
+        const alt = match[1];
+        const url = match[2];
+
+        if (isExternalImageUrl(url)) {
+            externalImages.set(url, alt);
+            console.log(`    🔍 Found external image: ${url}`);
+        }
+    }
+
+    if (externalImages.size === 0) {
+        console.log('    ℹ️  No external images found');
+        return content;
+    }
+
+    // Second pass: download images and replace URLs
+    let processedContent = content;
+
+    for (const [url, alt] of externalImages) {
+        try {
+            // Download the image
+            const localPath = await downloadExternalImage(url, outputDir);
+            const relativePath = `./assets/image/${basename(localPath)}`;
+
+            // Replace the URL in content
+            processedContent = processedContent.replace(
+                new RegExp(`!\\[${alt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]\\(${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g'),
+                `![${alt}](${relativePath})`
+            );
+
+            downloadedCount++;
+            processedCount++;
+
+        } catch (error) {
+            console.log(`    ⚠️  Skipping external image due to download failure: ${url}`);
+        }
+    }
+
+    if (downloadedCount > 0) {
+        console.log(`    ✅ Downloaded ${downloadedCount} external image(s)`);
+    }
+
+    return processedContent;
 }
 
 /**
@@ -367,6 +581,57 @@ function transformMarkdownImages(content) {
 }
 
 /**
+ * Add proper spacing around Astro components
+ * @param {string} content - MDX content
+ * @returns {string} - Content with proper spacing around components
+ */
+function addSpacingAroundComponents(content) {
+    console.log('  📏 Adding spacing around Astro components...');
+
+    let processedContent = content;
+    let spacingCount = 0;
+
+    // Known Astro components that should have spacing
+    const knownComponents = [
+        'HtmlEmbed', 'Image', 'Note', 'Sidenote', 'Wide', 'FullWidth',
+        'Accordion', 'Quote', 'Reference', 'Glossary', 'Stack', 'ThemeToggle',
+        'RawHtml', 'HfUser', 'Figure'
+    ];
+
+    // Process each component type
+    for (const component of knownComponents) {
+        // Pattern for components with content: <Component>...</Component>
+        // Process this first to handle the complete component structure
+        const withContentPattern = new RegExp(`(<${component}[^>]*>)([\\s\\S]*?)(<\\/${component}>)`, 'g');
+        processedContent = processedContent.replace(withContentPattern, (match, openTag, content, closeTag) => {
+            spacingCount++;
+            // Ensure blank line before opening tag and after closing tag
+            // Also ensure closing tag is on its own line
+            const trimmedContent = content.trim();
+            return `\n\n${openTag}\n${trimmedContent}\n${closeTag}\n\n`;
+        });
+
+        // Pattern for self-closing components: <Component ... />
+        const selfClosingPattern = new RegExp(`(<${component}[^>]*\\/?>)`, 'g');
+        processedContent = processedContent.replace(selfClosingPattern, (match) => {
+            spacingCount++;
+            return `\n\n${match}\n\n`;
+        });
+    }
+
+    // Clean up excessive newlines (more than 2 consecutive)
+    processedContent = processedContent.replace(/\n{3,}/g, '\n\n');
+
+    if (spacingCount > 0) {
+        console.log(`    ✅ Added spacing around ${spacingCount} component(s)`);
+    } else {
+        console.log('    ℹ️  No components found to add spacing around');
+    }
+
+    return processedContent;
+}
+
+/**
  * Fix smart quotes (curly quotes) and replace them with straight quotes
  * @param {string} content - Markdown content
  * @returns {string} - Content with fixed quotes
@@ -412,19 +677,28 @@ function fixSmartQuotes(content) {
  * @param {string} content - Raw Markdown content
  * @param {string} pageId - Notion page ID (optional)
  * @param {string} notionToken - Notion API token (optional)
+ * @param {string} outputDir - Output directory for downloaded images (optional)
  * @returns {string} - Processed MDX content compatible with Astro
  */
-async function processMdxContent(content, pageId = null, notionToken = null) {
+async function processMdxContent(content, pageId = null, notionToken = null, outputDir = null) {
     console.log('🔧 Processing for Astro MDX compatibility...');
 
     // Clear previous tracking
     usedComponents.clear();
     imageImports.clear();
+    externalImagesToDownload.clear();
 
     let processedContent = content;
 
     // Fix smart quotes first
     processedContent = fixSmartQuotes(processedContent);
+
+    // Process external images first (before other transformations)
+    if (outputDir) {
+        // Create a temporary external images directory in the output folder
+        const externalImagesDir = join(outputDir, 'external-images');
+        processedContent = await processExternalImages(processedContent, externalImagesDir);
+    }
 
     // Apply essential steps only
     processedContent = await ensureFrontmatter(processedContent, pageId, notionToken);
@@ -434,6 +708,9 @@ async function processMdxContent(content, pageId = null, notionToken = null) {
 
     // Transform markdown images to Image components
     processedContent = transformMarkdownImages(processedContent);
+
+    // Add spacing around Astro components
+    processedContent = addSpacingAroundComponents(processedContent);
 
     // Detect Astro components used in the content before adding imports
     detectAstroComponents(processedContent);
@@ -459,7 +736,7 @@ async function convertFileToMdx(inputFile, outputDir, pageId = null, notionToken
 
     try {
         const markdownContent = readFileSync(inputFile, 'utf8');
-        const mdxContent = await processMdxContent(markdownContent, pageId, notionToken);
+        const mdxContent = await processMdxContent(markdownContent, pageId, notionToken, outputDir);
         writeFileSync(outputFile, mdxContent);
 
         console.log(`    ✅ Converted: ${outputFile}`);
