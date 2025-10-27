@@ -5,24 +5,30 @@
     position: relative;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
+
   .d3-dpo-ablations svg {
     display: block;
     width: 100%;
   }
+
   .d3-dpo-ablations .bar {
     stroke: none;
   }
+
   .d3-dpo-ablations .axes path,
   .d3-dpo-ablations .axes line {
     stroke: var(--axis-color, var(--text-color));
   }
+
   .d3-dpo-ablations .axes text {
     fill: var(--tick-color, var(--muted-color));
     font-size: 11px;
   }
+
   .d3-dpo-ablations .grid line {
-    stroke: var(--grid-color, rgba(0,0,0,.08));
+    stroke: var(--grid-color, rgba(0, 0, 0, .08));
   }
+
   .d3-dpo-ablations .d3-tooltip {
     position: absolute;
     top: 0;
@@ -36,13 +42,15 @@
     border: 1px solid var(--border-color);
     background: var(--surface-bg);
     color: var(--text-color);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
     opacity: 0;
     transition: opacity .12s ease;
   }
+
   .d3-dpo-ablations .d3-tooltip__inner {
     text-align: left;
   }
+
   .d3-dpo-ablations .legend {
     display: flex;
     flex-direction: column;
@@ -50,16 +58,19 @@
     gap: 6px;
     margin-top: 16px;
   }
+
   .d3-dpo-ablations .legend-title {
     font-size: 12px;
     font-weight: 700;
     color: var(--text-color);
   }
+
   .d3-dpo-ablations .legend .items {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 14px;
   }
+
   .d3-dpo-ablations .legend .item {
     display: inline-flex;
     align-items: center;
@@ -68,12 +79,14 @@
     font-size: 12px;
     color: var(--text-color);
   }
+
   .d3-dpo-ablations .legend .swatch {
     width: 14px;
     height: 14px;
     border-radius: 3px;
     border: 1px solid var(--border-color);
   }
+
   .d3-dpo-ablations .controls {
     display: flex;
     gap: 16px;
@@ -82,17 +95,20 @@
     flex-wrap: wrap;
     margin-top: 8px;
   }
+
   .d3-dpo-ablations .control-group {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
   }
+
   .d3-dpo-ablations .controls label {
     font-size: 12px;
     font-weight: 700;
     color: var(--text-color);
   }
+
   .d3-dpo-ablations .controls select {
     font-size: 12px;
     padding: 8px 28px 8px 10px;
@@ -102,16 +118,19 @@
     color: var(--text-color);
     cursor: pointer;
   }
+
   .d3-dpo-ablations .checkbox-group {
     display: flex;
     align-items: center;
     gap: 6px;
   }
+
   .d3-dpo-ablations .checkbox-group input[type="checkbox"] {
     width: 16px;
     height: 16px;
     cursor: pointer;
   }
+
   .d3-dpo-ablations .checkbox-group label {
     font-size: 12px;
     color: var(--text-color);
@@ -189,10 +208,10 @@
 
       // Data loading
       const CSV_PATHS = [
-        '/data/apo/smollm3_dpo_ablations.csv',
-        './assets/data/apo/smollm3_dpo_ablations.csv',
-        '../assets/data/apo/smollm3_dpo_ablations.csv',
-        '../../assets/data/apo/smollm3_dpo_ablations.csv'
+        '/data/smollm3_dpo_ablations.csv',
+        './assets/data/smollm3_dpo_ablations.csv',
+        '../assets/data/smollm3_dpo_ablations.csv',
+        '../../assets/data/smollm3_dpo_ablations.csv'
       ];
 
       const fetchFirstAvailable = async (paths) => {
@@ -200,7 +219,7 @@
           try {
             const r = await fetch(p, { cache: 'no-cache' });
             if (r.ok) return await r.text();
-          } catch (e) {}
+          } catch (e) { }
         }
         throw new Error('CSV not found');
       };

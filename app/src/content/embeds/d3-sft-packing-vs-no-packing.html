@@ -140,7 +140,7 @@
     border: 1px solid var(--border-color);
     background: var(--surface-bg);
     color: var(--text-color);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
     opacity: 0;
     transition: opacity .12s ease;
   }
@@ -216,10 +216,10 @@
 
       // Data loading
       const CSV_PATHS = [
-        '/data/tech_report/sft_packing-vs-no-packing.csv',
-        './assets/data/tech_report/sft_packing-vs-no-packing.csv',
-        '../assets/data/tech_report/sft_packing-vs-no-packing.csv',
-        '../../assets/data/tech_report/sft_packing-vs-no-packing.csv'
+        '/data/sft_packing-vs-no-packing.csv',
+        './assets/data/sft_packing-vs-no-packing.csv',
+        '../assets/data/sft_packing-vs-no-packing.csv',
+        '../../assets/data/sft_packing-vs-no-packing.csv'
       ];
 
       const fetchFirstAvailable = async (paths) => {
@@ -227,7 +227,7 @@
           try {
             const r = await fetch(p, { cache: 'no-cache' });
             if (r.ok) return await r.text();
-          } catch (_) {}
+          } catch (_) { }
         }
         throw new Error('CSV not found in any of the expected locations');
       };
@@ -330,7 +330,7 @@
               .attr('transform', d => `translate(${xBenchmark(d.benchmark)},0)`);
 
             // Bars within each group
-            groupsMerged.each(function(groupData) {
+            groupsMerged.each(function (groupData) {
               const bars = d3.select(this)
                 .selectAll('.bar')
                 .data(groupData.values, d => d.packing);
@@ -340,14 +340,14 @@
                 .attr('x', d => xPacking(d.packing))
                 .attr('width', xPacking.bandwidth())
                 .attr('fill', d => colorMap[d.packing])
-                .on('mouseenter', function(event, d) {
+                .on('mouseenter', function (event, d) {
                   const packingLabel = d.packing === 'TRUE' ? 'Packing' : 'No Packing';
                   tipInner.innerHTML = `<strong>${groupData.benchmark}</strong><br/>${packingLabel}: ${d.value.toFixed(2)}`;
                   tip.style.opacity = '1';
                   const [mx, my] = d3.pointer(event, container);
                   tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
                 })
-                .on('mouseleave', function() {
+                .on('mouseleave', function () {
                   tip.style.opacity = '0';
                   tip.style.transform = 'translate(-9999px, -9999px)';
                 })

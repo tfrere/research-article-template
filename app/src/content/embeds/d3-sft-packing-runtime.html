@@ -6,29 +6,36 @@
     min-height: 320px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+
   .d3-sft-packing-runtime svg {
     display: block;
     width: 100%;
   }
+
   .d3-sft-packing-runtime .axes path,
   .d3-sft-packing-runtime .axes line {
     stroke: var(--axis-color);
   }
+
   .d3-sft-packing-runtime .axes text {
     fill: var(--tick-color);
     font-size: 11px;
   }
+
   .d3-sft-packing-runtime .grid line {
     stroke: var(--grid-color);
-    stroke-dasharray: 2,2;
+    stroke-dasharray: 2, 2;
   }
+
   .d3-sft-packing-runtime .bar {
     cursor: pointer;
     transition: opacity 0.15s ease;
   }
+
   .d3-sft-packing-runtime .bar:hover {
     opacity: 0.85;
   }
+
   .d3-sft-packing-runtime .axis-label {
     fill: var(--text-color);
     font-size: 12px;
@@ -42,16 +49,19 @@
     gap: 6px;
     margin-top: 12px;
   }
+
   .d3-sft-packing-runtime .legend-title {
     font-size: 12px;
     font-weight: 700;
     color: var(--text-color);
   }
+
   .d3-sft-packing-runtime .legend .items {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 14px;
   }
+
   .d3-sft-packing-runtime .legend .item {
     display: inline-flex;
     align-items: center;
@@ -62,9 +72,11 @@
     cursor: pointer;
     transition: opacity 0.15s ease;
   }
+
   .d3-sft-packing-runtime .legend .item:hover {
     opacity: 0.7;
   }
+
   .d3-sft-packing-runtime .legend .swatch {
     width: 14px;
     height: 14px;
@@ -85,17 +97,20 @@
     border: 1px solid var(--border-color);
     background: var(--surface-bg);
     color: var(--text-color);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
     opacity: 0;
     transition: opacity .12s ease;
   }
+
   .d3-sft-packing-runtime .d3-tooltip__inner {
     text-align: left;
   }
+
   .d3-sft-packing-runtime .d3-tooltip .label {
     font-weight: 700;
     margin-bottom: 2px;
   }
+
   .d3-sft-packing-runtime .d3-tooltip .value {
     color: var(--muted-color);
   }
@@ -165,9 +180,9 @@
         if (attr && attr.trim()) {
           providedData = attr.trim().startsWith('[') ? JSON.parse(attr) : attr.trim();
         }
-      } catch(_) {}
+      } catch (_) { }
 
-      const DEFAULT_CSV = '/data/tech_report/sft-packing-vs-no-packing-runtime.csv';
+      const DEFAULT_CSV = '/data/sft-packing-vs-no-packing-runtime.csv';
       const ensureDataPrefix = (p) => {
         if (typeof p !== 'string' || !p) return p;
         // If path doesn't start with / or ./, add /data/ prefix
@@ -183,18 +198,18 @@
       const CSV_PATHS = Array.isArray(providedData)
         ? normalizeInput(providedData)
         : (typeof providedData === 'string' ? normalizeInput(providedData) || [DEFAULT_CSV] : [
-            DEFAULT_CSV,
-            './assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
-            '../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
-            '../../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv'
-          ]);
+          DEFAULT_CSV,
+          './assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
+          '../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv',
+          '../../assets/data/tech_report/sft-packing-vs-no-packing-runtime.csv'
+        ]);
 
       const fetchFirstAvailable = async (paths) => {
         for (const p of paths) {
           try {
             const r = await fetch(p, { cache: 'no-cache' });
             if (r.ok) return await r.text();
-          } catch(_) {}
+          } catch (_) { }
         }
         throw new Error('CSV not found at any of: ' + paths.join(', '));
       };
@@ -304,7 +319,7 @@
           const barsEnter = bars.enter()
             .append('rect')
             .attr('class', 'bar')
-            .on('mouseenter', function(event, d) {
+            .on('mouseenter', function (event, d) {
               const [mx, my] = d3.pointer(event, container);
               tipInner.innerHTML = `
                 <div class="label">${d.packing} - Batch Size ${d.batchSize}</div>
@@ -313,7 +328,7 @@
               tip.style.opacity = '1';
               tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
             })
-            .on('mouseleave', function() {
+            .on('mouseleave', function () {
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
             });

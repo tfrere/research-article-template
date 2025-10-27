@@ -23,7 +23,7 @@
 
   .d3-sft-base-vs-mid .grid line {
     stroke: var(--grid-color);
-    stroke-dasharray: 2,2;
+    stroke-dasharray: 2, 2;
   }
 
   .d3-sft-base-vs-mid .bar {
@@ -194,10 +194,10 @@
 
       // Data loading helpers
       const CSV_PATHS = [
-        '/data/tech_report/sft-base-vs-mid.csv',
-        './assets/data/tech_report/sft-base-vs-mid.csv',
-        '../assets/data/tech_report/sft-base-vs-mid.csv',
-        '../../assets/data/tech_report/sft-base-vs-mid.csv'
+        '/data/sft-base-vs-mid.csv',
+        './assets/data/sft-base-vs-mid.csv',
+        '../assets/data/sft-base-vs-mid.csv',
+        '../../assets/data/sft-base-vs-mid.csv'
       ];
 
       const fetchFirstAvailable = async (paths) => {
@@ -205,7 +205,7 @@
           try {
             const r = await fetch(p, { cache: 'no-cache' });
             if (r.ok) return await r.text();
-          } catch (_) {}
+          } catch (_) { }
         }
         throw new Error('CSV not found at any of the specified paths');
       };
@@ -435,18 +435,18 @@
 
         // Hover interactions
         groupsMerge.selectAll('rect.bar')
-          .on('mouseenter', function(event, d) {
+          .on('mouseenter', function (event, d) {
             const benchmark = d3.select(this.parentNode).datum().benchmark;
             tipInner.innerHTML = `<strong>${d.baseModel}</strong><br/>${benchmark}: <strong>${d.value.toFixed(2)}</strong>`;
             tip.classList.add('visible');
           })
-          .on('mousemove', function(event) {
+          .on('mousemove', function (event) {
             const [mx, my] = d3.pointer(event, container);
             const offsetX = 10;
             const offsetY = -10;
             tip.style.transform = `translate(${mx + offsetX}px, ${my + offsetY}px)`;
           })
-          .on('mouseleave', function() {
+          .on('mouseleave', function () {
             tip.classList.remove('visible');
             tip.style.transform = 'translate(-9999px, -9999px)';
           });

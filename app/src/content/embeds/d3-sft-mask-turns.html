@@ -5,24 +5,105 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     position: relative;
   }
-  .d3-sft-mask-turns svg { display: block; }
+
+  .d3-sft-mask-turns svg {
+    display: block;
+  }
+
   .d3-sft-mask-turns .axes path,
-  .d3-sft-mask-turns .axes line { stroke: var(--axis-color); }
-  .d3-sft-mask-turns .axes text { fill: var(--tick-color); font-size: 11px; }
-  .d3-sft-mask-turns .grid line { stroke: var(--grid-color); stroke-dasharray: 2,2; }
-  .d3-sft-mask-turns .axis-label { fill: var(--text-color); font-size: 12px; font-weight: 600; }
+  .d3-sft-mask-turns .axes line {
+    stroke: var(--axis-color);
+  }
 
-  .d3-sft-mask-turns .header { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 16px; flex-wrap: wrap; }
-  .d3-sft-mask-turns .legend { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-  .d3-sft-mask-turns .legend-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
-  .d3-sft-mask-turns .legend .items { display: flex; flex-wrap: wrap; gap: 8px 14px; }
-  .d3-sft-mask-turns .legend .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; color: var(--text-color); cursor: pointer; user-select: none; opacity: 1; transition: opacity 0.15s ease; }
-  .d3-sft-mask-turns .legend .item.dimmed { opacity: 0.3; }
-  .d3-sft-mask-turns .legend .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); flex-shrink: 0; }
+  .d3-sft-mask-turns .axes text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
 
-  .d3-sft-mask-turns .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-  .d3-sft-mask-turns .controls .control-group { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-  .d3-sft-mask-turns .controls label { font-size: 12px; font-weight: 700; color: var(--text-color); }
+  .d3-sft-mask-turns .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2, 2;
+  }
+
+  .d3-sft-mask-turns .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .d3-sft-mask-turns .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .d3-sft-mask-turns .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .d3-sft-mask-turns .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-sft-mask-turns .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-sft-mask-turns .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+    cursor: pointer;
+    user-select: none;
+    opacity: 1;
+    transition: opacity 0.15s ease;
+  }
+
+  .d3-sft-mask-turns .legend .item.dimmed {
+    opacity: 0.3;
+  }
+
+  .d3-sft-mask-turns .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .d3-sft-mask-turns .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .d3-sft-mask-turns .controls .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .d3-sft-mask-turns .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
   .d3-sft-mask-turns .controls select {
     font-size: 12px;
     padding: 8px 28px 8px 10px;
@@ -37,8 +118,15 @@
     background-position: right 8px center;
     transition: border-color 0.15s ease;
   }
-  .d3-sft-mask-turns .controls select:hover { border-color: var(--primary-color); }
-  .d3-sft-mask-turns .controls select:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+
+  .d3-sft-mask-turns .controls select:hover {
+    border-color: var(--primary-color);
+  }
+
+  .d3-sft-mask-turns .controls select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
 
   .d3-sft-mask-turns .d3-tooltip {
     position: absolute;
@@ -53,11 +141,14 @@
     border: 1px solid var(--border-color);
     background: var(--surface-bg);
     color: var(--text-color);
-    box-shadow: 0 4px 24px rgba(0,0,0,.18);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
     opacity: 0;
     transition: opacity .12s ease;
   }
-  .d3-sft-mask-turns .d3-tooltip__inner { text-align: left; }
+
+  .d3-sft-mask-turns .d3-tooltip__inner {
+    text-align: left;
+  }
 </style>
 <script>
   (() => {
@@ -105,12 +196,12 @@
       }
 
       // Data loading
-      const DEFAULT_CSV = '/data/tech_report/sft_mask-turns.csv';
+      const DEFAULT_CSV = '/data/sft_mask-turns.csv';
       const CSV_PATHS = [
         DEFAULT_CSV,
-        './assets/data/tech_report/sft_mask-turns.csv',
-        '../assets/data/tech_report/sft_mask-turns.csv',
-        '../../assets/data/tech_report/sft_mask-turns.csv'
+        './assets/data/sft_mask-turns.csv',
+        '../assets/data/sft_mask-turns.csv',
+        '../../assets/data/sft_mask-turns.csv'
       ];
 
       const fetchFirstAvailable = async (paths) => {
@@ -118,7 +209,7 @@
           try {
             const r = await fetch(p, { cache: 'no-cache' });
             if (r.ok) return await r.text();
-          } catch(_) {}
+          } catch (_) { }
         }
         throw new Error('CSV not found at any path');
       };
@@ -255,7 +346,7 @@
             .attr('fill', d => colorScale(d.mask))
             .attr('opacity', d => hiddenSeries.has(d.mask) ? 0.1 : 1)
             .style('cursor', 'pointer')
-            .on('mouseenter', function(event, d) {
+            .on('mouseenter', function (event, d) {
               if (hiddenSeries.has(d.mask)) return;
               d3.select(this).attr('opacity', 0.8);
               tipInner.innerHTML = `<strong>${d.benchmark}</strong><br/>${maskLabels[d.mask]}<br/>Score: ${d.value.toFixed(2)}%`;
@@ -263,7 +354,7 @@
               const [mx, my] = d3.pointer(event, container);
               tip.style.transform = `translate(${mx + 12}px, ${my - 12}px)`;
             })
-            .on('mouseleave', function(event, d) {
+            .on('mouseleave', function (event, d) {
               d3.select(this).attr('opacity', hiddenSeries.has(d.mask) ? 0.1 : 1);
               tip.style.opacity = '0';
               tip.style.transform = 'translate(-9999px, -9999px)';
