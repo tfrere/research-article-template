@@ -3,6 +3,26 @@
  * Provides medium-zoom functionality for Mermaid diagrams
  */
 
+// Configuration - Désactiver le zoom Mermaid
+const MERMAID_ZOOM_ENABLED = false;
+
+console.log("🚀 Mermaid Zoom Script v20.0 loaded - DISABLED");
+
+// Si désactivé, ne rien faire
+if (!MERMAID_ZOOM_ENABLED) {
+    console.log("🚫 Mermaid zoom is disabled, skipping initialization");
+    // Export vide pour éviter les erreurs
+    window.mermaidZoom = {
+        init: () => { },
+        cleanup: () => { },
+        convertSvgToImage: () => { },
+        openZoom: () => { },
+        closeZoom: () => { }
+    };
+    // Arrêter l'exécution ici
+    throw new Error("Mermaid zoom disabled");
+}
+
 // Fonction pour appliquer les styles Mermaid au SVG selon le thème
 function applyMermaidStylesToSvg(svgElement) {
     try {
@@ -676,6 +696,7 @@ function setupMermaidZoom() {
     const mermaidElements = document.querySelectorAll(".mermaid");
     console.log(`🔍 Found ${mermaidElements.length} Mermaid elements`);
 
+    let processedCount = 0;
     mermaidElements.forEach((mermaidEl, index) => {
         // Vérifier si déjà wrappé
         if (
@@ -683,6 +704,7 @@ function setupMermaidZoom() {
             mermaidEl.parentElement.classList.contains("mermaid-zoom-wrapper")
         ) {
             console.log(`📦 Mermaid ${index} already wrapped`);
+            processedCount++;
             return;
         }
 
@@ -724,6 +746,8 @@ function setupMermaidZoom() {
             }
         }, 1000); // Réduit de 2000ms à 1000ms pour être plus rapide
     });
+
+    console.log(`✅ Processed ${processedCount} already wrapped, ${mermaidElements.length - processedCount} new diagrams`);
 }
 
 // Observer global pour forcer les bonnes couleurs et z-index sur les images Mermaid zoomées
@@ -807,9 +831,22 @@ window.addEventListener("load", () => {
     }, 1000);
 });
 
-// Observer simple pour les nouveaux diagrammes Mermaid
+// Observer simple pour les nouveaux diagrammes Mermaid (avec debounce)
+let resizeTimeout;
 const observer = new MutationObserver(() => {
-    setTimeout(initMermaidZoom, 200); // Réduit de 500ms à 200ms
+    // Debounce pour éviter les appels multiples
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        // Vérifier s'il y a vraiment de nouveaux diagrammes
+        const mermaidElements = document.querySelectorAll(".mermaid");
+        const wrappedElements = document.querySelectorAll(".mermaid-zoom-wrapper");
+
+        // Seulement si il y a plus de diagrammes que de wrappers
+        if (mermaidElements.length > wrappedElements.length) {
+            console.log(`🔄 New Mermaid diagrams detected: ${mermaidElements.length} total, ${wrappedElements.length} wrapped`);
+            initMermaidZoom();
+        }
+    }, 500); // Délai plus long pour éviter les appels fréquents
 });
 
 observer.observe(document.body, {
@@ -817,4 +854,4 @@ observer.observe(document.body, {
     subtree: true,
 });
 
-console.log("🚀 Mermaid Zoom Script v18.0 loaded - Enhanced contrast for arrows and links");
+console.log("🚀 Mermaid Zoom Script v19.0 loaded - DEBOUNCED observer to prevent resize loops");
