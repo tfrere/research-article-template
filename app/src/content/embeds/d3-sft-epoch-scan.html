@@ -1,0 +1,562 @@
+<div class="d3-sft-epoch-scan"></div>
+<style>
+  .d3-sft-epoch-scan {
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+  }
+  .d3-sft-epoch-scan svg {
+    display: block;
+    overflow: visible;
+  }
+  .d3-sft-epoch-scan .axes path,
+  .d3-sft-epoch-scan .axes line {
+    stroke: var(--axis-color);
+    shape-rendering: crispEdges;
+  }
+  .d3-sft-epoch-scan .axes text {
+    fill: var(--tick-color);
+    font-size: 11px;
+  }
+  .d3-sft-epoch-scan .grid line {
+    stroke: var(--grid-color);
+    stroke-dasharray: 2,2;
+    shape-rendering: crispEdges;
+  }
+  .d3-sft-epoch-scan .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .d3-sft-epoch-scan .line-think {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .d3-sft-epoch-scan .line-no-think {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .d3-sft-epoch-scan .dot {
+    stroke: var(--surface-bg);
+    stroke-width: 2;
+  }
+  .d3-sft-epoch-scan .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .d3-sft-epoch-scan .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-sft-epoch-scan .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-sft-epoch-scan .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .d3-sft-epoch-scan .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+  .d3-sft-epoch-scan .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+  .d3-sft-epoch-scan .legend .swatch-line {
+    width: 20px;
+    height: 2px;
+    border: none;
+  }
+  .d3-sft-epoch-scan .controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .d3-sft-epoch-scan .control-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .d3-sft-epoch-scan .controls label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .d3-sft-epoch-scan .controls select {
+    font-size: 12px;
+    padding: 8px 28px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .d3-sft-epoch-scan .controls select:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => {
+        if (window.d3 && typeof window.d3.select === 'function') cb();
+      };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-sft-epoch-scan'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-sft-epoch-scan'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      const CSV_PATHS = [
+        '/data/sft-epoch-scan.csv',
+        './assets/data/sft-epoch-scan.csv',
+        '../assets/data/sft-epoch-scan.csv',
+        '../../assets/data/sft-epoch-scan.csv'
+      ];
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.text();
+          } catch(_){}
+        }
+        throw new Error('CSV not found in any of the expected locations');
+      };
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      const showTooltip = (html, event) => {
+        tipInner.innerHTML = html;
+        const [mx, my] = d3.pointer(event, container);
+        const offsetX = 12, offsetY = 12;
+        tip.style.transform = `translate(${mx + offsetX}px, ${my + offsetY}px)`;
+        tip.style.opacity = '1';
+      };
+
+      const hideTooltip = () => {
+        tip.style.opacity = '0';
+        setTimeout(() => {
+          tip.style.transform = 'translate(-9999px, -9999px)';
+        }, 120);
+      };
+
+      // SVG setup
+      const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+      const gGrid = gRoot.append('g').attr('class', 'grid');
+      const gAxes = gRoot.append('g').attr('class', 'axes');
+      const gLines = gRoot.append('g').attr('class', 'lines');
+      const gDots = gRoot.append('g').attr('class', 'dots');
+
+      let width = 800, height = 360;
+      const margin = { top: 16, right: 28, bottom: 56, left: 64 };
+
+      // State
+      let data = [];
+      let benchmarks = [];
+      let currentMetric = 'Average';
+
+      const updateSize = () => {
+        width = container.clientWidth || 800;
+        height = Math.max(260, Math.round(width / 2.5));
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+        return {
+          innerWidth: width - margin.left - margin.right,
+          innerHeight: height - margin.top - margin.bottom
+        };
+      };
+
+      // Get colors
+      const getColors = () => {
+        if (window.ColorPalettes && window.ColorPalettes.getColors) {
+          const colors = window.ColorPalettes.getColors('categorical', 2);
+          return {
+            think: colors[0],
+            noThink: colors[1]
+          };
+        }
+        return {
+          think: 'var(--primary-color)',
+          noThink: '#7F7F7F'
+        };
+      };
+
+      const render = () => {
+        if (data.length === 0) return;
+
+        const { innerWidth, innerHeight } = updateSize();
+        const colors = getColors();
+
+        // Separate data by mode
+        const thinkData = data.filter(d => d.mode === '/think');
+        const noThinkData = data.filter(d => d.mode === '/no_think');
+
+        // Get metric values
+        const getMetricValue = (d) => {
+          if (currentMetric === 'Average') {
+            return d.average;
+          }
+          return d[currentMetric];
+        };
+
+        // Scales - use linear scale for epochs
+        const epochs = [...new Set(data.map(d => d.epoch))].sort((a, b) => a - b);
+        const xScale = d3.scaleLinear()
+          .domain([d3.min(epochs), d3.max(epochs)])
+          .range([0, innerWidth])
+          .nice();
+
+        const allValues = data.map(getMetricValue).filter(v => v != null);
+        const yScale = d3.scaleLinear()
+          .domain([0, d3.max(allValues) * 1.1 || 100])
+          .range([innerHeight, 0])
+          .nice();
+
+        // Grid
+        gGrid.selectAll('.grid-line').data(yScale.ticks(5))
+          .join('line')
+          .attr('class', 'grid-line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', d => yScale(d))
+          .attr('y2', d => yScale(d));
+
+        // Axes
+        const xAxis = d3.axisBottom(xScale)
+          .tickValues(epochs)
+          .tickFormat(d3.format('d'));
+        const yAxis = d3.axisLeft(yScale).ticks(5);
+
+        gAxes.selectAll('.x-axis').data([0])
+          .join('g')
+          .attr('class', 'x-axis')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(xAxis);
+
+        gAxes.selectAll('.y-axis').data([0])
+          .join('g')
+          .attr('class', 'y-axis')
+          .call(yAxis);
+
+        // Axis labels
+        gAxes.selectAll('.x-label').data([0])
+          .join('text')
+          .attr('class', 'x-label axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + 40)
+          .text('Epoch');
+
+        gAxes.selectAll('.y-label').data([0])
+          .join('text')
+          .attr('class', 'y-label axis-label')
+          .attr('text-anchor', 'middle')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -48)
+          .text('Score (%)');
+
+        // Line generator
+        const line = d3.line()
+          .x(d => xScale(d.epoch))
+          .y(d => yScale(getMetricValue(d)))
+          .curve(d3.curveMonotoneX);
+
+        // Think line
+        gLines.selectAll('.line-think')
+          .data([thinkData])
+          .join('path')
+          .attr('class', 'line-think')
+          .attr('d', line)
+          .attr('stroke', colors.think)
+          .attr('stroke-width', 2.5)
+          .attr('fill', 'none')
+          .attr('stroke-linecap', 'round')
+          .attr('stroke-linejoin', 'round');
+
+        // No-think line
+        gLines.selectAll('.line-no-think')
+          .data([noThinkData])
+          .join('path')
+          .attr('class', 'line-no-think')
+          .attr('d', line)
+          .attr('stroke', colors.noThink)
+          .attr('stroke-width', 2.5)
+          .attr('fill', 'none')
+          .attr('stroke-linecap', 'round')
+          .attr('stroke-linejoin', 'round');
+
+        // Dots for think mode
+        gDots.selectAll('.dot-think')
+          .data(thinkData)
+          .join('circle')
+          .attr('class', 'dot dot-think')
+          .attr('cx', d => xScale(d.epoch))
+          .attr('cy', d => yScale(getMetricValue(d)))
+          .attr('r', 4)
+          .attr('fill', colors.think)
+          .on('mouseenter', (event, d) => {
+            const value = getMetricValue(d);
+            const html = `<strong>Epoch: ${d.epoch}</strong><br/>Mode: /think<br/>Score: ${value.toFixed(2)}%`;
+            showTooltip(html, event);
+          })
+          .on('mouseleave', hideTooltip);
+
+        // Dots for no-think mode
+        gDots.selectAll('.dot-no-think')
+          .data(noThinkData)
+          .join('circle')
+          .attr('class', 'dot dot-no-think')
+          .attr('cx', d => xScale(d.epoch))
+          .attr('cy', d => yScale(getMetricValue(d)))
+          .attr('r', 4)
+          .attr('fill', colors.noThink)
+          .on('mouseenter', (event, d) => {
+            const value = getMetricValue(d);
+            const html = `<strong>Epoch: ${d.epoch}</strong><br/>Mode: /no_think<br/>Score: ${value.toFixed(2)}%`;
+            showTooltip(html, event);
+          })
+          .on('mouseleave', hideTooltip);
+
+        // Update legend
+        updateLegend(colors);
+      };
+
+      const ensureHeader = () => {
+        let header = container.querySelector('.header');
+        if (!header) {
+          header = document.createElement('div');
+          header.className = 'header';
+          container.appendChild(header);
+
+          // Create legend container first
+          const legend = document.createElement('div');
+          legend.className = 'legend';
+          header.appendChild(legend);
+
+          // Create controls container second
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+          header.appendChild(controls);
+        }
+        return header;
+      };
+
+      const updateLegend = (colors) => {
+        const header = ensureHeader();
+        let legend = header.querySelector('.legend');
+
+        let title = legend.querySelector('.legend-title');
+        if (!title) {
+          title = document.createElement('div');
+          title.className = 'legend-title';
+          title.textContent = 'Legend';
+          legend.appendChild(title);
+        }
+
+        let items = legend.querySelector('.items');
+        if (!items) {
+          items = document.createElement('div');
+          items.className = 'items';
+          legend.appendChild(items);
+        }
+
+        items.innerHTML = '';
+
+        // Think line
+        const thinkItem = document.createElement('span');
+        thinkItem.className = 'item';
+        const thinkSwatch = document.createElement('span');
+        thinkSwatch.className = 'swatch-line';
+        thinkSwatch.style.background = colors.think;
+        const thinkText = document.createElement('span');
+        thinkText.textContent = '/think';
+        thinkItem.appendChild(thinkSwatch);
+        thinkItem.appendChild(thinkText);
+        items.appendChild(thinkItem);
+
+        // No-think line
+        const noThinkItem = document.createElement('span');
+        noThinkItem.className = 'item';
+        const noThinkSwatch = document.createElement('span');
+        noThinkSwatch.className = 'swatch-line';
+        noThinkSwatch.style.background = colors.noThink;
+        const noThinkText = document.createElement('span');
+        noThinkText.textContent = '/no_think';
+        noThinkItem.appendChild(noThinkSwatch);
+        noThinkItem.appendChild(noThinkText);
+        items.appendChild(noThinkItem);
+      };
+
+      const buildControls = () => {
+        const header = ensureHeader();
+        let controls = header.querySelector('.controls');
+
+        // Metric select
+        const metricGroup = document.createElement('div');
+        metricGroup.className = 'control-group';
+        const metricLabel = document.createElement('label');
+        metricLabel.setAttribute('for', 'metric-select-epoch-scan');
+        metricLabel.textContent = 'Metric';
+        const metricSelect = document.createElement('select');
+        metricSelect.id = 'metric-select-epoch-scan';
+
+        const metrics = ['Average', ...benchmarks];
+        metrics.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          if (m === currentMetric) opt.selected = true;
+          metricSelect.appendChild(opt);
+        });
+
+        metricSelect.addEventListener('change', (e) => {
+          currentMetric = e.target.value;
+          render();
+        });
+
+        metricGroup.appendChild(metricLabel);
+        metricGroup.appendChild(metricSelect);
+        controls.appendChild(metricGroup);
+      };
+
+      // Load data
+      fetchFirstAvailable(CSV_PATHS)
+        .then(csvText => {
+          const rows = d3.csvParse(csvText);
+
+          // Get benchmark columns (all except Epoch and Reasoning mode)
+          benchmarks = rows.columns.filter(c => c !== 'Epoch' && c !== 'Reasoning mode');
+
+          // Parse data
+          data = rows.map(row => {
+            const epoch = +row['Epoch'];
+            const mode = row['Reasoning mode'];
+            const entry = {
+              epoch: epoch,
+              mode: mode
+            };
+
+            // Add all benchmark values
+            let sum = 0;
+            let count = 0;
+            benchmarks.forEach(b => {
+              const val = +row[b];
+              entry[b] = val;
+              sum += val;
+              count++;
+            });
+
+            // Calculate average
+            entry.average = sum / count;
+
+            return entry;
+          });
+
+          buildControls();
+          render();
+
+          // Resize handling
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(() => render());
+            ro.observe(container);
+          } else {
+            window.addEventListener('resize', render);
+          }
+        })
+        .catch(err => {
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'color:red;font-size:12px;padding:12px;';
+          pre.textContent = 'Error loading data: ' + err.message;
+          container.appendChild(pre);
+        });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
