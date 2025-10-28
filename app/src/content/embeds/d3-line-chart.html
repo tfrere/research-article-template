@@ -319,8 +319,7 @@
         runColumn: embedConfig.runColumn || 'run_name',
         xScaleType: embedConfig.xScaleType || 'linear',  // 'linear' or 'log'
         yScaleType: embedConfig.yScaleType || 'linear',  // 'linear' or 'log'
-        referenceLine: embedConfig.referenceLine || null,  // { value: number, label?: string, color?: string, dashArray?: string }
-        xFormatAsFileSize: embedConfig.xFormatAsFileSize || false  // Format X axis as file sizes (B, kB, MB, GB)
+        referenceLine: embedConfig.referenceLine || null  // { value: number, label?: string, color?: string, dashArray?: string }
       };
 
       let width = CONFIG.width;
@@ -422,7 +421,7 @@
       let formatY = (v) => v;
 
       // Function to determine smart format based on data values
-      function createSmartFormatter(values, isFileSize = false) {
+      function createSmartFormatter(values) {
         if (!values || values.length === 0) return (v) => v;
 
         const min = d3.min(values);
@@ -431,24 +430,6 @@
 
         // Check if all values are effectively integers (within 0.001 tolerance)
         const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
-
-        // File size formatting (B, kB, MB, GB)
-        if (isFileSize) {
-          return (v) => {
-            if (v >= 1e9) {
-              const gb = v / 1e9;
-              return d3.format('.2f')(gb) + ' GB';
-            } else if (v >= 1e6) {
-              const mb = v / 1e6;
-              return d3.format('.2f')(mb) + ' MB';
-            } else if (v >= 1000) {
-              const kb = v / 1000;
-              return d3.format('.1f')(kb) + ' kB';
-            } else {
-              return d3.format('d')(Math.round(v)) + ' B';
-            }
-          };
-        }
 
         // Large numbers (billions): format as "X.XXB"
         if (max >= 1e9) {
@@ -891,14 +872,7 @@
 
         // Build tooltip HTML
         let html = `<div><strong>${CONFIG.title}</strong></div>`;
-
-        // Smart tooltip label based on column name and formatting
-        let xLabel = CONFIG.xAxisLabel || CONFIG.xColumn || 'X Value';
-        if (CONFIG.xFormatAsFileSize) {
-          xLabel = xLabel.replace(/\(bytes\)/gi, '').replace(/\(.*\)/gi, '').trim() || 'Message Size';
-        }
-
-        html += `<div>${xLabel}: ${formatX(nearest)}</div>`;
+        html += `<div>tokens ${formatX(nearest)}</div>`;
 
         // Interpolate values for all series
         const entries = series.map(s => {
@@ -945,23 +919,8 @@
 
         entries.sort((a, b) => a.loss - b.loss);
 
-        // Smart Y-axis label
-        let yLabel = CONFIG.yAxisLabel || CONFIG.yColumn || 'Y Value';
-
         entries.forEach(e => {
-          // Smart formatting for Y values based on column name
-          let formattedValue;
-          if (CONFIG.yColumn.toLowerCase().includes('latency') || CONFIG.yColumn.toLowerCase().includes('time')) {
-            formattedValue = e.loss.toFixed(1) + ' μs';
-          } else if (CONFIG.yColumn.toLowerCase().includes('bandwidth')) {
-            formattedValue = e.loss.toFixed(1) + ' GB/s';
-          } else if (CONFIG.yColumn.toLowerCase().includes('loss')) {
-            formattedValue = e.loss.toFixed(4);
-          } else {
-            formattedValue = formatY(e.loss);
-          }
-
-          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${formattedValue}</span></div>`;
+          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.loss.toFixed(4)}</span></div>`;
         });
 
         tipInner.innerHTML = html;
@@ -1081,7 +1040,7 @@
           // Create smart formatters based on actual data
           const xValues = data.map(d => d.tokens);
           const yValues = data.map(d => d.loss);
-          formatX = createSmartFormatter(xValues, CONFIG.xFormatAsFileSize);
+          formatX = createSmartFormatter(xValues);
           formatY = createSmartFormatter(yValues);
 
           const colors = getRunColors(runList.length);
