@@ -78,8 +78,7 @@
     }
 
     .base-model-performance .model-circle {
-        stroke: white;
-        stroke-width: 3;
+        /* stroke is set dynamically in JavaScript */
     }
 
     .base-model-performance .model-icon {
@@ -326,38 +325,21 @@
             // X-axis label
             const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             xLabel.setAttribute('x', margin.left + width / 2);
-            xLabel.setAttribute('y', height + margin.top + 60);
+            xLabel.setAttribute('y', height + margin.top + 65);
             xLabel.setAttribute('text-anchor', 'middle');
             xLabel.setAttribute('class', 'axis-label');
-            xLabel.textContent = 'Model Size';
+            xLabel.innerHTML = '<tspan font-weight="700">Model Size</tspan><tspan font-weight="400"> (Billion parameters)</tspan>';
             svg.appendChild(xLabel);
-
-            const xSubLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            xSubLabel.setAttribute('x', margin.left + width / 2);
-            xSubLabel.setAttribute('y', height + margin.top + 75);
-            xSubLabel.setAttribute('text-anchor', 'middle');
-            xSubLabel.setAttribute('class', 'axis-sublabel');
-            xSubLabel.textContent = 'Billion parameters';
-            svg.appendChild(xSubLabel);
 
             // Y-axis label
             const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             yLabel.setAttribute('x', -(height / 2 + margin.top));
-            yLabel.setAttribute('y', 50);
+            yLabel.setAttribute('y', 55);
             yLabel.setAttribute('text-anchor', 'middle');
             yLabel.setAttribute('transform', 'rotate(-90)');
             yLabel.setAttribute('class', 'axis-label');
-            yLabel.textContent = 'Win rate (%)';
+            yLabel.innerHTML = '<tspan font-weight="700">Win Rate (%)</tspan><tspan font-weight="400"> - 12 popular LLM Benchmarks</tspan>';
             svg.appendChild(yLabel);
-
-            const ySubLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            ySubLabel.setAttribute('x', -(height / 2 + margin.top));
-            ySubLabel.setAttribute('y', 65);
-            ySubLabel.setAttribute('text-anchor', 'middle');
-            ySubLabel.setAttribute('transform', 'rotate(-90)');
-            ySubLabel.setAttribute('class', 'axis-sublabel');
-            ySubLabel.textContent = 'Measured on 12 popular LLM Benchmarks';
-            svg.appendChild(ySubLabel);
 
             // Draw arrows
             // "faster/cheaper" arrow (shorter, aligned to left)
@@ -419,6 +401,9 @@
                 if (isHighlight) {
                     circle.setAttribute('stroke', model.color);
                     circle.setAttribute('stroke-width', '4');
+                } else {
+                    circle.setAttribute('stroke', 'rgba(0, 0, 0, 0.25)');
+                    circle.setAttribute('stroke-width', '2');
                 }
                 g.appendChild(circle);
 
@@ -438,7 +423,7 @@
                 } else {
                     logoSize = 36;
                 }
-                foreignObject.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" style="width: ${isSmolLM3 ? 54 : 44}px; height: ${isSmolLM3 ? 54 : 44}px; display: flex; align-items: center; justify-content: center;"><img src="/data/${model.logo}-logo.svg" style="width: ${logoSize}px; height: ${logoSize}px;" /></div>`;
+                foreignObject.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" style="width: ${isSmolLM3 ? 54 : 44}px; height: ${isSmolLM3 ? 54 : 44}px; display: flex; align-items: center; justify-content: center;"><img src="/data/${model.logo}-logo.svg" style="width: ${logoSize}px; height: auto; max-height: ${logoSize}px;" /></div>`;
                 g.appendChild(foreignObject);
 
                 // Label below
@@ -483,11 +468,14 @@
             </div>
           `;
                     tooltip.classList.add('visible');
+                });
 
-                    const rect = container.getBoundingClientRect();
-                    const svgRect = svg.getBoundingClientRect();
-                    tooltip.style.left = `${x * svgRect.width / 900 + 20}px`;
-                    tooltip.style.top = `${y * svgRect.height / 600 - 50}px`;
+                g.addEventListener('mousemove', (e) => {
+                    if (tooltip.classList.contains('visible')) {
+                        const rect = container.getBoundingClientRect();
+                        tooltip.style.left = `${e.clientX - rect.left + 10}px`;
+                        tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+                    }
                 });
 
                 g.addEventListener('mouseleave', () => {

@@ -221,6 +221,7 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
 
     let prevActiveIdx = -1;
     let prevActiveElements = new Set();
+    let prevActiveHeadingId = null;
 
     const setCollapsedState = (activeIdx) => {
       if (!autoCollapse) return;
@@ -502,9 +503,40 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     let lastRequestedIdx = -1;
     let isProcessing = false;
 
+    // Fonction pour mettre à jour l'URL avec l'ancre actuelle
+    const updateURL = (headingId) => {
+      if (!headingId) return;
+
+      const newUrl = `${window.location.pathname}${window.location.search}#${headingId}`;
+
+      // Mettre à jour l'URL sans recharger la page
+      if (window.location.href !== newUrl) {
+        history.pushState(null, null, newUrl);
+
+        // Communiquer avec l'iframe parent (pour les Spaces HF)
+        if (window.parent !== window) {
+          try {
+            window.parent.postMessage(
+              {
+                type: "urlChange",
+                url: newUrl,
+                hash: headingId,
+              },
+              "*",
+            );
+          } catch (e) {
+            // Ignorer les erreurs de communication avec le parent
+            console.debug("Could not communicate with parent window:", e);
+          }
+        }
+      }
+    };
+
     const onScroll = () => {
       // active link highlight
       let activeIdx = -1;
+      let activeHeadingId = null;
+
       for (let i = headingsArr.length - 1; i >= 0; i--) {
         const top = headingsArr[i].getBoundingClientRect().top;
         if (top - 60 <= 0) {
@@ -516,8 +548,15 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
           actives.forEach((a) => a.classList.add("active"));
           // Utiliser l'index du heading actif (n'importe quel niveau)
           activeIdx = i;
+          activeHeadingId = headingsArr[i].id;
           break;
         }
+      }
+
+      // Mettre à jour l'URL si la section active a changé
+      if (activeHeadingId && activeHeadingId !== prevActiveHeadingId) {
+        updateURL(activeHeadingId);
+        prevActiveHeadingId = activeHeadingId;
       }
 
       if (activeIdx === prevActiveIdx) return;
@@ -551,8 +590,52 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     if (autoCollapse) setCollapsedState(0);
 
     window.addEventListener("scroll", onScroll);
+
+    // Gérer la navigation par ancres au chargement de la page
+    const handleInitialNavigation = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const targetElement = document.querySelector(hash);
+        if (targetElement) {
+          // Attendre que le DOM soit prêt puis faire défiler vers l'élément
+          setTimeout(() => {
+            targetElement.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+            // Mettre à jour l'URL après le scroll
+            setTimeout(() => {
+              updateURL(hash.substring(1)); // Enlever le # du hash
+            }, 100);
+          }, 100);
+        }
+      } else {
+        // Si pas d'ancre, initialiser avec la première section
+        if (headingsArr.length > 0) {
+          updateURL(headingsArr[0].id);
+        }
+      }
+    };
+
     // Initialize state
     onScroll();
+
+    // Gérer la navigation initiale
+    handleInitialNavigation();
+
+    // Gérer les événements de navigation du navigateur (boutons précédent/suivant)
+    window.addEventListener("popstate", (event) => {
+      const hash = window.location.hash;
+      if (hash) {
+        const targetElement = document.querySelector(hash);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      } else {
+        // Si pas d'ancre, aller au début de la page
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
 
     // Close mobile accordion when a link inside it is clicked
     if (holderMobile) {
