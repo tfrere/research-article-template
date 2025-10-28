@@ -1,9 +1,10 @@
 ---
 interface Props {
+    author?: string;
     source?: string;
 }
 
-const { source } = Astro.props;
+const { author, source } = Astro.props;
 ---
 
 <blockquote class="quote">
@@ -11,9 +12,11 @@ const { source } = Astro.props;
         <slot />
     </div>
     {
-        source && (
+        (author || source) && (
             <footer class="quote__footer">
-                <span class="quote__source" set:html={source} />
+                {author && <span class="quote__author" set:html={author} />}
+                {author && source && <span class="quote__separator">, </span>}
+                {source && <span class="quote__source" set:html={source} />}
             </footer>
         )
     }
@@ -85,16 +88,29 @@ const { source } = Astro.props;
             sans-serif;
     }
 
-    .quote__source {
+    .quote__author {
         font-weight: 500;
         opacity: 0.85;
         font-style: italic;
         color: var(--text-color);
     }
 
-    .quote__source::before {
+    .quote__author::before {
         content: "— ";
         font-style: normal;
+    }
+
+    .quote__separator {
+        font-weight: 500;
+        opacity: 0.85;
+        color: var(--text-color);
+    }
+
+    .quote__source {
+        font-weight: 500;
+        opacity: 0.85;
+        font-style: italic;
+        color: var(--text-color);
     }
 
     @media (max-width: 640px) {
