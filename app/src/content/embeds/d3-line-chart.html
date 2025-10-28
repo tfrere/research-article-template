@@ -445,6 +445,34 @@
       let formatX = (v) => v;
       let formatY = (v) => v;
 
+      // Function to detect if values represent file sizes (powers of 2)
+      function isFileSizeData(values) {
+        if (!values || values.length === 0) return false;
+
+        const min = d3.min(values);
+        const max = d3.max(values);
+
+        // Check if values are in typical file size ranges (bytes)
+        if (min < 1 || max > 1e12) return false;
+
+        // Check if most values are close to powers of 2
+        const powerOf2Values = values.filter(v => {
+          const log2 = Math.log2(v);
+          return Math.abs(log2 - Math.round(log2)) < 0.1; // Within 10% of a power of 2
+        });
+
+        return powerOf2Values.length / values.length > 0.7; // At least 70% are powers of 2
+      }
+
+      // Format helper for bytes (file sizes)
+      function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 10) / 10 + ' ' + sizes[i];
+      }
+
       // Function to determine smart format based on data values
       function createSmartFormatter(values) {
         if (!values || values.length === 0) return (v) => v;
@@ -455,6 +483,11 @@
 
         // Check if all values are effectively integers (within 0.001 tolerance)
         const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
+
+        // Check if this looks like file size data
+        if (isFileSizeData(values)) {
+          return formatBytes;
+        }
 
         // Large numbers (billions): format as "X.XXB"
         if (max >= 1e9) {
@@ -529,9 +562,12 @@
         const innerWidth = xScale.range()[1];
 
         // Smart grid ticks (same as axis ticks)
-        const getGridTicks = (scale, scaleType) => {
+        const getGridTicks = (scale, scaleType, values = null) => {
+          const MAX_TICKS = 10; // Maximum number of ticks to avoid overcrowding
+
           if (scaleType !== 'log') {
-            return scale.ticks(6);
+            const ticks = scale.ticks(6);
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
           }
 
           const domain = scale.domain();
@@ -540,31 +576,88 @@
           const logRange = maxLog - minLog;
 
           if (logRange < 2) {
-            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            const ticks = scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
+          }
+
+          // Check if this is file size data and use power-of-2 ticks
+          if (values && isFileSizeData(values)) {
+            // Generate power-of-2 ticks that fit within the domain
+            const ticks = [];
+            const minPower = Math.ceil(Math.log2(domain[0]));
+            const maxPower = Math.floor(Math.log2(domain[1]));
+            const powerRange = maxPower - minPower;
+
+            // Calculate step to limit ticks to MAX_TICKS
+            const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+            // Add powers of 2 with calculated step
+            for (let power = minPower; power <= maxPower; power += step) {
+              const value = Math.pow(2, power);
+              if (value >= domain[0] && value <= domain[1]) {
+                ticks.push(value);
+              }
+            }
+
+            // If we still have too few ticks, add intermediate powers
+            if (ticks.length < 4 && logRange < 4 && ticks.length < MAX_TICKS) {
+              const intermediateTicks = [];
+              for (let power = minPower; power < maxPower; power++) {
+                const value = Math.pow(2, power) * 1.5; // 1.5x intermediate
+                if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                  intermediateTicks.push(value);
+                }
+              }
+              ticks.push(...intermediateTicks);
+              ticks.sort((a, b) => a - b);
+
+              // Limit to MAX_TICKS if we exceeded
+              if (ticks.length > MAX_TICKS) {
+                return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+              }
+            }
+
+            return ticks.filter(t => t >= domain[0] && t <= domain[1]);
           }
 
           const ticks = [];
           const minPower = Math.ceil(minLog);
           const maxPower = Math.floor(maxLog);
+          const powerRange = maxPower - minPower;
 
-          for (let power = minPower; power <= maxPower; power++) {
+          // Calculate step to limit ticks to MAX_TICKS
+          const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+          for (let power = minPower; power <= maxPower; power += step) {
             ticks.push(Math.pow(10, power));
           }
 
-          if (ticks.length < 4 && logRange < 3) {
+          if (ticks.length < 4 && logRange < 3 && ticks.length < MAX_TICKS) {
             const intermediateTicks = [];
             for (let power = minPower; power < maxPower; power++) {
-              intermediateTicks.push(5 * Math.pow(10, power));
+              const value = 5 * Math.pow(10, power);
+              if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                intermediateTicks.push(value);
+              }
             }
             ticks.push(...intermediateTicks);
             ticks.sort((a, b) => a - b);
+
+            // Limit to MAX_TICKS if we exceeded
+            if (ticks.length > MAX_TICKS) {
+              return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+            }
           }
 
-          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          // Filter ticks to be within domain and limit to MAX_TICKS
+          const filteredTicks = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return filteredTicks.length > MAX_TICKS ?
+            filteredTicks.filter((_, i) => i % Math.ceil(filteredTicks.length / MAX_TICKS) === 0) :
+            filteredTicks;
         };
 
         // Update grid lines
-        const gridTicks = getGridTicks(newYScale, CONFIG.yScaleType);
+        const gridTicks = getGridTicks(newYScale, CONFIG.yScaleType, data.map(d => d.loss));
         gGrid.selectAll('line')
           .data(gridTicks)
           .join('line')
@@ -595,9 +688,12 @@
           .attr('d', d => line(applySmoothing(d.values, smoothEnabled)));
 
         // Smart tick generation for zoomed view
-        const getSmartTicksZoom = (scale, scaleType) => {
+        const getSmartTicksZoom = (scale, scaleType, values = null) => {
+          const MAX_TICKS = 10; // Maximum number of ticks to avoid overcrowding
+
           if (scaleType !== 'log') {
-            return scale.ticks(6);
+            const ticks = scale.ticks(6);
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
           }
 
           const domain = scale.domain();
@@ -606,31 +702,88 @@
           const logRange = maxLog - minLog;
 
           if (logRange < 2) {
-            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            const ticks = scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
+          }
+
+          // Check if this is file size data and use power-of-2 ticks
+          if (values && isFileSizeData(values)) {
+            // Generate power-of-2 ticks that fit within the domain
+            const ticks = [];
+            const minPower = Math.ceil(Math.log2(domain[0]));
+            const maxPower = Math.floor(Math.log2(domain[1]));
+            const powerRange = maxPower - minPower;
+
+            // Calculate step to limit ticks to MAX_TICKS
+            const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+            // Add powers of 2 with calculated step
+            for (let power = minPower; power <= maxPower; power += step) {
+              const value = Math.pow(2, power);
+              if (value >= domain[0] && value <= domain[1]) {
+                ticks.push(value);
+              }
+            }
+
+            // If we still have too few ticks, add intermediate powers
+            if (ticks.length < 4 && logRange < 4 && ticks.length < MAX_TICKS) {
+              const intermediateTicks = [];
+              for (let power = minPower; power < maxPower; power++) {
+                const value = Math.pow(2, power) * 1.5; // 1.5x intermediate
+                if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                  intermediateTicks.push(value);
+                }
+              }
+              ticks.push(...intermediateTicks);
+              ticks.sort((a, b) => a - b);
+
+              // Limit to MAX_TICKS if we exceeded
+              if (ticks.length > MAX_TICKS) {
+                return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+              }
+            }
+
+            return ticks.filter(t => t >= domain[0] && t <= domain[1]);
           }
 
           const ticks = [];
           const minPower = Math.ceil(minLog);
           const maxPower = Math.floor(maxLog);
+          const powerRange = maxPower - minPower;
 
-          for (let power = minPower; power <= maxPower; power++) {
+          // Calculate step to limit ticks to MAX_TICKS
+          const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+          for (let power = minPower; power <= maxPower; power += step) {
             ticks.push(Math.pow(10, power));
           }
 
-          if (ticks.length < 4 && logRange < 3) {
+          if (ticks.length < 4 && logRange < 3 && ticks.length < MAX_TICKS) {
             const intermediateTicks = [];
             for (let power = minPower; power < maxPower; power++) {
-              intermediateTicks.push(5 * Math.pow(10, power));
+              const value = 5 * Math.pow(10, power);
+              if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                intermediateTicks.push(value);
+              }
             }
             ticks.push(...intermediateTicks);
             ticks.sort((a, b) => a - b);
+
+            // Limit to MAX_TICKS if we exceeded
+            if (ticks.length > MAX_TICKS) {
+              return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+            }
           }
 
-          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          // Filter ticks to be within domain and limit to MAX_TICKS
+          const filteredTicks = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return filteredTicks.length > MAX_TICKS ?
+            filteredTicks.filter((_, i) => i % Math.ceil(filteredTicks.length / MAX_TICKS) === 0) :
+            filteredTicks;
         };
 
-        const newXTicks = getSmartTicksZoom(newXScale, CONFIG.xScaleType);
-        const newYTicks = getSmartTicksZoom(newYScale, CONFIG.yScaleType);
+        const newXTicks = getSmartTicksZoom(newXScale, CONFIG.xScaleType, data.map(d => d.tokens));
+        const newYTicks = getSmartTicksZoom(newYScale, CONFIG.yScaleType, data.map(d => d.loss));
 
         // Update axes with rescaled domains
         gAxes.select('.x-axis').call(d3.axisBottom(newXScale).tickValues(newXTicks).tickSizeOuter(0).tickFormat(formatX));
@@ -697,9 +850,12 @@
           .translateExtent([[0, 0], [innerWidth, innerHeight]]);
 
         // Smart tick generation for log scales
-        const getSmartTicks = (scale, scaleType, targetCount = 6) => {
+        const getSmartTicks = (scale, scaleType, targetCount = 6, values = null) => {
+          const MAX_TICKS = 10; // Maximum number of ticks to avoid overcrowding
+
           if (scaleType !== 'log') {
-            return scale.ticks(targetCount);
+            const ticks = scale.ticks(targetCount);
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
           }
 
           // For log scale, use custom tick logic to avoid crowding
@@ -710,35 +866,91 @@
 
           // If range is small (< 2 orders of magnitude), use fewer ticks
           if (logRange < 2) {
-            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            const ticks = scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+            return ticks.length > MAX_TICKS ? ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0) : ticks;
+          }
+
+          // Check if this is file size data and use power-of-2 ticks
+          if (values && isFileSizeData(values)) {
+            // Generate power-of-2 ticks that fit within the domain
+            const ticks = [];
+            const minPower = Math.ceil(Math.log2(domain[0]));
+            const maxPower = Math.floor(Math.log2(domain[1]));
+            const powerRange = maxPower - minPower;
+
+            // Calculate step to limit ticks to MAX_TICKS
+            const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+            // Add powers of 2 with calculated step
+            for (let power = minPower; power <= maxPower; power += step) {
+              const value = Math.pow(2, power);
+              if (value >= domain[0] && value <= domain[1]) {
+                ticks.push(value);
+              }
+            }
+
+            // If we still have too few ticks, add intermediate powers
+            if (ticks.length < 4 && logRange < 4 && ticks.length < MAX_TICKS) {
+              const intermediateTicks = [];
+              for (let power = minPower; power < maxPower; power++) {
+                const value = Math.pow(2, power) * 1.5; // 1.5x intermediate
+                if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                  intermediateTicks.push(value);
+                }
+              }
+              ticks.push(...intermediateTicks);
+              ticks.sort((a, b) => a - b);
+
+              // Limit to MAX_TICKS if we exceeded
+              if (ticks.length > MAX_TICKS) {
+                return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+              }
+            }
+
+            return ticks.filter(t => t >= domain[0] && t <= domain[1]);
           }
 
           // For larger ranges, show powers of 10 and maybe intermediate values
           const ticks = [];
           const minPower = Math.ceil(minLog);
           const maxPower = Math.floor(maxLog);
+          const powerRange = maxPower - minPower;
 
-          // Always include powers of 10
-          for (let power = minPower; power <= maxPower; power++) {
+          // Calculate step to limit ticks to MAX_TICKS
+          const step = Math.max(1, Math.ceil(powerRange / MAX_TICKS));
+
+          // Always include powers of 10 with calculated step
+          for (let power = minPower; power <= maxPower; power += step) {
             ticks.push(Math.pow(10, power));
           }
 
           // If we have too few ticks and the range is not too large, add intermediate values
-          if (ticks.length < 4 && logRange < 3) {
+          if (ticks.length < 4 && logRange < 3 && ticks.length < MAX_TICKS) {
             const intermediateTicks = [];
             for (let power = minPower; power < maxPower; power++) {
-              intermediateTicks.push(5 * Math.pow(10, power));
+              const value = 5 * Math.pow(10, power);
+              if (value >= domain[0] && value <= domain[1] && !ticks.includes(value)) {
+                intermediateTicks.push(value);
+              }
             }
             ticks.push(...intermediateTicks);
             ticks.sort((a, b) => a - b);
+
+            // Limit to MAX_TICKS if we exceeded
+            if (ticks.length > MAX_TICKS) {
+              return ticks.filter((_, i) => i % Math.ceil(ticks.length / MAX_TICKS) === 0);
+            }
           }
 
-          // Filter ticks to be within domain
-          return ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          // Filter ticks to be within domain and limit to MAX_TICKS
+          const filteredTicks = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return filteredTicks.length > MAX_TICKS ?
+            filteredTicks.filter((_, i) => i % Math.ceil(filteredTicks.length / MAX_TICKS) === 0) :
+            filteredTicks;
         };
 
-        const xTicks = getSmartTicks(xScale, CONFIG.xScaleType, 6);
-        const yTicks = getSmartTicks(yScale, CONFIG.yScaleType, 6);
+        const xTicks = getSmartTicks(xScale, CONFIG.xScaleType, 6, data.map(d => d.tokens));
+        const yTicks = getSmartTicks(yScale, CONFIG.yScaleType, 6, data.map(d => d.loss));
 
         // Grid (use smart ticks)
         gGrid.selectAll('line').data(yTicks)
@@ -895,9 +1107,35 @@
         const xpx = xScale(nearest);
         hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
 
-        // Build tooltip HTML
+        // Build tooltip HTML with smart formatting
         let html = `<div><strong>${CONFIG.title}</strong></div>`;
-        html += `<div>tokens ${formatX(nearest)}</div>`;
+
+        // Smart tooltip formatting based on data type
+        let xLabel = CONFIG.xAxisLabel || 'X';
+        let xValue = formatX(nearest);
+
+        // If it's file size data, show a more descriptive label
+        if (isFileSizeData(data.map(d => d.tokens))) {
+          xLabel = 'Message Size';
+          xValue = formatBytes(nearest);
+        } else if (CONFIG.xColumn === 'tokens' && nearest >= 1000) {
+          // For token counts, show a more readable format
+          xLabel = 'Tokens';
+          if (nearest >= 1e9) {
+            xValue = `${(nearest / 1e9).toFixed(1)}B tokens`;
+          } else if (nearest >= 1e6) {
+            xValue = `${(nearest / 1e6).toFixed(1)}M tokens`;
+          } else if (nearest >= 1000) {
+            xValue = `${(nearest / 1000).toFixed(1)}k tokens`;
+          } else {
+            xValue = `${nearest.toLocaleString()} tokens`;
+          }
+        } else if (nearest >= 1000) {
+          // For other large numbers, add thousand separators
+          xValue = nearest.toLocaleString();
+        }
+
+        html += `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;">${xLabel}: ${xValue}</div>`;
 
         // Interpolate values for all series
         const entries = series.map(s => {
@@ -945,7 +1183,29 @@
         entries.sort((a, b) => a.loss - b.loss);
 
         entries.forEach(e => {
-          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.loss.toFixed(4)}</span></div>`;
+          // Smart formatting for Y values based on data type
+          let yValue;
+          if (isFileSizeData(data.map(d => d.loss))) {
+            yValue = formatBytes(e.loss);
+          } else if (CONFIG.yColumn === 'loss' || CONFIG.yColumn === 'loss_value') {
+            // For loss values, show appropriate precision
+            if (e.loss < 0.01) {
+              yValue = e.loss.toFixed(6);
+            } else if (e.loss < 1) {
+              yValue = e.loss.toFixed(4);
+            } else {
+              yValue = e.loss.toFixed(3);
+            }
+          } else if (e.loss >= 1000) {
+            // For large numbers, add thousand separators
+            yValue = e.loss.toLocaleString();
+          } else if (Number.isInteger(e.loss)) {
+            yValue = e.loss.toString();
+          } else {
+            yValue = e.loss.toFixed(2);
+          }
+
+          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${yValue}</span></div>`;
         });
 
         tipInner.innerHTML = html;
