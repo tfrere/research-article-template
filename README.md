@@ -1,5 +1,5 @@
 ---
-title: 'The Smol Training Guide: The Secrets to Building World-Class LLMs'
+title: 'The Smol Training Playbook: The Secrets to Building World-Class LLMs'
 short_desc: 'A practical journey behind training SOTA LLMs'
 emoji: 📝
 colorFrom: blue
