@@ -67,15 +67,6 @@
         stroke-dasharray: 5, 5;
     }
 
-    .base-model-performance .model-point {
-        cursor: pointer;
-        transition: filter 0.2s, opacity 0.2s;
-    }
-
-    .base-model-performance .model-point:hover {
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-        opacity: 0.9;
-    }
 
     .base-model-performance .model-circle {
         /* stroke is set dynamically in JavaScript */
@@ -115,47 +106,6 @@
         letter-spacing: 0.3px;
     }
 
-    .base-model-performance .tooltip {
-        position: absolute;
-        background: var(--surface-bg);
-        border: 2px solid var(--border-color);
-        border-radius: 8px;
-        padding: 12px 16px;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.2s;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        min-width: 200px;
-    }
-
-    .base-model-performance .tooltip.visible {
-        opacity: 1;
-    }
-
-    .base-model-performance .tooltip-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--text-color);
-        margin-bottom: 8px;
-    }
-
-    .base-model-performance .tooltip-row {
-        display: flex;
-        justify-content: space-between;
-        margin: 4px 0;
-        font-size: 13px;
-    }
-
-    .base-model-performance .tooltip-label {
-        color: var(--muted-color);
-        margin-right: 12px;
-    }
-
-    .base-model-performance .tooltip-value {
-        color: var(--text-color);
-        font-weight: 600;
-    }
 
     .base-model-performance .legend {
         margin-top: 20px;
@@ -377,10 +327,6 @@
             arrow2Label.textContent = 'better';
             svg.appendChild(arrow2Label);
 
-            // Create tooltip
-            const tooltip = document.createElement('div');
-            tooltip.className = 'tooltip';
-            container.appendChild(tooltip);
 
             // Draw model points
             models.forEach(model => {
@@ -450,37 +396,6 @@
                 label2.textContent = nameParts[nameParts.length - 1];
                 g.appendChild(label2);
 
-                // Hover events
-                g.addEventListener('mouseenter', (e) => {
-                    tooltip.innerHTML = `
-            <div class="tooltip-title">${model.name}</div>
-            <div class="tooltip-row">
-              <span class="tooltip-label">Size:</span>
-              <span class="tooltip-value">${model.size.toFixed(1)}B params</span>
-            </div>
-            <div class="tooltip-row">
-              <span class="tooltip-label">Win Rate:</span>
-              <span class="tooltip-value">${model.winRate.toFixed(1)}%</span>
-            </div>
-            <div class="tooltip-row">
-              <span class="tooltip-label">Efficiency:</span>
-              <span class="tooltip-value">${(model.winRate / model.size).toFixed(2)} pts/B</span>
-            </div>
-          `;
-                    tooltip.classList.add('visible');
-                });
-
-                g.addEventListener('mousemove', (e) => {
-                    if (tooltip.classList.contains('visible')) {
-                        const rect = container.getBoundingClientRect();
-                        tooltip.style.left = `${e.clientX - rect.left + 10}px`;
-                        tooltip.style.top = `${e.clientY - rect.top - 10}px`;
-                    }
-                });
-
-                g.addEventListener('mouseleave', () => {
-                    tooltip.classList.remove('visible');
-                });
 
                 svg.appendChild(g);
             });
