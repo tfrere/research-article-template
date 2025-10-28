@@ -4,7 +4,6 @@
     .base-model-performance {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: var(--page-bg);
-        padding: 40px 20px;
         border-radius: 8px;
         max-width: 900px;
         margin: 0 auto;
@@ -13,16 +12,20 @@
     .base-model-performance .chart-container {
         position: relative;
         width: 100%;
-        height: 600px;
         background: var(--surface-bg);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-radius: 12px;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 1.5 / 1;
     }
 
     .base-model-performance svg {
         width: 100%;
         height: 100%;
+        display: block;
     }
 
     .base-model-performance .axis-line {
@@ -66,12 +69,12 @@
 
     .base-model-performance .model-point {
         cursor: pointer;
-        transition: transform 0.2s, filter 0.2s;
+        transition: filter 0.2s, opacity 0.2s;
     }
 
     .base-model-performance .model-point:hover {
-        transform: scale(1.1);
         filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+        opacity: 0.9;
     }
 
     .base-model-performance .model-circle {
@@ -100,16 +103,17 @@
 
     .base-model-performance .arrow {
         stroke: var(--muted-color);
-        stroke-width: 3;
+        stroke-width: 2.5;
         fill: none;
         marker-end: url(#arrowhead);
+        opacity: 0.7;
     }
 
     .base-model-performance .arrow-label {
-        fill: var(--muted-color);
-        font-size: 18px;
+        fill: var(--text-color);
+        font-size: 14px;
         font-weight: 600;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
 
     .base-model-performance .tooltip {
@@ -213,14 +217,6 @@
                 container.dataset.mounted = 'true';
             }
 
-            // Logos SVG
-            const logos = {
-                qwen: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path d="M174.82 108.75L155.38 75L165.64 57.75C166.46 56.31 166.46 54.53 165.64 53.09L155.38 35.84C154.86 34.91 153.87 34.33 152.78 34.33H114.88L106.14 19.03C105.62 18.1 104.63 17.52 103.54 17.52H83.3C82.21 17.52 81.22 18.1 80.7 19.03L61.26 52.77H41.02C39.93 52.77 38.94 53.35 38.42 54.28L28.16 71.53C27.34 72.97 27.34 74.75 28.16 76.19L45.52 107.5L36.78 122.8C35.96 124.24 35.96 126.02 36.78 127.46L47.04 144.71C47.56 145.64 48.55 146.22 49.64 146.22H87.54L96.28 161.52C96.8 162.45 97.79 163.03 98.88 163.03H119.12C120.21 163.03 121.2 162.45 121.72 161.52L141.16 127.78H158.52C159.61 127.78 160.6 127.2 161.12 126.27L171.38 109.02C172.2 107.58 172.2 105.8 171.38 104.36L174.82 108.75Z" fill="white"/><path d="M119.12 163.03H98.88L87.54 144.71H49.64L61.26 126.39H80.7L38.42 55.29H61.26L83.3 19.03L93.56 37.35L83.3 55.29H161.58L151.32 72.54L170.76 106.28H151.32L141.16 88.34L101.18 163.03H119.12Z" fill="#8B5CF6"/><path d="M127.86 79.83H76.14L101.18 122.11L127.86 79.83Z" fill="#665CEE"/></svg>`,
-                hf: `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><path d="M221.784 183.816C222.786 182.312 223.458 180.613 223.756 178.831C224.053 177.048 223.97 175.223 223.512 173.475C222.848 170.952 221.476 168.854 219.615 167.347C220.512 165.873 221.1 164.233 221.344 162.525C221.881 158.811 220.648 155.103 217.874 152.079C215.716 149.726 212.662 148.431 209.282 148.431C208.889 148.431 208.489 148.452 208.081 148.492C210.643 140.304 211.942 131.774 211.933 123.195C211.933 76.5231 174.097 38.6851 127.424 38.6851C80.75 38.6851 42.9099 76.5191 42.9099 123.195C42.9015 131.752 44.1936 140.261 46.742 148.43H46.6519C43.2719 148.43 40.219 149.724 38.06 152.077C35.287 155.098 34.0529 158.81 34.5899 162.523C34.8346 164.231 35.4231 165.872 36.3199 167.346C34.4579 168.852 33.086 170.95 32.422 173.473C31.9642 175.222 31.8817 177.047 32.1799 178.83C32.4781 180.612 33.1501 182.312 34.1519 183.816C33.9739 184.094 33.8099 184.381 33.6549 184.676C31.9849 187.847 31.877 191.43 33.352 194.767C35.588 199.824 41.1419 203.808 51.9289 208.085C58.6359 210.745 64.779 212.446 64.833 212.461C73.705 214.762 81.729 215.931 88.675 215.931C100.081 215.931 108.591 212.811 114.026 206.647C123.222 208.106 132.594 208.052 141.773 206.489C147.201 212.757 155.76 215.931 167.262 215.931C174.208 215.931 182.232 214.762 191.103 212.461C191.158 212.446 197.298 210.745 204.008 208.085C214.795 203.808 220.35 199.824 222.585 194.767C224.059 191.43 223.952 187.847 222.281 184.676C222.129 184.379 221.961 184.091 221.784 183.816Z" fill="#FF9D00"/><path fill-rule="evenodd" clip-rule="evenodd" d="M152.047 102.567C153.229 102.985 154.108 104.257 154.944 105.468C156.074 107.104 157.126 108.627 158.74 107.769C160.644 106.756 162.205 105.202 163.225 103.302C164.246 101.402 164.681 99.2427 164.475 97.096C164.321 95.4908 163.813 93.9398 162.987 92.5548C162.161 91.1697 161.038 89.985 159.7 89.0862C158.361 88.1874 156.839 87.5968 155.245 87.3569C153.65 87.117 152.022 87.2339 150.478 87.699C148.934 88.1639 147.513 88.9653 146.316 90.0455C145.119 91.1257 144.176 92.4578 143.556 93.946C142.936 95.4342 142.653 97.0415 142.728 98.652C142.804 100.263 143.235 101.836 143.992 103.26C144.74 104.667 146.4 104.003 148.152 103.302C149.525 102.753 150.956 102.181 152.047 102.567ZM100.672 102.567C99.49 102.985 98.611 104.258 97.775 105.468C96.645 107.105 95.592 108.627 93.979 107.769C91.5845 106.501 89.7482 104.386 88.8278 101.838C87.9075 99.2895 87.9692 96.4896 89.0008 93.9841C90.0324 91.4786 91.9601 89.4471 94.408 88.2855C96.856 87.1239 99.6488 86.9156 102.242 87.701C104.307 88.3228 106.141 89.5427 107.513 91.2065C108.885 92.8704 109.732 94.9035 109.949 97.049C110.165 99.1945 109.74 101.356 108.728 103.26C107.979 104.667 106.319 104.003 104.567 103.303C103.193 102.753 101.764 102.181 100.672 102.567ZM144.099 149.318C152.242 142.903 155.233 132.429 155.233 125.977C155.233 120.877 151.802 122.482 146.309 125.202L145.999 125.355C140.957 127.852 134.245 131.177 126.877 131.177C119.508 131.177 112.796 127.852 107.755 125.354C102.084 122.545 98.527 120.783 98.527 125.978C98.527 132.634 101.709 143.563 110.443 149.912C111.596 147.573 113.219 145.497 115.211 143.813C117.202 142.129 119.52 140.874 122.018 140.126C122.89 139.866 123.788 141.367 124.707 142.904C125.594 144.386 126.501 145.902 127.423 145.902C128.406 145.902 129.371 144.408 130.314 142.95C131.299 141.425 132.26 139.94 133.189 140.237C137.864 141.738 141.775 144.993 144.099 149.318Z" fill="#32343D"/></svg>`,
-                meta: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 287.56 191"><path style="fill:#0081fb" d="m31.06,125.96c0,10.98 2.41,19.41 5.56,24.51 4.13,6.68 10.29,9.51 16.57,9.51 8.1,0 15.51-2.01 29.79-21.76 11.44-15.83 24.92-38.05 33.99-51.98l15.36-23.6c10.67-16.39 23.02-34.61 37.18-46.96 11.56-10.08 24.03-15.68 36.58-15.68 21.07,0 41.14,12.21 56.5,35.11 16.81,25.08 24.97,56.67 24.97,89.27 0,19.38-3.82,33.62-10.32,44.87-6.28,10.88-18.52,21.75-39.11,21.75l0-31.02c17.63,0 22.03-16.2 22.03-34.74 0-26.42-6.16-55.74-19.73-76.69-9.63-14.86-22.11-23.94-35.84-23.94-14.85,0-26.8,11.2-40.23,31.17-7.14,10.61-14.47,23.54-22.7,38.13l-9.06,16.05c-18.2,32.27-22.81,39.62-31.91,51.75-15.95,21.24-29.57,29.29-47.5,29.29-21.27,0-34.72-9.21-43.05-23.09-6.8-11.31-10.14-26.15-10.14-43.06z"/></svg>`,
-                google: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>`
-            };
-
             // Data for models
             const models = [
                 { name: 'Qwen3 1.7B Base', size: 1.7, winRate: 2.1, logo: 'qwen', color: '#8B5CF6' },
@@ -232,7 +228,8 @@
             ];
 
             // Chart dimensions
-            const margin = { top: 60, right: 60, bottom: 80, left: 80 };
+            const padding = 20;
+            const margin = { top: 20 + padding, right: 20 + padding, bottom: 80 + padding, left: 100 + padding };
             const width = 900 - margin.left - margin.right;
             const height = 600 - margin.top - margin.bottom;
 
@@ -243,6 +240,7 @@
             // Create SVG
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
             // Define arrowhead marker
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -260,24 +258,9 @@
             defs.appendChild(marker);
             svg.appendChild(defs);
 
-            // Draw Pareto zone (shaded area)
-            const paretoPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const paretoPoints = [
-                [1.5, 5.2],
-                [2.8, 3.5],
-                [4.5, 3.2],
-                [4.5, 5.2]
-            ];
-            const pathD = paretoPoints.map((p, i) =>
-                `${i === 0 ? 'M' : 'L'} ${xScale(p[0])} ${yScale(p[1])}`
-            ).join(' ') + ' Z';
-            paretoPath.setAttribute('d', pathD);
-            paretoPath.setAttribute('class', 'pareto-zone');
-            svg.appendChild(paretoPath);
-
-            // Draw Pareto border
+            // Draw Pareto border - straight diagonal
             const paretoBorder = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            const borderD = `M ${xScale(1.5)} ${yScale(5.2)} L ${xScale(2.8)} ${yScale(3.5)} L ${xScale(4.5)} ${yScale(3.2)}`;
+            const borderD = `M ${xScale(1.5)} ${yScale(1.8)} L ${xScale(4.5)} ${yScale(5.2)}`;
             paretoBorder.setAttribute('d', borderD);
             paretoBorder.setAttribute('class', 'pareto-border');
             svg.appendChild(paretoBorder);
@@ -360,7 +343,7 @@
             // Y-axis label
             const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             yLabel.setAttribute('x', -(height / 2 + margin.top));
-            yLabel.setAttribute('y', 20);
+            yLabel.setAttribute('y', 50);
             yLabel.setAttribute('text-anchor', 'middle');
             yLabel.setAttribute('transform', 'rotate(-90)');
             yLabel.setAttribute('class', 'axis-label');
@@ -369,7 +352,7 @@
 
             const ySubLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             ySubLabel.setAttribute('x', -(height / 2 + margin.top));
-            ySubLabel.setAttribute('y', 35);
+            ySubLabel.setAttribute('y', 65);
             ySubLabel.setAttribute('text-anchor', 'middle');
             ySubLabel.setAttribute('transform', 'rotate(-90)');
             ySubLabel.setAttribute('class', 'axis-sublabel');
@@ -377,15 +360,20 @@
             svg.appendChild(ySubLabel);
 
             // Draw arrows
-            // "faster/cheaper" arrow (pointing left-up)
+            // "faster/cheaper" arrow (shorter, aligned to left)
+            const arrow1StartX = margin.left + 80;
+            const arrow1Length = 170;
+            const arrow1EndX = arrow1StartX + arrow1Length;
+            const arrow1Y = yScale(4.8);
+
             const arrow1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            arrow1.setAttribute('d', `M ${xScale(3.8)} ${yScale(4.8)} L ${xScale(2.2)} ${yScale(4.8)}`);
+            arrow1.setAttribute('d', `M ${arrow1EndX} ${arrow1Y} L ${arrow1StartX} ${arrow1Y}`);
             arrow1.setAttribute('class', 'arrow');
             svg.appendChild(arrow1);
 
             const arrow1Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            arrow1Label.setAttribute('x', xScale(3.0));
-            arrow1Label.setAttribute('y', yScale(4.8) - 15);
+            arrow1Label.setAttribute('x', (arrow1StartX + arrow1EndX) / 2);
+            arrow1Label.setAttribute('y', arrow1Y - 10);
             arrow1Label.setAttribute('text-anchor', 'middle');
             arrow1Label.setAttribute('class', 'arrow-label');
             arrow1Label.textContent = 'faster / cheaper';
@@ -398,9 +386,11 @@
             svg.appendChild(arrow2);
 
             const arrow2Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            arrow2Label.setAttribute('x', xScale(1.75) - 40);
-            arrow2Label.setAttribute('y', yScale(4.0) + 5);
+            arrow2Label.setAttribute('x', xScale(1.75) - 50);
+            arrow2Label.setAttribute('y', yScale(4.0) + 35);
             arrow2Label.setAttribute('text-anchor', 'middle');
+            arrow2Label.setAttribute('dominant-baseline', 'middle');
+            arrow2Label.setAttribute('transform', `rotate(-90 ${xScale(1.75) - 50} ${yScale(4.0)})`);
             arrow2Label.setAttribute('class', 'arrow-label');
             arrow2Label.textContent = 'better';
             svg.appendChild(arrow2Label);
@@ -420,35 +410,58 @@
 
                 // Circle background
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                const isHighlight = model.name.includes('SmolLM3');
                 circle.setAttribute('cx', x);
                 circle.setAttribute('cy', y);
-                circle.setAttribute('r', 28);
-                circle.setAttribute('fill', model.color);
+                circle.setAttribute('r', isHighlight ? 35 : 28);
+                circle.setAttribute('fill', 'white');
                 circle.setAttribute('class', 'model-circle');
+                if (isHighlight) {
+                    circle.setAttribute('stroke', model.color);
+                    circle.setAttribute('stroke-width', '4');
+                }
                 g.appendChild(circle);
 
                 // Logo as foreignObject
                 const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-                foreignObject.setAttribute('x', x - 22);
-                foreignObject.setAttribute('y', y - 22);
-                foreignObject.setAttribute('width', 44);
-                foreignObject.setAttribute('height', 44);
-                foreignObject.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">${logos[model.logo]}</div>`;
+                const isSmolLM3 = isHighlight;
+                const logoOffset = isSmolLM3 ? 26 : 22;
+                foreignObject.setAttribute('x', x - logoOffset);
+                foreignObject.setAttribute('y', isSmolLM3 ? y - 28 : y - 22);
+                foreignObject.setAttribute('width', isSmolLM3 ? 54 : 44);
+                foreignObject.setAttribute('height', isSmolLM3 ? 54 : 44);
+                let logoSize;
+                if (model.logo === 'qwen' || model.logo === 'hf') {
+                    logoSize = isSmolLM3 ? 52 : 44;
+                } else if (model.logo === 'meta') {
+                    logoSize = 32;
+                } else {
+                    logoSize = 36;
+                }
+                foreignObject.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" style="width: ${isSmolLM3 ? 54 : 44}px; height: ${isSmolLM3 ? 54 : 44}px; display: flex; align-items: center; justify-content: center;"><img src="/data/${model.logo}-logo.svg" style="width: ${logoSize}px; height: ${logoSize}px;" /></div>`;
                 g.appendChild(foreignObject);
 
                 // Label below
                 const nameParts = model.name.split(' ');
                 const label1 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 label1.setAttribute('x', x);
-                label1.setAttribute('y', y + 50);
+                label1.setAttribute('y', isSmolLM3 ? y + 55 : y + 50);
                 label1.setAttribute('class', 'model-label');
+                if (isHighlight) {
+                    label1.setAttribute('font-weight', '800');
+                    label1.setAttribute('font-size', '16px');
+                }
                 label1.textContent = nameParts.slice(0, -1).join(' ');
                 g.appendChild(label1);
 
                 const label2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 label2.setAttribute('x', x);
-                label2.setAttribute('y', y + 66);
+                label2.setAttribute('y', isSmolLM3 ? y + 73 : y + 66);
                 label2.setAttribute('class', 'model-sublabel');
+                if (isHighlight) {
+                    label2.setAttribute('font-weight', '800');
+                    label2.setAttribute('font-size', '14px');
+                }
                 label2.textContent = nameParts[nameParts.length - 1];
                 g.appendChild(label2);
 
@@ -489,33 +502,6 @@
             chartContainer.className = 'chart-container';
             chartContainer.appendChild(svg);
             container.appendChild(chartContainer);
-
-            // Add legend
-            const legend = document.createElement('div');
-            legend.className = 'legend';
-            legend.innerHTML = `
-        <div class="legend-item">
-          <span class="legend-icon" style="display: inline-block; width: 20px; height: 20px;">${logos.qwen}</span>
-          <span>Qwen Models</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-icon" style="display: inline-block; width: 20px; height: 20px;">${logos.hf}</span>
-          <span>SmolLM3</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-icon" style="display: inline-block; width: 20px; height: 20px;">${logos.meta}</span>
-          <span>Llama</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-icon" style="display: inline-block; width: 20px; height: 20px;">${logos.google}</span>
-          <span>Gemma</span>
-        </div>
-        <div class="legend-item">
-          <span style="opacity: 0.3">▨</span>
-          <span>Zone sous-optimale</span>
-        </div>
-      `;
-            container.appendChild(legend);
         };
 
         if (document.readyState === 'loading') {
