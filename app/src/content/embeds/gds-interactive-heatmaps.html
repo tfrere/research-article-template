@@ -111,12 +111,12 @@
       grid-template-columns: 1fr;
       grid-template-rows: repeat(4, 1fr);
     }
-    
+
     .gds-interactive-heatmaps .controls {
       flex-direction: column;
       align-items: flex-start;
     }
-    
+
     .gds-interactive-heatmaps .heatmap-panel svg {
       width: 100%;
       max-width: 500px;
@@ -179,7 +179,8 @@
           color: 'var(--text-color)',
           boxShadow: '0 4px 24px rgba(0,0,0,.18)',
           opacity: '0',
-          transition: 'opacity .12s ease'
+          transition: 'opacity .12s ease',
+          zIndex: 'var(--z-tooltip)'
         });
         tipInner = document.createElement('div');
         tipInner.className = 'd3-tooltip__inner';
@@ -197,7 +198,7 @@
       // Create controls
       const controls = document.createElement('div');
       controls.className = 'controls';
-      
+
       const xferGroup = document.createElement('div');
       xferGroup.className = 'control-group';
       xferGroup.innerHTML = `
@@ -208,7 +209,7 @@
           <option value="CPU_GPU">CPU_GPU</option>
         </select>
       `;
-      
+
       const metricGroup = document.createElement('div');
       metricGroup.className = 'control-group';
       metricGroup.innerHTML = `
@@ -218,7 +219,7 @@
           <option value="iops">IOPS</option>
         </select>
       `;
-      
+
       controls.appendChild(xferGroup);
       controls.appendChild(metricGroup);
 
@@ -226,7 +227,7 @@
       const grid = document.createElement('div');
       grid.className = 'grid-2x2';
       container.appendChild(grid);
-      
+
       // Add controls after the grid
       container.appendChild(controls);
 
@@ -243,19 +244,19 @@
         const panel = document.createElement('div');
         panel.className = 'heatmap-panel';
         panel.id = config.id;
-        
+
         const title = document.createElement('div');
         title.className = 'panel-title';
         title.textContent = `${config.title} - Bandwidth (GiB/s)`;
         panel.appendChild(title);
-        
+
         const svg = d3.select(panel).append('svg').attr('width', '100%').style('display', 'block');
         const gRoot = svg.append('g');
         const gCells = gRoot.append('g');
         const gAxes = gRoot.append('g');
-        
+
         grid.appendChild(panel);
-        
+
         panels[config.id] = {
           panel,
           svg,
@@ -285,46 +286,46 @@
             console.warn(`Failed to load ${storage} data:`, error);
           }
         }
-        
+
         renderAllHeatmaps();
       }
 
 
       function createHeatmap(panelData) {
         const { gRoot, gCells, gAxes, config } = panelData;
-        
+
         function render() {
           const storageData = allData[config.storage];
           if (!storageData) return;
-          
+
           const xferType = document.getElementById('xfer-select').value;
           const metric = document.getElementById('metric-select').value;
-          
+
           if (!storageData.data[xferType]) return;
-          
+
           const { innerWidth, innerHeight } = updateSize(panelData);
           const threadCounts = storageData.metadata.thread_counts;
           const ioSizeLabels = storageData.metadata.io_size_labels;
           const matrix = storageData.data[xferType][metric];
-          
+
           if (!matrix) return;
-          
+
           const nRows = threadCounts.length;
           const nCols = ioSizeLabels.length;
           const gridSize = Math.min(innerWidth, innerHeight);
-          
+
           // Center the grid horizontally if it's smaller than innerWidth
           const gridOffsetX = (innerWidth - gridSize) / 2;
           gCells.attr('transform', `translate(${gridOffsetX}, 0)`);
           gAxes.attr('transform', `translate(${gridOffsetX}, 0)`);
-          
+
           const x = d3.scaleBand().domain(d3.range(nCols)).range([0, gridSize]).paddingInner(0.06);
           const y = d3.scaleBand().domain(d3.range(nRows)).range([0, gridSize]).paddingInner(0.06);
-          
+
           // Flatten matrix data
           const flatData = [];
           let minVal = Infinity, maxVal = -Infinity;
-          
+
           for (let r = 0; r < nRows; r++) {
             for (let c = 0; c < nCols; c++) {
               const value = matrix[r][c];
@@ -333,7 +334,7 @@
               flatData.push({ r, c, value, threadCount: threadCounts[r], ioSize: ioSizeLabels[c] });
             }
           }
-          
+
           // Color scale using ColorPalettes
           let colorScale;
           try {
@@ -359,11 +360,11 @@
                 .domain([maxVal, minVal]);
             }
           }
-          
+
           // Clear previous content
           gCells.selectAll('*').remove();
           gAxes.selectAll('*').remove();
-          
+
           // Background
           gCells.append('rect')
             .attr('class', 'cell-bg')
@@ -374,15 +375,15 @@
             .attr('fill', 'none')
             .attr('stroke', 'var(--border-color)')
             .attr('stroke-width', 1);
-          
+
           // Cells
           const cells = gCells.selectAll('g.cell')
             .data(flatData, d => `${d.r}-${d.c}`);
-          
+
           const cellsEnter = cells.enter()
             .append('g')
             .attr('class', 'cell');
-          
+
           cellsEnter.append('rect')
             .attr('rx', 2)
             .attr('ry', 2)
@@ -391,7 +392,7 @@
               const storageData = allData[config.storage];
               const iops = storageData.data[xferType].iops[d.r][d.c];
               const throughput = storageData.data[xferType].throughput[d.r][d.c];
-              
+
               if (metric === 'throughput') {
                 tipInner.innerHTML = `<strong>${config.storage.toUpperCase()} - ${xferType}</strong><br/>Threads: ${d.threadCount}<br/>IO Size: ${d.ioSize}<br/>Throughput: ${d.value.toFixed(2)} GiB/s<br/>IOPS: ${iops.toFixed(0)}`;
               } else {
@@ -403,21 +404,21 @@
             .on('mouseleave', () => {
               tip.style.opacity = '0';
             });
-          
+
           cellsEnter.append('text')
             .attr('class', 'cell-text')
             .attr('text-anchor', 'middle')
             .attr('dominant-baseline', 'middle');
-          
+
           const cellsMerged = cellsEnter.merge(cells);
-          
+
           cellsMerged.select('rect')
             .attr('x', d => x(d.c))
             .attr('y', d => y(d.r))
             .attr('width', Math.max(1, x.bandwidth()))
             .attr('height', Math.max(1, y.bandwidth()))
             .attr('fill', d => colorScale(d.value));
-          
+
           cellsMerged.select('text')
             .attr('x', d => x(d.c) + x.bandwidth() / 2)
             .attr('y', d => y(d.r) + y.bandwidth() / 2)
@@ -428,7 +429,7 @@
                 return d.value.toFixed(0);
               }
             })
-            .style('fill', function(d) {
+            .style('fill', function (d) {
               try {
                 const rect = this && this.parentNode ? this.parentNode.querySelector('rect') : null;
                 const bg = rect ? getComputedStyle(rect).fill : colorScale(d.value);
@@ -437,9 +438,9 @@
                 return '#0e1116';
               }
             });
-          
+
           cells.exit().remove();
-          
+
           // Axes
           gAxes.append('g')
             .selectAll('text')
@@ -450,7 +451,7 @@
             .attr('x', (_, i) => x(i) + x.bandwidth() / 2)
             .attr('y', -8)
             .text(d => d);
-          
+
           gAxes.append('g')
             .selectAll('text')
             .data(threadCounts)
@@ -461,21 +462,21 @@
             .attr('y', (_, i) => y(i) + y.bandwidth() / 2)
             .attr('dominant-baseline', 'middle')
             .text(d => d);
-          
+
           gAxes.append('text')
             .attr('class', 'axis-label')
             .attr('text-anchor', 'middle')
             .attr('x', gridSize / 2)
             .attr('y', innerHeight + 20)
             .text('IO Size');
-          
+
           gAxes.append('text')
             .attr('class', 'axis-label')
             .attr('text-anchor', 'middle')
             .attr('transform', `translate(${-40}, ${gridSize / 2}) rotate(-90)`)
             .text('Thread Count');
         }
-        
+
         return { render };
       }
 
@@ -484,18 +485,18 @@
         const width = panel.clientWidth || 400;
         const height = 280;
         const margin = { top: 30, right: 20, bottom: 20, left: 50 };
-        
+
         svg
           .attr('viewBox', `0 0 ${width} ${height}`)
           .attr('preserveAspectRatio', 'xMidYMid meet')
           .style('width', '100%')
           .style('height', 'auto');
-        
+
         gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
-        
+
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
-        
+
         return { innerWidth, innerHeight };
       }
 
@@ -523,13 +524,13 @@
         const xferType = document.getElementById('xfer-select').value;
         const metric = document.getElementById('metric-select').value;
         const metricLabel = metric === 'throughput' ? 'Bandwidth (GiB/s)' : 'IOPS';
-        
+
         // Update titles for all panels
         Object.values(panels).forEach(panelData => {
           const title = panelData.panel.querySelector('.panel-title');
           title.textContent = `${panelData.config.storage.toUpperCase()} - ${metricLabel}`;
         });
-        
+
         renderAllHeatmaps();
       }
 
@@ -539,7 +540,7 @@
 
       // Initial load
       loadAllData();
-      
+
       // Resize handling
       const rerender = () => renderAllHeatmaps();
       if (window.ResizeObserver) {
