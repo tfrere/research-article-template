@@ -525,7 +525,18 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
               console.debug("Direct parent URL update blocked:", e.message);
             }
 
-            // Méthode 2: Utiliser postMessage avec différents formats
+            // Méthode 2: Essayer avec window.top (fenêtre racine)
+            try {
+              if (window.top !== window && window.top !== window.parent) {
+                window.top.location.hash = headingId;
+                console.debug("Successfully updated top window URL directly");
+                return;
+              }
+            } catch (e) {
+              console.debug("Direct top window URL update blocked:", e.message);
+            }
+
+            // Méthode 3: Utiliser postMessage avec différents formats vers parent
             const messages = [
               {
                 type: "urlChange",
@@ -542,32 +553,48 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
                 hash: headingId,
                 url: newUrl,
               },
+              // Format officiel Hugging Face
+              {
+                queryString: "",
+                hash: headingId,
+              },
             ];
 
             messages.forEach((msg) => {
               try {
                 window.parent.postMessage(msg, "*");
               } catch (e) {
-                console.debug("PostMessage failed:", e.message);
+                console.debug("PostMessage to parent failed:", e.message);
               }
             });
 
-            // Méthode 3: Essayer avec l'origine spécifique si on peut la détecter
+            // Méthode 4: Essayer avec window.top
             try {
-              const parentOrigin = window.parent.location.origin;
+              if (window.top !== window) {
+                messages.forEach((msg) => {
+                  try {
+                    window.top.postMessage(msg, "*");
+                  } catch (e) {
+                    console.debug("PostMessage to top failed:", e.message);
+                  }
+                });
+              }
+            } catch (e) {
+              console.debug("PostMessage to top window failed:", e.message);
+            }
+
+            // Méthode 5: Essayer avec l'origine spécifique Hugging Face
+            try {
               window.parent.postMessage(
                 {
-                  type: "urlChange",
-                  url: newUrl,
+                  queryString: "",
                   hash: headingId,
                 },
-                parentOrigin,
+                "https://huggingface.co",
               );
+              console.debug("Sent HF official format message");
             } catch (e) {
-              console.debug(
-                "PostMessage with specific origin failed:",
-                e.message,
-              );
+              console.debug("HF official format failed:", e.message);
             }
           } catch (e) {
             console.debug(
@@ -646,10 +673,7 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
         if (targetElement) {
           // Attendre que le DOM soit prêt puis faire défiler vers l'élément
           setTimeout(() => {
-            targetElement.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
+            targetElement.scrollIntoView({ block: "start" });
             // Mettre à jour l'URL après le scroll
             setTimeout(() => {
               updateURL(hash.substring(1)); // Enlever le # du hash
@@ -676,11 +700,11 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       if (hash) {
         const targetElement = document.querySelector(hash);
         if (targetElement) {
-          targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+          targetElement.scrollIntoView({ block: "start" });
         }
       } else {
         // Si pas d'ancre, aller au début de la page
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0 });
       }
     });
 
