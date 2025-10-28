@@ -1,0 +1,267 @@
+<div class="gpu-sm-architecture"></div>
+
+<style>
+    .gpu-sm-architecture {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        position: relative;
+    }
+
+
+    .gpu-sm-architecture .diagram-container {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+
+
+    .gpu-sm-architecture .sm-label {
+        font-size: 14px;
+        font-weight: 700;
+        fill: white;
+        text-anchor: middle;
+    }
+
+    .gpu-sm-architecture .component-label {
+        font-size: 11px;
+        font-weight: 600;
+        fill: white;
+        text-anchor: middle;
+    }
+
+    .gpu-sm-architecture .core-label {
+        font-size: 9px;
+        font-weight: 600;
+        fill: white;
+        text-anchor: middle;
+    }
+
+    .gpu-sm-architecture .ellipsis-text {
+        font-size: 24px;
+        font-weight: bold;
+        fill: var(--muted-color);
+        text-anchor: middle;
+    }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/3.2.5/svg.min.js"></script>
+<script>
+    (() => {
+        // Prevent multiple executions
+        if (window.gpuSmArchitectureInitialized) return;
+        window.gpuSmArchitectureInitialized = true;
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('gpu-sm-architecture'))) {
+                const cs = Array.from(document.querySelectorAll('.gpu-sm-architecture')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+                container = cs[cs.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Get colors from ColorPalettes
+            const getColors = () => {
+                try {
+                    if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+                        return window.ColorPalettes.getColors('categorical', 5);
+                    }
+                } catch (_) { }
+                return ['#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9'];
+            };
+
+            const colors = getColors();
+
+            // Background colors - gray tones like training compass
+            const bgColors = {
+                sm: 'var(--surface-bg)', // Dark mode ready SM background
+                control: colors[1], // Keep categorical colors for components
+                registers: colors[2],
+                cores: colors[3],
+                cache: colors[4]
+            };
+
+            // Create diagram container
+            const diagramContainer = document.createElement('div');
+            diagramContainer.className = 'diagram-container';
+            container.appendChild(diagramContainer);
+
+            // Create responsive SVG with fixed internal dimensions
+            const containerWidth = diagramContainer.clientWidth || 1200;
+            const smHeight = 375; // Fixed internal height
+            const containerHeight = smHeight + 20; // Fixed internal height
+            const draw = SVG().addTo(diagramContainer).size('100%', containerHeight).viewbox(0, 0, containerWidth, containerHeight);
+
+            // SM dimensions - scaled to fit container width
+            const totalWidth = containerWidth - 40; // Leave 20px margin on each side
+            const smWidth = (totalWidth - 80) / 3; // Total width minus spacings, divided by 3 SMs
+            const normalSpacing = 20; // Normal spacing between blocks
+            const ellipsisSpacing = 80; // Much larger spacing for ellipsis
+
+            // Perfect centering
+            const startX = 0; // Fixed margin from left edge
+            const startY = 0; // Small top margin instead of centering vertically
+
+            // Create 3 SM blocks with different spacing
+            let currentX = startX;
+            for (let i = 0; i < 3; i++) {
+                const x = currentX;
+                const y = startY;
+
+                // Adjust spacing based on position
+                if (i === 0) {
+                    // After 1st SM: normal spacing (no ellipsis)
+                    currentX += smWidth + normalSpacing;
+                } else if (i === 1) {
+                    // After 2nd SM: large spacing (with ellipsis)
+                    currentX += smWidth + ellipsisSpacing;
+                }
+
+                // Create SM group
+                const smGroup = draw.group().id(`sm-${i}`);
+
+                // SM background
+                const smBg = smGroup.rect(smWidth, smHeight)
+                    .fill(bgColors.sm)
+                    .stroke({ color: 'var(--border-color)', width: 1.5 })
+                    .radius(12)
+                    .move(x, y);
+
+                // SM label
+                smGroup.text('SM')
+                    .font({ size: 28, weight: 'bold' })
+                    .fill('var(--text-color)')
+                    .center(x + smWidth / 2, y + 35);
+
+                // Control Unit
+                const controlY = y + 70;
+                smGroup.rect(smWidth - 30, 35)
+                    .fill(bgColors.control)
+                    .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                    .radius(8)
+                    .move(x + 15, controlY);
+                smGroup.text('Control')
+                    .font({ size: 16, weight: '600' })
+                    .fill('white')
+                    .center(x + smWidth / 2, controlY + 17.5);
+
+                // Registers
+                const registersY = controlY + 50;
+                smGroup.rect(smWidth - 30, 35)
+                    .fill(bgColors.registers)
+                    .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                    .radius(8)
+                    .move(x + 15, registersY);
+                smGroup.text('Registers')
+                    .font({ size: 16, weight: '600' })
+                    .fill('white')
+                    .center(x + smWidth / 2, registersY + 17.5);
+
+                // Cores container
+                const coresY = registersY + 50;
+                const coresWidth = smWidth - 30;
+                const coresHeight = 82.5; // Slightly increased height
+                const coresPerRow = 4;
+                const coresRows = 2;
+                const coreSpacing = 8;
+
+                // Calculate core size to fill available width
+                const availableWidth = coresWidth - (coresPerRow - 1) * coreSpacing - 20; // 20px padding
+                const coreSize = availableWidth / coresPerRow;
+
+                // Cores background
+                smGroup.rect(coresWidth, coresHeight)
+                    .fill('rgba(0,0,0,0.05)')
+                    .radius(8)
+                    .stroke({ color: 'var(--border-color)', width: 1.5 })
+                    .move(x + 15, coresY);
+
+                // Create 8 cores (4x2 grid) - fill full width
+                const startCoreX = x + 15 + 10; // Left padding
+                const startCoreY = coresY + 10; // Top padding
+
+                for (let row = 0; row < coresRows; row++) {
+                    for (let col = 0; col < coresPerRow; col++) {
+                        const coreX = startCoreX + col * (coreSize + coreSpacing);
+                        const coreY = startCoreY + row * (coreSize + coreSpacing);
+
+                        smGroup.rect(coreSize, coreSize)
+                            .fill(bgColors.cores)
+                            .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                            .radius(4)
+                            .move(coreX, coreY);
+
+                        smGroup.text('Core')
+                            .font({ size: 10, weight: '600' })
+                            .fill('white')
+                            .center(coreX + coreSize / 2, coreY + coreSize / 2);
+                    }
+                }
+
+                // Constant Cache
+                const cacheY = coresY + coresHeight + 15;
+                smGroup.rect(smWidth - 30, 35)
+                    .fill(bgColors.cache)
+                    .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                    .radius(8)
+                    .move(x + 15, cacheY);
+                smGroup.text('Constant Cache')
+                    .font({ size: 16, weight: '600' })
+                    .fill('white')
+                    .center(x + smWidth / 2, cacheY + 17.5);
+
+                // Shared Memory and L1 Cache (side by side with line breaks)
+                const memoryY = cacheY + 50;
+                const memoryWidth = (smWidth - 40) / 2;
+
+                // Shared Memory (left side)
+                smGroup.rect(memoryWidth, 40)
+                    .fill(bgColors.cache)
+                    .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                    .radius(8)
+                    .move(x + 15, memoryY);
+                smGroup.text('Shared')
+                    .font({ size: 12, weight: '600' })
+                    .fill('white')
+                    .center(x + 15 + memoryWidth / 2, memoryY + 12);
+                smGroup.text('Memory')
+                    .font({ size: 12, weight: '600' })
+                    .fill('white')
+                    .center(x + 15 + memoryWidth / 2, memoryY + 28);
+
+                // L1 Cache (right side)
+                smGroup.rect(memoryWidth, 40)
+                    .fill(bgColors.cache)
+                    .stroke({ color: 'rgba(0,0,0,0.2)', width: 1 })
+                    .radius(8)
+                    .move(x + 15 + memoryWidth + 10, memoryY);
+                smGroup.text('L1')
+                    .font({ size: 12, weight: '600' })
+                    .fill('white')
+                    .center(x + 15 + memoryWidth + 10 + memoryWidth / 2, memoryY + 12);
+                smGroup.text('Cache')
+                    .font({ size: 12, weight: '600' })
+                    .fill('white')
+                    .center(x + 15 + memoryWidth + 10 + memoryWidth / 2, memoryY + 28);
+
+                // Add ellipsis between SMs (only between 2nd and 3rd)
+                if (i === 1) {
+                    draw.text('...')
+                        .font({ size: 42, weight: 'bold' })
+                        .fill('var(--muted-color)')
+                        .center(x + smWidth + ellipsisSpacing / 2, y + smHeight / 2);
+                }
+            }
+
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+        } else {
+            bootstrap();
+        }
+    })();
+</script>
