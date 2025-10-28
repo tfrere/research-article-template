@@ -67,10 +67,10 @@
             const getColors = () => {
                 try {
                     if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
-                        return window.ColorPalettes.getColors('categorical', 5);
+                        return window.ColorPalettes.getColors('categorical', 4);
                     }
                 } catch (_) { }
-                return ['#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9'];
+                return ['#64748b', '#94a3b8', '#cbd5e1', '#e2e8f0'];
             };
 
             const colors = getColors();
@@ -78,10 +78,10 @@
             // Background colors - gray tones like training compass
             const bgColors = {
                 sm: 'var(--surface-bg)', // Dark mode ready SM background
-                control: colors[1], // Keep categorical colors for components
-                registers: colors[2],
-                cores: colors[3],
-                cache: colors[4]
+                control: colors[0], // Keep categorical colors for components
+                registers: colors[1],
+                cores: colors[2],
+                cache: colors[3]
             };
 
             // Create diagram container

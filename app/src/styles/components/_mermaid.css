@@ -2,6 +2,32 @@
     color: black !important;
 }
 
+.mermaid .cluster-label .nodeLabel {
+    color: var(--text-color) !important;
+}
+
+/* Styles pour le texte des subgraphs/clusters - gérer les foreignObject */
+.mermaid .cluster-label text,
+.mermaid .cluster-label .nodeLabel text,
+.mermaid .cluster-label foreignObject,
+.mermaid .cluster-label foreignObject div,
+.mermaid .cluster-label foreignObject span {
+    color: var(--text-color) !important;
+    fill: var(--text-color) !important;
+}
+
+/* Styles spécifiques pour les clusters/subgraphs */
+.mermaid .cluster rect {
+    fill: transparent !important;
+    stroke: var(--border-color) !important;
+    stroke-width: 1px !important;
+}
+
+.mermaid .cluster-label {
+    color: var(--text-color) !important;
+    fill: var(--text-color) !important;
+}
+
 /* Masquer le flicker pendant la conversion */
 .mermaid-zoom-wrapper.converting {
     opacity: 0.7;

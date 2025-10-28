@@ -485,14 +485,36 @@ tableOfContentsAutoCollapse: true
 
 
 /**
- * Add a blank line after each markdown table
- * @param {string} content - MDX content
- * @returns {string} - Content with blank lines after tables
+ * Check if a line is a table line
+ * @param {string} line - Line to check
+ * @returns {boolean} - True if it's a table line
  */
-function addBlankLineAfterTables(content) {
-    console.log('  📋 Adding blank lines after tables...');
+function isTableLine(line) {
+    const trimmed = line.trim();
+    return trimmed.startsWith('|') && trimmed.endsWith('|');
+}
 
-    let addedCount = 0;
+/**
+ * Check if a line is a list item
+ * @param {string} line - Line to check
+ * @returns {boolean} - True if it's a list item
+ */
+function isListItem(line) {
+    const trimmed = line.trim();
+    // Match: * -, + (bullet points) or 1. 2. 3. (numbered lists)
+    return /^\s*[\*\-\+]\s/.test(trimmed) || /^\s*\d+\.\s/.test(trimmed);
+}
+
+/**
+ * Add a blank line after each markdown table and list
+ * @param {string} content - MDX content
+ * @returns {string} - Content with blank lines after tables and lists
+ */
+function addBlankLineAfterTablesAndLists(content) {
+    console.log('  📋 Adding blank lines after tables and lists...');
+
+    let addedTableCount = 0;
+    let addedListCount = 0;
     const lines = content.split('\n');
     const result = [];
 
@@ -500,18 +522,18 @@ function addBlankLineAfterTables(content) {
         result.push(lines[i]);
 
         // Check if current line is the end of a table
-        if (lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+        if (isTableLine(lines[i])) {
             // Look ahead to see if this is the last line of a table
             let isLastTableLine = false;
 
             // Check if next line is empty or doesn't start with |
             if (i + 1 >= lines.length ||
                 lines[i + 1].trim() === '' ||
-                !lines[i + 1].trim().startsWith('|')) {
+                !isTableLine(lines[i + 1])) {
 
                 // Look back to find if we're actually inside a table
                 let tableLineCount = 0;
-                for (let j = i; j >= 0 && lines[j].trim().startsWith('|') && lines[j].trim().endsWith('|'); j--) {
+                for (let j = i; j >= 0 && isTableLine(lines[j]); j--) {
                     tableLineCount++;
                 }
 
@@ -522,16 +544,33 @@ function addBlankLineAfterTables(content) {
             }
 
             if (isLastTableLine) {
-                addedCount++;
+                addedTableCount++;
+                result.push(''); // Add blank line
+            }
+        }
+        // Check if current line is the end of a list
+        else if (isListItem(lines[i])) {
+            // Look ahead to see if this is the last line of a list
+            let isLastListItem = false;
+
+            // Check if next line is empty or doesn't start with list marker
+            if (i + 1 >= lines.length ||
+                lines[i + 1].trim() === '' ||
+                !isListItem(lines[i + 1])) {
+                isLastListItem = true;
+            }
+
+            if (isLastListItem) {
+                addedListCount++;
                 result.push(''); // Add blank line
             }
         }
     }
 
-    if (addedCount > 0) {
-        console.log(`    ✅ Added blank line after ${addedCount} table(s)`);
+    if (addedTableCount > 0 || addedListCount > 0) {
+        console.log(`    ✅ Added blank line after ${addedTableCount} table(s) and ${addedListCount} list(s)`);
     } else {
-        console.log('    ℹ️  No tables found to process');
+        console.log('    ℹ️  No tables or lists found to process');
     }
 
     return result.join('\n');
@@ -703,8 +742,8 @@ async function processMdxContent(content, pageId = null, notionToken = null, out
     // Apply essential steps only
     processedContent = await ensureFrontmatter(processedContent, pageId, notionToken);
 
-    // Add blank lines after tables
-    processedContent = addBlankLineAfterTables(processedContent);
+    // Add blank lines after tables and lists
+    processedContent = addBlankLineAfterTablesAndLists(processedContent);
 
     // Transform markdown images to Image components
     processedContent = transformMarkdownImages(processedContent);
