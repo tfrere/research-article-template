@@ -318,7 +318,7 @@ you can find an overview here <a href="https://huggingface.co/science" target="_
 
 Hopefully, this section has convinced you that there is value in thinking deeply about why you want to train a model.
 
- **For the rest of this blog post, we'll assume you've done this**soul-searching**  **and have a legitimate reason to train.** 
+ **For the rest of this blog post, we'll assume you've done this soul-searching and have a legitimate reason to train.** 
 
 ### What: translating goals into decisions
 
@@ -1228,7 +1228,7 @@ We started this section by saying that transformers need positional information 
 
  **NoPE (No Position Embedding)**  [@nope] trains transformers without any explicit positional encoding, allowing the model to implicitly learn positional information through causal masking and attention patterns. The authors show that this approach demonstrates better length generalisetion compared to ALiBi and RoPE. Without explicit position encoding to extrapolate beyond training lengths, NoPE naturally handles longer contexts. In practice though, NoPE models tend to show weaker performance on short context reasoning and knowledge tasks compared to RoPE  ([Yang et al](https://arxiv.org/pdf/2501.18795).). This suggests that while explicit positional encodings may limit extrapolation, they provide useful inductive biases for tasks within the training context length.
 
- **RNoPE Hybrid Approach:** Given these trade-offs; **@rnope**  suggest that combining different positional encoding strategies might be interesting. They introduce,  **RNoPE**** alternates between RoPE and NoPE layers throughout the model. RoPE layers provide explicit positional information and handle local context with recency bias, while NoPE layers improve information retrieval across long distances. This technique was recently used in Llama4, Command A and SmolLM3.
+ **RNoPE Hybrid Approach:** Given these trade-offs; **@rnope**  suggest that combining different positional encoding strategies might be interesting. They introduce,  **RNoPE** alternates between RoPE and NoPE layers throughout the model. RoPE layers provide explicit positional information and handle local context with recency bias, while NoPE layers improve information retrieval across long distances. This technique was recently used in Llama4, Command A and SmolLM3.
 
 <Note title="Naming convention" emoji="📍" variant="info">
 
@@ -2391,7 +2391,7 @@ The batch size is the number of samples processed before updating model weights.
 Throughput is the number of tokens processed per second during training.
 </Sidenote>
 
--  **Increasing the batch size while staying b**elow critical** : after increasing the batch size and retuning the learning rate, you reach the same loss with the same number of tokens as the smaller batch size run, no data is wasted.
+-  **Increasing the batch size while staying below critical** : after increasing the batch size and retuning the learning rate, you reach the same loss with the same number of tokens as the smaller batch size run, no data is wasted.
 -  **Increasing the batch size while staying above critical** : larger batches start to sacrifice data efficiency; reaching the same loss now requires more total tokens (and thus more money), even if wall-clock time drops because more chips are busy.
 
 Let's try to give some intuition about why we need to retune the learning rate, and how to compute an estimation of what the critical batch size should be. 
@@ -2603,7 +2603,7 @@ Recent work has proposed automated approaches for finding optimal data proportio
 
 - DoReMi [@xie2023doremioptimizingdatamixtures]: Uses a small proxy model to learn domain weights that minimize validation loss
 - Rho Loss [@mindermann2022prioritizedtrainingpointslearnable]: Selects individual training points based on a holdout loss, prioritizing samples that are learnable, task-relevant, and not yet learned by the model
-- RegMix **** [@liu2025regmixdatamixtureregression]: Determines optimal data mixture proportions through regularized regression that balances performance across multiple evaluation objectives and data domains
+- **RegMix** [@liu2025regmixdatamixtureregression]: Determines optimal data mixture proportions through regularized regression that balances performance across multiple evaluation objectives and data domains
 
 We experimented with DoReMi and Rho Loss in past projects, but found they tend to converge toward distributions that roughly mirror the natural distribution of dataset sizes, essentially suggesting to use more of what we have more of. While theoretically appealing, they didn't outperform careful manual ablations in our setting. Recent SOTA models still rely on manual mixture tuning through systematic ablations and annealing experiments, which is the approach we adopted for SmolLM3.
 
@@ -3143,7 +3143,7 @@ A hybrid reasoning model operates in two distinct modes: one for concise, direct
 
 Just like pre-training, post-training benefits from a clear compass to avoid wasted research and engineering cycles. Here's how to frame it:
 
-1.  **Why**post-train?**  The three motivations for training that we outlined in the [pretraining compass](#training-compass-why--what--how)—research, production, and strategic open-source—apply equally to post-training. For example, you might be exploring whether RL can unlock new reasoning capabilities in an existing model (research), or you might need to distill a large model into a smaller one for latency reasons (production), or you may have identified a gap where no strong open model exists for a specific use case (strategic open-source). The distinction is that post-training builds on existing capabilities rather than creating them from scratch. However, before reaching for your GPUs, ask yourself:
+1.  **Why post-train?**  The three motivations for training that we outlined in the [pretraining compass](#training-compass-why--what--how)—research, production, and strategic open-source—apply equally to post-training. For example, you might be exploring whether RL can unlock new reasoning capabilities in an existing model (research), or you might need to distill a large model into a smaller one for latency reasons (production), or you may have identified a gap where no strong open model exists for a specific use case (strategic open-source). The distinction is that post-training builds on existing capabilities rather than creating them from scratch. However, before reaching for your GPUs, ask yourself:
     - Do you really need to post-train? Many open-weight models now rival proprietary ones on a wide range of tasks. Some can even be run locally with quantisation and modest compute. If you want a generalist assistant, an off-the-shelf model from the [Hugging Face Hub](https://huggingface.co/models) may already meet your needs.
     - Do you have access to high-quality, domain specific data? Post-training makes most sense when you are targeting a specific task or domain where a generalist model underperforms. With the right data, you can tune the model to produce more accurate outputs for the applications you care most about.
     - Can you measure success? Without clear evaluation criteria, you won't know if post-training really helps.
@@ -4849,7 +4849,7 @@ For more details, see the <a href="https://download.deltacomputer.com/NVIDIA%20G
 
  **⚠️ NUMA Affinity: Critical for Multi-Socket Performance** 
 
-On multi-socket systems like our AMD EPYC 7R13 nodes (2 sockets, 48 cores each),  **NUMA affinity**is crucial for GPU performance.**  It refers to running processes on CPU cores that share the same socket as their target devices (like GPUs). When your GPU process runs on CPUs from a different NUMA node than where the GPU is attached, operations must traverse the CPU interconnect (AMD Infinity Fabric), adding significant latency and bandwidth constraints.
+On multi-socket systems like our AMD EPYC 7R13 nodes (2 sockets, 48 cores each), **NUMA affinity is crucial for GPU performance.**  It refers to running processes on CPU cores that share the same socket as their target devices (like GPUs). When your GPU process runs on CPUs from a different NUMA node than where the GPU is attached, operations must traverse the CPU interconnect (AMD Infinity Fabric), adding significant latency and bandwidth constraints.
 
  **First, let's examine the NUMA topology and node distances to understand the performance implications** :
 
