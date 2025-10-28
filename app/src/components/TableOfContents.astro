@@ -513,20 +513,67 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       if (window.location.href !== newUrl) {
         history.pushState(null, null, newUrl);
 
-        // Communiquer avec l'iframe parent (pour les Spaces HF)
+        // Essayer différentes méthodes pour communiquer avec la fenêtre parente
         if (window.parent !== window) {
           try {
-            window.parent.postMessage(
+            // Méthode 1: Essayer de modifier directement l'URL du parent (si autorisé)
+            try {
+              window.parent.location.hash = headingId;
+              console.debug("Successfully updated parent URL directly");
+              return;
+            } catch (e) {
+              console.debug("Direct parent URL update blocked:", e.message);
+            }
+
+            // Méthode 2: Utiliser postMessage avec différents formats
+            const messages = [
               {
                 type: "urlChange",
                 url: newUrl,
                 hash: headingId,
               },
-              "*",
-            );
+              {
+                type: "anchorChange",
+                anchorId: headingId,
+                url: newUrl,
+              },
+              {
+                type: "HF_SPACE_URL_UPDATE",
+                hash: headingId,
+                url: newUrl,
+              },
+            ];
+
+            messages.forEach((msg) => {
+              try {
+                window.parent.postMessage(msg, "*");
+              } catch (e) {
+                console.debug("PostMessage failed:", e.message);
+              }
+            });
+
+            // Méthode 3: Essayer avec l'origine spécifique si on peut la détecter
+            try {
+              const parentOrigin = window.parent.location.origin;
+              window.parent.postMessage(
+                {
+                  type: "urlChange",
+                  url: newUrl,
+                  hash: headingId,
+                },
+                parentOrigin,
+              );
+            } catch (e) {
+              console.debug(
+                "PostMessage with specific origin failed:",
+                e.message,
+              );
+            }
           } catch (e) {
-            // Ignorer les erreurs de communication avec le parent
-            console.debug("Could not communicate with parent window:", e);
+            console.debug(
+              "All parent communication methods failed:",
+              e.message,
+            );
           }
         }
       }

@@ -9,27 +9,29 @@ function applyMermaidStylesToSvg(svgElement) {
         const isDark = document.documentElement.getAttribute("data-theme") === "dark";
         console.log(`🎨 Applying Mermaid styles for theme: ${isDark ? 'dark' : 'light'}`);
 
-        // Couleurs selon le thème
+        // Couleurs selon le thème - avec plus de contraste pour le zoom
         const colors = isDark ? {
             nodeFill: '#1a1a1a',
             nodeStroke: '#ffffff',
-            nodeStrokeWidth: '1',
+            nodeStrokeWidth: '2', // Plus épais pour plus de visibilité
             clusterFill: '#2a2a2a',
             clusterStroke: '#ffffff',
-            clusterStrokeWidth: '1',
+            clusterStrokeWidth: '2',
             pathStroke: '#ffffff',
-            pathStrokeWidth: '1',
-            textColor: '#ffffff'
+            pathStrokeWidth: '2', // Plus épais pour les flèches
+            textColor: '#ffffff',
+            linkColor: '#ffffff' // Couleur spécifique pour les liens
         } : {
             nodeFill: '#ffffff',
-            nodeStroke: '#333333',
-            nodeStrokeWidth: '1',
+            nodeStroke: '#000000', // Noir pur pour plus de contraste
+            nodeStrokeWidth: '2',
             clusterFill: '#f9f9f9',
-            clusterStroke: '#333333',
-            clusterStrokeWidth: '1',
-            pathStroke: '#333333',
-            pathStrokeWidth: '1',
-            textColor: '#333333'
+            clusterStroke: '#000000', // Noir pur
+            clusterStrokeWidth: '2',
+            pathStroke: '#000000', // Noir pur pour les flèches
+            pathStrokeWidth: '2',
+            textColor: '#000000', // Noir pur
+            linkColor: '#000000' // Noir pur pour les liens
         };
 
         // Appliquer border-radius aux rectangles
@@ -74,17 +76,31 @@ function applyMermaidStylesToSvg(svgElement) {
             }
         });
 
-        // Appliquer les couleurs aux chemins
-        const paths = svgElement.querySelectorAll('.edgePath');
+        // Appliquer les couleurs aux chemins et flèches
+        const paths = svgElement.querySelectorAll('.edgePath, path, .flowchart-link');
         paths.forEach(path => {
             path.setAttribute('stroke', colors.pathStroke);
             path.setAttribute('stroke-width', colors.pathStrokeWidth);
+        });
+
+        // Appliquer les couleurs aux liens spécifiquement
+        const links = svgElement.querySelectorAll('.flowchart-link, .edgeLabel');
+        links.forEach(link => {
+            link.setAttribute('stroke', colors.linkColor);
+            link.setAttribute('fill', colors.linkColor);
         });
 
         // Appliquer les couleurs au texte
         const textElements = svgElement.querySelectorAll('text, .nodeLabel text, .edgeLabel text');
         textElements.forEach(text => {
             text.setAttribute('fill', colors.textColor);
+        });
+
+        // Appliquer les couleurs aux marqueurs de flèches
+        const markers = svgElement.querySelectorAll('marker, marker path');
+        markers.forEach(marker => {
+            marker.setAttribute('fill', colors.pathStroke);
+            marker.setAttribute('stroke', colors.pathStroke);
         });
 
         console.log(`🎨 Applied Mermaid styles: ${rects.length} rects, ${clusters.length} clusters, ${paths.length} paths, ${textElements.length} text elements`);
@@ -199,25 +215,40 @@ function convertSvgToImagePreservingDimensions(svgElement, wrapper, originalMerm
         // Appliquer les styles Mermaid
         applyMermaidStylesToSvg(clonedSvg);
 
-        // Forcer les dimensions exactes du wrapper sur le SVG
-        clonedSvg.setAttribute('width', wrapperWidth);
-        clonedSvg.setAttribute('height', wrapperHeight);
-        clonedSvg.style.width = `${wrapperWidth}px`;
-        clonedSvg.style.height = `${wrapperHeight}px`;
+        // Créer une image PLUS GRANDE pour permettre un vrai zoom (2x la taille)
+        const zoomFactor = 2;
+        const imageWidth = wrapperWidth * zoomFactor;
+        const imageHeight = wrapperHeight * zoomFactor;
+
+        // Forcer les dimensions plus grandes sur le SVG
+        clonedSvg.setAttribute('width', imageWidth);
+        clonedSvg.setAttribute('height', imageHeight);
+        clonedSvg.style.width = `${imageWidth}px`;
+        clonedSvg.style.height = `${imageHeight}px`;
+
+        console.log(`🔍 Creating zoomable image:`, {
+            original: { width: wrapperWidth, height: wrapperHeight },
+            zoomed: { width: imageWidth, height: imageHeight },
+            factor: zoomFactor
+        });
 
         // Créer une URL data pour le SVG
         const svgData = new XMLSerializer().serializeToString(clonedSvg);
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const svgUrl = URL.createObjectURL(svgBlob);
 
-        // Créer un élément img avec les MÊMES dimensions que le wrapper
+        // Créer un élément img avec les dimensions du wrapper (affichage normal)
         const imgElement = document.createElement('img');
         imgElement.src = svgUrl;
-        imgElement.style.width = `${wrapperWidth}px`;
-        imgElement.style.height = `${wrapperHeight}px`;
+        imgElement.style.width = `${wrapperWidth}px`;  // Affichage normal
+        imgElement.style.height = `${wrapperHeight}px`; // Affichage normal
         imgElement.style.display = 'block';
         imgElement.setAttribute('data-zoomable', '1');
         imgElement.classList.add('mermaid-zoom-image'); // Classe spécifique pour Mermaid
+
+        // Ajouter les attributs pour medium-zoom (dimensions réelles de l'image)
+        imgElement.setAttribute('data-zoom-width', imageWidth);
+        imgElement.setAttribute('data-zoom-height', imageHeight);
 
         console.log(`🖼️ Image created with exact dimensions:`, { width: wrapperWidth, height: wrapperHeight });
 
@@ -691,7 +722,7 @@ function setupMermaidZoom() {
             } else {
                 console.log(`❌ No SVG found in Mermaid element ${index}`);
             }
-        }, 2000);
+        }, 1000); // Réduit de 2000ms à 1000ms pour être plus rapide
     });
 }
 
@@ -778,7 +809,7 @@ window.addEventListener("load", () => {
 
 // Observer simple pour les nouveaux diagrammes Mermaid
 const observer = new MutationObserver(() => {
-    setTimeout(initMermaidZoom, 500);
+    setTimeout(initMermaidZoom, 200); // Réduit de 500ms à 200ms
 });
 
 observer.observe(document.body, {
@@ -786,4 +817,4 @@ observer.observe(document.body, {
     subtree: true,
 });
 
-console.log("🚀 Mermaid Zoom Script v14.0 loaded - REAL medium-zoom with JavaScript z-index fix");
+console.log("🚀 Mermaid Zoom Script v18.0 loaded - Enhanced contrast for arrows and links");
