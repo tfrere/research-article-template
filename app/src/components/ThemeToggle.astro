@@ -59,14 +59,34 @@
       else if (media.addListener) media.addListener(syncWithSystem);
     }
 
+    const toggleTheme = () => {
+      const next =
+        document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      apply(next);
+    };
+
     if (btn) {
-      btn.addEventListener("click", () => {
-        const next =
-          document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-        localStorage.setItem("theme", next);
-        apply(next);
-      });
+      btn.addEventListener("click", toggleTheme);
     }
+
+    // Ajouter le raccourci clavier pour la touche D
+    document.addEventListener("keydown", (e) => {
+      // Vérifier que la touche D est pressée et qu'on n'est pas dans un input/textarea
+      if (e.key === "d" || e.key === "D") {
+        const activeElement = document.activeElement;
+        const isInput =
+          activeElement &&
+          (activeElement.tagName === "INPUT" ||
+            activeElement.tagName === "TEXTAREA" ||
+            (activeElement as HTMLElement).contentEditable === "true");
+
+        if (!isInput) {
+          e.preventDefault();
+          toggleTheme();
+        }
+      }
+    });
   </script>
 </button>
 
