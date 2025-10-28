@@ -187,6 +187,25 @@
     margin: 12px 0 0 0;
     flex-wrap: wrap;
   }
+
+  /* Trackio footer */
+  .d3-line-chart .trackio-footer {
+    text-align: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-line-chart .trackio-footer a {
+    font-size: 11px;
+    color: var(--muted-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .d3-line-chart .trackio-footer a:hover {
+    color: var(--text-color);
+  }
 </style>
 <script>
   (() => {
@@ -274,6 +293,12 @@
 
       container.appendChild(chartCard);
       container.appendChild(header);
+
+      // Add Trackio footer
+      const footer = document.createElement('div');
+      footer.className = 'trackio-footer';
+      footer.innerHTML = '<a href="https://github.com/gradio-app/trackio" target="_blank" rel="noopener noreferrer">Made with Trackio</a>';
+      container.appendChild(footer);
 
       const d3 = window.d3;
 

@@ -246,6 +246,25 @@
     border-radius: 3px;
     border: 1px solid var(--border-color);
   }
+
+  /* Trackio footer */
+  .d3-multi-charts .trackio-footer {
+    text-align: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-multi-charts .trackio-footer a {
+    font-size: 11px;
+    color: var(--muted-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .d3-multi-charts .trackio-footer a:hover {
+    color: var(--text-color);
+  }
 </style>
 <script>
   (() => {
@@ -327,6 +346,12 @@
       const grid = document.createElement('div');
       grid.className = 'd3-multi-charts__grid';
       container.appendChild(grid);
+
+      // Add Trackio footer
+      const footer = document.createElement('div');
+      footer.className = 'trackio-footer';
+      footer.innerHTML = '<a href="https://github.com/gradio-app/trackio" target="_blank" rel="noopener noreferrer">Made with Trackio</a>';
+      container.appendChild(footer);
 
       // Create chart cells
       CONFIG.charts.forEach((chartConfig, idx) => {
