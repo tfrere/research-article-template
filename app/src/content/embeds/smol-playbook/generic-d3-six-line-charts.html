@@ -1,0 +1,874 @@
+<!-- 
+  Multi-Line Charts Grid
+  
+  A configurable grid of line charts with zoom/pan, smoothing, and hover tooltips.
+  
+  Configuration via data-config attribute:
+  {
+    "dataUrl": "./assets/data/your_data.csv",
+    "charts": [
+      { "title": "Chart 1", "metric": "metric1" },
+      { "title": "Chart 2", "metric": "metric2" },
+      ...
+    ],
+    "smoothingWindow": 15,
+    "smoothingCurve": "monotoneX",
+    "gridColumns": 3  // Optional: number of columns (default: 3)
+  }
+  
+  CSV format: run_name, step, metric1, metric2, ...
+  
+  Example usage in MDX:
+  <HtmlEmbed 
+    src="embeds/d3-six-line-charts.html" 
+    config={{ 
+      dataUrl: "./assets/data/attention_evals.csv",
+      charts: [
+        { title: "HellaSwag", metric: "hellaswag" },
+        { title: "MMLU", metric: "mmlu" },
+        { title: "ARC", metric: "arc" },
+        { title: "PIQA", metric: "piqa" },
+        { title: "OpenBookQA", metric: "openbookqa" },
+        { title: "WinoGrande", metric: "winogrande" }
+      ],
+      smoothingWindow: 15
+    }} 
+  />
+-->
+<div class="d3-multi-charts"></div>
+<style>
+  .d3-multi-charts {
+    position: relative;
+    container-type: inline-size;
+  }
+
+  /* Legend header */
+  .d3-multi-charts__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .d3-multi-charts__header .legend-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+    max-width: 80%;
+  }
+
+  .d3-multi-charts__header .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-multi-charts__header .legend-bottom .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    justify-content: center;
+  }
+
+  .d3-multi-charts__header .legend-bottom .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .d3-multi-charts__header .legend-bottom .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+
+  /* Grid */
+  .d3-multi-charts__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  /* Container queries - basées sur la largeur du container parent, pas de la viewport */
+  @container (max-width: 900px) {
+    .d3-multi-charts__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @container (max-width: 600px) {
+    .d3-multi-charts__grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .chart-cell {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 12px;
+    box-shadow: inset 0 0 0 1px var(--border-color);
+    border-radius: 8px;
+  }
+
+  .chart-cell__title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .chart-cell__body {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .chart-cell__body svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Reset button */
+  .chart-cell .reset-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+  }
+
+  /* Axes */
+  .d3-multi-charts .axes path {
+    display: none;
+  }
+
+  .d3-multi-charts .axes line {
+    stroke: var(--axis-color);
+  }
+
+  .d3-multi-charts .axes text {
+    fill: var(--tick-color);
+    font-size: 10px;
+  }
+
+  .d3-multi-charts .axis-label {
+    fill: var(--text-color);
+    font-size: 10px;
+    font-weight: 300;
+    opacity: 0.7;
+    stroke: var(--page-bg, white);
+    stroke-width: 3px;
+    paint-order: stroke fill;
+  }
+
+  .d3-multi-charts .grid line {
+    stroke: var(--grid-color);
+  }
+
+  /* Lines */
+  .d3-multi-charts path.main-line {
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-multi-charts path.ghost-line {
+    transition: opacity 0.6s ease;
+  }
+
+  /* Ghosting on hover */
+  .d3-multi-charts.hovering path.main-line.ghost {
+    opacity: .25;
+  }
+
+  .d3-multi-charts.hovering path.ghost-line.ghost {
+    opacity: .05;
+  }
+
+  .d3-multi-charts.hovering .legend-bottom .item.ghost {
+    opacity: .35;
+  }
+
+  /* Tooltip */
+  .d3-multi-charts .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-multi-charts .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+  }
+
+  .d3-multi-charts .d3-tooltip__inner>div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+
+  .d3-multi-charts .d3-tooltip__inner>div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+
+  .d3-multi-charts .d3-tooltip__inner>div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-multi-charts .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  /* Trackio footer removed */
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-multi-charts'))) {
+        const cs = Array.from(document.querySelectorAll('.d3-multi-charts')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      const d3 = window.d3;
+
+      // Read config from HtmlEmbed props
+      function readEmbedConfig() {
+        let mountEl = container;
+        while (mountEl && !mountEl.getAttribute?.('data-config')) {
+          mountEl = mountEl.parentElement;
+        }
+
+        let providedConfig = null;
+        try {
+          const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+          if (cfg && cfg.trim()) {
+            providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+          }
+        } catch (e) {
+          // Failed to parse data-config
+        }
+        return providedConfig || {};
+      }
+
+      const embedConfig = readEmbedConfig();
+
+      // Configuration
+      const CONFIG = {
+        dataUrl: embedConfig.dataUrl || './assets/data/attention_evals.csv',
+        charts: embedConfig.charts || [],
+        smoothing: embedConfig.smoothing !== undefined ? embedConfig.smoothing : false,
+        smoothingWindow: embedConfig.smoothingWindow || 15,
+        smoothingCurve: embedConfig.smoothingCurve || 'monotoneX',
+        gridColumns: embedConfig.gridColumns || 3,
+        chartHeight: 240,
+        margin: { top: 20, right: 20, bottom: 40, left: 50 },
+        zoomExtent: [1.0, 8],
+        xAxisLabel: embedConfig.xAxisLabel || 'Consumed tokens',
+        yAxisLabel: embedConfig.yAxisLabel || 'Value',
+        xColumn: embedConfig.xColumn || 'tokens',
+        runColumn: embedConfig.runColumn || 'run_name'
+      };
+
+      if (!CONFIG.charts.length) {
+        container.innerHTML = '<p style="color: var(--danger); font-size: 12px;">Error: No charts configured</p>';
+        return;
+      }
+
+      // Create legend header
+      const header = document.createElement('div');
+      header.className = 'd3-multi-charts__header';
+      header.innerHTML = `
+      <div class="legend-bottom">
+        <div class="legend-title">Legend</div>
+        <div class="items"></div>
+      </div>
+    `;
+      container.appendChild(header);
+
+      // Create grid
+      const grid = document.createElement('div');
+      grid.className = 'd3-multi-charts__grid';
+      container.appendChild(grid);
+
+      // Trackio footer removed
+
+      // Create chart cells
+      CONFIG.charts.forEach((chartConfig, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'chart-cell';
+        cell.style.zIndex = CONFIG.charts.length - idx; // Stacking order
+        cell.innerHTML = `
+        <div class="chart-cell__title">${chartConfig.title}</div>
+        <button class="reset-button">Reset</button>
+        <div class="chart-cell__body"></div>
+      `;
+        grid.appendChild(cell);
+      });
+
+      // Data
+      let allData = [];
+      let runList = [];
+      let runColorMap = {};
+
+      // Smoothing
+      const getCurve = (smooth) => {
+        if (!smooth) return d3.curveLinear;
+        switch (CONFIG.smoothingCurve) {
+          case 'catmullRom': return d3.curveCatmullRom.alpha(0.5);
+          case 'monotoneX': return d3.curveMonotoneX;
+          case 'basis': return d3.curveBasis;
+          default: return d3.curveLinear;
+        }
+      };
+
+      function movingAverage(values, windowSize) {
+        if (!Array.isArray(values) || values.length === 0 || windowSize <= 1) return values;
+        const half = Math.floor(windowSize / 2);
+        const out = new Array(values.length);
+        for (let i = 0; i < values.length; i++) {
+          let sum = 0; let count = 0;
+          const start = Math.max(0, i - half);
+          const end = Math.min(values.length - 1, i + half);
+          for (let j = start; j <= end; j++) { if (!Number.isNaN(values[j].value)) { sum += values[j].value; count++; } }
+          const avg = count ? (sum / count) : values[i].value;
+          out[i] = { step: values[i].step, value: avg };
+        }
+        return out;
+      }
+
+      function applySmoothing(values, smooth) {
+        if (!smooth) return values;
+        return movingAverage(values, CONFIG.smoothingWindow);
+      }
+
+      // Function to determine smart format based on data values
+      function createSmartFormatter(values) {
+        if (!values || values.length === 0) return (v) => v;
+
+        const min = d3.min(values);
+        const max = d3.max(values);
+        const range = max - min;
+
+        // Check if all values are effectively integers (within 0.001 tolerance)
+        const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
+
+        // Large numbers (billions): format as "X.XXB"
+        if (max >= 1e9) {
+          return (v) => {
+            const billions = v / 1e9;
+            return allIntegers && billions === Math.round(billions)
+              ? d3.format('d')(Math.round(billions)) + 'B'
+              : d3.format('.2f')(billions) + 'B';
+          };
+        }
+
+        // Millions: format as "X.XXM" or "XM"
+        if (max >= 1e6) {
+          return (v) => {
+            const millions = v / 1e6;
+            return allIntegers && millions === Math.round(millions)
+              ? d3.format('d')(Math.round(millions)) + 'M'
+              : d3.format('.2f')(millions) + 'M';
+          };
+        }
+
+        // Thousands: format as "X.Xk" or "Xk"
+        if (max >= 1000 && range >= 100) {
+          return (v) => {
+            const thousands = v / 1000;
+            return allIntegers && thousands === Math.round(thousands)
+              ? d3.format('d')(Math.round(thousands)) + 'k'
+              : d3.format('.1f')(thousands) + 'k';
+          };
+        }
+
+        // Regular numbers
+        if (allIntegers) {
+          return (v) => d3.format('d')(Math.round(v));
+        }
+
+        // Small decimals: use appropriate precision
+        if (range < 1) {
+          return (v) => d3.format('.3f')(v);
+        } else if (range < 10) {
+          return (v) => d3.format('.2f')(v);
+        } else {
+          return (v) => d3.format('.1f')(v);
+        }
+      }
+
+      // Colors
+      const getRunColors = (n) => {
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch (_) { }
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6', '#16A085', ...(d3.schemeTableau10 || [])].slice(0, n);
+      };
+
+      // Init each chart
+      function initChart(cellElement, chartConfig) {
+        const bodyEl = cellElement.querySelector('.chart-cell__body');
+        const resetBtn = cellElement.querySelector('.reset-button');
+
+        const metric = chartConfig.metric;
+        let smoothEnabled = CONFIG.smoothing;
+        let hasMoved = false;
+
+        // Tooltip
+        let tip = cellElement.querySelector('.d3-tooltip');
+        let tipInner;
+        if (!tip) {
+          tip = document.createElement('div');
+          tip.className = 'd3-tooltip';
+          Object.assign(tip.style, {
+            position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+            padding: '10px 12px', borderRadius: '12px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+            background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity: '0', transition: 'opacity .12s ease', zIndex: '20'
+          });
+          tipInner = document.createElement('div');
+          tipInner.className = 'd3-tooltip__inner';
+          tip.appendChild(tipInner);
+          cellElement.appendChild(tip);
+        } else {
+          tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+        }
+
+        // Create SVG
+        const svg = d3.select(bodyEl).append('svg').attr('width', '100%').style('display', 'block');
+
+        // Clip path
+        const clipId = 'clip-' + Math.random().toString(36).slice(2);
+        const clipPath = svg.append('defs').append('clipPath').attr('id', clipId);
+        const clipRect = clipPath.append('rect');
+
+        // Groups
+        const g = svg.append('g');
+        const gGrid = g.append('g').attr('class', 'grid');
+        const gAxes = g.append('g').attr('class', 'axes');
+        const gPlot = g.append('g').attr('class', 'plot').attr('clip-path', `url(#${clipId})`);
+        const gHover = g.append('g').attr('class', 'hover-layer');
+        const overlay = g.append('rect').attr('class', 'overlay').attr('fill', 'none').attr('pointer-events', 'all').style('cursor', 'grab')
+          .on('mousedown', function () {
+            d3.select(this).style('cursor', 'grabbing');
+            tip.style.opacity = '0';
+            if (hoverLine) hoverLine.style('display', 'none');
+          })
+          .on('mouseup', function () { d3.select(this).style('cursor', 'grab'); });
+
+        // Scales
+        const xScale = d3.scaleLinear();
+        const yScale = d3.scaleLinear();
+
+        // Hover state
+        let hoverLine = null;
+        let steps = [];
+        let hideTipTimer = null;
+
+        // Formatters (will be set in render())
+        let formatStep = (v) => v;
+        let formatValue = (v) => v;
+
+        // Zoom
+        const zoom = d3.zoom().scaleExtent(CONFIG.zoomExtent).on('zoom', zoomed);
+        overlay.call(zoom);
+
+        function zoomed(event) {
+          const transform = event.transform;
+          hasMoved = transform.k !== 1 || transform.x !== 0 || transform.y !== 0;
+          updateResetButton();
+
+          const newXScale = transform.rescaleX(xScale);
+          const newYScale = transform.rescaleY(yScale);
+
+          const innerWidth = xScale.range()[1];
+
+          // Update grid
+          const gridTicks = newYScale.ticks(5);
+          gGrid.selectAll('line').data(gridTicks).join('line')
+            .attr('x1', 0).attr('x2', innerWidth)
+            .attr('y1', d => newYScale(d)).attr('y2', d => newYScale(d))
+            .attr('stroke', 'var(--grid-color)');
+
+          // Update lines
+          const line = d3.line()
+            .x(d => newXScale(d.step))
+            .y(d => newYScale(d.value))
+            .curve(getCurve(smoothEnabled));
+
+          gPlot.selectAll('path.ghost-line')
+            .attr('d', d => {
+              const rawLine = d3.line().x(d => newXScale(d.step)).y(d => newYScale(d.value)).curve(d3.curveLinear);
+              return rawLine(d.values);
+            });
+
+          gPlot.selectAll('path.main-line')
+            .attr('d', d => line(applySmoothing(d.values, smoothEnabled)));
+
+          // Update axes
+          gAxes.select('.x-axis').call(d3.axisBottom(newXScale).ticks(5).tickSizeOuter(0).tickFormat(formatStep));
+          gAxes.select('.y-axis').call(d3.axisLeft(newYScale).ticks(5).tickSizeOuter(0).tickFormat(formatValue));
+        }
+
+        function updateResetButton() {
+          if (hasMoved) {
+            resetBtn.style.display = 'block';
+            requestAnimationFrame(() => { resetBtn.style.opacity = '1'; });
+          } else {
+            resetBtn.style.opacity = '0';
+            setTimeout(() => { if (!hasMoved) resetBtn.style.display = 'none'; }, 200);
+          }
+        }
+
+        function render() {
+          const rect = bodyEl.getBoundingClientRect();
+          const width = Math.max(1, Math.round(rect.width || 400));
+          const height = CONFIG.chartHeight;
+          svg.attr('width', width).attr('height', height);
+
+          const margin = CONFIG.margin;
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+          // Filter data for this metric
+          const metricData = allData.filter(d => d[metric] != null && !isNaN(d[metric]));
+
+          if (!metricData.length) {
+            return;
+          }
+
+          // Auto-compute domains from data
+          const stepExtent = d3.extent(metricData, d => d.step);
+          const valueExtent = d3.extent(metricData, d => d[metric]);
+
+          xScale.domain(stepExtent).range([0, innerWidth]);
+          yScale.domain(valueExtent).range([innerHeight, 0]);
+
+          // Create smart formatters based on actual data
+          const stepValues = metricData.map(d => d.step);
+          const metricValues = metricData.map(d => d[metric]);
+          formatStep = createSmartFormatter(stepValues);
+          formatValue = createSmartFormatter(metricValues);
+
+          // Update clip
+          clipRect.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+
+          // Update overlay
+          overlay.attr('x', 0).attr('y', 0).attr('width', innerWidth).attr('height', innerHeight);
+
+          // Update zoom extent
+          zoom.extent([[0, 0], [innerWidth, innerHeight]])
+            .translateExtent([[0, 0], [innerWidth, innerHeight]]);
+
+          // Grid
+          gGrid.selectAll('line').data(yScale.ticks(5)).join('line')
+            .attr('x1', 0).attr('x2', innerWidth)
+            .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+            .attr('stroke', 'var(--grid-color)');
+
+          // Axes
+          gAxes.selectAll('*').remove();
+          gAxes.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(xScale).ticks(5).tickSizeOuter(0).tickFormat(formatStep));
+          gAxes.append('g').attr('class', 'y-axis')
+            .call(d3.axisLeft(yScale).ticks(5).tickSizeOuter(0).tickFormat(formatValue));
+          gAxes.selectAll('.domain, .tick line').attr('stroke', 'var(--axis-color)');
+          gAxes.selectAll('text').attr('fill', 'var(--tick-color)');
+
+          // Axis labels
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('x', innerWidth / 2)
+            .attr('y', innerHeight + 32)
+            .attr('text-anchor', 'middle')
+            .text(CONFIG.xAxisLabel);
+
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -innerHeight / 2)
+            .attr('y', -38)
+            .attr('text-anchor', 'middle')
+            .text(CONFIG.yAxisLabel);
+
+          // Group data by run
+          const dataByRun = {};
+          runList.forEach(run => { dataByRun[run] = []; });
+          metricData.forEach(d => {
+            if (dataByRun[d.run]) dataByRun[d.run].push({ step: d.step, value: d[metric] });
+          });
+          runList.forEach(run => { dataByRun[run].sort((a, b) => a.step - b.step); });
+
+          const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] })).filter(s => s.values.length > 0);
+
+          // Ghost lines
+          const ghostLine = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value)).curve(d3.curveLinear);
+          gPlot.selectAll('path.ghost-line').data(series, d => d.run).join('path')
+            .attr('class', 'ghost-line')
+            .attr('fill', 'none')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 1.5)
+            .attr('opacity', smoothEnabled ? 0.15 : 0)
+            .attr('pointer-events', 'none')
+            .attr('d', d => ghostLine(d.values));
+
+          // Main lines
+          const mainLine = d3.line().x(d => xScale(d.step)).y(d => yScale(d.value)).curve(getCurve(smoothEnabled));
+          gPlot.selectAll('path.main-line').data(series, d => d.run).join('path')
+            .attr('class', 'main-line')
+            .attr('fill', 'none')
+            .attr('stroke', d => d.color)
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.85)
+            .attr('d', d => mainLine(applySmoothing(d.values, smoothEnabled)));
+
+          // Hover
+          setupHover(series, innerWidth, innerHeight);
+        }
+
+        function setupHover(series, innerWidth, innerHeight) {
+          gHover.selectAll('*').remove();
+
+          hoverLine = gHover.append('line')
+            .style('stroke', 'var(--text-color)')
+            .attr('stroke-opacity', 0.25)
+            .attr('stroke-width', 1)
+            .attr('y1', 0)
+            .attr('y2', innerHeight)
+            .style('display', 'none')
+            .attr('pointer-events', 'none');
+
+          const stepSet = new Set();
+          series.forEach(s => s.values.forEach(v => stepSet.add(v.step)));
+          steps = Array.from(stepSet).sort((a, b) => a - b);
+
+          overlay.on('mousemove', function (ev) {
+            if (ev.buttons === 0) onHoverMove(ev, series);
+          }).on('mouseleave', onHoverLeave);
+        }
+
+        function onHoverMove(ev, series) {
+          if (hideTipTimer) { clearTimeout(hideTipTimer); hideTipTimer = null; }
+
+          const [mx, my] = d3.pointer(ev, overlay.node());
+          const targetStep = xScale.invert(mx);
+          const nearest = steps.reduce((best, t) => Math.abs(t - targetStep) < Math.abs(best - targetStep) ? t : best, steps[0]);
+
+          const xpx = xScale(nearest);
+          hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
+
+          let html = `<div><strong>${chartConfig.title}</strong></div>`;
+          html += `<div>${formatStep(nearest)}</div>`;
+
+          const entries = series.map(s => {
+            const values = s.values;
+            let before = null, after = null;
+            for (let i = 0; i < values.length; i++) {
+              if (values[i].step <= nearest) before = values[i];
+              if (values[i].step >= nearest && !after) { after = values[i]; break; }
+            }
+
+            let interpolatedValue = null;
+            if (before && after && before.step !== after.step) {
+              const t = (nearest - before.step) / (after.step - before.step);
+              interpolatedValue = before.value + t * (after.value - before.value);
+            } else if (before && before.step === nearest) {
+              interpolatedValue = before.value;
+            } else if (after && after.step === nearest) {
+              interpolatedValue = after.value;
+            } else if (before) {
+              interpolatedValue = before.value;
+            } else if (after) {
+              interpolatedValue = after.value;
+            }
+
+            return { run: s.run, color: s.color, value: interpolatedValue };
+          }).filter(e => e.value != null);
+
+          entries.sort((a, b) => b.value - a.value);
+
+          entries.forEach(e => {
+            html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.value.toFixed(4)}</span></div>`;
+          });
+
+          tipInner.innerHTML = html;
+          const offsetX = 12, offsetY = 12;
+          tip.style.opacity = '1';
+          tip.style.transform = `translate(${Math.round(mx + offsetX + CONFIG.margin.left)}px, ${Math.round(my + offsetY + CONFIG.margin.top)}px)`;
+        }
+
+        function onHoverLeave() {
+          hideTipTimer = setTimeout(() => {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+            if (hoverLine) hoverLine.style('display', 'none');
+          }, 100);
+        }
+
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+          overlay.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+        });
+
+        return { render };
+      }
+
+      // Load data
+      async function load() {
+        try {
+          const response = await fetch(CONFIG.dataUrl, { cache: 'no-cache' });
+          if (!response.ok) throw new Error(`Failed to load data: ${response.status} ${response.statusText}`);
+
+          const csvText = await response.text();
+
+          // Parse CSV (long format: run_name, metric, tokens, value)
+          const rawRows = d3.csvParse(csvText, d => ({
+            run: (d[CONFIG.runColumn] || '').trim(),
+            metric: (d.metric || '').trim(),
+            tokens: +d[CONFIG.xColumn],
+            value: +d.value
+          }));
+
+          // Pivot data: group by run + tokens, create columns for each metric
+          const pivotMap = new Map();
+          rawRows.forEach(row => {
+            if (isNaN(row.tokens) || isNaN(row.value)) return;
+
+            const key = `${row.run}|${row.tokens}`;
+            if (!pivotMap.has(key)) {
+              pivotMap.set(key, { run: row.run, step: row.tokens });
+            }
+            const pivotRow = pivotMap.get(key);
+            pivotRow[row.metric] = row.value;
+          });
+
+          allData = Array.from(pivotMap.values());
+
+          runList = Array.from(new Set(allData.map(d => d.run))).sort();
+
+          const colors = getRunColors(runList.length);
+          runList.forEach((run, i) => { runColorMap[run] = colors[i % colors.length]; });
+
+          // Build legend
+          const legendItemsHost = header.querySelector('.legend-bottom .items');
+          if (legendItemsHost) {
+            legendItemsHost.innerHTML = runList.map(run => {
+              const color = runColorMap[run];
+              return `<span class="item" data-run="${run}"><span class="swatch" style="background:${color}"></span><span>${run}</span></span>`;
+            }).join('');
+
+            // Add hover interactions
+            legendItemsHost.querySelectorAll('.item').forEach(el => {
+              el.addEventListener('mouseenter', () => {
+                const run = el.getAttribute('data-run');
+                container.classList.add('hovering');
+                grid.querySelectorAll('path.main-line').forEach(path => {
+                  const pathRun = d3.select(path).datum()?.run;
+                  path.classList.toggle('ghost', pathRun !== run);
+                });
+                grid.querySelectorAll('path.ghost-line').forEach(path => {
+                  const pathRun = d3.select(path).datum()?.run;
+                  path.classList.toggle('ghost', pathRun !== run);
+                });
+                legendItemsHost.querySelectorAll('.item').forEach(it => {
+                  it.classList.toggle('ghost', it.getAttribute('data-run') !== run);
+                });
+              });
+
+              el.addEventListener('mouseleave', () => {
+                container.classList.remove('hovering');
+                grid.querySelectorAll('path.main-line').forEach(path => path.classList.remove('ghost'));
+                grid.querySelectorAll('path.ghost-line').forEach(path => path.classList.remove('ghost'));
+                legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+              });
+            });
+          }
+
+          // Init all charts
+          const cells = Array.from(grid.querySelectorAll('.chart-cell'));
+          const chartInstances = cells.map((cell, idx) => initChart(cell, CONFIG.charts[idx]));
+
+          // Render all
+          chartInstances.forEach(chart => chart.render());
+
+          // Responsive - observe container for resize
+          let resizeTimer;
+          const handleResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+              chartInstances.forEach(chart => chart.render());
+            }, 100);
+          };
+
+          const ro = window.ResizeObserver ? new ResizeObserver(handleResize) : null;
+          if (ro) {
+            ro.observe(container);
+          }
+
+          // Also observe window resize as fallback
+          window.addEventListener('resize', handleResize);
+
+          // Force a re-render after a short delay to ensure proper sizing
+          setTimeout(() => {
+            chartInstances.forEach(chart => chart.render());
+          }, 100);
+
+        } catch (e) {
+          const pre = document.createElement('pre');
+          pre.textContent = 'Error loading data: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)';
+          pre.style.fontSize = '12px';
+          container.appendChild(pre);
+        }
+      }
+
+      load();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>

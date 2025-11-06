@@ -1,0 +1,80 @@
+---
+import Seo from "../components/Seo.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import TrackioWrapper from "../components/trackio/TrackioWrapper.astro";
+import * as ArticleMod from "../content/article.mdx";
+import "katex/dist/katex.min.css";
+import "../styles/global.css";
+
+// Import article metadata
+const articleFM = (ArticleMod as any).frontmatter ?? {};
+const stripHtml = (text: string) => String(text || "").replace(/<[^>]*>/g, "");
+const articleTitle = stripHtml(articleFM?.title ?? "Article")
+    .replace(/\\n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+// Page metadata
+const pageTitle = "TrackIO Demo";
+const pageDesc = "Interactive training metrics visualization with TrackIO";
+---
+
+<html lang="en" data-theme="light">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Seo title={pageTitle} description={pageDesc} />
+        <script is:inline>
+            (() => {
+                try {
+                    const saved = localStorage.getItem("theme");
+                    const prefersDark =
+                        window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches;
+                    const theme = saved || (prefersDark ? "dark" : "light");
+                    document.documentElement.setAttribute("data-theme", theme);
+                } catch {}
+            })();
+        </script>
+        <script type="module" src="/scripts/color-palettes.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    </head>
+    <body class="trackio-page">
+        <ThemeToggle />
+
+        <main class="trackio-main">
+            <div class="trackio-container">
+                <TrackioWrapper />
+            </div>
+        </main>
+    </body>
+</html>
+
+<style>
+    .trackio-page {
+        min-height: 100vh;
+        background: var(--bg-color);
+        color: var(--text-color);
+    }
+
+    .trackio-main {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 40px 20px;
+    }
+
+    .trackio-container {
+        width: 100%;
+        max-width: 760px;
+    }
+
+    @media (max-width: 900px) {
+        .trackio-main {
+            padding: 20px 16px;
+        }
+    }
+</style>

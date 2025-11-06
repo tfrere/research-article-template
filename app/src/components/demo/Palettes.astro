@@ -1,0 +1,596 @@
+---
+const rootId = `palettes-${Math.random().toString(36).slice(2)}`;
+---
+
+<div class="palettes" id={rootId} style="width:100%; margin: 10px 0;">
+  <style is:global>
+    .palettes {
+      box-sizing: border-box;
+    }
+    .palettes .palettes__grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: 100%;
+    }
+    .palettes .palette-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr minmax(0, 220px);
+      align-items: stretch;
+      gap: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--surface-bg);
+      padding: 12px;
+      transition:
+        box-shadow 0.18s ease,
+        transform 0.18s ease,
+        border-color 0.18s ease;
+      min-height: 60px;
+    }
+    .palettes .palette-card__preview {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      background-size: cover;
+      background-position: center;
+    }
+    .palettes .palette-card__copy {
+      position: absolute;
+      top: 50%;
+      left: 100%;
+      transform: translateY(-50%);
+      z-index: 3;
+      border-left: none;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+    .palettes .palette-card__copy svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      display: block;
+      color: inherit;
+    }
+    .palettes .palette-card__swatches {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      gap: 2px;
+      margin: 0;
+      min-height: 60px;
+    }
+    .palettes .palette-card__swatches .sw {
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      border-radius: 0;
+      border: 1px solid var(--border-color);
+    }
+    .palettes .palette-card__swatches .sw:first-child {
+      border-top-left-radius: 8px;
+      border-bottom-left-radius: 8px;
+    }
+    .palettes .palette-card__swatches .sw:last-child {
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+    .palettes .palette-card__content {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      min-width: 0;
+      padding-right: 12px;
+    }
+    .palettes .palette-card__preview {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      position: relative;
+      flex: 0 0 auto;
+      overflow: hidden;
+    }
+    .palettes .palette-card__preview .dot {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #fff;
+      border-radius: 999px;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 1);
+    }
+    .palettes .palette-card__preview .donut-hole {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--surface-bg);
+      box-shadow: 0 0 0 1px var(--border-color) inset;
+    }
+
+    .palettes .palette-card__content__info {
+      display: flex;
+      flex-direction: column;
+    }
+    .palettes .palette-card__title {
+      text-align: left;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .palettes .palette-card__desc {
+      text-align: left;
+      color: var(--muted-color);
+      line-height: 1.5;
+      font-size: 12px;
+    }
+
+    .palettes .palettes__select {
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid var(--border-color);
+      background: var(--surface-bg);
+      color: var(--text-color);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+    .palettes .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 1px, 1px);
+      white-space: nowrap;
+      border: 0;
+    }
+    .palettes .palettes__controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin: 8px 0 14px;
+    }
+    .palettes .palettes__field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      flex: 1 1 280px;
+      max-width: 100%;
+    }
+    .palettes .palettes__label {
+      font-size: 12px;
+      color: var(--muted-color);
+      font-weight: 800;
+    }
+    .palettes .palettes__label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .palettes .ghost-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      color: var(--muted-color);
+      background: transparent;
+      font-variant-numeric: tabular-nums;
+    }
+    .palettes .palettes__count {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+    }
+    .palettes .palettes__count input[type="range"] {
+      width: 100%;
+    }
+    .palettes .palettes__count output {
+      min-width: 28px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      color: var(--muted-color);
+    }
+    .palettes input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 24px;
+      background: transparent;
+      cursor: pointer;
+      accent-color: var(--primary-color);
+    }
+    .palettes input[type="range"]:focus {
+      outline: none;
+    }
+    .palettes input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 999px;
+    }
+    .palettes input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -6px;
+      width: 18px;
+      height: 18px;
+      background: var(--primary-color);
+      border: 2px solid var(--surface-bg);
+      border-radius: 50%;
+    }
+    .palettes input[type="range"]::-moz-range-track {
+      height: 6px;
+      background: var(--border-color);
+      border: none;
+      border-radius: 999px;
+    }
+    .palettes input[type="range"]::-moz-range-progress {
+      height: 6px;
+      background: var(--primary-color);
+      border-radius: 999px;
+    }
+    .palettes input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--primary-color);
+      border: 2px solid var(--surface-bg);
+      border-radius: 50%;
+    }
+    html.cb-grayscale,
+    body.cb-grayscale {
+      filter: grayscale(1) !important;
+    }
+    html.cb-protanopia,
+    body.cb-protanopia {
+      filter: url(#cb-protanopia) !important;
+    }
+    html.cb-deuteranopia,
+    body.cb-deuteranopia {
+      filter: url(#cb-deuteranopia) !important;
+    }
+    html.cb-tritanopia,
+    body.cb-tritanopia {
+      filter: url(#cb-tritanopia) !important;
+    }
+    html.cb-achromatopsia,
+    body.cb-achromatopsia {
+      filter: url(#cb-achromatopsia) !important;
+    }
+    @media (max-width: 1100px) {
+      .palettes .palette-card {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .palettes .palette-card__swatches {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .palettes .palette-card__content {
+        border-right: none;
+        padding-right: 0;
+      }
+      .palettes .palette-card__copy {
+        display: none;
+      }
+    }
+  </style>
+  <div class="palettes__controls">
+    <div class="palettes__field">
+      <label class="palettes__label" for="cb-select"
+        >Color vision simulation</label
+      >
+      <select id="cb-select" class="palettes__select">
+        <option value="none"
+          >Normal color vision — typical for most people</option
+        >
+        <option value="achromatopsia">Achromatopsia — no color at all</option>
+        <option value="protanopia">Protanopia — reduced/absent reds</option>
+        <option value="deuteranopia"
+          >Deuteranopia — reduced/absent greens</option
+        >
+        <option value="tritanopia">Tritanopia — reduced/absent blues</option>
+      </select>
+    </div>
+    <div class="palettes__field">
+      <div class="palettes__label-row">
+        <label class="palettes__label" for="color-count">Number of colors</label
+        >
+        <output id="color-count-out" for="color-count" class="ghost-badge"
+          >8</output
+        >
+      </div>
+      <div class="palettes__count">
+        <input
+          id="color-count"
+          type="range"
+          min="6"
+          max="10"
+          step="1"
+          value="8"
+          aria-label="Number of colors"
+        />
+      </div>
+    </div>
+  </div>
+  <div class="palettes__grid"></div>
+  <div class="palettes__simu" role="group" aria-labelledby="cb-sim-title">
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width="0"
+      height="0"
+      style="position:absolute; left:-9999px; overflow:hidden;"
+    >
+      <defs>
+        <filter id="cb-protanopia"
+          ><feColorMatrix
+            type="matrix"
+            values="0.567 0.433 0     0 0  0.558 0.442 0     0 0  0      0.242 0.758 0 0  0 0 0 1 0"
+          ></feColorMatrix></filter
+        >
+        <filter id="cb-deuteranopia"
+          ><feColorMatrix
+            type="matrix"
+            values="0.625 0.375 0     0 0  0.7   0.3   0     0 0  0      0.3   0.7   0 0  0 0 0 1 0"
+          ></feColorMatrix></filter
+        >
+        <filter id="cb-tritanopia"
+          ><feColorMatrix
+            type="matrix"
+            values="0.95  0.05  0     0 0  0     0.433 0.567 0 0  0     0.475 0.525 0 0  0 0 0 1 0"
+          ></feColorMatrix></filter
+        >
+        <filter id="cb-achromatopsia"
+          ><feColorMatrix
+            type="matrix"
+            values="0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0.299 0.587 0.114 0 0  0 0 0 1 0"
+          ></feColorMatrix></filter
+        >
+      </defs>
+    </svg>
+  </div>
+</div>
+<script type="module" is:inline>
+  import "/scripts/color-palettes.js";
+  const ROOT_ID = "{rootId}";
+  (() => {
+    const cards = [
+      {
+        key: "categorical",
+        title: "Categorical",
+        desc: "For <strong>non‑numeric categories</strong>; <strong>visually distinct</strong> colors.",
+      },
+      {
+        key: "sequential",
+        title: "Sequential",
+        desc: "For <strong>numeric scales</strong>; gradient from <strong>dark to light</strong>. Ideal for <strong>heatmaps</strong>.",
+      },
+      {
+        key: "diverging",
+        title: "Diverging",
+        desc: "For numeric scales with negative and positive; Opposing extremes with smooth contrast around a neutral midpoint.",
+      },
+    ];
+    const getPaletteColors = (key, count) => {
+      const total = Number(count) || 6;
+      if (
+        window.ColorPalettes &&
+        typeof window.ColorPalettes.getColors === "function"
+      ) {
+        return window.ColorPalettes.getColors(key, total) || [];
+      }
+      return [];
+    };
+    const render = () => {
+      const root =
+        document.getElementById(ROOT_ID) || document.querySelector(".palettes");
+      if (!root) return;
+      const grid = root.querySelector(".palettes__grid");
+      if (!grid) return;
+      const input = document.getElementById("color-count");
+      const total = input ? Number(input.value) || 6 : 6;
+      const html = cards
+        .map((c) => {
+          const colors = getPaletteColors(c.key, total);
+          const swatches = colors
+            .map(
+              (col) => `<div class=\"sw\" style=\"background:${col}\"></div>`,
+            )
+            .join("");
+          const baseHex =
+            window.ColorPalettes &&
+            typeof window.ColorPalettes.getPrimary === "function"
+              ? window.ColorPalettes.getPrimary()
+              : colors[0] || "#FF0000";
+          const hueDeg = (() => {
+            try {
+              const s = baseHex.replace("#", "");
+              const v =
+                s.length === 3
+                  ? s
+                      .split("")
+                      .map((ch) => ch + ch)
+                      .join("")
+                  : s;
+              const r = parseInt(v.slice(0, 2), 16) / 255,
+                g = parseInt(v.slice(2, 4), 16) / 255,
+                b = parseInt(v.slice(4, 6), 16) / 255;
+              const M = Math.max(r, g, b),
+                m = Math.min(r, g, b),
+                d = M - m;
+              if (d === 0) return 0;
+              let h = 0;
+              if (M === r) h = ((g - b) / d) % 6;
+              else if (M === g) h = (b - r) / d + 2;
+              else h = (r - g) / d + 4;
+              h *= 60;
+              if (h < 0) h += 360;
+              return h;
+            } catch {
+              return 0;
+            }
+          })();
+          const gradient =
+            c.key === "categorical"
+              ? (() => {
+                  const steps = 60; // smooth hue wheel (fixed orientation)
+                  const wheel = Array.from(
+                    { length: steps },
+                    (_, i) =>
+                      `hsl(${Math.round((i / steps) * 360)}, 100%, 50%)`,
+                  ).join(", ");
+                  return `conic-gradient(${wheel})`;
+                })()
+              : colors.length
+                ? `linear-gradient(90deg, ${colors.join(", ")})`
+                : `linear-gradient(90deg, var(--border-color), var(--border-color))`;
+          const previewInner = (() => {
+            if (c.key !== "categorical" || !colors.length) return "";
+            const ring = 18;
+            const cx = 24;
+            const cy = 24;
+            const offset = (hueDeg / 360) * 2 * Math.PI;
+            return colors
+              .map((col, i) => {
+                const angle = offset + (i / colors.length) * 2 * Math.PI;
+                const x = cx + ring * Math.cos(angle);
+                const y = cy + ring * Math.sin(angle);
+                return `<span class=\"dot\" style=\"left:${x - 2}px; top:${y - 2}px\"></span>`;
+              })
+              .join("");
+          })();
+          const donutHole =
+            c.key === "categorical" ? '<span class="donut-hole"></span>' : "";
+          return `
+          <div class="palette-card" data-colors="${colors.join(",")}">
+            <div class="palette-card__content">
+              <div class=\"palette-card__preview\" aria-hidden=\"true\" style=\"background:${gradient}\">${previewInner}${donutHole}</div>
+              <div class="palette-card__content__info">
+                <div class="palette-card__title">${c.title}</div>
+                <div class="palette-card__desc">${c.desc}</div>
+              </div>
+            </div>
+            <div class="palette-card__swatches" style="grid-template-columns: repeat(${colors.length}, minmax(0, 1fr));">${swatches}</div>
+            <button class="palette-card__copy button--ghost" type="button" aria-label="Copy palette">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </button>
+          </div>`;
+        })
+        .join("");
+      grid.innerHTML = html;
+    };
+    const MODE_TO_CLASS = {
+      protanopia: "cb-protanopia",
+      deuteranopia: "cb-deuteranopia",
+      tritanopia: "cb-tritanopia",
+      achromatopsia: "cb-achromatopsia",
+    };
+    const CLEAR_CLASSES = Object.values(MODE_TO_CLASS);
+    const clearCbClasses = () => {
+      const rootEl = document.documentElement;
+      CLEAR_CLASSES.forEach((cls) => rootEl.classList.remove(cls));
+    };
+    const applyCbClass = (mode) => {
+      clearCbClasses();
+      const cls = MODE_TO_CLASS[mode];
+      if (cls) document.documentElement.classList.add(cls);
+    };
+    const currentCbMode = () => {
+      const rootEl = document.documentElement;
+      for (const [mode, cls] of Object.entries(MODE_TO_CLASS)) {
+        if (rootEl.classList.contains(cls)) return mode;
+      }
+      return "none";
+    };
+    const setupCbSim = () => {
+      const select = document.getElementById("cb-select");
+      if (!select) return;
+      try {
+        select.value = currentCbMode();
+      } catch {}
+      select.addEventListener("change", () => applyCbClass(select.value));
+    };
+    const setupCountControl = () => {
+      const input = document.getElementById("color-count");
+      const out = document.getElementById("color-count-out");
+      if (!input) return;
+      const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+      const read = () => clamp(Number(input.value) || 6, 6, 10);
+      const syncOut = () => {
+        if (out) out.textContent = String(read());
+      };
+      const onChange = () => {
+        syncOut();
+        render();
+      };
+      syncOut();
+      input.addEventListener("input", onChange);
+      document.addEventListener("palettes:updated", () => {
+        syncOut();
+        render();
+      });
+    };
+    let copyDelegationSetup = false;
+    const setupCopyDelegation = () => {
+      if (copyDelegationSetup) return;
+      const grid = document.querySelector(".palettes .palettes__grid");
+      if (!grid) return;
+      grid.addEventListener("click", async (e) => {
+        const btn = e.target.closest
+          ? e.target.closest(".palette-card__copy")
+          : null;
+        if (!btn) return;
+        const card = btn.closest(".palette-card");
+        if (!card) return;
+        const colors = (card.dataset.colors || "").split(",").filter(Boolean);
+        const json = JSON.stringify(colors, null, 2);
+        try {
+          await navigator.clipboard.writeText(json);
+          const old = btn.innerHTML;
+          btn.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 20.3 7.7l-1.4-1.4z"/></svg>';
+          setTimeout(() => (btn.innerHTML = old), 900);
+        } catch {
+          window.prompt("Copy palette", json);
+        }
+      });
+      copyDelegationSetup = true;
+    };
+    const bootstrap = () => {
+      setupCbSim();
+      setupCountControl();
+      setupCopyDelegation();
+      // Render immediately
+      render();
+      // Re-render on palette updates
+      document.addEventListener("palettes:updated", render);
+      // Force an immediate notify after listeners are attached (ensures initial render)
+      try {
+        if (
+          window.ColorPalettes &&
+          typeof window.ColorPalettes.notify === "function"
+        )
+          window.ColorPalettes.notify();
+        else if (
+          window.ColorPalettes &&
+          typeof window.ColorPalettes.refresh === "function"
+        )
+          window.ColorPalettes.refresh();
+      } catch {}
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

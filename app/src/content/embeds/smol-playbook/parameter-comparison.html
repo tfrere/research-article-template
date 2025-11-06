@@ -1,0 +1,807 @@
+<div class="d3-parameter-comparison"></div>
+
+<style>
+  .d3-parameter-comparison {
+    position: relative !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+    color: var(--text-color);
+    padding-bottom: 0;
+  }
+
+  .d3-parameter-comparison .model-selector {
+    margin-bottom: 32px;
+  }
+
+  .d3-parameter-comparison .section-title {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0 0 12px 0;
+  }
+
+  .d3-parameter-comparison .button-group {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    background: var(--page-bg);
+    border: 0.25px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 24px;
+  }
+
+  .d3-parameter-comparison .actions-group {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .d3-parameter-comparison .actions-group .button {
+    flex: 1;
+    margin: 0 !important;
+    border-radius: var(--button-radius) !important;
+    border: 1px solid var(--primary-color) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 8px !important;
+  }
+
+  .d3-parameter-comparison .btn-icon {
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-parameter-comparison .actions-group .button:hover .btn-icon {
+    opacity: 1;
+  }
+
+  /* Utilisation des styles de boutons du template */
+  .d3-parameter-comparison .button-group {
+    display: flex;
+    gap: 0;
+    width: 100%;
+    background: var(--page-bg);
+    border: 0.25px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 24px;
+  }
+
+  .d3-parameter-comparison .button-group .button {
+    flex: 1;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    padding: calc(var(--button-padding-y) * 2) var(--button-padding-x) !important;
+  }
+
+  .d3-parameter-comparison .button-group .button:first-child {
+    border-radius: 8px 0 0 8px !important;
+  }
+
+  .d3-parameter-comparison .button-group .button:last-child {
+    border-radius: 0 8px 8px 0 !important;
+  }
+
+  .d3-parameter-comparison .button-group .button:not(:first-child) {
+    border-left: 1px solid var(--primary-color) !important;
+  }
+
+  .d3-parameter-comparison .button-group .button.active {
+    background: var(--primary-color) !important;
+    color: var(--page-bg) !important;
+    font-weight: 900 !important;
+  }
+
+  .d3-parameter-comparison .button-group .button.active:first-child {
+    border-left: none !important;
+  }
+
+
+  .d3-parameter-comparison .model-info {
+    margin: 10px 0;
+  }
+
+  .d3-parameter-comparison .model-size-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0 20px 0;
+    text-align: center;
+    width: 100%;
+  }
+
+  .d3-parameter-comparison .model-size-label {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--muted-color);
+    margin: 0 0 4px 0;
+  }
+
+  .d3-parameter-comparison .model-size {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0 0 4px 0;
+  }
+
+  .d3-parameter-comparison .model-specs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .d3-parameter-comparison .spec-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .d3-parameter-comparison .spec-label {
+    font-size: 0.65em;
+    color: var(--muted-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+    line-height: 1.1;
+  }
+
+  .d3-parameter-comparison .spec-value {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.0em;
+    line-height: 1.1;
+    word-break: break-all;
+  }
+
+  /* Special styling for different value types */
+  .d3-parameter-comparison .spec-card[data-type="number"] .spec-value {
+    font-size: 1.1em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .d3-parameter-comparison .spec-card[data-type="ratio"] .spec-value {
+    font-size: 0.95em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .d3-parameter-comparison .spec-card[data-type="text"] .spec-value {
+    font-size: 0.9em;
+    text-transform: capitalize;
+  }
+
+  .d3-parameter-comparison .chart-container {
+    margin: 20px 0 0 0;
+  }
+
+  .d3-parameter-comparison .chart-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .d3-parameter-comparison .legend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 16px 0;
+    font-size: 12px;
+    color: var(--text-color);
+  }
+
+  .d3-parameter-comparison .legend .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-parameter-comparison .legend .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-parameter-comparison .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .d3-parameter-comparison .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  /* Labels with contrast liseret */
+  .d3-parameter-comparison .slice-label {
+    font-size: 11px;
+    font-weight: 700;
+    fill: var(--text-color);
+    paint-order: stroke;
+    stroke: var(--transparent-page-contrast);
+    stroke-width: 3px;
+  }
+
+  /* Hover effects */
+  .d3-parameter-comparison.hovering .legend .item.ghost {
+    opacity: .35;
+  }
+
+  .d3-parameter-comparison .slice {
+    transition: opacity .15s ease;
+  }
+
+  .d3-parameter-comparison.hovering .slice.ghost {
+    opacity: .25;
+  }
+
+  /* Tooltip */
+  .d3-parameter-comparison .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-9999px, -9999px);
+    pointer-events: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, .18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    z-index: var(--z-elevated);
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-parameter-comparison .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+    text-align: left;
+  }
+
+  .d3-parameter-comparison .d3-tooltip__inner>div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+
+  .d3-parameter-comparison .d3-tooltip__inner>div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+
+  .d3-parameter-comparison .d3-tooltip__inner>div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-parameter-comparison .d3-tooltip .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .d3-parameter-comparison .model-specs {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .d3-parameter-comparison .button-group {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .d3-parameter-comparison .actions-group {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .d3-parameter-comparison .button-group .button,
+    .d3-parameter-comparison .actions-group .button {
+      padding: 8px 12px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .d3-parameter-comparison .model-specs {
+      grid-template-columns: 1fr;
+    }
+
+    .d3-parameter-comparison .section-title {
+      font-size: 1em;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-parameter-comparison'))) {
+        const cs = Array.from(document.querySelectorAll('.d3-parameter-comparison')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      container.style.position = container.style.position || 'relative';
+
+
+      // Model configurations
+      const models = {
+        'llama3.2-1b': {
+          name: 'Llama 3.2 1B',
+          configUrl: 'https://huggingface.co/meta-llama/Llama-3.2-1B/blob/main/config.json',
+          vocab_size: 128256,
+          hidden_size: 2048,
+          num_hidden_layers: 16,
+          num_attention_heads: 32,
+          num_key_value_heads: 8,
+          intermediate_size: 8192,
+          tie_word_embeddings: true
+        },
+        'smollm3-3b': {
+          name: 'SmolLM3 3B',
+          configUrl: 'https://huggingface.co/HuggingFaceTB/SmolLM3-3B/blob/main/config.json',
+          vocab_size: 128256,
+          hidden_size: 2048,
+          num_hidden_layers: 36,
+          num_attention_heads: 16,
+          num_key_value_heads: 4,
+          intermediate_size: 11008,
+          tie_word_embeddings: true
+        },
+        'llama3.1-8b': {
+          name: 'Llama 3.1 8B',
+          configUrl: 'https://huggingface.co/meta-llama/Llama-3.1-8B/blob/main/config.json',
+          vocab_size: 128256,
+          hidden_size: 4096,
+          num_hidden_layers: 32,
+          num_attention_heads: 32,
+          num_key_value_heads: 8,
+          intermediate_size: 14336,
+          tie_word_embeddings: false
+        },
+        'llama3.1-70b': {
+          name: 'Llama 3.1 70B',
+          configUrl: 'https://huggingface.co/meta-llama/Llama-3.1-70B/blob/main/config.json',
+          vocab_size: 128256,
+          hidden_size: 8192,
+          num_hidden_layers: 80,
+          num_attention_heads: 64,
+          num_key_value_heads: 8,
+          intermediate_size: 28672,
+          tie_word_embeddings: false
+        }
+      };
+
+      function calculateParameters(config) {
+        const { vocab_size, hidden_size, num_hidden_layers, num_attention_heads, num_key_value_heads, intermediate_size, tie_word_embeddings } = config;
+
+        // Embeddings
+        const embeddings = vocab_size * hidden_size * (tie_word_embeddings ? 1 : 2);
+
+        // Attention
+        const attention = num_hidden_layers * hidden_size * hidden_size * (2 + 2 * num_key_value_heads / num_attention_heads);
+
+        // Feed Forward
+        const ffn = num_hidden_layers * hidden_size * intermediate_size * 3;
+
+        // Layer Norms
+        const layernorm = num_hidden_layers * hidden_size * 2 + hidden_size;
+
+        const total = embeddings + attention + ffn + layernorm;
+
+        return { embeddings, attention, ffn, layernorm, total };
+      }
+
+      function formatNumber(num) {
+        if (num >= 1000000000) return `${(num / 1000000000).toFixed(2)} <span style="opacity: 0.6;">B</span>`;
+        if (num >= 1000000) return `${(num / 1000000).toFixed(0)} <span style="opacity: 0.6;">M</span>`;
+        if (num >= 1000) return `${(num / 1000).toFixed(0)} <span style="opacity: 0.6;">K</span>`;
+        return num.toString();
+      }
+
+      function formatPercent(part, total) {
+        return `${((part / total) * 100).toFixed(1)} <span style="opacity: 0.6;">%</span>`;
+      }
+
+      function getColors() {
+        try {
+          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+            return window.ColorPalettes.getColors('categorical', 4);
+          }
+        } catch (_) { }
+        return ['#E458B5', '#F3A4D3', '#55D09D', '#00B971'];
+      }
+
+      // Create HTML structure
+      container.innerHTML = `
+      <div class="model-selector">
+        <h3 class="section-title">Choose a Model</h3>
+        <div class="button-group" id="modelButtonGroup">
+          <button class="button button--ghost active" data-model="llama3.2-1b">Llama 3.2 1B</button>
+          <button class="button button--ghost" data-model="smollm3-3b">SmolLM3 3B</button>
+          <button class="button button--ghost" data-model="llama3.1-8b">Llama 3.1 8B</button>
+          <button class="button button--ghost" data-model="llama3.1-70b">Llama 3.1 70B</button>
+        </div>
+        <div class="actions-group">
+          <button class="button button--ghost" id="exportBtn">
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7,10 12,15 17,10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="btn-text">Export JSON</span>
+          </button>
+          <a href="#" class="button button--ghost" id="configLink" target="_blank">
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <span class="btn-text">View Original</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="model-info">
+        <div class="model-size-card">
+          <div class="model-size" id="modelSize">1.24B</div>
+          <div class="model-size-label">Parameters</div>
+        </div>
+        <div class="model-specs">
+          <div class="spec-card" data-type="number">
+            <div class="spec-label">Layers</div>
+            <div class="spec-value" id="specLayers">16</div>
+          </div>
+          <div class="spec-card" data-type="number">
+            <div class="spec-label">Hidden Size</div>
+            <div class="spec-value" id="specHidden">2048</div>
+          </div>
+          <div class="spec-card" data-type="ratio">
+            <div class="spec-label">Heads (Q/KV)</div>
+            <div class="spec-value" id="specHeads">32/8</div>
+          </div>
+          <div class="spec-card" data-type="number">
+            <div class="spec-label">Intermediate</div>
+            <div class="spec-value" id="specIntermediate">8192</div>
+          </div>
+          <div class="spec-card" data-type="text">
+            <div class="spec-label">Embeddings</div>
+            <div class="spec-value" id="specTied">Tied</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-card">
+          <div class="chart-svg"></div>
+          <div class="legend">
+            <div class="legend-title">Legend</div>
+            <div class="items"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+      // Create tooltip AFTER HTML structure
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) { tip = document.createElement('div'); tip.className = 'd3-tooltip'; tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tip.appendChild(tipInner); container.appendChild(tip); } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      const chartCard = container.querySelector('.chart-card');
+      const chartSvg = container.querySelector('.chart-svg');
+      const legend = container.querySelector('.legend');
+      const items = legend.querySelector('.items');
+
+      const svg = d3.select(chartSvg).append('svg').attr('width', '100%').style('display', 'block');
+      const gRoot = svg.append('g');
+
+      let width = 400, height = 240; const DONUT_INNER_RATIO = 0.6;
+      function updateSize() {
+        width = chartSvg.clientWidth || 400;
+        height = Math.min(width, 240); // Reduced from 300 to 240
+        svg.attr('width', width).attr('height', height);
+        gRoot.attr('transform', `translate(${width / 2},${height / 2})`);
+        return { inner: Math.min(width, height) * 0.4 }; // Increased from 0.35 to 0.4 to compensate
+      }
+
+      function makeLegend(categories, colorOf, pieData, rawValues, total) {
+        items.innerHTML = '';
+        categories.forEach(name => {
+          const el = document.createElement('span');
+          el.className = 'item';
+          el.dataset.category = name;
+          const sw = document.createElement('span');
+          sw.className = 'swatch';
+          sw.style.background = colorOf(name);
+          const txt = document.createElement('span');
+          txt.textContent = name;
+          el.appendChild(sw);
+          el.appendChild(txt);
+
+          // Add hover events for legend items
+          el.addEventListener('mouseenter', (ev) => {
+            container.classList.add('hovering');
+            gRoot.selectAll('path.slice').classed('ghost', s => (s && s.data && s.data.category) !== name);
+            items.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.dataset.category !== name));
+
+            // Find the corresponding slice data
+            const sliceData = pieData.find(d => d.data.category === name);
+            if (sliceData) {
+              const realValue = rawValues.find(r => r.category === name)?.value || sliceData.data.value;
+              const realPct = (realValue / total) * 100;
+              const colorSw = colorOf(name);
+              const selectedModel = getSelectedModel();
+              const modelName = models[selectedModel]?.name || selectedModel;
+
+              tipInner.innerHTML = `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class="swatch" style="background:${colorSw}"></span><strong>${name}</strong></div>` +
+                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;">${modelName}</div>` +
+                `<div style="padding-top:6px;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">` +
+                `<span><strong>Parameters</strong></span>` +
+                `<span style="font-weight:600;">${realValue.toLocaleString()}</span>` +
+                `</div>` +
+                `<div style="display:flex;justify-content:space-between;align-items:center;">` +
+                `<span><strong>Percentage</strong></span>` +
+                `<span style="font-weight:600;">${realPct.toFixed(1)}%</span>` +
+                `</div>`;
+              tip.style.opacity = '1';
+            }
+          });
+
+          el.addEventListener('mouseleave', () => {
+            tip.style.opacity = '0';
+            tip.style.transform = 'translate(-9999px, -9999px)';
+            container.classList.remove('hovering');
+            gRoot.selectAll('path.slice').classed('ghost', false);
+            items.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+          });
+
+          items.appendChild(el);
+        });
+      }
+
+      function render(data) {
+        const { inner } = updateSize();
+        const categories = ['Embeddings', 'Attention', 'Feed Forward', 'Layer Norms'];
+        const colors = getColors();
+        const color = d3.scaleOrdinal().domain(categories).range(colors);
+        const colorOf = (c) => color(c || 'Unknown');
+
+        const rawValues = [
+          { category: 'Embeddings', value: data.embeddings },
+          { category: 'Attention', value: data.attention },
+          { category: 'Feed Forward', value: data.ffn },
+          { category: 'Layer Norms', value: data.layernorm }
+        ];
+
+        const total = rawValues.reduce((sum, d) => sum + d.value, 0);
+        const minVisiblePercent = 0.5; // 0.5% minimum
+        const minVisibleValue = total * (minVisiblePercent / 100);
+
+        const values = rawValues.map(d => ({
+          category: d.category,
+          value: Math.max(d.value, minVisibleValue)
+        }));
+
+        const sum = d3.sum(values, d => d.value) || 1;
+
+        const radius = Math.max(60, Math.min(inner, 120));
+        const innerR = Math.round(radius * DONUT_INNER_RATIO);
+        const pie = d3.pie().sort(null).value(d => d.value).padAngle(0.02);
+        const arc = d3.arc().innerRadius(innerR).outerRadius(radius).cornerRadius(3);
+        const arcLabel = d3.arc().innerRadius((innerR + radius) / 2).outerRadius((innerR + radius) / 2);
+
+        const pieData = pie(values);
+
+        // Create legend with proper data
+        makeLegend(categories, colorOf, pieData, rawValues, total);
+
+        const slices = gRoot.selectAll('path.slice').data(pieData, d => d.data.category);
+
+        slices.enter().append('path').attr('class', 'slice')
+          .attr('fill', d => colorOf(d.data.category))
+          .attr('stroke', getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim() || '#ffffff')
+          .attr('stroke-width', 1)
+          .attr('data-category', d => d.data.category)
+          .on('mouseenter', (ev, d) => {
+            // Find the real value (not forced)
+            const realValue = rawValues.find(r => r.category === d.data.category)?.value || d.data.value;
+            const realPct = (realValue / total) * 100;
+            container.classList.add('hovering');
+            gRoot.selectAll('path.slice').classed('ghost', s => (s && s.data && s.data.category) !== d.data.category);
+            try { const items = legend.querySelectorAll('.item'); items.forEach(it => it.classList.toggle('ghost', it.dataset.category !== d.data.category)); } catch (_) { }
+            const colorSw = colorOf(d.data.category);
+            const selectedModel = getSelectedModel();
+            const modelName = models[selectedModel]?.name || selectedModel;
+
+            tipInner.innerHTML = `<div style="display:flex;align-items:center;gap:8px;white-space:nowrap;"><span class="swatch" style="background:${colorSw}"></span><strong>${d.data.category}</strong></div>` +
+              `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;">${modelName}</div>` +
+              `<div style="padding-top:6px;border-top:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">` +
+              `<span><strong>Parameters</strong></span>` +
+              `<span style="font-weight:600;">${realValue.toLocaleString()}</span>` +
+              `</div>` +
+              `<div style="display:flex;justify-content:space-between;align-items:center;">` +
+              `<span><strong>Percentage</strong></span>` +
+              `<span style="font-weight:600;">${realPct.toFixed(1)}%</span>` +
+              `</div>`;
+            tip.style.opacity = '1';
+          })
+          .on('mousemove', (ev) => { const [mx, my] = d3.pointer(ev, container); tip.style.transform = `translate(${Math.round(mx + 12)}px, ${Math.round(my + 12)}px)`; })
+          .on('mouseleave', () => {
+            tip.style.opacity = '0'; tip.style.transform = 'translate(-9999px, -9999px)';
+            container.classList.remove('hovering');
+            gRoot.selectAll('path.slice').classed('ghost', false);
+            try { const items = legend.querySelectorAll('.item'); items.forEach(it => it.classList.remove('ghost')); } catch (_) { }
+          })
+          .merge(slices)
+          .transition()
+          .duration(750)
+          .attrTween('d', function (d) {
+            const interpolate = d3.interpolate(this._current || { startAngle: 0, endAngle: 0 }, d);
+            this._current = interpolate(0);
+            return function (t) {
+              return arc(interpolate(t));
+            };
+          });
+
+        slices.exit().remove();
+
+        const labels = gRoot.selectAll('text.slice-label').data(pieData, d => d.data.category);
+        labels.enter().append('text').attr('class', 'slice-label').attr('text-anchor', 'middle')
+          .merge(labels)
+          .transition()
+          .duration(750)
+          .attrTween('transform', function (d) {
+            const interpolate = d3.interpolate(this._current || { startAngle: 0, endAngle: 0 }, d);
+            this._current = interpolate(0);
+            return function (t) {
+              return `translate(${arcLabel.centroid(interpolate(t))})`;
+            };
+          })
+          .attr('font-size', d => {
+            const percentage = (d.data.value / sum) * 100;
+            if (percentage >= 5) return '11px';
+            if (percentage >= 2) return '9px';
+            return '7px';
+          })
+          .text(d => {
+            const realValue = rawValues.find(r => r.category === d.data.category)?.value || d.data.value;
+            const realPct = (realValue / total) * 100;
+            return realPct >= 1 ? `${realPct.toFixed(1)}%` : '';
+          });
+        labels.exit().remove();
+      }
+
+      function getSelectedModel() {
+        const activeBtn = container.querySelector('.button-group .button.active');
+        return activeBtn ? activeBtn.dataset.model : 'llama3.2-1b';
+      }
+
+      function updateDisplay() {
+        const selectedModel = getSelectedModel();
+        const config = models[selectedModel];
+        const params = calculateParameters(config);
+
+        container.querySelector('#modelSize').innerHTML = formatNumber(params.total);
+        container.querySelector('#specLayers').textContent = config.num_hidden_layers;
+        container.querySelector('#specHidden').textContent = config.hidden_size;
+        container.querySelector('#specHeads').textContent = `${config.num_attention_heads}/${config.num_key_value_heads}`;
+        container.querySelector('#specIntermediate').textContent = config.intermediate_size;
+        container.querySelector('#specTied').textContent = config.tie_word_embeddings ? 'Tied' : 'Separate';
+
+        // Update config link
+        const configLink = container.querySelector('#configLink');
+        configLink.href = config.configUrl;
+
+        render(params);
+      }
+
+      function exportToJSON() {
+        const selectedModel = getSelectedModel();
+        const config = models[selectedModel];
+
+        // Create JSON content with only the relevant parameters
+        const jsonConfig = {
+          vocab_size: config.vocab_size,
+          hidden_size: config.hidden_size,
+          num_hidden_layers: config.num_hidden_layers,
+          num_attention_heads: config.num_attention_heads,
+          num_key_value_heads: config.num_key_value_heads,
+          intermediate_size: config.intermediate_size,
+          tie_word_embeddings: config.tie_word_embeddings
+        };
+
+        // Convert to JSON string with proper formatting
+        const jsonString = JSON.stringify(jsonConfig, null, 2);
+
+        // Create and download file
+        const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${config.name.replace(/\s+/g, '_')}_config.json`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Add event listeners
+      const buttonGroup = container.querySelector('#modelButtonGroup');
+      buttonGroup.addEventListener('click', (e) => {
+        if (e.target.classList.contains('button')) {
+          // Remove active class from all buttons
+          buttonGroup.querySelectorAll('.button').forEach(btn => btn.classList.remove('active'));
+          // Add active class to clicked button
+          e.target.classList.add('active');
+          updateDisplay();
+        }
+      });
+      container.querySelector('#exportBtn').addEventListener('click', exportToJSON);
+
+      // Initialize
+      updateDisplay();
+
+      // Resize observer
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+          const selectedModel = getSelectedModel();
+          const config = models[selectedModel];
+          const params = calculateParameters(config);
+          render(params);
+        });
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', () => {
+          const selectedModel = getSelectedModel();
+          const config = models[selectedModel];
+          const params = calculateParameters(config);
+          render(params);
+        });
+      }
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>

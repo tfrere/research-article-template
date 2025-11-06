@@ -1,0 +1,633 @@
+---
+
+---
+
+<div class="color-picker" style="width:100%; margin: 10px 0;">
+  <style>
+    .color-picker .picker__stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .color-picker .current-card {
+      display: grid;
+      grid-template-columns: 40% 60%;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 32px 14px 16px;
+      border: 1px solid var(--border-color);
+      background: var(--surface-bg);
+      border-radius: 12px;
+    }
+    .color-picker .current-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .color-picker .current-right {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-left: 14px;
+      border-left: 1px solid var(--border-color);
+    }
+    .color-picker .current-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .color-picker .current-swatch {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    .color-picker .current-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+      min-width: 0;
+    }
+    .color-picker .current-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: clamp(140px, 28vw, 260px);
+    }
+    .color-picker .current-hex,
+    .color-picker .current-extra {
+      font-size: 11px;
+      color: var(--muted-color);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: clamp(140px, 28vw, 260px);
+    }
+    :global(.color-label) {
+      color: var(--muted-color);
+      opacity: 0.6 !important;
+    }
+    :global(.color-value) {
+      color: var(--text-color);
+      font-weight: 500;
+    }
+    .color-picker .picker__label {
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--muted-color);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .color-picker .hue-slider {
+      position: relative;
+      height: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: linear-gradient(
+        to right,
+        #f00 0%,
+        #ff0 17%,
+        #0f0 33%,
+        #0ff 50%,
+        #00f 67%,
+        #f0f 83%,
+        #f00 100%
+      );
+      cursor: ew-resize;
+      touch-action: none;
+      flex: 1 1 auto;
+      min-width: 200px;
+    }
+    .color-picker .hue-knob {
+      position: absolute;
+      top: 50%;
+      left: 93.6%;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      transform: translate(-50%, -50%);
+      background: var(--surface-bg);
+      z-index: 2;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+    }
+    .color-picker .hue-slider:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+    .color-picker .hue-value {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted-color);
+      font-size: 12px;
+    }
+    @media (max-width: 720px) {
+      .color-picker .current-card {
+        grid-template-columns: 1fr;
+      }
+      .color-picker .current-right {
+        padding-left: 0;
+        border-left: none;
+      }
+    }
+  </style>
+  <div class="picker__stack">
+    <div class="current-card">
+      <div class="current-left">
+        <div class="current-main">
+          <div
+            class="current-swatch"
+            aria-label="Current color"
+            title="Current color"
+          >
+          </div>
+          <div class="current-text">
+            <div class="current-name">—</div>
+            <div class="current-extra current-lch">—</div>
+            <div class="current-extra current-rgb">—</div>
+            <div class="current-hex">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="current-right">
+        <div class="picker__label">Hue</div>
+        <div
+          class="hue-slider"
+          role="slider"
+          aria-label="Hue"
+          aria-valuemin="0"
+          aria-valuemax="360"
+          aria-valuenow="214"
+          tabindex="0"
+        >
+          <div class="hue-knob"></div>
+        </div>
+        <div class="hue-value">214°</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  (() => {
+    const COLOR_NAMES = [
+      { name: "Candy Apple Red", hex: "#ff0800" },
+      { name: "Boiling Magma", hex: "#ff3300" },
+      { name: "Aerospace Orange", hex: "#ff4f00" },
+      { name: "Burtuqali Orange", hex: "#ff6700" },
+      { name: "American Orange", hex: "#ff8b00" },
+      { name: "Cheese", hex: "#ffa600" },
+      { name: "Amber", hex: "#ffbf00" },
+      { name: "Demonic Yellow", hex: "#ffe700" },
+      { name: "Bat-Signal", hex: "#feff00" },
+      { name: "Bitter Lime", hex: "#cfff00" },
+      { name: "Electric Lime", hex: "#ccff00" },
+      { name: "Bright Yellow Green", hex: "#9dff00" },
+      { name: "Lasting Lime", hex: "#88ff00" },
+      { name: "Bright Green", hex: "#66ff00" },
+      { name: "Chlorophyll Green", hex: "#4aff00" },
+      { name: "Green Screen", hex: "#22ff00" },
+      { name: "Electric Pickle", hex: "#00ff04" },
+      { name: "Acid", hex: "#00ff22" },
+      { name: "Lucent Lime", hex: "#00ff33" },
+      { name: "Cathode Green", hex: "#00ff55" },
+      { name: "Booger Buster", hex: "#00ff77" },
+      { name: "Green Gas", hex: "#00ff99" },
+      { name: "Enthusiasm", hex: "#00ffaa" },
+      { name: "Ice Ice Baby", hex: "#00ffdd" },
+      { name: "Master Sword Blue", hex: "#00ffee" },
+      { name: "Agressive Aqua", hex: "#00fbff" },
+      { name: "Vivid Sky Blue", hex: "#00ccff" },
+      { name: "Capri", hex: "#00bfff" },
+      { name: "Sky of Magritte", hex: "#0099ff" },
+      { name: "Azure", hex: "#007fff" },
+      { name: "Blue Ribbon", hex: "#0066ff" },
+      { name: "Blinking Blue", hex: "#0033ff" },
+      { name: "Icelandic Water", hex: "#0011ff" },
+      { name: "Blue", hex: "#0000ff" },
+      { name: "Blue Pencil", hex: "#2200ff" },
+      { name: "Electric Ultramarine", hex: "#3f00ff" },
+      { name: "Aladdin's Feather", hex: "#5500ff" },
+      { name: "Purple Climax", hex: "#8800ff" },
+      { name: "Amethyst Ganzstar", hex: "#8f00ff" },
+      { name: "Electric Purple", hex: "#bf00ff" },
+      { name: "Phlox", hex: "#df00ff" },
+      { name: "Brusque Pink", hex: "#ee00ff" },
+      { name: "Bright Magenta", hex: "#ff08e8" },
+      { name: "Big bang Pink", hex: "#ff00bb" },
+      { name: "Mean Girls Lipstick", hex: "#ff00ae" },
+      { name: "Pink", hex: "#ff0099" },
+      { name: "Hot Flamingoes", hex: "#ff005d" },
+      { name: "Blazing Dragonfruit", hex: "#ff0054" },
+      { name: "Carmine Red", hex: "#ff0038" },
+      { name: "Bright Red", hex: "#ff000d" },
+    ];
+    if (!window.__colorNames) window.__colorNames = COLOR_NAMES;
+
+    if (!window.__colorPickerBus) {
+      window.__colorPickerBus = (() => {
+        let hue = 214;
+        let adjusting = false;
+        const listeners = new Set();
+        return {
+          get: () => ({ hue, adjusting }),
+          publish: (sourceId, nextHue, isAdj) => {
+            hue = ((nextHue % 360) + 360) % 360;
+            adjusting = !!isAdj;
+            listeners.forEach((fn) => {
+              try {
+                fn({ sourceId, hue, adjusting });
+              } catch {}
+            });
+          },
+          subscribe: (fn) => {
+            listeners.add(fn);
+            return () => listeners.delete(fn);
+          },
+        };
+      })();
+    }
+
+    const bootstrap = () => {
+      const root = document.querySelector(".color-picker");
+      if (!root || root.dataset.mounted) return;
+      root.dataset.mounted = "true";
+      const slider = root.querySelector(".hue-slider");
+      const knob = root.querySelector(".hue-knob");
+      const hueValue = root.querySelector(".hue-value");
+      const currentSwatch = root.querySelector(".current-swatch");
+      const currentName = root.querySelector(".current-name");
+      const currentHex = root.querySelector(".current-hex");
+      const currentLch = root.querySelector(".current-lch");
+      const currentRgb = root.querySelector(".current-rgb");
+      const bus = window.__colorPickerBus;
+      const instanceId = Math.random().toString(36).slice(2);
+      const getKnobRadius = () => {
+        try {
+          const w = knob ? knob.getBoundingClientRect().width : 0;
+          return w ? w / 2 : 8;
+        } catch {
+          return 8;
+        }
+      };
+      const hexToHsl = (H) => {
+        const s = H.replace("#", "");
+        const v =
+          s.length === 3
+            ? s
+                .split("")
+                .map((ch) => ch + ch)
+                .join("")
+            : s;
+        const bigint = parseInt(v, 16);
+        let r = (bigint >> 16) & 255,
+          g = (bigint >> 8) & 255,
+          b = bigint & 255;
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        const max = Math.max(r, g, b),
+          min = Math.min(r, g, b);
+        let h = 0,
+          s2 = 0,
+          l = (max + min) / 2;
+        if (max !== min) {
+          const d = max - min;
+          s2 = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r:
+              h = (g - b) / d + (g < b ? 6 : 0);
+              break;
+            case g:
+              h = (b - r) / d + 2;
+              break;
+            default:
+              h = (r - g) / d + 4;
+          }
+          h /= 6;
+        }
+        return {
+          h: Math.round(h * 360),
+          s: Math.round(s2 * 100),
+          l: Math.round(l * 100),
+        };
+      };
+      const hslToHex = (h, s, l) => {
+        s /= 100;
+        l /= 100;
+        const k = (n) => (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) =>
+          l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        const toHex = (x) =>
+          Math.round(255 * x)
+            .toString(16)
+            .padStart(2, "0");
+        return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase();
+      };
+
+      // OKLCH conversion functions
+      const srgbToLinear = (u) =>
+        u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4);
+      const linearToSrgb = (u) =>
+        u <= 0.0031308
+          ? 12.92 * u
+          : 1.055 * Math.pow(Math.max(0, u), 1 / 2.4) - 0.055;
+      const rgbToOklab = (r, g, b) => {
+        const rl = srgbToLinear(r),
+          gl = srgbToLinear(g),
+          bl = srgbToLinear(b);
+        const l = Math.cbrt(
+          0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl,
+        );
+        const m = Math.cbrt(
+          0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl,
+        );
+        const s = Math.cbrt(
+          0.0883024619 * rl + 0.2817188366 * gl + 0.6299787005 * bl,
+        );
+        const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+        const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+        const b2 = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+        return { L, a, b: b2 };
+      };
+      const oklabToOklch = (L, a, b) => {
+        const C = Math.sqrt(a * a + b * b);
+        let h = (Math.atan2(b, a) * 180) / Math.PI;
+        if (h < 0) h += 360;
+        return { L, C, h };
+      };
+      const hexToOklch = (hex) => {
+        const s = hex.replace("#", "");
+        const v =
+          s.length === 3
+            ? s
+                .split("")
+                .map((ch) => ch + ch)
+                .join("")
+            : s;
+        const r = parseInt(v.slice(0, 2), 16) / 255;
+        const g = parseInt(v.slice(2, 4), 16) / 255;
+        const b = parseInt(v.slice(4, 6), 16) / 255;
+        const { L, a, b: bb } = rgbToOklab(r, g, b);
+        return oklabToOklch(L, a, bb);
+      };
+      // Precompute hues for the provided color-name list
+      const NAME_HUES = COLOR_NAMES.map((c) => {
+        const hh = hexToHsl(c.hex).h || 0;
+        return { name: c.name, hue: hh };
+      });
+      // Pick closest name by circular hue distance; fallback to coarse labels
+      const getName = (hex) => {
+        const h = hexToHsl(hex).h || 0;
+        let bestName = "—";
+        let best = 361;
+        for (let i = 0; i < NAME_HUES.length; i++) {
+          const hh = NAME_HUES[i].hue;
+          const d = Math.abs(hh - h);
+          const dist = Math.min(d, 360 - d);
+          if (dist < best) {
+            best = dist;
+            bestName = NAME_HUES[i].name;
+          }
+        }
+        if (bestName !== "—") return bestName;
+        const labels = [
+          "Red",
+          "Orange",
+          "Yellow",
+          "Lime",
+          "Green",
+          "Cyan",
+          "Blue",
+          "Indigo",
+          "Violet",
+          "Magenta",
+        ];
+        const idx = Math.round(((h % 360) / 360) * (labels.length - 1));
+        return labels[idx];
+      };
+      // OKLCH to RGB conversion functions
+      const oklchToOklab = (L, C, hDeg) => {
+        const h = (hDeg * Math.PI) / 180;
+        return { L, a: C * Math.cos(h), b: C * Math.sin(h) };
+      };
+      const oklabToRgb = (L, a, b) => {
+        const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+        const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+        const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+        const l = l_ * l_ * l_;
+        const m = m_ * m_ * m_;
+        const s = s_ * s_ * s_;
+        const r = linearToSrgb(
+          +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+        );
+        const g = linearToSrgb(
+          -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        );
+        const b3 = linearToSrgb(
+          -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+        );
+        return { r, g, b: b3 };
+      };
+      const oklchToHex = (L, C, h) => {
+        const { a, b } = oklchToOklab(L, C, h);
+        const rgb = oklabToRgb(L, a, b);
+        const toHex = (x) =>
+          Math.round(255 * x)
+            .toString(16)
+            .padStart(2, "0");
+        return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`.toUpperCase();
+      };
+
+      const updateUI = (h, adjusting) => {
+        const rect = slider.getBoundingClientRect();
+        const r = Math.min(getKnobRadius(), Math.max(0, rect.width / 2 - 1));
+        const t = Math.max(0, Math.min(1, h / 360));
+        const leftPx = r + t * Math.max(0, rect.width - 2 * r);
+        if (knob) knob.style.left = (leftPx / rect.width) * 100 + "%";
+        if (hueValue) hueValue.innerHTML = `<strong>${Math.round(h)}°</strong>`;
+        if (slider) slider.setAttribute("aria-valuenow", String(Math.round(h)));
+
+        // Generate OKLCH color directly (similar to CSS variables)
+        const L = 0.75; // 75% lightness
+        const C = 0.12; // 12% chroma
+        const oklchColor = `oklch(${L} ${C} ${h})`;
+        const baseHex = oklchToHex(L, C, h);
+
+        if (currentSwatch) currentSwatch.style.background = baseHex;
+        if (currentName) currentName.textContent = getName(baseHex);
+        if (currentHex)
+          currentHex.innerHTML = `<span class="color-label">#</span><span class="color-value">${baseHex.replace("#", "")}</span>`;
+
+        // Display OKLCH values
+        if (currentLch)
+          currentLch.innerHTML = `<span class="color-label">OKLCH</span> <span class="color-value">${(L * 100).toFixed(1)}</span><span class="color-label">%</span>, <span class="color-value">${(C * 100).toFixed(1)}</span><span class="color-label">%</span>, <span class="color-value"><strong>${Math.round(h)}</strong></span><span class="color-label">°</span>`;
+
+        if (currentRgb) {
+          const hex = baseHex.replace("#", "");
+          const R = parseInt(hex.slice(0, 2), 16),
+            G = parseInt(hex.slice(2, 4), 16),
+            B = parseInt(hex.slice(4, 6), 16);
+          currentRgb.innerHTML = `<span class="color-label">RGB</span> <span class="color-value">${R}</span><span class="color-label">,</span> <span class="color-value">${G}</span><span class="color-label">,</span> <span class="color-value">${B}</span>`;
+        }
+
+        // Apply OKLCH color to CSS variables
+        const hoverOklch = `oklch(${L} ${C} ${h})`;
+        const rootEl = document.documentElement;
+        rootEl.style.setProperty("--primary-color", oklchColor);
+        rootEl.style.setProperty("--primary-color-hover", hoverOklch);
+      };
+
+      // Update UI position only, without modifying CSS colors
+      const updateUIPositionOnly = (h) => {
+        const rect = slider.getBoundingClientRect();
+        const r = Math.min(getKnobRadius(), Math.max(0, rect.width / 2 - 1));
+        const t = Math.max(0, Math.min(1, h / 360));
+        const leftPx = r + t * Math.max(0, rect.width - 2 * r);
+        if (knob) knob.style.left = (leftPx / rect.width) * 100 + "%";
+        if (hueValue) hueValue.innerHTML = `<strong>${Math.round(h)}°</strong>`;
+        if (slider) slider.setAttribute("aria-valuenow", String(Math.round(h)));
+
+        // Generate OKLCH color for display only
+        const L = 0.75; // 75% lightness
+        const C = 0.12; // 12% chroma
+        const baseHex = oklchToHex(L, C, h);
+
+        if (currentSwatch) currentSwatch.style.background = baseHex;
+        if (currentName) currentName.textContent = getName(baseHex);
+        if (currentHex)
+          currentHex.innerHTML = `<span class="color-label">#</span><span class="color-value">${baseHex.replace("#", "")}</span>`;
+
+        // Display OKLCH values
+        if (currentLch)
+          currentLch.innerHTML = `<span class="color-label">OKLCH</span> <span class="color-value">${(L * 100).toFixed(1)}</span><span class="color-label">%</span>, <span class="color-value">${(C * 100).toFixed(1)}</span><span class="color-label">%</span>, <span class="color-value"><strong>${Math.round(h)}</strong></span><span class="color-label">°</span>`;
+
+        if (currentRgb) {
+          const hex = baseHex.replace("#", "");
+          const R = parseInt(hex.slice(0, 2), 16),
+            G = parseInt(hex.slice(2, 4), 16),
+            B = parseInt(hex.slice(4, 6), 16);
+          currentRgb.innerHTML = `<span class="color-label">RGB</span> <span class="color-value">${R}</span><span class="color-label">,</span> <span class="color-value">${G}</span><span class="color-label">,</span> <span class="color-value">${B}</span>`;
+        }
+
+        // DO NOT modify CSS variables - just show the position
+      };
+      const getHueFromEvent = (ev) => {
+        const rect = slider.getBoundingClientRect();
+        const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+        const x = clientX - rect.left;
+        const r = Math.min(getKnobRadius(), Math.max(0, rect.width / 2 - 1));
+        const effX = Math.max(r, Math.min(rect.width - r, x));
+        const denom = Math.max(1, rect.width - 2 * r);
+        const t = (effX - r) / denom;
+        return t * 360;
+      };
+      const unsubscribe = bus.subscribe(({ sourceId, hue, adjusting }) => {
+        if (sourceId === instanceId) return;
+        updateUI(hue, adjusting);
+      });
+      try {
+        let initH = 214;
+
+        // Try to get OKLCH directly from ColorPalettes first
+        if (
+          window.ColorPalettes &&
+          typeof window.ColorPalettes.getPrimaryOKLCH === "function"
+        ) {
+          const oklch = window.ColorPalettes.getPrimaryOKLCH();
+          if (oklch && oklch.h !== undefined) {
+            initH = oklch.h; // Use exact OKLCH hue, no conversion!
+          }
+        } else {
+          // Fallback: try to parse OKLCH directly from CSS
+          const cssPrimary = getComputedStyle(document.documentElement)
+            .getPropertyValue("--primary-color")
+            .trim();
+          if (cssPrimary && cssPrimary.includes("oklch")) {
+            const oklchMatch = cssPrimary.match(/oklch\(([^)]+)\)/);
+            if (oklchMatch) {
+              const values = oklchMatch[1]
+                .split(/\s+/)
+                .map((v) => parseFloat(v.trim()));
+              if (values.length >= 3) {
+                initH = values[2]; // Direct OKLCH hue, no conversion!
+              }
+            }
+          } else if (cssPrimary) {
+            // Only convert if it's not OKLCH
+            initH = hexToHsl(cssPrimary).h || initH;
+          }
+        }
+
+        const { hue: sharedHue } = bus.get();
+        // Only update UI position, don't modify CSS colors on initialization
+        updateUIPositionOnly(initH ?? sharedHue);
+        bus.publish(instanceId, initH ?? sharedHue, false);
+      } catch {
+        const { hue: sharedHue } = bus.get();
+        updateUIPositionOnly(sharedHue);
+      }
+      const onDown = (ev) => {
+        ev.preventDefault();
+        const h = getHueFromEvent(ev);
+        updateUI(h, true);
+        bus.publish(instanceId, h, true);
+        const move = (e) => {
+          e.preventDefault && e.preventDefault();
+          const hh = getHueFromEvent(e);
+          updateUI(hh, true);
+          bus.publish(instanceId, hh, true);
+        };
+        const up = () => {
+          bus.publish(instanceId, getHueFromEvent(ev), false);
+          window.removeEventListener("mousemove", move);
+          window.removeEventListener("touchmove", move);
+          window.removeEventListener("mouseup", up);
+          window.removeEventListener("touchend", up);
+        };
+        window.addEventListener("mousemove", move, { passive: false });
+        window.addEventListener("touchmove", move, { passive: false });
+        window.addEventListener("mouseup", up, { once: true });
+        window.addEventListener("touchend", up, { once: true });
+      };
+      if (slider) {
+        slider.addEventListener("mousedown", onDown);
+        slider.addEventListener("touchstart", onDown, { passive: false });
+        slider.addEventListener("keydown", (e) => {
+          const step = e.shiftKey ? 10 : 2;
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            const { hue } = bus.get();
+            const h = hue - step;
+            updateUI(h, true);
+            bus.publish(instanceId, h, true);
+            bus.publish(instanceId, h, false);
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            const { hue } = bus.get();
+            const h = hue + step;
+            updateUI(h, true);
+            bus.publish(instanceId, h, true);
+            bus.publish(instanceId, h, false);
+          }
+        });
+      }
+      const ro = new MutationObserver(() => {
+        if (!document.body.contains(root)) {
+          unsubscribe && unsubscribe();
+          ro.disconnect();
+        }
+      });
+      ro.observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", bootstrap, { once: true });
+    else bootstrap();
+  })();
+</script>

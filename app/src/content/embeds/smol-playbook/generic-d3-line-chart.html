@@ -1,0 +1,1184 @@
+<!-- 
+  Line Chart with Smoothing
+  
+  A configurable multi-line chart with zoom/pan, smoothing, and hover tooltips.
+  
+  Configuration via data-config attribute (optional):
+  {
+    "dataUrl": "./assets/data/your_data.csv",       // Custom CSV path
+    "xDomain": [0, 45e9],                           // X-axis range
+    "yDomain": [2.1, 2.7],                          // Y-axis range
+    "smoothingWindow": 15,                          // Moving average window size
+    "smoothingCurve": "monotoneX",                  // D3 curve: "linear", "monotoneX", "catmullRom", "basis"
+    "title": "My Chart",                            // Chart title for tooltip
+    "xFormatAsFileSize": true                       // Format X axis as file sizes (B, kB, MB, GB)
+  }
+  
+  CSV format: run_name, tokens, loss (or custom x/y columns)
+  
+  Example usage in MDX:
+  <HtmlEmbed 
+    src="embeds/line-chart-smooth.html" 
+    config={{ 
+      dataUrl: "./assets/data/attention_loss.csv",
+      xDomain: [0, 30e9],
+      yDomain: [2.0, 2.8],
+      smoothingWindow: 20,
+      title: "Attention Loss"
+    }} 
+  />
+  
+  Example with file size formatting:
+  <HtmlEmbed 
+    src="embeds/d3-line-chart.html" 
+    config={{ 
+      dataUrl: "./data/device_local_copy_bandwidth.csv",
+      xColumn: "message_size",
+      yColumn: "bandwidth",
+      runColumn: "run_name",
+      xScaleType: "log",
+      xFormatAsFileSize: true,
+      xAxisLabel: "Message Size",
+      yAxisLabel: "Bandwidth (GB/s)"
+    }} 
+  />
+-->
+<div class="d3-line-chart"></div>
+<style>
+  .d3-line-chart {
+    position: relative;
+  }
+
+  .d3-line-chart .axis-label {
+    fill: var(--text-color);
+    font-size: 12px;
+    font-weight: 300;
+    opacity: 0.7;
+    stroke: var(--page-bg, white);
+    background-color: var(--surface-bg) !important;
+    stroke-width: 6px;
+    paint-order: stroke fill;
+  }
+
+  .d3-line-chart .axes path {
+    display: none;
+  }
+
+  .d3-line-chart .axes line {
+    stroke: var(--axis-color);
+  }
+
+  .d3-line-chart .axes text {
+    fill: var(--tick-color);
+  }
+
+  .d3-line-chart .grid line {
+    stroke: var(--grid-color);
+  }
+
+
+  .d3-line-chart .legend-bottom {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    font-size: 12px;
+    color: var(--text-color);
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .d3-line-chart .legend-bottom .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-line-chart .legend-bottom .items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .d3-line-chart .legend-bottom .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .d3-line-chart .legend-bottom .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+    display: inline-block;
+  }
+
+  .d3-line-chart path.main-line {
+    transition: opacity 0.2s ease;
+  }
+
+  .d3-line-chart path.ghost-line {
+    transition: opacity 0.6s ease;
+  }
+
+  /* Ghosting on hover */
+  .d3-line-chart.hovering .legend-bottom .item.ghost {
+    opacity: .35;
+  }
+
+  .d3-line-chart.hovering path.main-line.ghost {
+    opacity: .25;
+  }
+
+  .d3-line-chart.hovering path.ghost-line.ghost {
+    opacity: .05;
+  }
+
+  /* Tooltip */
+  .d3-line-chart .d3-tooltip {
+    z-index: 20;
+    backdrop-filter: saturate(1.12) blur(8px);
+  }
+
+  .d3-line-chart .d3-tooltip__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:first-child {
+    font-weight: 800;
+    letter-spacing: 0.1px;
+    margin-bottom: 0;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:nth-child(2) {
+    font-size: 11px;
+    color: var(--muted-color);
+    display: block;
+    margin-top: -4px;
+    margin-bottom: 2px;
+    letter-spacing: 0.1px;
+  }
+
+  .d3-line-chart .d3-tooltip__inner>div:nth-child(n+3) {
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .d3-line-chart .d3-tooltip__color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border-color);
+  }
+
+  /* Reference line */
+  .d3-line-chart .reference-line {
+    stroke: #e15759;
+    stroke-width: 2;
+    stroke-dasharray: 3, 3;
+  }
+
+  .d3-line-chart .reference-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  /* Chart card */
+  .d3-line-chart .chart-card {
+    padding: 0;
+  }
+
+  .d3-line-chart .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 12px 0 0 0;
+    flex-wrap: wrap;
+  }
+
+  /* Trackio footer removed */
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true }); if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+
+      // If the previous sibling is not a d3-line-chart, look for the closest one
+      if (!(container && container.classList && container.classList.contains('d3-line-chart'))) {
+        // First, try to find the closest d3-line-chart element by traversing up the DOM
+        let currentEl = scriptEl;
+        while (currentEl && currentEl.parentNode) {
+          currentEl = currentEl.parentNode;
+          const found = currentEl.querySelector && currentEl.querySelector('.d3-line-chart:not([data-mounted="true"])');
+          if (found) {
+            container = found;
+            break;
+          }
+        }
+
+        // If still not found, get the first unmounted d3-line-chart
+        if (!container) {
+          const cs = Array.from(document.querySelectorAll('.d3-line-chart')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+          container = cs[0] || null; // Use first instead of last
+        }
+      }
+
+      if (!container) return;
+      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip'); let tipInner;
+      if (!tip) {
+        tip = document.createElement('div'); tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+          padding: '10px 12px', borderRadius: '12px', fontSize: '12px', lineHeight: '1.35', border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 8px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.12)', opacity: '0', transition: 'opacity .12s ease'
+        });
+        tipInner = document.createElement('div'); tipInner.className = 'd3-tooltip__inner'; tipInner.style.textAlign = 'left'; tip.appendChild(tipInner); container.appendChild(tip);
+      } else { tipInner = tip.querySelector('.d3-tooltip__inner') || tip; }
+
+      // Header (legend)
+      const header = document.createElement('div');
+      header.className = 'chart-header';
+      const legend = document.createElement('div');
+      legend.className = 'legend-bottom';
+      legend.innerHTML = '<div class="legend-title">Legend</div><div class="items"></div>';
+      header.appendChild(legend);
+
+      const chartCard = document.createElement('div');
+      chartCard.className = 'chart-card';
+      chartCard.style.position = 'relative';
+
+      // Reset button (absolute positioned in chart)
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'reset-button';
+      resetBtn.textContent = 'Reset View';
+      Object.assign(resetBtn.style, {
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        zIndex: '10',
+        display: 'none',
+        opacity: '0',
+        transition: 'opacity 0.2s ease',
+        fontSize: '12px',
+        padding: '4px 8px',
+        borderRadius: '6px',
+        background: 'var(--surface-bg)',
+        color: 'var(--text-color)',
+        border: '1px solid var(--border-color)',
+        cursor: 'pointer'
+      });
+      chartCard.appendChild(resetBtn);
+
+      container.appendChild(chartCard);
+      container.appendChild(header);
+
+      // Footer removed
+
+      const d3 = window.d3;
+
+      // Read config from HtmlEmbed props
+      function readEmbedConfig() {
+        let mountEl = container;
+        while (mountEl && !mountEl.getAttribute?.('data-config')) {
+          mountEl = mountEl.parentElement;
+        }
+
+        let providedConfig = null;
+        try {
+          const cfg = mountEl && mountEl.getAttribute ? mountEl.getAttribute('data-config') : null;
+          if (cfg && cfg.trim()) {
+            providedConfig = cfg.trim().startsWith('{') ? JSON.parse(cfg) : cfg;
+          }
+        } catch (e) {
+          // Failed to parse data-config
+        }
+        return providedConfig || {};
+      }
+
+      const embedConfig = readEmbedConfig();
+
+      // Configuration (with overrides from embed config)
+      const CONFIG = {
+        width: 800,
+        height: 320,
+        margin: { top: 20, right: 10, bottom: 52, left: 52 },
+        xDomain: embedConfig.xDomain || null,  // Auto-calculated if null
+        yDomain: embedConfig.yDomain || null,  // Auto-calculated if null
+        zoomExtent: [1.0, 8],
+        smoothing: embedConfig.smoothing !== undefined ? embedConfig.smoothing : false,
+        smoothingWindow: embedConfig.smoothingWindow || 15,
+        smoothingCurve: embedConfig.smoothingCurve || 'monotoneX',
+        transitionDuration: 600,
+        dataUrl: embedConfig.dataUrl || null,
+        title: embedConfig.title || 'Chart',
+        xAxisLabel: embedConfig.xAxisLabel || 'Consumed tokens',
+        yAxisLabel: embedConfig.yAxisLabel || 'Loss',
+        xColumn: embedConfig.xColumn || 'tokens',
+        yColumn: embedConfig.yColumn || 'loss',
+        runColumn: embedConfig.runColumn || 'run_name',
+        xScaleType: embedConfig.xScaleType || 'linear',  // 'linear' or 'log'
+        yScaleType: embedConfig.yScaleType || 'linear',  // 'linear' or 'log'
+        referenceLine: embedConfig.referenceLine || null,  // { value: number, label?: string, color?: string, dashArray?: string }
+        xFormatAsFileSize: embedConfig.xFormatAsFileSize || false  // Format X axis as file sizes (B, kB, MB, GB)
+      };
+
+      let width = CONFIG.width;
+      let height = CONFIG.height;
+      const margin = CONFIG.margin;
+      let smoothEnabled = CONFIG.smoothing;
+      let hasMoved = false;
+
+      // Create SVG
+      const svg = d3.select(chartCard)
+        .append('svg')
+        .attr('width', '100%')
+        .style('display', 'block');
+
+      // Clip path for constraining plot area
+      const clipId = 'clip-' + Math.random().toString(36).slice(2);
+      const clipPath = svg.append('defs')
+        .append('clipPath')
+        .attr('id', clipId);
+      const clipRect = clipPath.append('rect');
+
+      // Main group (with margins)
+      const g = svg.append('g');
+
+      // Grid and axes (not affected by zoom)
+      const gGrid = g.append('g').attr('class', 'grid');
+      const gAxes = g.append('g').attr('class', 'axes');
+      const gReference = g.append('g').attr('class', 'reference');
+
+      // Zoomable content layer (with clip-path)
+      const gPlot = g.append('g')
+        .attr('class', 'plot')
+        .attr('clip-path', `url(#${clipId})`);
+
+      // Hover layer (on top, for tooltips)
+      const gHover = g.append('g').attr('class', 'hover-layer');
+
+      // Overlay rect for capturing zoom events (on top, transparent)
+      const overlay = g.append('rect')
+        .attr('class', 'overlay')
+        .attr('fill', 'none')
+        .attr('pointer-events', 'all')
+        .style('cursor', 'grab')
+        .on('mousedown', function () {
+          d3.select(this).style('cursor', 'grabbing');
+          // Hide tooltip during zoom/pan
+          if (tip) tip.style.opacity = '0';
+          if (hoverLine) hoverLine.style('display', 'none');
+        })
+        .on('mouseup', function () { d3.select(this).style('cursor', 'grab'); });
+
+      // Scales
+      const xScale = (CONFIG.xScaleType === 'log' ? d3.scaleLog() : d3.scaleLinear()).domain(CONFIG.xDomain || [0.1, 1]);
+      const yScale = (CONFIG.yScaleType === 'log' ? d3.scaleLog() : d3.scaleLinear()).domain(CONFIG.yDomain || [0.1, 1]);
+
+      // Data
+      let data = [];
+      let runList = [];
+      let runColorMap = {};
+
+      // Hover state
+      let hoverLine = null;
+      let tokens = [];
+      let hideTipTimer = null;
+
+      // Smoothing
+      const getCurve = (smooth) => {
+        if (!smooth) return d3.curveLinear;
+        switch (CONFIG.smoothingCurve) {
+          case 'catmullRom': return d3.curveCatmullRom.alpha(0.5);
+          case 'monotoneX': return d3.curveMonotoneX;
+          case 'basis': return d3.curveBasis;
+          default: return d3.curveLinear;
+        }
+      };
+
+      function movingAverage(values, windowSize) {
+        if (!Array.isArray(values) || values.length === 0 || windowSize <= 1) return values;
+        const half = Math.floor(windowSize / 2);
+        const out = new Array(values.length);
+        for (let i = 0; i < values.length; i++) {
+          let sum = 0; let count = 0;
+          const start = Math.max(0, i - half);
+          const end = Math.min(values.length - 1, i + half);
+          for (let j = start; j <= end; j++) { if (!Number.isNaN(values[j].loss)) { sum += values[j].loss; count++; } }
+          const avg = count ? (sum / count) : values[i].loss;
+          out[i] = { tokens: values[i].tokens, loss: avg };
+        }
+        return out;
+      }
+
+      function applySmoothing(values, smooth) {
+        if (!smooth) return values;
+        return movingAverage(values, CONFIG.smoothingWindow);
+      }
+
+      // Smart formatters (will be set after data loading)
+      let formatX = (v) => v;
+      let formatY = (v) => v;
+      const MAX_TICKS = 10;
+
+      function limitTicks(ticks, maxCount, domain) {
+        if (!Array.isArray(ticks)) return ticks;
+        if (ticks.length <= maxCount) return ticks;
+        const first = ticks[0];
+        const last = ticks[ticks.length - 1];
+        const step = Math.ceil(ticks.length / maxCount);
+        const sampled = ticks.filter((_, i) => i % step === 0);
+        if (sampled[0] !== first && first >= domain[0]) sampled.unshift(first);
+        if (sampled[sampled.length - 1] !== last && last <= domain[1]) sampled.push(last);
+        return sampled.slice(0, maxCount);
+      }
+
+      // Function to determine smart format based on data values
+      function createSmartFormatter(values, isFileSize = false) {
+        if (!values || values.length === 0) return (v) => v;
+
+        const min = d3.min(values);
+        const max = d3.max(values);
+        const range = max - min;
+
+        // Check if all values are effectively integers (within 0.001 tolerance)
+        const allIntegers = values.every(v => Math.abs(v - Math.round(v)) < 0.001);
+
+        // File size formatting (binary units: B, KiB, MiB, GiB)
+        if (isFileSize) {
+          const KiB = 1024;
+          const MiB = KiB * 1024;
+          const GiB = MiB * 1024;
+          return (v) => {
+            if (v >= GiB) {
+              const gib = v / GiB;
+              return (gib % 1 === 0 ? d3.format('d')(gib) : d3.format('.2f')(gib)) + ' GiB';
+            } else if (v >= MiB) {
+              const mib = v / MiB;
+              return (mib % 1 === 0 ? d3.format('d')(mib) : d3.format('.2f')(mib)) + ' MiB';
+            } else if (v >= KiB) {
+              const kib = v / KiB;
+              return (kib % 1 === 0 ? d3.format('d')(kib) : d3.format('.1f')(kib)) + ' KiB';
+            } else {
+              return d3.format('d')(Math.round(v)) + ' B';
+            }
+          };
+        }
+
+        // Large numbers (billions): format as "X.XXB"
+        if (max >= 1e9) {
+          return (v) => {
+            const billions = v / 1e9;
+            return allIntegers && billions === Math.round(billions)
+              ? d3.format('d')(Math.round(billions)) + 'B'
+              : d3.format('.2f')(billions) + 'B';
+          };
+        }
+
+        // Millions: format as "X.XXM" or "XM"
+        if (max >= 1e6) {
+          return (v) => {
+            const millions = v / 1e6;
+            return allIntegers && millions === Math.round(millions)
+              ? d3.format('d')(Math.round(millions)) + 'M'
+              : d3.format('.2f')(millions) + 'M';
+          };
+        }
+
+        // Thousands: format as "X.Xk" or "Xk"
+        if (max >= 1000 && range >= 100) {
+          return (v) => {
+            const thousands = v / 1000;
+            return allIntegers && thousands === Math.round(thousands)
+              ? d3.format('d')(Math.round(thousands)) + 'k'
+              : d3.format('.1f')(thousands) + 'k';
+          };
+        }
+
+        // Regular numbers
+        if (allIntegers) {
+          return (v) => d3.format('d')(Math.round(v));
+        }
+
+        // Small decimals: use appropriate precision
+        if (range < 1) {
+          return (v) => d3.format('.3f')(v);
+        } else if (range < 10) {
+          return (v) => d3.format('.2f')(v);
+        } else {
+          return (v) => d3.format('.1f')(v);
+        }
+      }
+
+      // Colors
+      const getRunColors = (n) => {
+        try { if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') return window.ColorPalettes.getColors('categorical', n); } catch (_) { }
+        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#E889AB';
+        return [primary, '#4EA5B7', '#E38A42', '#CEC0FA', '#9B59B6', '#16A085', ...(d3.schemeTableau10 || [])].slice(0, n);
+      };
+
+      // Zoom behavior
+      const zoom = d3.zoom()
+        .scaleExtent(CONFIG.zoomExtent)
+        .on('zoom', zoomed);
+
+      // Apply zoom to overlay (not svg) so it respects the margins
+      overlay.call(zoom);
+
+      function zoomed(event) {
+        const transform = event.transform;
+        hasMoved = transform.k !== 1 || transform.x !== 0 || transform.y !== 0;
+        updateResetButton();
+
+        // DON'T transform the group - instead redraw paths with rescaled domains
+        const newXScale = transform.rescaleX(xScale);
+        const newYScale = transform.rescaleY(yScale);
+
+        // Get current inner dimensions
+        const innerWidth = xScale.range()[1];
+
+        // Smart grid ticks (same as axis ticks)
+
+        const getGridTicks = (scale, scaleType) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(Math.min(6, MAX_TICKS));
+          }
+
+          const domain = scale.domain();
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          if (logRange < 2) {
+            return scale.ticks(Math.min(4, Math.ceil(logRange * 2)));
+          }
+
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          const within = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return limitTicks(within, MAX_TICKS, domain);
+        };
+
+        // Update grid lines
+        const gridTicks = getGridTicks(newYScale, CONFIG.yScaleType);
+        gGrid.selectAll('line')
+          .data(gridTicks)
+          .join('line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', d => newYScale(d))
+          .attr('y2', d => newYScale(d))
+          .attr('stroke', 'var(--grid-color)');
+
+        // Redraw lines with transformed scales
+        const line = d3.line()
+          .x(d => newXScale(d.tokens))
+          .y(d => newYScale(d.loss))
+          .curve(getCurve(smoothEnabled));
+
+        // Update ghost lines (raw data)
+        gPlot.selectAll('path.ghost-line')
+          .attr('d', d => {
+            const rawLine = d3.line()
+              .x(d => newXScale(d.tokens))
+              .y(d => newYScale(d.loss))
+              .curve(d3.curveLinear);
+            return rawLine(d.values);
+          });
+
+        // Update main lines
+        gPlot.selectAll('path.main-line')
+          .attr('d', d => line(applySmoothing(d.values, smoothEnabled)));
+
+        // Smart tick generation for zoomed view
+        const getSmartTicksZoom = (scale, scaleType, useBinary = false) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(Math.min(6, MAX_TICKS));
+          }
+
+          const domain = scale.domain();
+          if (useBinary) {
+            const minPow2 = Math.ceil(Math.log2(domain[0]));
+            const maxPow2 = Math.floor(Math.log2(domain[1]));
+            const ticks = [];
+            for (let p = minPow2; p <= maxPow2; p++) ticks.push(Math.pow(2, p));
+            const within = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+            return limitTicks(within, MAX_TICKS, domain);
+          }
+
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          if (logRange < 2) {
+            return scale.ticks(Math.min(MAX_TICKS, Math.min(4, Math.ceil(logRange * 2))));
+          }
+
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          const within = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return limitTicks(within, MAX_TICKS, domain);
+        };
+
+        const newXTicks = getSmartTicksZoom(newXScale, CONFIG.xScaleType, !!CONFIG.xFormatAsFileSize);
+        const newYTicks = getSmartTicksZoom(newYScale, CONFIG.yScaleType);
+
+        // Update axes with rescaled domains
+        gAxes.select('.x-axis').call(d3.axisBottom(newXScale).tickValues(newXTicks).tickSizeOuter(0).tickFormat(formatX));
+        gAxes.select('.y-axis').call(d3.axisLeft(newYScale).tickValues(newYTicks).tickSizeOuter(0).tickFormat(formatY));
+
+        // Update reference line
+        if (CONFIG.referenceLine) {
+          const refValue = CONFIG.referenceLine.value;
+          gReference.select('.reference-line')
+            .attr('y1', newYScale(refValue))
+            .attr('y2', newYScale(refValue));
+
+          gReference.select('.reference-label')
+            .attr('y', newYScale(refValue) - 5);
+        }
+      }
+
+      function updateResetButton() {
+        if (hasMoved) {
+          resetBtn.style.display = 'block';
+          requestAnimationFrame(() => { resetBtn.style.opacity = '1'; });
+        } else {
+          resetBtn.style.opacity = '0';
+          setTimeout(() => { if (!hasMoved) resetBtn.style.display = 'none'; }, 200);
+        }
+      }
+
+      function render() {
+        if (!data.length) return;
+
+        // Update dimensions
+        const rect = container.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect && rect.width ? rect.width : (container.clientWidth || 800)));
+        height = Math.max(CONFIG.height, Math.round(width / 2.2));
+        svg.attr('width', width).attr('height', height);
+
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        // Position main group
+        g.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        // Update scales ranges
+        xScale.range([0, innerWidth]);
+        yScale.range([innerHeight, 0]);
+
+        // Update clip rect - positioned relative to g (which is already translated)
+        clipRect
+          .attr('x', 0)
+          .attr('y', 0)
+          .attr('width', innerWidth)
+          .attr('height', innerHeight);
+
+        // Update overlay (positioned at 0,0 within the g group)
+        overlay
+          .attr('x', 0)
+          .attr('y', 0)
+          .attr('width', innerWidth)
+          .attr('height', innerHeight);
+
+        // Update zoom extent and translateExtent
+        zoom
+          .extent([[0, 0], [innerWidth, innerHeight]])
+          .translateExtent([[0, 0], [innerWidth, innerHeight]]);
+
+        // Smart tick generation for log scales
+        const getSmartTicks = (scale, scaleType, targetCount = 6, useBinary = false) => {
+          if (scaleType !== 'log') {
+            return scale.ticks(Math.min(targetCount, MAX_TICKS));
+          }
+
+          const domain = scale.domain();
+          if (useBinary) {
+            const minPow2 = Math.ceil(Math.log2(domain[0]));
+            const maxPow2 = Math.floor(Math.log2(domain[1]));
+            const ticks = [];
+            for (let p = minPow2; p <= maxPow2; p++) ticks.push(Math.pow(2, p));
+            const within = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+            return limitTicks(within, MAX_TICKS, domain);
+          }
+
+          // For log scale, use custom tick logic to avoid crowding (powers of 10)
+          const minLog = Math.log10(domain[0]);
+          const maxLog = Math.log10(domain[1]);
+          const logRange = maxLog - minLog;
+
+          if (logRange < 2) {
+            return scale.ticks(Math.min(MAX_TICKS, Math.min(4, Math.ceil(logRange * 2))));
+          }
+
+          const ticks = [];
+          const minPower = Math.ceil(minLog);
+          const maxPower = Math.floor(maxLog);
+
+          for (let power = minPower; power <= maxPower; power++) {
+            ticks.push(Math.pow(10, power));
+          }
+
+          if (ticks.length < 4 && logRange < 3) {
+            const intermediateTicks = [];
+            for (let power = minPower; power < maxPower; power++) {
+              intermediateTicks.push(5 * Math.pow(10, power));
+            }
+            ticks.push(...intermediateTicks);
+            ticks.sort((a, b) => a - b);
+          }
+
+          const within = ticks.filter(t => t >= domain[0] && t <= domain[1]);
+          return limitTicks(within, MAX_TICKS, domain);
+        };
+
+        const xTicks = getSmartTicks(xScale, CONFIG.xScaleType, 6, !!CONFIG.xFormatAsFileSize);
+        const yTicks = getSmartTicks(yScale, CONFIG.yScaleType, 6);
+
+        // Grid (use smart ticks)
+        gGrid.selectAll('line').data(yTicks)
+          .join('line')
+          .attr('x1', 0)
+          .attr('x2', innerWidth)
+          .attr('y1', d => yScale(d))
+          .attr('y2', d => yScale(d))
+          .attr('stroke', 'var(--grid-color)');
+
+        // Axes
+        gAxes.selectAll('*').remove();
+
+        gAxes.append('g')
+          .attr('class', 'x-axis')
+          .attr('transform', `translate(0,${innerHeight})`)
+          .call(d3.axisBottom(xScale).tickValues(xTicks).tickSizeOuter(0).tickFormat(formatX))
+          .selectAll('text').attr('fill', 'var(--tick-color)');
+
+        gAxes.append('g')
+          .attr('class', 'y-axis')
+          .call(d3.axisLeft(yScale).tickValues(yTicks).tickSizeOuter(0).tickFormat(formatY))
+          .selectAll('text').attr('fill', 'var(--tick-color)');
+
+        gAxes.selectAll('.domain, .tick line').attr('stroke', 'var(--axis-color)');
+
+        // Axis labels
+        gAxes.append('text')
+          .attr('class', 'axis-label')
+          .attr('x', innerWidth / 2)
+          .attr('y', innerHeight + 38)
+          .attr('text-anchor', 'middle')
+          .text(CONFIG.xAxisLabel);
+
+        gAxes.append('text')
+          .attr('class', 'axis-label')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -innerHeight / 2)
+          .attr('y', -43)
+          .attr('text-anchor', 'middle')
+          .text(CONFIG.yAxisLabel);
+
+        // Reference line (optional horizontal line at a specific Y value)
+        gReference.selectAll('*').remove();
+        if (CONFIG.referenceLine) {
+          const refValue = CONFIG.referenceLine.value;
+          const refLabel = CONFIG.referenceLine.label || null;
+          const refColor = CONFIG.referenceLine.color || '#e15759';
+          const refDashArray = CONFIG.referenceLine.dashArray || '3,3';
+
+          gReference.append('line')
+            .attr('class', 'reference-line')
+            .attr('x1', 0)
+            .attr('x2', innerWidth)
+            .attr('y1', yScale(refValue))
+            .attr('y2', yScale(refValue))
+            .style('stroke', refColor)
+            .style('stroke-dasharray', refDashArray);
+
+          if (refLabel) {
+            gReference.append('text')
+              .attr('class', 'reference-label')
+              .attr('x', innerWidth - 5)
+              .attr('y', yScale(refValue) - 5)
+              .attr('text-anchor', 'end')
+              .text(refLabel);
+          }
+        }
+
+        // Group data by run
+        const dataByRun = {};
+        runList.forEach(run => { dataByRun[run] = []; });
+        data.forEach(d => { if (dataByRun[d.run]) dataByRun[d.run].push(d); });
+        runList.forEach(run => { dataByRun[run].sort((a, b) => a.tokens - b.tokens); });
+
+        // Draw lines
+        const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] }));
+
+        // Ghost lines (raw data, always linear)
+        const ghostLine = d3.line()
+          .x(d => xScale(d.tokens))
+          .y(d => yScale(d.loss))
+          .curve(d3.curveLinear);
+
+        gPlot.selectAll('path.ghost-line').data(series, d => d.run)
+          .join('path')
+          .attr('class', 'ghost-line')
+          .attr('fill', 'none')
+          .attr('stroke', d => d.color)
+          .attr('stroke-width', 1.5)
+          .attr('opacity', smoothEnabled ? 0.15 : 0)
+          .attr('pointer-events', 'none')
+          .attr('d', d => ghostLine(d.values));
+
+        // Main lines (smooth or raw depending on toggle)
+        const mainLine = d3.line()
+          .x(d => xScale(d.tokens))
+          .y(d => yScale(d.loss))
+          .curve(getCurve(smoothEnabled));
+
+        gPlot.selectAll('path.main-line').data(series, d => d.run)
+          .join('path')
+          .attr('class', 'main-line')
+          .attr('fill', 'none')
+          .attr('stroke', d => d.color)
+          .attr('stroke-width', 2)
+          .attr('opacity', 0.85)
+          .attr('d', d => mainLine(applySmoothing(d.values, smoothEnabled)));
+
+        // Hover interactions
+        setupHover(series, innerWidth, innerHeight);
+      }
+
+      // Setup hover tooltip
+      function setupHover(series, innerWidth, innerHeight) {
+        gHover.selectAll('*').remove();
+
+        hoverLine = gHover.append('line')
+          .style('stroke', 'var(--text-color)')
+          .attr('stroke-opacity', 0.25)
+          .attr('stroke-width', 1)
+          .attr('y1', 0)
+          .attr('y2', innerHeight)
+          .style('display', 'none')
+          .attr('pointer-events', 'none');
+
+        // Build a set of all unique token values
+        const tokenSet = new Set();
+        series.forEach(s => s.values.forEach(v => tokenSet.add(v.tokens)));
+        tokens = Array.from(tokenSet).sort((a, b) => a - b);
+
+        // Attach hover handlers to the overlay (which also handles zoom)
+        overlay.on('mousemove', function (ev) {
+          // Show tooltip on mouse move (will be hidden during zoom/pan by mousedown handler)
+          onHoverMove(ev, series);
+        }).on('mouseleave', onHoverLeave);
+      }
+
+      function onHoverMove(ev, series) {
+        if (hideTipTimer) {
+          clearTimeout(hideTipTimer);
+          hideTipTimer = null;
+        }
+
+        const [mx, my] = d3.pointer(ev, overlay.node());
+        const targetTokens = xScale.invert(mx);
+
+        // Find nearest actual data point for snapping the hover line
+        const nearest = tokens.reduce((best, t) =>
+          Math.abs(t - targetTokens) < Math.abs(best - targetTokens) ? t : best,
+          tokens[0]
+        );
+
+        const xpx = xScale(nearest);
+        hoverLine.attr('x1', xpx).attr('x2', xpx).style('display', null);
+
+        // Build tooltip HTML
+        let html = `<div><strong>${CONFIG.title}</strong></div>`;
+        html += `<div>${formatX(nearest)}</div>`;
+
+        // Interpolate values for all series
+        const entries = series.map(s => {
+          const values = s.values;
+
+          // Find the two points to interpolate between
+          let before = null, after = null;
+          for (let i = 0; i < values.length; i++) {
+            if (values[i].tokens <= nearest) {
+              before = values[i];
+            }
+            if (values[i].tokens >= nearest && !after) {
+              after = values[i];
+              break;
+            }
+          }
+
+          let interpolatedLoss = null;
+
+          if (before && after && before.tokens !== after.tokens) {
+            // Linear interpolation
+            const t = (nearest - before.tokens) / (after.tokens - before.tokens);
+            interpolatedLoss = before.loss + t * (after.loss - before.loss);
+          } else if (before && before.tokens === nearest) {
+            // Exact match
+            interpolatedLoss = before.loss;
+          } else if (after && after.tokens === nearest) {
+            // Exact match
+            interpolatedLoss = after.loss;
+          } else if (before) {
+            // Use last known value
+            interpolatedLoss = before.loss;
+          } else if (after) {
+            // Use first value
+            interpolatedLoss = after.loss;
+          }
+
+          return {
+            run: s.run,
+            color: s.color,
+            loss: interpolatedLoss
+          };
+        }).filter(e => e.loss != null);
+
+        entries.sort((a, b) => a.loss - b.loss);
+
+        entries.forEach(e => {
+          html += `<div style="display:flex;align-items:center;gap:8px;"><span class="d3-tooltip__color-dot" style="background:${e.color}"></span><span>${e.run}</span><span style="margin-left:auto;font-weight:normal;">${e.loss.toFixed(4)}</span></div>`;
+        });
+
+        tipInner.innerHTML = html;
+        const offsetX = 12, offsetY = 12;
+        tip.style.opacity = '1';
+        tip.style.transform = `translate(${Math.round(mx + offsetX + margin.left)}px, ${Math.round(my + offsetY + margin.top)}px)`;
+      }
+
+      function onHoverLeave() {
+        hideTipTimer = setTimeout(() => {
+          tip.style.opacity = '0';
+          tip.style.transform = 'translate(-9999px, -9999px)';
+          if (hoverLine) hoverLine.style('display', 'none');
+        }, 100);
+      }
+
+      // Toggle smoothing
+      function toggleSmoothing(enabled) {
+        smoothEnabled = enabled;
+
+        // Group data by run
+        const dataByRun = {};
+        runList.forEach(run => { dataByRun[run] = []; });
+        data.forEach(d => { if (dataByRun[d.run]) dataByRun[d.run].push(d); });
+        runList.forEach(run => { dataByRun[run].sort((a, b) => a.tokens - b.tokens); });
+        const series = runList.map(run => ({ run, color: runColorMap[run], values: dataByRun[run] }));
+
+        // Animate ghost lines opacity
+        gPlot.selectAll('path.ghost-line')
+          .transition()
+          .duration(CONFIG.transitionDuration)
+          .attr('opacity', enabled ? 0.15 : 0);
+
+        // Update main lines instantly (no animation on path shape)
+        const mainLine = d3.line()
+          .x(d => xScale(d.tokens))
+          .y(d => yScale(d.loss))
+          .curve(getCurve(enabled));
+
+        gPlot.selectAll('path.main-line')
+          .data(series, d => d.run)
+          .attr('d', d => mainLine(applySmoothing(d.values, enabled)));
+      }
+
+      // Load data
+      async function load() {
+        try {
+          // Build CSV paths, prioritizing CONFIG.dataUrl if provided
+          const csvPaths = CONFIG.dataUrl
+            ? [CONFIG.dataUrl]
+            : [
+              '/data/attention_loss.csv',
+              './assets/data/attention_loss.csv',
+              '../assets/data/attention_loss.csv',
+              '../../assets/data/attention_loss.csv'
+            ];
+
+          let csvText = null;
+          for (const path of csvPaths) {
+            try {
+              const response = await fetch(path, { cache: 'no-cache' });
+              if (response.ok) {
+                csvText = await response.text();
+                break;
+              }
+            } catch (_) { }
+          }
+
+          if (!csvText) throw new Error('CSV file not found');
+
+          const rows = d3.csvParse(csvText, d => ({
+            run: (d[CONFIG.runColumn] || '').trim(),
+            tokens: +d[CONFIG.xColumn],
+            loss: +d[CONFIG.yColumn]
+          }));
+
+          data = rows.filter(d => !isNaN(d.tokens) && !isNaN(d.loss));
+          runList = Array.from(new Set(data.map(d => d.run))).sort();
+
+          // Auto-calculate domains if not provided
+          if (!CONFIG.xDomain) {
+            const xValues = data.map(d => d.tokens);
+            const xMin = d3.min(xValues);
+            const xMax = d3.max(xValues);
+
+            if (CONFIG.xScaleType === 'log') {
+              // For log scale: use ratio-based padding and ensure min > 0
+              const minVal = Math.max(xMin / 1.1, 0.1); // 10% below min, but > 0
+              const maxVal = xMax * 1.1; // 10% above max
+              CONFIG.xDomain = [minVal, maxVal];
+            } else {
+              const xPadding = (xMax - xMin) * 0.02; // 2% padding
+              CONFIG.xDomain = [Math.max(0, xMin - xPadding), xMax + xPadding];
+            }
+          }
+
+          if (!CONFIG.yDomain) {
+            const yValues = data.map(d => d.loss);
+            const yMin = d3.min(yValues);
+            const yMax = d3.max(yValues);
+
+            if (CONFIG.yScaleType === 'log') {
+              // For log scale: use ratio-based padding and ensure min > 0
+              const minVal = Math.max(yMin / 1.1, 0.1); // 10% below min, but > 0
+              const maxVal = yMax * 1.1; // 10% above max
+              CONFIG.yDomain = [minVal, maxVal];
+            } else {
+              const yPadding = (yMax - yMin) * 0.05; // 5% padding
+              CONFIG.yDomain = [yMin - yPadding, yMax + yPadding];
+            }
+          }
+
+          // Update scales with calculated/provided domains
+          xScale.domain(CONFIG.xDomain);
+          yScale.domain(CONFIG.yDomain);
+
+          // Create smart formatters based on actual data
+          const xValues = data.map(d => d.tokens);
+          const yValues = data.map(d => d.loss);
+
+          // Force file size formatting if xColumn contains "size" or "message"
+          const shouldFormatAsFileSize = CONFIG.xFormatAsFileSize ||
+            CONFIG.xColumn.toLowerCase().includes('size') ||
+            CONFIG.xColumn.toLowerCase().includes('message');
+
+          // Ensure CONFIG flag reflects detection for consistent tick logic
+          CONFIG.xFormatAsFileSize = shouldFormatAsFileSize;
+
+          formatX = createSmartFormatter(xValues, shouldFormatAsFileSize);
+          formatY = createSmartFormatter(yValues);
+
+          const colors = getRunColors(runList.length);
+          runList.forEach((run, i) => {
+            runColorMap[run] = colors[i % colors.length];
+          });
+
+          // Build legend (only if more than one run)
+          if (runList.length > 1) {
+            const legendItemsHost = header.querySelector('.legend-bottom .items');
+            if (legendItemsHost) {
+              legendItemsHost.innerHTML = runList.map(run => {
+                const color = runColorMap[run];
+                return `<span class="item" data-run="${run}"><span class="swatch" style="background:${color}"></span><span>${run}</span></span>`;
+              }).join('');
+
+              legendItemsHost.querySelectorAll('.item').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                  const run = el.getAttribute('data-run');
+                  container.classList.add('hovering');
+                  gPlot.selectAll('path.main-line').classed('ghost', function () { return d3.select(this).datum().run !== run; });
+                  gPlot.selectAll('path.ghost-line').classed('ghost', function () { return d3.select(this).datum().run !== run; });
+                  legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.toggle('ghost', it.getAttribute('data-run') !== run));
+                });
+                el.addEventListener('mouseleave', () => {
+                  container.classList.remove('hovering');
+                  gPlot.selectAll('path.main-line').classed('ghost', false);
+                  gPlot.selectAll('path.ghost-line').classed('ghost', false);
+                  legendItemsHost.querySelectorAll('.item').forEach(it => it.classList.remove('ghost'));
+                });
+              });
+            }
+          } else {
+            // Hide header if only one run
+            header.style.display = 'none';
+          }
+
+          // Reset button event listener
+          resetBtn.addEventListener('click', () => {
+            overlay.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+          });
+
+          render();
+          const ro = window.ResizeObserver ? new ResizeObserver(() => render()) : null;
+          if (ro) ro.observe(container);
+        } catch (e) {
+          const pre = document.createElement('pre');
+          pre.textContent = 'CSV load error: ' + (e && e.message ? e.message : e);
+          pre.style.color = 'var(--danger, #b00020)';
+          pre.style.fontSize = '12px';
+          container.appendChild(pre);
+        }
+      }
+
+      load();
+    };
+
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
+  })();
+</script>

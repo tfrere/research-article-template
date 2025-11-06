@@ -1,0 +1,616 @@
+<div class="d3-parameter-calculator"></div>
+
+<style>
+  .d3-parameter-calculator {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+    color: var(--text-color);
+  }
+
+  .d3-parameter-calculator .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .d3-parameter-calculator .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .d3-parameter-calculator .control-group label {
+    font-size: 0.8em;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .d3-parameter-calculator .control-group input {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.85em;
+    background: var(--surface-bg);
+    color: var(--text-color);
+  }
+
+  .d3-parameter-calculator .control-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: var(--surface-bg);
+  }
+
+  .d3-parameter-calculator .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .d3-parameter-calculator .slider-group label {
+    font-size: 0.8em;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .d3-parameter-calculator .slider-value {
+    font-size: 0.75em;
+    color: var(--muted-color);
+    font-weight: 600;
+  }
+
+  /* Slider styling */
+  .d3-parameter-calculator input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+    height: 6px;
+    border-radius: 3px;
+    position: relative;
+  }
+
+  /* Slider container for progress bar */
+  .d3-parameter-calculator .slider-group {
+    position: relative;
+  }
+
+  .d3-parameter-calculator .slider-group::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .d3-parameter-calculator .slider-group::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: var(--progress-width, 0%);
+    height: 6px;
+    background: var(--primary-color);
+    border-radius: 3px;
+    transition: width 0.1s ease;
+    pointer-events: none;
+  }
+
+  /* WebKit slider track */
+  .d3-parameter-calculator input[type="range"]::-webkit-slider-track {
+    background: var(--border-color);
+    height: 6px;
+    border-radius: 3px;
+  }
+
+  /* WebKit slider thumb */
+  .d3-parameter-calculator input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--primary-color);
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    margin-top: 2px;
+  }
+
+  .d3-parameter-calculator input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Firefox slider track */
+  .d3-parameter-calculator input[type="range"]::-moz-range-track {
+    background: var(--border-color);
+    height: 6px;
+    border-radius: 3px;
+    border: none;
+  }
+
+  /* Firefox slider thumb */
+  .d3-parameter-calculator input[type="range"]::-moz-range-thumb {
+    background: var(--primary-color);
+    height: 18px;
+    width: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    margin-top: 2px;
+  }
+
+  .d3-parameter-calculator input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Firefox slider progress */
+  .d3-parameter-calculator input[type="range"]::-moz-range-progress {
+    background: var(--primary-color);
+    height: 6px;
+    border-radius: 3px;
+  }
+
+
+  .d3-parameter-calculator .total-params-container {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0 20px 0;
+    text-align: center;
+    width: 100%;
+  }
+
+  .d3-parameter-calculator .total-params {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0 0 4px 0;
+  }
+
+  .d3-parameter-calculator .total-params-label {
+    font-size: 0.8em;
+    font-weight: 500;
+    color: var(--muted-color);
+    margin: 0;
+  }
+
+  .d3-parameter-calculator .breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .d3-parameter-calculator .component {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+  }
+
+  .d3-parameter-calculator .component-title {
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  .d3-parameter-calculator .component-description {
+    font-size: 0.8em;
+    color: var(--muted-color);
+    margin-bottom: 12px;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .d3-parameter-calculator .component-params {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.2em;
+    text-align: center;
+    margin: 12px 0 8px 0;
+    padding: 8px;
+  }
+
+  .d3-parameter-calculator .calculation-section {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    margin: 8px 0;
+  }
+
+  .d3-parameter-calculator .component-calculation {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8em;
+    color: var(--text-color);
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .d3-parameter-calculator .component-formula {
+    font-size: 0.75em;
+    color: var(--text-color);
+    opacity: 0.7;
+    font-style: italic;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 6px;
+  }
+
+  .d3-parameter-calculator .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0 0 0;
+  }
+
+  .d3-parameter-calculator .config-card {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .d3-parameter-calculator .config-title {
+    font-size: 0.75em;
+    color: var(--text-color);
+    margin-bottom: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .d3-parameter-calculator .config-value {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.9em;
+  }
+
+  .d3-parameter-calculator .formula-box {
+    background: transparent;
+    border: none;
+    padding: 12px 0;
+    margin: 12px 0 0 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75em;
+    color: var(--text-color);
+    text-align: center;
+  }
+
+  /* Responsive design */
+  @media (max-width: 768px) {
+    .d3-parameter-calculator .controls-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .d3-parameter-calculator .breakdown {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .d3-parameter-calculator .comparison {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .d3-parameter-calculator .total-params {
+      font-size: 1.5em;
+    }
+
+    .d3-parameter-calculator .component-params {
+      font-size: 1.1em;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .d3-parameter-calculator {
+      padding: 16px;
+    }
+
+    .d3-parameter-calculator .total-params-container {
+      padding: 16px;
+    }
+
+    .d3-parameter-calculator .component {
+      padding: 12px;
+    }
+
+    .d3-parameter-calculator .config-card {
+      padding: 10px;
+    }
+
+    .d3-parameter-calculator .total-params {
+      font-size: 1.3em;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-parameter-calculator'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-parameter-calculator'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Create the calculator interface
+      container.innerHTML = `
+        <div class="controls-grid">
+          <div class="slider-group">
+            <label for="vocabSize">Vocabulary Size <span class="slider-value" id="vocabValue">128k</span></label>
+            <input type="range" id="vocabSize" min="32000" max="256000" step="1000" value="128256">
+          </div>
+          
+          <div class="slider-group">
+            <label for="hiddenSize">Hidden Size <span class="slider-value" id="hiddenValue">2048</span></label>
+            <input type="range" id="hiddenSize" min="512" max="8192" step="64" value="2048">
+          </div>
+          
+          <div class="slider-group">
+            <label for="numLayers">Layers <span class="slider-value" id="layersValue">16</span></label>
+            <input type="range" id="numLayers" min="4" max="64" step="1" value="16">
+          </div>
+          
+          <div class="slider-group">
+            <label for="numHeads">Attention Heads <span class="slider-value" id="headsValue">32</span></label>
+            <input type="range" id="numHeads" min="8" max="128" step="1" value="32">
+          </div>
+          
+          <div class="slider-group">
+            <label for="numKVHeads">KV Heads <span class="slider-value" id="kvHeadsValue">32</span></label>
+            <input type="range" id="numKVHeads" min="1" max="64" step="1" value="32">
+          </div>
+          
+          <div class="slider-group">
+            <label for="intermediateSize">Intermediate Size <span class="slider-value" id="intermediateValue">8192</span></label>
+            <input type="range" id="intermediateSize" min="2048" max="32768" step="256" value="8192">
+          </div>
+          
+          <div class="control-group" style="grid-column: 1 / -1;">
+            <label for="tieEmbeddings">Tie Embeddings</label>
+            <select id="tieEmbeddings">
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="total-params-container">
+          <div class="total-params" id="totalParams">1.46B</div>
+          <div class="total-params-label">Parameters</div>
+        </div>
+        
+        <div class="breakdown">
+          <div class="component">
+            <div class="component-title">Embeddings</div>
+            <div class="component-description">Input + Output Projection</div>
+            <div class="component-params" id="embeddingParams">524M</div>
+            <div class="calculation-section">
+              <div class="component-calculation" id="embeddingCalculation">128k × 2048 × 2</div>
+              <div class="component-formula" id="embeddingFormula">vocab_size × hidden_size × 2</div>
+            </div>
+          </div>
+          
+          <div class="component">
+            <div class="component-title">Attention Layers</div>
+            <div class="component-description">Q, K, V, O projections</div>
+            <div class="component-params" id="attentionParams">268M</div>
+            <div class="calculation-section">
+              <div class="component-calculation" id="attentionCalculation">16 × 2048² × 4</div>
+              <div class="component-formula" id="attentionFormula">layers × hidden_size² × 4</div>
+            </div>
+          </div>
+          
+          <div class="component">
+            <div class="component-title">Feed Forward</div>
+            <div class="component-description">Up, Gate, Down projections</div>
+            <div class="component-params" id="ffnParams">805M</div>
+            <div class="calculation-section">
+              <div class="component-calculation" id="ffnCalculation">16 × 2048 × 8192 × 3</div>
+              <div class="component-formula" id="ffnFormula">layers × hidden_size × intermediate_size × 3</div>
+            </div>
+          </div>
+          
+          <div class="component">
+            <div class="component-title">Layer Norms</div>
+            <div class="component-description">Input + Attention norms</div>
+            <div class="component-params" id="lnParams">131K</div>
+            <div class="calculation-section">
+              <div class="component-calculation" id="lnCalculation">16 × 2048 × 2</div>
+              <div class="component-formula" id="lnFormula">layers × hidden_size × 2</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="comparison">
+          <div class="config-card">
+            <div class="config-title">Attention Type</div>
+            <div class="config-value" id="attentionType">MHA</div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Embedding Strategy</div>
+            <div class="config-value" id="embeddingStrategy">Tied</div>
+          </div>
+          <div class="config-card">
+            <div class="config-title">Params per Layer</div>
+            <div class="config-value" id="paramsPerLayer">67M</div>
+          </div>
+        </div>
+      `;
+
+      function updateSliderValues() {
+        const vocabSize = parseInt(container.querySelector('#vocabSize').value) || 0;
+        const hiddenSize = parseInt(container.querySelector('#hiddenSize').value) || 0;
+        const numLayers = parseInt(container.querySelector('#numLayers').value) || 0;
+        const numHeads = parseInt(container.querySelector('#numHeads').value) || 0;
+        const numKVHeads = parseInt(container.querySelector('#numKVHeads').value) || 0;
+        const intermediateSize = parseInt(container.querySelector('#intermediateSize').value) || 0;
+
+        container.querySelector('#vocabValue').innerHTML = vocabSize >= 1000 ? `${(vocabSize / 1000).toFixed(0)} <span style="opacity: 0.6;">k</span>` : vocabSize.toString();
+        container.querySelector('#hiddenValue').textContent = hiddenSize.toString();
+        container.querySelector('#layersValue').textContent = numLayers.toString();
+        container.querySelector('#headsValue').textContent = numHeads.toString();
+        container.querySelector('#kvHeadsValue').textContent = numKVHeads.toString();
+        container.querySelector('#intermediateValue').textContent = intermediateSize.toString();
+
+        // Update progress bars
+        updateProgressBars();
+      }
+
+      function updateProgressBars() {
+        const sliders = container.querySelectorAll('input[type="range"]');
+        sliders.forEach(slider => {
+          const sliderGroup = slider.closest('.slider-group');
+          if (sliderGroup) {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const value = parseFloat(slider.value);
+            const percentage = ((value - min) / (max - min)) * 100;
+            sliderGroup.style.setProperty('--progress-width', `${percentage}%`);
+          }
+        });
+      }
+
+      function calculateParameters() {
+        const vocabSize = parseInt(container.querySelector('#vocabSize').value) || 0;
+        const hiddenSize = parseInt(container.querySelector('#hiddenSize').value) || 0;
+        const numLayers = parseInt(container.querySelector('#numLayers').value) || 0;
+        const numHeads = parseInt(container.querySelector('#numHeads').value) || 0;
+        const numKVHeads = parseInt(container.querySelector('#numKVHeads').value) || 0;
+        const intermediateSize = parseInt(container.querySelector('#intermediateSize').value) || 0;
+        const tieEmbeddings = container.querySelector('#tieEmbeddings').value === 'true';
+
+        updateSliderValues();
+
+        // Calculate each component
+        const embeddingParams = vocabSize * hiddenSize * (tieEmbeddings ? 1 : 2);
+
+        // Attention parameters - corrected formula
+        let attentionParams;
+        if (numKVHeads === numHeads) {
+          // MHA: 4 full projections (Q, K, V, O)
+          attentionParams = numLayers * 4 * hiddenSize * hiddenSize;
+        } else {
+          // GQA/MQA: Q + O are full size, K + V are reduced
+          attentionParams = numLayers * hiddenSize * hiddenSize * (2 + 2 * numKVHeads / numHeads);
+        }
+
+        // FFN parameters (up, gate, down)
+        const ffnParams = numLayers * hiddenSize * intermediateSize * 3;
+
+        // Layer norm parameters
+        const lnParams = numLayers * hiddenSize * 2 + hiddenSize; // +1 for final layer norm
+
+        // Total
+        const totalParams = embeddingParams + attentionParams + ffnParams + lnParams;
+
+        // Format numbers with reduced opacity suffixes
+        const formatNumber = (num) => {
+          if (num >= 1000000000) return `${(num / 1000000000).toFixed(2)} <span style="opacity: 0.6;">B</span>`;
+          if (num >= 1000000) return `${(num / 1000000).toFixed(0)} <span style="opacity: 0.6;">M</span>`;
+          if (num >= 1000) return `${(num / 1000).toFixed(0)} <span style="opacity: 0.6;">K</span>`;
+          return num.toString();
+        };
+
+        // Update displays
+        container.querySelector('#totalParams').innerHTML = formatNumber(totalParams);
+        container.querySelector('#embeddingParams').innerHTML = formatNumber(embeddingParams);
+        container.querySelector('#attentionParams').innerHTML = formatNumber(attentionParams);
+        container.querySelector('#ffnParams').innerHTML = formatNumber(ffnParams);
+        container.querySelector('#lnParams').innerHTML = formatNumber(lnParams);
+
+        // Update calculations and formulas
+        const vocabDisplay = vocabSize >= 1000 ? `${(vocabSize / 1000).toFixed(0)} <span style="opacity: 0.6;">k</span>` : vocabSize.toString();
+
+        container.querySelector('#embeddingCalculation').innerHTML =
+          tieEmbeddings ? `${vocabDisplay} × ${hiddenSize}` : `${vocabDisplay} × ${hiddenSize} × 2`;
+        container.querySelector('#embeddingFormula').textContent =
+          tieEmbeddings ? 'vocab_size × hidden_size' : 'vocab_size × hidden_size × 2';
+
+        if (numKVHeads === numHeads) {
+          container.querySelector('#attentionCalculation').textContent =
+            `${numLayers} × ${hiddenSize}² × 4`;
+          container.querySelector('#attentionFormula').textContent =
+            'layers × hidden_size² × 4';
+        } else {
+          container.querySelector('#attentionCalculation').textContent =
+            `${numLayers} × ${hiddenSize}² × ${(2 + 2 * numKVHeads / numHeads).toFixed(2)}`;
+          container.querySelector('#attentionFormula').textContent =
+            'layers × hidden_size² × (2 + 2 × kv_heads/num_heads)';
+        }
+
+        container.querySelector('#ffnCalculation').textContent =
+          `${numLayers} × ${hiddenSize} × ${intermediateSize} × 3`;
+        container.querySelector('#ffnFormula').textContent =
+          'layers × hidden_size × intermediate_size × 3';
+
+        container.querySelector('#lnCalculation').textContent =
+          `${numLayers} × ${hiddenSize} × 2`;
+        container.querySelector('#lnFormula').textContent =
+          'layers × hidden_size × 2';
+
+        // Update config display
+        let attentionType = 'MHA';
+        if (numKVHeads === 1) attentionType = 'MQA';
+        else if (numKVHeads < numHeads) attentionType = 'GQA';
+
+        container.querySelector('#attentionType').textContent = attentionType;
+        container.querySelector('#embeddingStrategy').textContent = tieEmbeddings ? 'Tied' : 'Separate';
+        container.querySelector('#paramsPerLayer').innerHTML =
+          formatNumber((attentionParams + ffnParams + lnParams) / numLayers);
+
+        // Update progress bars
+        updateProgressBars();
+      }
+
+      // Add event listeners
+      container.querySelector('#vocabSize').addEventListener('input', calculateParameters);
+      container.querySelector('#hiddenSize').addEventListener('input', calculateParameters);
+      container.querySelector('#numLayers').addEventListener('input', calculateParameters);
+      container.querySelector('#numHeads').addEventListener('input', calculateParameters);
+      container.querySelector('#numKVHeads').addEventListener('input', calculateParameters);
+      container.querySelector('#intermediateSize').addEventListener('input', calculateParameters);
+      container.querySelector('#tieEmbeddings').addEventListener('change', calculateParameters);
+
+      // Initialize
+      updateSliderValues();
+      calculateParameters();
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    } else {
+      bootstrap();
+    }
+  })();
+</script>

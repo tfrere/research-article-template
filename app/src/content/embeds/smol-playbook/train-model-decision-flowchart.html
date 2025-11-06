@@ -1,0 +1,522 @@
+<!--
+  Train Model Decision Flowchart
+  
+  Usage:
+    <HtmlEmbed src="/embeds/train-model-decision-flowchart.html" />
+-->
+<div class="train-model-decision-flowchart"></div>
+<style>
+    .train-model-decision-flowchart {
+        width: 100%;
+        min-height: 300px;
+        position: relative;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    }
+
+    .train-model-decision-flowchart svg {
+        display: block;
+        width: 100%;
+    }
+
+    .train-model-decision-flowchart .node-rect {
+        stroke-width: 2.5px;
+        rx: 14px;
+        ry: 14px;
+    }
+
+    .train-model-decision-flowchart .node-text {
+        font-size: 18px;
+        font-weight: 600;
+        text-anchor: middle;
+        pointer-events: none;
+        fill: var(--text-color, #333);
+    }
+
+    .train-model-decision-flowchart .node-question {
+        fill: oklch(from var(--primary-color) calc(l + 0.4) c h / 0.26);
+        stroke: oklch(from var(--primary-color) calc(l + 0.15) c h / 0.5) !important;
+    }
+
+    .train-model-decision-flowchart .node-success {
+        fill: oklch(from var(--success-color) calc(l + 0.4) c h / 0.26);
+        stroke: oklch(from var(--success-color) calc(l + 0.15) c h / 0.5) !important;
+    }
+
+    .train-model-decision-flowchart .node-category {
+        fill: oklch(from var(--danger-color) calc(l + 0.4) c h / 0.26);
+        stroke: oklch(from var(--danger-color) calc(l + 0.15) c h / 0.5) !important;
+    }
+
+    .train-model-decision-flowchart .node-decision {
+        stroke: var(--border-color, #ddd) !important;
+    }
+
+    /* Dark mode adjustments */
+    [data-theme="dark"] .train-model-decision-flowchart .node-question {
+        fill: oklch(from var(--primary-color) calc(l + 0.3) c h / 0.2);
+        stroke: oklch(from var(--primary-color) calc(l + 0.1) c h / 0.6) !important;
+    }
+
+    [data-theme="dark"] .train-model-decision-flowchart .node-success {
+        fill: oklch(from var(--success-color) calc(l + 0.3) c h / 0.2);
+        stroke: oklch(from var(--success-color) calc(l + 0.1) c h / 0.6) !important;
+    }
+
+    [data-theme="dark"] .train-model-decision-flowchart .node-category {
+        fill: oklch(from var(--danger-color) calc(l + 0.3) c h / 0.2);
+        stroke: oklch(from var(--danger-color) calc(l + 0.1) c h / 0.6) !important;
+    }
+
+    .train-model-decision-flowchart .link-path {
+        fill: none;
+        stroke: var(--muted-color, #666);
+        stroke-width: 2.5px;
+        marker-end: url(#arrowhead);
+    }
+
+    .train-model-decision-flowchart .link-label {
+        font-size: 14px;
+        font-weight: 700;
+        fill: var(--text-color, #333);
+        text-anchor: middle;
+        pointer-events: none;
+    }
+
+    .train-model-decision-flowchart .link-label-bg {
+        fill: var(--page-bg, #ffffff);
+        stroke: none;
+    }
+</style>
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function') return cb();
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            const onReady = () => {
+                if (window.d3 && typeof window.d3.select === 'function') cb();
+            };
+            s.addEventListener('load', onReady, { once: true });
+            if (window.d3) onReady();
+        };
+
+        const bootstrap = () => {
+            const scriptEl = document.currentScript;
+            let container = scriptEl ? scriptEl.previousElementSibling : null;
+            if (!(container && container.classList && container.classList.contains('train-model-decision-flowchart'))) {
+                const candidates = Array.from(document.querySelectorAll('.train-model-decision-flowchart'))
+                    .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+                container = candidates[candidates.length - 1] || null;
+            }
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // Define color scheme matching the Mermaid chart
+            const getColors = () => {
+                // Try to use CSS variables first, fallback to Mermaid colors
+                const getCSSVar = (varName, fallback) => {
+                    if (typeof getComputedStyle !== 'undefined') {
+                        const value = getComputedStyle(document.documentElement)
+                            .getPropertyValue(varName);
+                        if (value && value.trim()) {
+                            return value.trim();
+                        }
+                    }
+                    return fallback;
+                };
+
+                return {
+                    question: getCSSVar('--danger-color', '#e85c42'),
+                    decision: getCSSVar('--surface-bg', '#f9f9f9'),
+                    success: getCSSVar('--success-color', '#42d9b3'),
+                    category: getCSSVar('--primary-color', '#0084ff'),
+                    link: getCSSVar('--muted-color', '#666')
+                };
+            };
+
+            // Define the flowchart structure
+            // Layout: top-down with very generous vertical spacing between layers
+            const nodes = [
+                { id: 'A', label: 'Should you train your own model?', type: 'question', x: 400, y: 60 },
+                { id: 'B', label: 'Can existing models handle your use case?', type: 'question', x: 400, y: 240 },
+                { id: 'C', label: 'Existing models work well just with prompting', type: 'decision', x: 200, y: 400 },
+                { id: 'D', label: 'Prompting isn\'t enough', type: 'decision', x: 600, y: 400 },
+                { id: 'E', label: '❌\nDon\'t train. Use existing models', type: 'success', x: 200, y: 560 },
+                { id: 'F', label: 'Can finetuning solve your problem?', type: 'question', x: 600, y: 600 },
+                { id: 'G', label: 'Finetuning works (post-training/continual pretraining)', type: 'decision', x: 450, y: 760 },
+                { id: 'H', label: 'Finetuning cannot solve your problem', type: 'decision', x: 750, y: 760 },
+                { id: 'I', label: '❌\nDon\'t train from scratch', type: 'success', x: 450, y: 920 },
+                { id: 'J', label: 'Train a model under one of these categories', type: 'category', x: 750, y: 960 },
+                { id: 'K', label: '🔬\nResearch', type: 'category', x: 600, y: 1120 },
+                { id: 'L', label: '🏭\nProduction', type: 'category', x: 750, y: 1120 },
+                { id: 'N', label: '🌐\nStrategic Open-Source', type: 'category', x: 970, y: 1120 }
+            ];
+
+            const links = [
+                { source: 'A', target: 'B', label: '' },
+                { source: 'B', target: 'C', label: 'YES' },
+                { source: 'B', target: 'D', label: 'NO' },
+                { source: 'C', target: 'E', label: '' },
+                { source: 'D', target: 'F', label: '' },
+                { source: 'F', target: 'G', label: 'YES' },
+                { source: 'F', target: 'H', label: 'NO' },
+                { source: 'G', target: 'I', label: '' },
+                { source: 'H', target: 'J', label: '' },
+                { source: 'J', target: 'K', label: '' },
+                { source: 'J', target: 'L', label: '' },
+                { source: 'J', target: 'N', label: '' }
+            ];
+
+            // Create SVG
+            const svg = d3.select(container).append('svg').attr('width', '100%').style('display', 'block');
+            const gRoot = svg.append('g');
+
+            // Define arrowhead marker (solid triangle arrowhead)
+            const defs = svg.append('defs');
+            const marker = defs.append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '0 0 10 10')
+                .attr('refX', 2.5)
+                .attr('refY', 5)
+                .attr('markerWidth', 4)
+                .attr('markerHeight', 4)
+                .attr('orient', 'auto');
+
+            // Create solid arrowhead pointing right (smaller)
+            marker.append('path')
+                .attr('d', 'M 0 0 L 8 5 L 0 10 Z')
+                .attr('fill', () => getColors().link);
+
+            let width = 1000, height = 800;
+
+            function render() {
+                width = container.clientWidth || 1000;
+
+                const colors = getColors();
+
+                // Calculate scale to fit content (no padding, allow to touch edges)
+                const nodeExtent = {
+                    minX: d3.min(nodes, d => d.x) - 140,
+                    maxX: d3.max(nodes, d => d.x) + 140,
+                    minY: d3.min(nodes, d => d.y) - 60,
+                    maxY: d3.max(nodes, d => d.y) + 60
+                };
+
+                const contentWidth = nodeExtent.maxX - nodeExtent.minX;
+                const contentHeight = nodeExtent.maxY - nodeExtent.minY;
+
+                // Calculate height based on actual content with some padding
+                height = Math.round((contentHeight / contentWidth) * width);
+                svg.attr('width', width).attr('height', height);
+
+                const scale = Math.min(width / contentWidth, height / contentHeight);
+                const offsetX = (width - contentWidth * scale) / 2 - nodeExtent.minX * scale;
+                const offsetY = (height - contentHeight * scale) / 2 - nodeExtent.minY * scale;
+
+                gRoot.attr('transform', `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+
+                // Create a temporary text element for measuring text width
+                const tempText = gRoot.append('text')
+                    .style('visibility', 'hidden')
+                    .style('font-size', '18px')
+                    .style('font-weight', '500');
+
+                // Word wrap function - intelligently breaks text into lines
+                const wordWrap = (text, maxWidth, fontSize = '18px') => {
+                    const explicitLines = text.split('\n');
+                    const wrappedLines = [];
+
+                    explicitLines.forEach(line => {
+                        if (!line.trim()) {
+                            wrappedLines.push(line);
+                            return;
+                        }
+
+                        tempText.attr('font-size', fontSize).text(line);
+                        const textWidth = tempText.node().getComputedTextLength();
+
+                        // If line fits, keep it as is
+                        if (textWidth <= maxWidth) {
+                            wrappedLines.push(line);
+                            return;
+                        }
+
+                        // Otherwise, break into words and wrap
+                        const words = line.split(/\s+/);
+                        let currentLine = '';
+
+                        words.forEach(word => {
+                            const testLine = currentLine ? `${currentLine} ${word}` : word;
+                            tempText.text(testLine);
+                            const testWidth = tempText.node().getComputedTextLength();
+
+                            if (testWidth <= maxWidth && currentLine) {
+                                currentLine = testLine;
+                            } else {
+                                if (currentLine) {
+                                    wrappedLines.push(currentLine);
+                                }
+                                currentLine = word;
+                            }
+                        });
+
+                        if (currentLine) {
+                            wrappedLines.push(currentLine);
+                        }
+                    });
+
+                    return wrappedLines.filter(line => line.trim().length > 0);
+                };
+
+                // Calculate node dimensions with word wrapping
+                const getNodeDimensions = (node) => {
+                    // Determine max width based on node type (increased for better readability)
+                    const maxWidths = {
+                        question: 220,
+                        decision: 240,
+                        success: 220,
+                        category: 200
+                    };
+
+                    const maxWidth = maxWidths[node.type] || 180;
+                    const fontSize = node.type === 'category' ? '19px' : '18px';
+
+                    // Get wrapped lines
+                    const wrappedLines = wordWrap(node.label, maxWidth, fontSize);
+                    node.wrappedLines = wrappedLines;
+
+                    // Calculate actual width from wrapped lines
+                    tempText.attr('font-size', fontSize);
+                    const lineWidths = wrappedLines.map(line => {
+                        tempText.text(line);
+                        return tempText.node().getComputedTextLength();
+                    });
+                    const maxLineWidth = Math.max(...lineWidths, 0);
+
+                    // Calculate dimensions with padding
+                    const padding = 36;
+                    const lineHeight = node.type === 'category' ? 28 : 26;
+
+                    const width = Math.max(120, maxLineWidth + padding);
+                    const height = Math.max(30, wrappedLines.length * lineHeight + padding);
+
+                    return { width, height, wrappedLines };
+                };
+
+                // Pre-calculate all node dimensions with wrapping
+                nodes.forEach(node => {
+                    const dims = getNodeDimensions(node);
+                    node.width = dims.width;
+                    node.height = dims.height;
+                });
+
+                // Keep tempText for measuring link labels (don't remove it yet)
+
+                // Draw links first (so labels can be on top)
+                const linkGroup = gRoot.selectAll('.link-group').data(links);
+                const linkEnter = linkGroup.enter().append('g').attr('class', 'link-group');
+
+                linkEnter.append('path').attr('class', 'link-path');
+                // Add background rect and text for labels (will be positioned later, after path)
+                linkEnter.append('rect').attr('class', 'link-label-bg').style('opacity', 0);
+                linkEnter.append('text').attr('class', 'link-label').attr('dy', -5);
+
+                const linkMerge = linkEnter.merge(linkGroup);
+
+                linkMerge.select('.link-path')
+                    .attr('d', d => {
+                        const sourceNode = nodes.find(n => n.id === d.source);
+                        const targetNode = nodes.find(n => n.id === d.target);
+
+                        // Add gap between arrows and nodes, and ensure arrows point to node edges
+                        const gap = 12;
+
+                        // Calculate arrow start/end points at node edges
+                        // For vertical connections
+                        if (Math.abs(sourceNode.x - targetNode.x) < 50) {
+                            const sx = sourceNode.x;
+                            const sy = sourceNode.y + sourceNode.height / 2 + gap;
+                            const tx = targetNode.x;
+                            const ty = targetNode.y - targetNode.height / 2 - gap;
+                            return `M ${sx} ${sy} L ${tx} ${ty}`;
+                        }
+
+                        // For horizontal/curved connections
+                        // Determine connection points based on relative positions
+                        let sx, sy, tx, ty;
+
+                        if (Math.abs(sourceNode.y - targetNode.y) < 50) {
+                            // Horizontal connection
+                            const sourceIsLeft = sourceNode.x < targetNode.x;
+                            sx = sourceNode.x + (sourceIsLeft ? sourceNode.width / 2 + gap : -(sourceNode.width / 2 + gap));
+                            sy = sourceNode.y;
+                            tx = targetNode.x + (sourceIsLeft ? -(targetNode.width / 2 + gap) : targetNode.width / 2 + gap);
+                            ty = targetNode.y;
+                        } else {
+                            // Vertical or diagonal connection
+                            sx = sourceNode.x;
+                            sy = sourceNode.y + (sourceNode.y < targetNode.y ? sourceNode.height / 2 + gap : -(sourceNode.height / 2 + gap));
+                            tx = targetNode.x;
+                            ty = targetNode.y + (targetNode.y > sourceNode.y ? -(targetNode.height / 2 + gap) : targetNode.height / 2 + gap);
+                        }
+
+                        // Use curve for diagonal/horizontal connections
+                        const midX = (sx + tx) / 2;
+                        const midY = (sy + ty) / 2;
+                        return `M ${sx} ${sy} C ${sx} ${midY}, ${tx} ${midY}, ${tx} ${ty}`;
+                    })
+                    .attr('stroke', colors.link);
+
+                // Draw label backgrounds and text (only for non-empty labels like YES/NO)
+                linkMerge.filter(d => d.label && d.label.trim())
+                    .each(function (d) {
+                        const sourceNode = nodes.find(n => n.id === d.source);
+                        const targetNode = nodes.find(n => n.id === d.target);
+                        const x = (sourceNode.x + targetNode.x) / 2;
+                        const y = (sourceNode.y + targetNode.y) / 2;
+
+                        const labelEl = d3.select(this);
+                        const textEl = labelEl.select('.link-label');
+
+                        // Measure text to size background (use correct font size for labels)
+                        tempText.style('font-size', '14px').style('font-weight', '700').text(d.label);
+                        const textWidth = tempText.node().getComputedTextLength();
+                        const textHeight = 20;
+                        const padding = 10;
+
+                        // Position background
+                        labelEl.select('.link-label-bg')
+                            .attr('x', x - textWidth / 2 - padding)
+                            .attr('y', y - textHeight / 2 - padding / 2)
+                            .attr('width', textWidth + padding * 2)
+                            .attr('height', textHeight + padding)
+                            .style('opacity', 1);
+
+                        // Position text
+                        textEl
+                            .attr('x', x)
+                            .attr('y', y)
+                            .text(d.label);
+                    });
+
+                // Empty labels don't need background
+                linkMerge.filter(d => !d.label || !d.label.trim())
+                    .select('.link-label')
+                    .attr('x', d => {
+                        const sourceNode = nodes.find(n => n.id === d.source);
+                        const targetNode = nodes.find(n => n.id === d.target);
+                        return (sourceNode.x + targetNode.x) / 2;
+                    })
+                    .attr('y', d => {
+                        const sourceNode = nodes.find(n => n.id === d.source);
+                        const targetNode = nodes.find(n => n.id === d.target);
+                        return (sourceNode.y + targetNode.y) / 2;
+                    })
+                    .text('');
+
+                // Now remove temporary text element
+                tempText.remove();
+
+                // Draw nodes
+                const nodeGroup = gRoot.selectAll('.node-group').data(nodes);
+                const nodeEnter = nodeGroup.enter().append('g').attr('class', 'node-group');
+
+                nodeEnter.append('rect').attr('class', d => `node-rect node-${d.type}`);
+                nodeEnter.append('text').attr('class', 'node-text');
+
+                const nodeMerge = nodeEnter.merge(nodeGroup);
+
+                nodeMerge.select('.node-rect')
+                    .attr('x', d => d.x - d.width / 2)
+                    .attr('y', d => d.y - d.height / 2)
+                    .attr('width', d => d.width)
+                    .attr('height', d => d.height)
+                    .attr('fill', d => {
+                        // Use CSS classes for colors to support color-mix
+                        switch (d.type) {
+                            case 'question': return 'currentColor';
+                            case 'decision': return colors.decision;
+                            case 'success': return 'currentColor';
+                            case 'category': return 'currentColor';
+                            default: return colors.decision;
+                        }
+                    });
+                // Stroke is handled by CSS classes
+
+                nodeMerge.select('.node-text')
+                    .attr('x', d => d.x)
+                    .each(function (d) {
+                        // Use wrapped lines if available, otherwise fallback to original
+                        const lines = d.wrappedLines || d.label.split('\n');
+                        const textEl = d3.select(this);
+                        textEl.selectAll('tspan').remove();
+
+                        const fontSize = d.type === 'category' ? '19px' : '18px';
+                        const lineHeight = d.type === 'category' ? 28 : 26;
+
+                        // Calculate vertical centering precisely
+                        // Position text element at node center Y
+                        textEl.attr('y', d.y);
+
+                        // Calculate the offset needed to center the text block
+                        // The first line should be positioned such that the middle of all lines aligns with d.y
+                        const numLines = lines.length;
+                        const totalTextHeight = (numLines - 1) * lineHeight;
+
+                        // For each line, calculate its Y position relative to center
+                        lines.forEach((line, i) => {
+                            // Calculate offset from center: line 0 is at -totalTextHeight/2, last line at +totalTextHeight/2
+                            const offsetFromCenter = (i - (numLines - 1) / 2) * lineHeight;
+
+                            textEl.append('tspan')
+                                .attr('x', d.x)
+                                .attr('dy', i === 0 ? `${offsetFromCenter}px` : `${lineHeight}px`)
+                                .attr('font-size', fontSize)
+                                .attr('text-anchor', 'middle')
+                                .attr('dominant-baseline', 'central')
+                                .text(line);
+                        });
+                    });
+
+                // Update arrowhead color
+                marker.select('path').attr('fill', colors.link);
+            }
+
+            // Initial render + resize handling
+            render();
+            const rerender = () => render();
+            if (window.ResizeObserver) {
+                const ro = new ResizeObserver(() => rerender());
+                ro.observe(container);
+            } else {
+                window.addEventListener('resize', rerender);
+            }
+
+            // Listen for theme changes
+            const observer = new MutationObserver(() => {
+                render();
+            });
+
+            if (document.documentElement) {
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['data-theme', 'class']
+                });
+            }
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+        } else {
+            ensureD3(bootstrap);
+        }
+    })();
+</script>

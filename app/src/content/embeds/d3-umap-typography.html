@@ -1,0 +1,804 @@
+<div class="typography-umap-2d">
+    <svg class="main-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs id="font-defs"></defs>
+        <g class="viewport-group"></g>
+        <g class="ui-group"></g>
+    </svg>
+    <div class="ui-layer"></div>
+</div>
+<style>
+    .typography-umap-2d {
+        position: relative;
+        min-height: 280px;
+        max-height: 450px;
+        width: 100%;
+        overflow: hidden;
+        cursor: grab;
+        contain: layout style paint;
+    }
+
+    .main-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+        /* Rendering optimizations */
+        shape-rendering: optimizeLegibility;
+        text-rendering: optimizeLegibility;
+        image-rendering: optimizeLegibility;
+        /* GPU layer */
+        will-change: transform;
+        transform: translateZ(0);
+    }
+
+    .typography-umap-2d:active {
+        cursor: grabbing;
+    }
+
+    /* Viewport - THE only element that receives transforms */
+    .viewport {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        will-change: transform;
+    }
+
+    /* Font glyphs with expanded hit area */
+    .font-glyph-group {
+        cursor: pointer;
+    }
+
+    .font-hit-area {
+        cursor: pointer;
+    }
+
+    .font-glyph {
+        pointer-events: none;
+        /* The glyph itself no longer intercepts events */
+    }
+
+    /* Native SVG centroid labels */
+    .centroid-label {
+        font-weight: 700;
+        font-size: 14px;
+        pointer-events: none;
+        paint-order: stroke fill;
+        stroke: var(--page-bg);
+        stroke-width: 3px;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+    }
+
+    /* UI Layer - static */
+    .ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+    }
+
+    /* HTML tooltip in foreignObject */
+    .svg-tooltip {
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .tooltip-html {
+        background: var(--surface-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--text-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        white-space: nowrap;
+        font-family: var(--font-sans);
+        min-width: 140px;
+        filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.08));
+    }
+
+    .tooltip-title {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 4px;
+        color: var(--text-color);
+    }
+
+    .tooltip-category {
+        font-size: 11px;
+        color: var(--muted-color);
+        margin-bottom: 2px;
+    }
+
+    /* Zoom controls */
+    .zoom-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        pointer-events: all;
+    }
+
+    .zoom-controls button {
+        background: var(--surface-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        color: var(--text-color);
+        transition: all 0.2s ease;
+    }
+
+    .zoom-controls button:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: scale(1.1);
+    }
+</style>
+
+<script>
+    (() => {
+        // Ensure D3 is loaded
+        const ensureD3 = (cb) => {
+            if (window.d3) return cb();
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+            script.onload = cb;
+            document.head.appendChild(script);
+        };
+
+        const bootstrap = () => {
+            // Get container
+            const containers = document.querySelectorAll('.typography-umap-2d');
+            const container = containers[containers.length - 1];
+            if (!container || container.dataset.mounted) return;
+            container.dataset.mounted = 'true';
+
+            // SVG elements - Native architecture
+            const mainSvg = container.querySelector('.main-svg');
+            let fontDefs = container.querySelector('#font-defs');
+            let viewportGroup = container.querySelector('.viewport-group');
+            const uiGroup = container.querySelector('.ui-group');
+            const uiLayer = container.querySelector('.ui-layer');
+
+            // Create viewportGroup if necessary (will be used as zoomGroup)
+            if (!viewportGroup) {
+                viewportGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                viewportGroup.className = 'viewport-group';
+                mainSvg.appendChild(viewportGroup);
+            }
+
+            // Check and create fontDefs if necessary
+            if (!fontDefs) {
+                fontDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                fontDefs.id = 'font-defs';
+                mainSvg.insertBefore(fontDefs, mainSvg.firstChild);
+            }
+
+            // State
+            let width = 800, height = 500;
+            const margin = 20;
+            let data = [];
+            let visibleGlyphs = new Map();
+            let centroids = new Map();
+            let transform = d3.zoomIdentity;
+            let isZooming = false;
+
+            // Native SVG tooltip
+            let tooltipGroup = null;
+            let currentTooltipFont = null;
+            let hoverTimeout = null;
+
+            // Scales
+            const x = d3.scaleLinear();
+            const y = d3.scaleLinear();
+            const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+            // Typography families
+            const families = {
+                'serif': 'Serif',
+                'sans-serif': 'Sans Serif',
+                'monospace': 'Monospace',
+                'display': 'Display',
+                'handwriting': 'Handwriting',
+                'geometric': 'Geometric'
+            };
+
+            // Mapping fonts to sprite IDs
+            let fontMapping = {};
+
+            // Load mapping and inject sprite into defs - SIMPLIFIED APPROACH
+            const initSprite = async () => {
+                try {
+                    // Load mapping
+                    const mappingPaths = ['/data/font-sprite-mapping.json', './assets/data/font-sprite-mapping.json', '../assets/data/font-sprite-mapping.json'];
+                    let mappingResponse;
+                    for (const path of mappingPaths) {
+                        try {
+                            mappingResponse = await fetch(path);
+                            if (mappingResponse.ok) break;
+                        } catch (e) { }
+                    }
+                    if (!mappingResponse?.ok) throw new Error('Mapping not found');
+                    fontMapping = await mappingResponse.json();
+
+                    // Load SVG sprite
+                    const spritePaths = ['/data/font-sprite.svg', './assets/sprites/font-sprite.svg', '../assets/sprites/font-sprite.svg'];
+                    let spriteResponse;
+                    for (const path of spritePaths) {
+                        try {
+                            spriteResponse = await fetch(path);
+                            if (spriteResponse.ok) break;
+                        } catch (e) { }
+                    }
+                    if (!spriteResponse?.ok) throw new Error('Sprite not found');
+                    const spriteContent = await spriteResponse.text();
+
+                    // SIMPLIFIED APPROACH: Inject complete sprite at beginning of document
+                    // This makes symbols available globally via <use>
+                    if (!document.getElementById('global-font-sprite')) {
+                        const spriteContainer = document.createElement('div');
+                        spriteContainer.id = 'global-font-sprite';
+                        spriteContainer.innerHTML = spriteContent;
+                        spriteContainer.style.display = 'none';
+                        spriteContainer.style.position = 'absolute';
+                        spriteContainer.style.width = '0';
+                        spriteContainer.style.height = '0';
+                        document.body.insertBefore(spriteContainer, document.body.firstChild);
+                    }
+
+                } catch (error) {
+                    console.error('Sprite loading error:', error);
+                }
+            };
+
+            const getFontSymbolId = (fontName) => {
+                const mapped = fontMapping[fontName];
+                if (mapped) return mapped;
+
+                // Fallback: generate ID from name
+                return fontName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '').toLowerCase() + '_a';
+            };
+
+            const createFontUse = (fontName, x, y) => {
+                const symbolId = getFontSymbolId(fontName);
+
+                // Group containing glyph and its hit area
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('class', 'font-glyph-group');
+                group.setAttribute('data-font', fontName);
+
+                // Invisible hit area (larger square)
+                const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                hitArea.setAttribute('x', x - 12);
+                hitArea.setAttribute('y', y - 12);
+                hitArea.setAttribute('width', '24');
+                hitArea.setAttribute('height', '24');
+                hitArea.setAttribute('fill', 'transparent');
+                hitArea.setAttribute('class', 'font-hit-area');
+                hitArea.setAttribute('data-font', fontName);
+
+                // The visible glyph
+                const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', `#${symbolId}`);
+                use.setAttribute('x', x - 8);
+                use.setAttribute('y', y - 8);
+                use.setAttribute('width', '16');
+                use.setAttribute('height', '16');
+                use.setAttribute('class', 'font-glyph');
+                use.setAttribute('data-font', fontName);
+
+                // Simple click handler with delay to avoid conflicts with D3
+                group.addEventListener('click', (e) => {
+                    if (!isZooming) {
+                        // Small delay to ensure it's not a drag
+                        setTimeout(() => {
+                            if (!isZooming) {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const fontData = data.find(d => d.label === fontName);
+                                if (fontData && fontData.googleFontsUrl) {
+                                    window.open(fontData.googleFontsUrl, '_blank');
+                                }
+                            }
+                        }, 10);
+                    }
+                });
+
+                group.appendChild(hitArea);
+                group.appendChild(use);
+
+                return group;
+            };
+
+            // TOOLTIP SYSTEM with foreignObject + HTML
+            const createTooltipGroup = () => {
+                if (tooltipGroup) return tooltipGroup;
+
+                tooltipGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                tooltipGroup.setAttribute('class', 'svg-tooltip');
+
+                // foreignObject to contain HTML
+                const foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                foreignObject.setAttribute('width', '160');
+                foreignObject.setAttribute('height', '60');
+
+                // HTML content in the foreignObject
+                const htmlDiv = document.createElement('div');
+                htmlDiv.className = 'tooltip-html';
+                htmlDiv.innerHTML = `
+                    <div class="tooltip-title"></div>
+                    <div class="tooltip-category">
+                        <span class="tooltip-category-text"></span>
+                    </div>
+                `;
+
+                foreignObject.appendChild(htmlDiv);
+                tooltipGroup.appendChild(foreignObject);
+
+                uiGroup.appendChild(tooltipGroup);
+                return tooltipGroup;
+            };
+
+            const showTooltip = (fontData, mouseX, mouseY) => {
+                if (isZooming) return;
+
+                // Clear pending hide
+                if (hoverTimeout) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = null;
+                }
+
+                // Same font, just update position
+                if (currentTooltipFont === fontData.label) {
+                    updateTooltipPosition(mouseX, mouseY);
+                    return;
+                }
+
+                currentTooltipFont = fontData.label;
+                const tooltip = createTooltipGroup();
+                const clr = color(fontData.group);
+
+                // Update HTML content
+                const titleEl = tooltip.querySelector('.tooltip-title');
+                const categoryTextEl = tooltip.querySelector('.tooltip-category-text');
+
+                titleEl.textContent = fontData.label;
+                categoryTextEl.textContent = families[fontData.group] || fontData.group;
+
+                // Position tooltip in screen coordinates (SVG viewport coordinates)
+                const { x: svgX, y: svgY } = screenToSvg(mouseX, mouseY);
+
+                // Fixed size for foreignObject (smaller without preview)
+                const tooltipWidth = 160;
+                const tooltipHeight = 60;
+
+                let tooltipX = svgX + 15;
+                let tooltipY = svgY - tooltipHeight - 10;
+
+                // Keep tooltip in bounds
+                if (tooltipX + tooltipWidth > width) tooltipX = svgX - tooltipWidth - 15;
+                if (tooltipY < 0) tooltipY = svgY + 15;
+
+                tooltip.setAttribute('transform', `translate(${tooltipX}, ${tooltipY})`);
+                tooltip.style.opacity = '1';
+            };
+
+            const hideTooltip = () => {
+                if (!tooltipGroup || hoverTimeout) return;
+
+                hoverTimeout = setTimeout(() => {
+                    if (tooltipGroup) {
+                        tooltipGroup.style.opacity = '0';
+                    }
+                    currentTooltipFont = null;
+                    hoverTimeout = null;
+                }, 100);
+            };
+
+            const updateTooltipPosition = (mouseX, mouseY) => {
+                if (!tooltipGroup || !currentTooltipFont) return;
+
+                const { x: svgX, y: svgY } = screenToSvg(mouseX, mouseY);
+
+                const tooltipWidth = 160;
+                const tooltipHeight = 60;
+
+                let tooltipX = svgX + 15;
+                let tooltipY = svgY - tooltipHeight - 10;
+
+                if (tooltipX + tooltipWidth > width) tooltipX = svgX - tooltipWidth - 15;
+                if (tooltipY < 0) tooltipY = svgY + 15;
+
+                tooltipGroup.setAttribute('transform', `translate(${tooltipX}, ${tooltipY})`);
+            };
+
+            const createFallbackSvg = () => {
+                return `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="16" height="16">
+                        <rect width="80" height="80" fill="var(--surface-bg)" stroke="var(--border-color)" stroke-width="1"/>
+                        <text x="40" y="50" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="32" fill="currentColor">A</text>
+                    </svg>
+                `;
+            };
+
+            // CORE: Update viewport transform - SVG NATIVE
+            const updateTransform = () => {
+                const { k, x: tx, y: ty } = transform;
+                viewportGroup.setAttribute('transform', `translate(${tx}, ${ty}) scale(${k})`);
+
+                // Adjust centroid label size to remain constant on screen
+                // centroids.forEach((labelElement, family) => {
+                //     const inverseScale = 1 / k;
+                //     // Get original centroid position
+                //     const originalX = parseFloat(labelElement.getAttribute('data-x'));
+                //     const originalY = parseFloat(labelElement.getAttribute('data-y'));
+
+                //     // Apply inverse scale centered on label position
+                //     labelElement.setAttribute('transform', `translate(${originalX}, ${originalY}) scale(${inverseScale}) translate(${-originalX}, ${-originalY})`);
+                // });
+            };
+
+            // Native SVG render - ULTRA PERFORMANCE
+            const render = () => {
+                if (!data.length) return;
+
+                // Create all glyphs as <use> elements in SVG
+                data.forEach((d, i) => {
+                    if (visibleGlyphs.has(i)) return; // Already created
+
+                    const useElement = createFontUse(d.label, x(d.x), y(d.y));
+                    viewportGroup.appendChild(useElement);
+                    visibleGlyphs.set(i, useElement);
+                });
+
+                // Native SVG centroids with density-weighted position
+                // if (centroids.size === 0) {
+                //     const groups = d3.rollup(data, v => {
+                //         // Calculate centroid weighted by local density
+                //         const positions = v.map(d => ({ x: d.x, y: d.y }));
+
+                //         // For each point, calculate its local density (number of neighbors within radius)
+                //         const radius = 2.0; // Radius to calculate local density
+                //         const densityWeights = positions.map(pos => {
+                //             const neighbors = positions.filter(other => {
+                //                 const dist = Math.sqrt(Math.pow(pos.x - other.x, 2) + Math.pow(pos.y - other.y, 2));
+                //                 return dist <= radius;
+                //             });
+                //             return neighbors.length; // Weight = number of neighbors
+                //         });
+
+                //         // Calculate weighted centroid
+                //         const totalWeight = d3.sum(densityWeights);
+                //         const weightedX = d3.sum(positions, (d, i) => d.x * densityWeights[i]) / totalWeight;
+                //         const weightedY = d3.sum(positions, (d, i) => d.y * densityWeights[i]) / totalWeight;
+
+                //         return {
+                //             x: weightedX,
+                //             y: weightedY,
+                //             count: v.length
+                //         };
+                //     }, d => d.group);
+
+                //     groups.forEach((info, family) => {
+                //         if (info.count < 3) return; // Show groups with 3+ fonts
+
+                //         const posX = x(info.x);
+                //         const posY = y(info.y);
+
+                //         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                //         text.setAttribute('x', posX);
+                //         text.setAttribute('y', posY);
+                //         text.setAttribute('data-x', posX); // Store original position
+                //         text.setAttribute('data-y', posY); // Store original position
+                //         text.setAttribute('class', 'centroid-label');
+                //         text.setAttribute('text-anchor', 'middle');
+                //         text.setAttribute('dominant-baseline', 'middle');
+                //         text.setAttribute('fill', color(family));
+                //         text.textContent = families[family] || family;
+
+                //         viewportGroup.appendChild(text);
+                //         centroids.set(family, text);
+                //     });
+                // }
+            };
+
+            // Zoom handler - ONLY transform viewport
+            const handleZoom = (event) => {
+                transform = event.transform;
+                updateTransform();
+            };
+
+            // Professional approach for zoom/pan constraints
+            const getConstraints = () => {
+                // No data = generic default constraints
+                if (!data.length) {
+                    return {
+                        scaleExtent: [0.25, 10],
+                        translateExtent: [[-width * 0.5, -height * 0.5], [width * 1.5, height * 1.5]]
+                    };
+                }
+
+                // Calculate actual data bounds in screen space
+                const xExtent = d3.extent(data, d => d.x);
+                const yExtent = d3.extent(data, d => d.y);
+
+                // Convert to screen coordinates
+                const screenLeft = x(xExtent[0]);
+                const screenRight = x(xExtent[1]);
+                const screenTop = y(yExtent[1]);    // y inverted
+                const screenBottom = y(yExtent[0]); // y inverted
+
+                const contentWidth = screenRight - screenLeft;
+                const contentHeight = screenBottom - screenTop;
+
+                // Minimum scale: see all content with comfortable padding
+                const paddingFactor = 1.1; // 10% padding
+                const minScaleX = width / (contentWidth * paddingFactor);
+                const minScaleY = height / (contentHeight * paddingFactor);
+                const minScale = Math.min(minScaleX, minScaleY) * 0.9; // Small safety margin
+
+                // Maximum scale: fine details visible
+                const maxScale = 12;
+
+                // Translation bounds: "rubber band" strategy - can go out but not too much
+                // Allow centering any part of content in view
+                const buffer = Math.min(width, height) * 0.3; // 30% flexible buffer
+
+                const translateExtent = [
+                    // Top-left bounds: can go quite far left/up
+                    [screenLeft - width + buffer, screenTop - height + buffer],
+                    // Bottom-right bounds: can go quite far right/down
+                    [screenRight - buffer, screenBottom - buffer]
+                ];
+
+                const constraints = {
+                    scaleExtent: [Math.max(0.1, minScale), maxScale],
+                    translateExtent
+                };
+
+                return constraints;
+            };
+
+            // Setup zoom with D3 best practices
+            // 1. Element that receives the behavior (mainSvg)
+            // 2. Element that will be transformed (zoomGroup in the SVG)
+            // 3. Visual content (in zoomGroup)
+
+            const zoom = d3.zoom()
+                .scaleExtent([1, 4])
+                // Constraints will be applied after data loading
+                .on('start', () => {
+                    isZooming = true;
+                    if (tooltipGroup) {
+                        tooltipGroup.style.opacity = '0';
+                    }
+                    currentTooltipFont = null;
+                })
+                .on('zoom', (event) => {
+                    const { transform } = event;
+
+                    // Apply transformation directly (WITHOUT updateTransform which interferes)
+                    d3.select(viewportGroup).attr('transform', transform.toString());
+                })
+                .on('end', () => {
+                    setTimeout(() => { isZooming = false; }, 100);
+                });
+            d3.select(mainSvg).call(zoom);
+
+            // Convert screen coordinates to SVG
+            const screenToSvg = (clientX, clientY) => {
+                const rect = mainSvg.getBoundingClientRect();
+                const svgX = ((clientX - rect.left) / rect.width) * width;
+                const svgY = ((clientY - rect.top) / rect.height) * height;
+                return { x: svgX, y: svgY };
+            };
+
+            // TOOLTIP EVENTS - Screen coordinates
+            mainSvg.addEventListener('mousemove', (e) => {
+                if (isZooming) return;
+
+                // Find element under mouse
+                const element = document.elementFromPoint(e.clientX, e.clientY);
+
+                // Check if it's a glyph, hit area, or in a glyph group
+                let fontName = null;
+                if (element && (element.classList.contains('font-glyph') || element.classList.contains('font-hit-area'))) {
+                    fontName = element.getAttribute('data-font');
+                } else if (element && element.closest('.font-glyph-group')) {
+                    fontName = element.closest('.font-glyph-group').getAttribute('data-font');
+                }
+
+                if (fontName) {
+                    const fontData = data.find(d => d.label === fontName);
+                    if (fontData) {
+                        showTooltip(fontData, e.clientX, e.clientY);
+                    }
+                } else {
+                    hideTooltip();
+                }
+            });
+
+            mainSvg.addEventListener('mouseleave', () => {
+                hideTooltip();
+            });
+
+
+            // Zoom controls
+            const controls = document.createElement('div');
+            controls.className = 'zoom-controls';
+            controls.innerHTML = `
+            <button title="Zoom In">+</button>
+            <button title="Zoom Out">−</button>
+            <button title="Reset">⌂</button>
+        `;
+
+            const [zoomIn, zoomOut, reset] = controls.querySelectorAll('button');
+            zoomIn.onclick = () => d3.select(mainSvg).transition().call(zoom.scaleBy, 1.5);
+            zoomOut.onclick = () => d3.select(mainSvg).transition().call(zoom.scaleBy, 1 / 1.5);
+
+            // Smart reset: return to optimal data view
+            reset.onclick = () => {
+                if (!data.length) {
+                    d3.select(mainSvg).transition().call(zoom.transform, d3.zoomIdentity);
+                    return;
+                }
+
+                const constraints = getConstraints();
+                const optimalScale = constraints.scaleExtent[0] * 1.05; // Slightly above minimum
+
+                // Calculate translation to center content
+                const xExtent = d3.extent(data, d => d.x);
+                const yExtent = d3.extent(data, d => d.y);
+                const centerX = (x(xExtent[0]) + x(xExtent[1])) / 2;
+                const centerY = (y(yExtent[0]) + y(yExtent[1])) / 2;
+
+                const targetX = width / 2 - centerX * optimalScale;
+                const targetY = height / 2 - centerY * optimalScale;
+
+                const resetTransform = d3.zoomIdentity.translate(targetX, targetY).scale(optimalScale);
+
+                d3.select(mainSvg).transition().duration(750).call(zoom.transform, resetTransform);
+            };
+
+            uiLayer.appendChild(controls);
+
+            // Setup scales - Compact size inspired by scatter
+            const updateScales = () => {
+                width = container.clientWidth || 800;
+                height = Math.max(280, Math.min(450, Math.round(width * 0.4))); // More compact: 2.5:1 max ratio
+
+                // Update main SVG viewBox
+                mainSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+                const xExtent = d3.extent(data, d => d.x);
+                const yExtent = d3.extent(data, d => d.y);
+
+                x.domain(xExtent).range([margin, width - margin]);
+                y.domain(yExtent).range([height - margin, margin]);
+            };
+
+            // Color palette
+            const updateColors = () => {
+                try {
+                    if (window.ColorPalettes?.getColors) {
+                        const colors = window.ColorPalettes.getColors('categorical', 6);
+                        if (colors?.length) color.range(colors);
+                    }
+                } catch (e) { }
+            };
+
+            // Load data
+            const loadData = async () => {
+                try {
+                    // Load SVG sprite first
+                    await initSprite();
+
+                    const paths = ['/data/typography_data.json', './assets/data/typography_data.json', '../assets/data/typography_data.json'];
+                    let response;
+                    for (const path of paths) {
+                        try {
+                            response = await fetch(path);
+                            if (response.ok) break;
+                        } catch (e) { }
+                    }
+
+                    if (!response?.ok) throw new Error('Data not found');
+
+                    const raw = await response.json();
+                    const fontsData = raw.fonts || raw; // Support both formats
+                    data = fontsData.map((d, i) => ({
+                        id: i,
+                        originalId: d.id,
+                        googleFontsUrl: d.google_fonts_url, // Pre-generated URL
+                        x: d.x,
+                        y: d.y,
+                        group: d.family || 'sans-serif',
+                        label: d.name
+                    })).filter(d => Number.isFinite(d.x) && Number.isFinite(d.y));
+
+                    color.domain([...new Set(data.map(d => d.group))]);
+                    updateColors();
+                    updateScales();
+
+                    // Apply professional constraints based on data
+                    const xExtent = d3.extent(data, d => d.x);
+                    const yExtent = d3.extent(data, d => d.y);
+
+                    // Convert to screen coordinates
+                    const contentLeft = x(xExtent[0]);
+                    const contentRight = x(xExtent[1]);
+                    const contentTop = y(yExtent[1]);
+                    const contentBottom = y(yExtent[0]);
+
+                    const contentWidth = contentRight - contentLeft;
+                    const contentHeight = contentBottom - contentTop;
+
+                    // Professional pan area: slightly larger than content
+                    const padding = 1; // padding in pixels
+                    const panLeft = contentLeft - padding;
+                    const panRight = contentRight + padding;
+                    const panTop = contentTop - padding;
+                    const panBottom = contentBottom + padding;
+
+                    // Apply constraints to zoom
+                    zoom.translateExtent([[panLeft, panTop], [panRight, panBottom]]);
+
+                    render();
+                } catch (e) {
+                    console.error('Failed to load data:', e);
+                    container.innerHTML = '<div style="color:red;padding:20px;">Failed to load typography data</div>';
+                }
+            };
+
+            // Initialize
+            updateColors();
+            document.addEventListener('palettes:updated', updateColors);
+
+            // Resize handler
+            let resizeTimer;
+            const handleResize = () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    updateScales();
+
+                    // TEMPORARILY DISABLED: Recalculate constraints after resize
+                    // if (data.length) {
+                    //     const constraints = getConstraints();
+                    //     zoom.scaleExtent(constraints.scaleExtent)
+                    //         .translateExtent(constraints.translateExtent);
+                    // }
+
+                    render();
+                }, 100);
+            };
+
+            new ResizeObserver(handleResize).observe(container);
+
+            loadData();
+        };
+
+        // Start when ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap));
+        } else {
+            ensureD3(bootstrap);
+        }
+    })();
+</script>

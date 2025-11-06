@@ -1,0 +1,1116 @@
+/* ============================================================================ */
+/* CSS Paged Media - Style Livre Professionnel AAA */
+/* Utilise les typos du site: Source Sans Pro pour titres, Georgia pour texte */
+/* Note: Source Sans Pro est déjà chargée par le site via _base.css */
+/* ============================================================================ */
+
+@media print {
+  /* ========================================================================== */
+  /* Configuration des pages */
+  /* ========================================================================== */
+
+  @page {
+    size: A4;
+    margin-top: 20mm;
+    margin-bottom: 25mm;
+    margin-left: 25mm;
+    margin-right: 20mm;
+
+    /* Footer avec numéro de page */
+    @bottom-center {
+      content: counter(page);
+      font-size: 10pt;
+      font-family: "Source Sans Pro", sans-serif;
+      color: #666;
+    }
+  }
+
+  /* Pages de gauche (verso) - marge intérieure à droite pour reliure */
+  @page :left {
+    margin-left: 20mm;
+    margin-right: 25mm;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.01) 0%, transparent 15mm);
+
+    @top-left {
+      content: "· " string(chapter-title) " ·";
+      font-size: 8.5pt;
+      font-style: italic;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.8pt;
+      font-weight: 400;
+      font-family: "Source Sans Pro", sans-serif;
+    }
+
+    @bottom-left {
+      content: "〈 " counter(page) " 〉";
+      font-size: 10pt;
+      font-family: "Source Sans Pro", sans-serif;
+      color: #555;
+      letter-spacing: 1pt;
+      font-weight: 300;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+
+  /* Pages de droite (recto) - marge intérieure à gauche pour reliure */
+  @page :right {
+    margin-left: 25mm;
+    margin-right: 20mm;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.01) 0%, transparent 15mm);
+
+    @top-right {
+      content: "· " string(section-title) " ·";
+      font-size: 8.5pt;
+      font-style: italic;
+      color: #888;
+      letter-spacing: 0.8pt;
+      font-weight: 400;
+      font-family: "Source Sans Pro", sans-serif;
+    }
+
+    @bottom-right {
+      content: "〈 " counter(page) " 〉";
+      font-size: 10pt;
+      font-family: "Source Sans Pro", sans-serif;
+      color: #555;
+      letter-spacing: 1pt;
+      font-weight: 300;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+
+  /* Première page (titre) - pas de headers/footers + fond spécial */
+  @page :first {
+    margin-top: 40mm;
+    margin-bottom: 40mm;
+    background:
+      /* Motif géométrique subtil en haut */
+      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.008) 48%, rgba(0, 0, 0, 0.008) 52%, transparent 52%),
+      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.008) 48%, rgba(0, 0, 0, 0.008) 52%, transparent 52%),
+      /* Dégradés radiaux pour profondeur */
+      radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.035) 0%, transparent 45%),
+      radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.035) 0%, transparent 45%),
+      /* Base légèrement teintée */
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.012) 0%, rgba(0, 0, 0, 0.002) 100%);
+    background-size: 40mm 40mm, 40mm 40mm, 100% 100%, 100% 100%, 100% 100%;
+    background-position: 0 0, 20mm 20mm, center, center, center;
+
+    @top-left {
+      content: none;
+    }
+
+    @top-right {
+      content: none;
+    }
+
+    @bottom-left {
+      content: none;
+    }
+
+    @bottom-right {
+      content: none;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+
+  /* Pages blanches (pour chapitres commençant à droite) */
+  @page blank {
+    background: white;
+
+    @top-left {
+      content: none;
+    }
+
+    @top-right {
+      content: none;
+    }
+
+    @bottom-left {
+      content: none;
+    }
+
+    @bottom-right {
+      content: none;
+    }
+
+    @bottom-center {
+      content: none;
+    }
+  }
+
+  /* Page de chapitre - commence toujours à droite avec fond spécial */
+  @page chapter {
+    background:
+      /* Barre décorative en haut */
+      linear-gradient(to right, rgba(0, 0, 0, 0.08) 0mm, rgba(0, 0, 0, 0.05) 15mm, transparent 40mm),
+      /* Motif géométrique subtil */
+      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.006) 48%, rgba(0, 0, 0, 0.006) 52%, transparent 52%),
+      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.006) 48%, rgba(0, 0, 0, 0.006) 52%, transparent 52%),
+      /* Dégradé doux du haut */
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 0%, transparent 35mm),
+      /* Accent latéral gauche */
+      radial-gradient(ellipse at 0% 25%, rgba(0, 0, 0, 0.02) 0%, transparent 60%);
+    background-size: 100% 3pt, 30mm 30mm, 30mm 30mm, 100% 100%, 100% 100%;
+    background-position: 0 0, 0 0, 15mm 15mm, center, left center;
+    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
+
+    @top-left {
+      content: none;
+    }
+
+    @top-right {
+      content: none;
+    }
+  }
+
+  /* ========================================================================== */
+  /* Typographie générale */
+  /* ========================================================================== */
+
+  html {
+    font-size: 11pt;
+    line-height: 1.6;
+  }
+
+  body {
+    font-family: "Georgia", "Palatino", "Times New Roman", serif;
+    color: #1a1a1a;
+    background: white;
+    margin: 0;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+  }
+
+  /* Éviter les veuves et orphelines */
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* ========================================================================== */
+  /* Titres et structure */
+  /* ========================================================================== */
+
+  /* ========================================================================== */
+  /* PAGE DE TITRE - DESIGN AAA */
+  /* ========================================================================== */
+
+  .hero {
+    text-align: center;
+    margin-bottom: 0;
+    break-after: page;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 220mm;
+    padding-top: 30mm;
+  }
+
+  /* Ornement supérieur */
+  .hero::before {
+    content: "";
+    display: block;
+    width: 60mm;
+    height: 1pt;
+    background: linear-gradient(to right, transparent, #333 30%, #333 70%, transparent);
+    margin: 0 auto 15mm;
+  }
+
+  /* Zone titre */
+  .hero-title {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 42pt;
+    font-weight: 300;
+    line-height: 1.1;
+    margin-bottom: 8mm;
+    color: #1a1a1a;
+    string-set: document-title content();
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    max-width: 140mm;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-subtitle {
+    font-size: 14pt;
+    color: #555;
+    font-style: italic;
+    margin-bottom: 20mm;
+    font-weight: 300;
+    line-height: 1.5;
+    max-width: 120mm;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Séparateur central */
+  .hero::after {
+    content: "✦";
+    display: block;
+    font-size: 16pt;
+    color: #999;
+    margin: 0 auto;
+  }
+
+  /* Zone métadonnées en bas de page */
+  .hero-authors,
+  .hero-meta {
+    margin-top: auto;
+  }
+
+  .hero-authors {
+    font-size: 12pt;
+    margin-bottom: 8mm;
+    color: #333;
+    font-weight: 400;
+    letter-spacing: 0.5pt;
+  }
+
+  .hero-authors .author {
+    display: block;
+    margin-bottom: 2mm;
+  }
+
+  .hero-authors .author-name {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
+    font-size: 11pt;
+  }
+
+  .hero-authors sup {
+    font-size: 8pt;
+    margin-left: 1mm;
+  }
+
+  /* Affiliations */
+  .hero-affiliations {
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 10mm;
+    font-style: italic;
+  }
+
+  .hero-affiliations .affiliation {
+    display: block;
+    margin-bottom: 2mm;
+  }
+
+  /* Métadonnées (date, DOI, etc.) */
+  .hero-meta {
+    font-size: 9pt;
+    color: #888;
+    font-style: normal;
+    padding-top: 8mm;
+    border-top: 0.5pt solid #ddd;
+    max-width: 120mm;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-meta p {
+    margin: 2mm 0;
+    text-indent: 0 !important;
+  }
+
+  /* Masquer le banner décoratif en mode livre */
+  .hero-banner {
+    display: none !important;
+  }
+
+  /* ========================================================================== */
+  /* ABSTRACT / INTRODUCTION - Style AAA */
+  /* ========================================================================== */
+
+  /* Premier paragraphe/section après le hero (souvent l'abstract) */
+  .hero+section,
+  .hero+div,
+  .abstract,
+  main>section:first-of-type,
+  main>div:first-of-type {
+    padding: 8mm 12mm;
+    background:
+      /* Motif géométrique léger */
+      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.004) 48%, rgba(0, 0, 0, 0.004) 52%, transparent 52%),
+      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.004) 48%, rgba(0, 0, 0, 0.004) 52%, transparent 52%),
+      /* Dégradé principal */
+      linear-gradient(to bottom, #fafafa, #fcfcfc 30%, white);
+    background-size: 20mm 20mm, 20mm 20mm, 100% 100%;
+    background-position: 0 0, 10mm 10mm, center;
+    border-left: 3pt solid #ddd;
+    margin-bottom: 15mm;
+    break-inside: avoid;
+    position: relative;
+  }
+
+  /* Accent décoratif en haut de l'abstract */
+  .hero+section::before,
+  .hero+div::before,
+  .abstract::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2pt;
+    background: linear-gradient(to right, #ccc 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
+  }
+
+  .hero+section p:first-of-type::first-line,
+  .hero+div p:first-of-type::first-line,
+  .abstract p:first-of-type::first-line {
+    font-variant: small-caps;
+    letter-spacing: 0.5pt;
+    font-weight: 500;
+  }
+
+  /* Titre "Abstract" ou premier H2 après hero */
+  .hero+section h2:first-child,
+  .hero+div h2:first-child,
+  .abstract h2 {
+    font-size: 14pt;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2pt;
+    font-weight: 300;
+    color: #666;
+    margin-bottom: 8mm;
+    padding-bottom: 4mm;
+    border-bottom: 0.5pt solid #ddd;
+  }
+
+  .hero+section h2:first-child::before,
+  .hero+div h2:first-child::before,
+  .abstract h2::before {
+    content: none !important;
+  }
+
+  .hero+section h2:first-child::after,
+  .hero+div h2:first-child::after,
+  .abstract h2::after {
+    content: none !important;
+  }
+
+  /* Chapitres H2 - Typo du site */
+  h2 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 28pt;
+    font-weight: 600;
+    margin-top: 20mm;
+    margin-bottom: 12mm;
+    line-height: 1.2;
+    page-break-after: avoid;
+    break-after: avoid-page;
+    string-set: chapter-title content();
+    counter-increment: chapter;
+    page: chapter;
+    color: #1a1a1a;
+    letter-spacing: -0.5pt;
+    position: relative;
+    padding-top: 8mm;
+  }
+
+  h2::before {
+    content: counter(chapter);
+    display: block;
+    font-size: 48pt;
+    font-weight: 200;
+    color: #ddd;
+    position: absolute;
+    top: -5mm;
+    left: 0;
+    line-height: 1;
+  }
+
+  h2::after {
+    content: "";
+    display: block;
+    width: 30mm;
+    height: 1pt;
+    background: linear-gradient(to right, #666, transparent);
+    margin-top: 4mm;
+  }
+
+  /* Sections H3 - Typo du site */
+  h3 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 18pt;
+    font-weight: 700;
+    margin-top: 12mm;
+    margin-bottom: 6mm;
+    page-break-after: avoid;
+    break-after: avoid-page;
+    string-set: section-title content();
+    counter-increment: section;
+    color: #333;
+    letter-spacing: -0.2pt;
+  }
+
+  h3::before {
+    content: counter(chapter) "." counter(section);
+    display: inline-block;
+    margin-right: 1.5mm;
+    color: #999;
+    font-size: 12pt;
+    font-weight: 300;
+  }
+
+  /* Sous-sections H4 - Typo du site */
+  h4 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 14pt;
+    font-weight: 600;
+    margin-top: 8mm;
+    margin-bottom: 4mm;
+    page-break-after: avoid;
+    break-after: avoid-page;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+
+  /* ========================================================================== */
+  /* Paragraphes et texte */
+  /* ========================================================================== */
+
+  p {
+    text-align: justify;
+    margin-bottom: 4mm;
+    text-indent: 0;
+    line-height: 1.65;
+  }
+
+  /* Premier paragraphe après titre sans retrait */
+  h2+p,
+  h3+p,
+  h4+p {
+    text-indent: 0;
+  }
+
+  /* Lettrine (drop cap) pour le premier paragraphe d'un chapitre */
+  h2+p::first-letter {
+    float: left;
+    font-size: 48pt;
+    line-height: 0.85;
+    margin: 0 4mm -2mm 0;
+    font-weight: 400;
+    color: #333;
+  }
+
+  /* Paragraphes suivants avec retrait */
+  p+p {
+    text-indent: 5mm;
+    margin-top: 0;
+  }
+
+  /* Liens */
+  a {
+    color: #000;
+    text-decoration: none;
+    border-bottom: 0.5pt solid #999;
+  }
+
+  a[href]::after {
+    content: "";
+  }
+
+  /* Pas de bordure pour les liens dans le hero */
+  .hero a {
+    border: none;
+    font-weight: inherit;
+  }
+
+  /* ========================================================================== */
+  /* Listes */
+  /* ========================================================================== */
+
+  ul,
+  ol {
+    margin-left: 8mm;
+    margin-bottom: 5mm;
+  }
+
+  li {
+    margin-bottom: 2mm;
+  }
+
+  /* ========================================================================== */
+  /* FEATURES / BADGES - Mise en page colonnes AAA */
+  /* ========================================================================== */
+
+  /* Premier chapitre avec features : layout multi-colonnes */
+  main>section:first-of-type ul:first-of-type,
+  main>div:first-of-type ul:first-of-type,
+  .features-list {
+    columns: 2;
+    column-gap: 8mm;
+    column-rule: 0.5pt solid #ddd;
+    margin-left: 0;
+    list-style: none;
+    break-inside: auto;
+    margin-bottom: 12mm;
+    padding: 8mm;
+    background:
+      /* Motif de points subtils */
+      radial-gradient(circle at center, rgba(0, 0, 0, 0.03) 1pt, transparent 1pt),
+      /* Motif géométrique */
+      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.005) 48%, rgba(0, 0, 0, 0.005) 52%, transparent 52%),
+      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.005) 48%, rgba(0, 0, 0, 0.005) 52%, transparent 52%),
+      /* Dégradé de base */
+      linear-gradient(135deg, #fafafa 0%, #f5f5f5 50%, #fafafa 100%);
+    background-size: 8mm 8mm, 15mm 15mm, 15mm 15mm, 100% 100%;
+    background-position: 0 0, 0 0, 7.5mm 7.5mm, center;
+    border: 0.5pt solid #e0e0e0;
+    border-radius: 2pt;
+    position: relative;
+  }
+
+  /* Accent décoratif pour la features list */
+  main>section:first-of-type ul:first-of-type::before,
+  main>div:first-of-type ul:first-of-type::before,
+  .features-list::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4mm;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.02));
+    border-radius: 2pt 0 0 2pt;
+  }
+
+  main>section:first-of-type ul:first-of-type li,
+  main>div:first-of-type ul:first-of-type li,
+  .features-list li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 3mm;
+    padding-left: 9mm;
+    /* 5mm + 4mm de la barre décorative */
+    position: relative;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  /* Puces décoratives */
+  main>section:first-of-type ul:first-of-type li::before,
+  main>div:first-of-type ul:first-of-type li::before,
+  .features-list li::before {
+    content: "▸";
+    position: absolute;
+    left: 5mm;
+    /* Après la barre décorative */
+    color: #999;
+    font-size: 10pt;
+  }
+
+  /* Tags/badges dans les listes */
+  li code,
+  .tag,
+  .badge {
+    background: white;
+    border: 0.5pt solid #ddd;
+    padding: 0.5mm 2mm;
+    border-radius: 2pt;
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: #555;
+    white-space: nowrap;
+  }
+
+  /* ========================================================================== */
+  /* Code */
+  /* ========================================================================== */
+
+  pre,
+  code {
+    font-family: "Monaco", "Courier New", monospace;
+    font-size: 9pt;
+  }
+
+  pre {
+    background: linear-gradient(to right, #f8f8f8, #fafafa);
+    padding: 5mm;
+    border: 0.5pt solid #e0e0e0;
+    border-left: 3pt solid #bbb;
+    overflow-x: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 6mm 0;
+    border-radius: 1pt;
+    box-shadow: 0 1pt 2pt rgba(0, 0, 0, 0.05);
+  }
+
+  code {
+    background: #f0f0f0;
+    padding: 1pt 2pt;
+    border-radius: 2pt;
+  }
+
+  /* ========================================================================== */
+  /* Figures et images */
+  /* ========================================================================== */
+
+  figure {
+    margin: 8mm 0;
+    text-align: center;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  figure img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    font-size: 9pt;
+    color: #666;
+    font-style: italic;
+    margin-top: 3mm;
+    text-align: left;
+    padding-left: 5mm;
+    border-left: 2pt solid #e0e0e0;
+  }
+
+  /* ========================================================================== */
+  /* Tableaux */
+  /* ========================================================================== */
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8mm 0;
+    font-size: 10pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  th {
+    background: linear-gradient(to bottom, #fafafa, #f0f0f0);
+    font-weight: 500;
+    text-align: left;
+    padding: 3mm;
+    border-bottom: 1.5pt solid #555;
+    border-top: 1.5pt solid #555;
+    font-size: 10pt;
+    letter-spacing: 0.5pt;
+    text-transform: uppercase;
+    color: #333;
+  }
+
+  td {
+    padding: 3mm;
+    border-bottom: 0.5pt solid #e0e0e0;
+  }
+
+  tr:last-child td {
+    border-bottom: 1.5pt solid #555;
+  }
+
+  /* ========================================================================== */
+  /* Blockquotes */
+  /* ========================================================================== */
+
+  blockquote {
+    margin: 10mm 12mm;
+    padding: 6mm 8mm;
+    border-left: none;
+    font-style: italic;
+    color: #444;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    position: relative;
+    background: linear-gradient(to right, #f8f8f8, transparent 40mm);
+  }
+
+  blockquote::before {
+    content: "" ";
+ position: absolute;
+    left: -3mm;
+    top: 0;
+    font-size: 48pt;
+    color: #ddd;
+    font-family: Georgia, serif;
+    line-height: 0.7;
+  }
+
+  blockquote p {
+    text-indent: 0 !important;
+  }
+
+  /* ========================================================================== */
+  /* Notes de bas de page (Paged.js) */
+  /* ========================================================================== */
+
+  .footnote {
+    float: footnote;
+    footnote-display: block;
+    font-size: 8pt;
+    line-height: 1.4;
+  }
+
+  ::footnote-call {
+    content: "[" counter(footnote) "]";
+    font-size: 0.8em;
+    vertical-align: super;
+    line-height: 0;
+  }
+
+  ::footnote-marker {
+    content: counter(footnote) ". ";
+    font-weight: bold;
+  }
+
+  /* ========================================================================== */
+  /* ACCORDIONS - Ouverts et stylisés pour le livre */
+  /* ========================================================================== */
+
+  .accordion,
+  details.accordion {
+    margin: 8mm 0;
+    border: 1pt solid #ddd !important;
+    border-radius: 2pt;
+    background: rgba(0, 0, 0, 0.015) !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .accordion__summary,
+  details.accordion>summary {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 11pt;
+    font-weight: 600;
+    padding: 4mm !important;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.01)) !important;
+    border-bottom: 0.5pt solid #ddd !important;
+    color: #333 !important;
+  }
+
+  /* Masquer le chevron en print */
+  .accordion__chevron {
+    display: none !important;
+  }
+
+  /* Forcer l'affichage du contenu */
+  .accordion__content-wrapper {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .accordion__content {
+    padding: 5mm !important;
+  }
+
+  /* Titre de l'accordéon */
+  .accordion__title {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    font-size: 10pt;
+  }
+
+  /* Code dans les accordéons */
+  .accordion pre {
+    margin: 3mm 0 !important;
+  }
+
+  /* ========================================================================== */
+  /* Éléments à masquer en mode livre */
+  /* ========================================================================== */
+
+  #theme-toggle,
+  .table-of-contents,
+  .table-of-contents-mobile,
+  .right-aside,
+  nav,
+  .code-lang-chip,
+  .meta-container-cell--pdf,
+  button,
+  .interactive-only {
+    display: none !important;
+  }
+
+  /* ========================================================================== */
+  /* Table des matières */
+  /* ========================================================================== */
+
+  .toc {
+    page: toc;
+    break-after: page;
+  }
+
+  .toc h2 {
+    font-size: 20pt;
+    margin-bottom: 10mm;
+    text-align: center;
+  }
+
+  .toc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc li {
+    margin-bottom: 3mm;
+  }
+
+  .toc a {
+    text-decoration: none;
+    border: none;
+  }
+
+  .toc a::after {
+    content: leader('.') target-counter(attr(href), page);
+    font-style: italic;
+  }
+
+  /* ========================================================================== */
+  /* Compteurs */
+  /* ========================================================================== */
+
+  body {
+    counter-reset: chapter section figure table;
+  }
+
+  h2 {
+    counter-reset: section;
+  }
+
+  figure {
+    counter-increment: figure;
+  }
+
+  figure figcaption::before {
+    content: "Figure " counter(chapter) "." counter(figure) " · ";
+    font-weight: 500;
+    font-style: normal;
+    color: #888;
+    font-variant: small-caps;
+    letter-spacing: 0.5pt;
+  }
+
+  table {
+    counter-increment: table;
+  }
+
+  /* ========================================================================== */
+  /* HTML EMBEDS - Gestion AAA pour le print */
+  /* ========================================================================== */
+
+  .html-embed {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 10mm 0;
+    width: 100%;
+  }
+
+  .html-embed__card {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: white !important;
+    padding: 6mm !important;
+    border: 1pt solid #ddd !important;
+    box-shadow: 0 1pt 3pt rgba(0, 0, 0, 0.08) !important;
+    border-radius: 2pt;
+  }
+
+  /* Frameless embeds */
+  .html-embed__card.is-frameless {
+    padding: 2mm !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Container des fragments HTML */
+  .html-embed__card>div[id^="frag-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Containers D3 - respecter leur structure */
+  .html-embed__card [class^="d3-"],
+  .html-embed__card [class*=" d3-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* SVG dans les embeds - contraindre sans forcer 100% width */
+  .html-embed__card svg {
+    max-width: 100% !important;
+    max-height: 130mm !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* SVG avec viewBox - les laisser responsive */
+  .html-embed__card svg[viewBox] {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Canvas dans les embeds */
+  .html-embed__card canvas {
+    max-width: 100% !important;
+    max-height: 130mm !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    object-fit: contain !important;
+  }
+
+  /* Charts qui utilisent chart-card */
+  .html-embed__card .chart-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  /* Titre des embeds */
+  .html-embed__title {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 11pt;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4mm;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+
+  /* Description/caption des embeds */
+  .html-embed__desc {
+    font-size: 9pt;
+    color: #666;
+    font-style: italic;
+    margin-top: 4mm;
+    padding-left: 5mm;
+    border-left: 2pt solid #e0e0e0;
+  }
+
+  /* Embeds wide */
+  .html-embed--wide .html-embed__card {
+    max-width: none !important;
+  }
+
+  /* Légendes */
+  .html-embed__card .legend {
+    font-size: 8pt !important;
+    width: 100% !important;
+  }
+
+  /* Masquer tooltips en print */
+  .html-embed__card .tooltip,
+  .html-embed__card .d3-tooltip,
+  .html-embed__card [class*="tooltip"] {
+    display: none !important;
+  }
+
+  /* ========================================================================== */
+  /* Visualisations D3/Plotly - adaptation pour print */
+  /* ========================================================================== */
+
+  svg,
+  canvas {
+    max-width: 100%;
+    height: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .js-plotly-plot,
+  .d3-line,
+  .d3-bar {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 8mm 0;
+    background: white !important;
+    padding: 4mm;
+    border: 0.5pt solid #e0e0e0;
+  }
+
+  /* Conteneurs D3 spécifiques */
+  .d3-line svg,
+  .d3-bar svg,
+  .d3-scatter svg {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* ========================================================================== */
+  /* Layout simple colonne */
+  /* ========================================================================== */
+
+  .content-grid {
+    grid-template-columns: 1fr !important;
+    max-width: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* ========================================================================== */
+  /* Citations académiques */
+  /* ========================================================================== */
+
+  .citation {
+    font-size: 0.9em;
+    color: #666;
+  }
+
+  .references {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .references h2 {
+    text-align: center;
+  }
+
+  .reference-item {
+    margin-bottom: 4mm;
+    text-indent: -5mm;
+    margin-left: 5mm;
+  }
+}

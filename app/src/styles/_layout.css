@@ -1,0 +1,198 @@
+/* ============================================================================ */
+/* Layout – 3-column grid (Table of Contents / Article / Aside) */
+/* ============================================================================ */
+
+.content-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--content-padding-x);
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 680px) 260px;
+  gap: 32px;
+  align-items: start;
+}
+
+.content-grid>main {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.content-grid>main>*:first-child {
+  margin-top: 0;
+}
+
+@media (--bp-content-collapse) {
+  .content-grid {
+    overflow: hidden;
+    display: block;
+    margin-top: var(--spacing-2);
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-of-contents {
+    position: static;
+    display: none;
+  }
+
+  .table-of-contents-mobile {
+    display: block;
+  }
+
+  .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .footer-inner>h3 {
+    grid-column: auto;
+    margin-top: 16px;
+  }
+
+  .footer-inner {
+    display: block;
+    padding: 40px 16px;
+  }
+}
+
+
+
+/* ============================================================================ */
+/* Width helpers – slightly wider than main column, and full-width to viewport */
+/* ---------------------------------------------------------------------------- */
+
+.wide,
+.full-width {
+  box-sizing: border-box;
+  position: relative;
+  z-index: var(--z-elevated);
+  background-color: var(--background-color);
+}
+
+.wide {
+  /* Target up to ~1100px while staying within viewport minus page gutters */
+  width: min(1100px, 100vw - var(--content-padding-x) * 4);
+  margin-left: 50%;
+  transform: translateX(-50%);
+  padding: calc(var(--content-padding-x)*4);
+  border-radius: calc(var(--button-radius)*4);
+  background-color: var(--page-bg);
+  -webkit-mask:
+    linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%),
+    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+  -webkit-mask-composite: intersect;
+  mask:
+    linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%),
+    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+  mask-composite: intersect;
+}
+
+.wide>* {
+  margin-bottom: 0 !important;
+}
+
+.full-width {
+  /* Span the full viewport width and center relative to viewport */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: calc(var(--content-padding-x)*4);
+  border-radius: calc(var(--button-radius)*4);
+  background-color: var(--page-bg);
+  -webkit-mask:
+    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+  mask:
+    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+}
+
+.full-width figure figcaption {
+  text-align: center !important;
+}
+
+@media (--bp-content-collapse) {
+
+  .wide,
+  .full-width {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    transform: none;
+  }
+}
+
+/* ============================================================================ */
+/* Theme toggle placement                                                       */
+/* ============================================================================ */
+
+#theme-toggle {
+  position: absolute;
+  top: var(--spacing-4);
+  left: var(--spacing-3);
+  margin: 0;
+  z-index: var(--z-overlay);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Hero meta bar responsiveness                                               */
+/* Two columns at collapse breakpoint, then one column below small screens    */
+/* ------------------------------------------------------------------------- */
+@media (--bp-sm) {
+  header.meta .meta-container {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 12px;
+    column-gap: 8px;
+    max-width: 100%;
+    padding: 0 var(--spacing-4);
+  }
+
+  header.meta .meta-container .meta-container-cell {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+}
+
+@media (--bp-xxs) {
+  header.meta .meta-container .meta-container-cell {
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  /* Center ordered list numbers within meta (e.g., affiliations) */
+  header.meta .affiliations {
+    list-style-position: inside;
+    padding-left: 0;
+    margin-left: 0;
+  }
+
+  header.meta .affiliations li {
+    text-align: center;
+  }
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* D3 neural embed responsiveness                                            */
+/* Stack canvas (left) over network (right) on small screens                 */
+/* ------------------------------------------------------------------------- */
+@media (--bp-md) {
+  .d3-neural .panel {
+    flex-direction: column;
+  }
+
+  .d3-neural .panel .left {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .d3-neural .panel .right {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+}

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Training Adventure</title>
+    <style>
+        .post-training-wrapper {
+            font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            color: var(--text-color, #333333);
+            margin: 20px 0;
+        }
+
+        .post-training-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .node-text {
+            font-size: 12px;
+            font-weight: 500;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+        }
+
+        .link {
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .link-direct {
+            stroke-width: 2;
+            stroke: var(--primary-color, #007bff);
+        }
+
+        .link-via-sft {
+            stroke-width: 1.5;
+            stroke: var(--muted-color, #999999);
+            stroke-dasharray: 5, 5;
+        }
+
+        .arrowhead {
+            fill: var(--primary-color, #007bff);
+        }
+
+        .arrowhead-via-sft {
+            fill: var(--muted-color, #999999);
+        }
+
+        .node-base-model {
+            fill: var(--surface-bg);
+            stroke: var(--muted-color);
+        }
+
+        .node-sft {
+            fill: var(--surface-bg);
+            stroke: var(--muted-color);
+        }
+
+        .node-other {
+            fill: var(--surface-bg);
+            stroke: var(--muted-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="post-training-wrapper">
+        <div class="post-training-container"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            // Node definitions
+            nodes: {
+                'base': {
+                    id: 'base',
+                    label: 'Base model',
+                    x: 400, // Centré horizontalement
+                    y: 80,  // Premier niveau
+                    type: 'base-model',
+                    width: 120,
+                    height: 50
+                },
+                'sft': {
+                    id: 'sft',
+                    label: 'SFT',
+                    x: 400, // Centré horizontalement, aligné avec Base model
+                    y: 225, // Deuxième niveau
+                    type: 'sft',
+                    width: 80,
+                    height: 40
+                },
+                'orpo': {
+                    id: 'orpo',
+                    label: 'ORPO',
+                    x: 175, // Premier nœud du groupe du bas (centré)
+                    y: 360, // Troisième niveau
+                    type: 'other',
+                    width: 140, // Largeur augmentée
+                    height: 40
+                },
+                'dpo': {
+                    id: 'dpo',
+                    label: 'DPO and friends',
+                    x: 325, // Deuxième nœud (centré)
+                    y: 360,
+                    type: 'other',
+                    width: 140, // Largeur augmentée
+                    height: 40
+                },
+                'rl': {
+                    id: 'rl',
+                    label: 'RL (here be dragons)',
+                    x: 475, // Troisième nœud (centré)
+                    y: 360,
+                    type: 'other',
+                    width: 140, // Largeur augmentée
+                    height: 40
+                },
+                'kto': {
+                    id: 'kto',
+                    label: 'KTO',
+                    x: 625, // Quatrième nœud (centré)
+                    y: 360,
+                    type: 'other',
+                    width: 140, // Largeur augmentée
+                    height: 40
+                }
+            },
+
+            // Link definitions
+            links: [
+                { from: 'base', to: 'sft', type: 'direct' },
+                { from: 'base', to: 'orpo', type: 'direct' },
+                { from: 'base', to: 'dpo', type: 'direct' },
+                { from: 'base', to: 'rl', type: 'direct' },
+                { from: 'base', to: 'kto', type: 'direct' },
+                { from: 'sft', to: 'orpo', type: 'via-sft' },
+                { from: 'sft', to: 'dpo', type: 'via-sft' },
+                { from: 'sft', to: 'rl', type: 'via-sft' },
+                { from: 'sft', to: 'kto', type: 'via-sft' }
+            ],
+
+            // Colors
+            colors: {
+                linkColor: 'var(--primary-color, #007bff)',
+                nodeFill: 'var(--page-bg, #ffffff)',
+                nodeStroke: 'var(--muted-color, #666666)',
+                nodeText: 'var(--text-color, #333333)'
+            }
+        };
+
+        // Initialize the visualization
+        class PostTrainingRenderer {
+            constructor(container) {
+                this.container = container;
+                this.svg = null;
+                this.colors = this.getColors();
+
+                this.init();
+            }
+
+            getColors() {
+                // Use CSS variables for dark mode compatibility
+                return ['var(--primary-color, #007bff)', 'var(--muted-color, #6c757d)'];
+            }
+
+            init() {
+                // Create SVG
+                this.svg = d3.select(this.container)
+                    .append('svg')
+                    .attr('width', '100%')
+                    .attr('height', '100%')
+                    .attr('viewBox', '50 50 700 350');
+
+                this.render();
+            }
+
+            render() {
+                // Clear existing elements
+                this.svg.selectAll('*').remove();
+
+                // Create arrowhead markers
+                this.createArrowheadMarkers();
+
+                // Render links
+                this.svg.selectAll('.link')
+                    .data(CONFIG.links)
+                    .enter()
+                    .append('path')
+                    .attr('class', d => `link link-${d.type}`)
+                    .attr('d', d => this.getLinkPath(d))
+                    .attr('fill', 'none')
+                    .attr('stroke', d => d.type === 'direct' ? this.colors[0] : this.colors[1])
+                    .attr('marker-end', d => `url(#arrowhead-${d.type})`);
+
+                // Render nodes
+                const nodeGroups = this.svg.selectAll('.node-group')
+                    .data(Object.values(CONFIG.nodes))
+                    .enter()
+                    .append('g')
+                    .attr('class', 'node-group')
+                    .attr('transform', d => `translate(${d.x - d.width / 2}, ${d.y - d.height / 2})`);
+
+                // Add node rectangles with rounded corners
+                nodeGroups.append('rect')
+                    .attr('class', d => `node node-${d.type}`)
+                    .attr('width', d => d.width)
+                    .attr('height', d => d.height)
+                    .attr('rx', 8)
+                    .attr('ry', 8)
+                    .attr('stroke-width', 2)
+                    .attr('fill', d => {
+                        if (d.type === 'base-model') return 'var(--surface-bg)';
+                        if (d.type === 'sft') return `color-mix(in srgb, ${this.colors[0]} 25%, var(--surface-bg))`;
+                        return `color-mix(in srgb, ${this.colors[1]} 25%, var(--surface-bg))`;
+                    })
+                    .attr('stroke', d => {
+                        if (d.type === 'base-model') return 'var(--muted-color)';
+                        if (d.type === 'sft') return `color-mix(in srgb, ${this.colors[0]} 60%, var(--surface-bg))`;
+                        return `color-mix(in srgb, ${this.colors[1]} 60%, var(--surface-bg))`;
+                    });
+
+                // Add node text
+                nodeGroups.append('text')
+                    .attr('class', 'node-text')
+                    .attr('x', d => d.width / 2)
+                    .attr('y', d => d.height / 2)
+                    .text(d => d.label)
+                    .style('font-size', '12px')
+                    .style('font-weight', '500')
+                    .style('text-anchor', 'middle')
+                    .style('dominant-baseline', 'central')
+                    .style('pointer-events', 'none');
+            }
+
+            createArrowheadMarkers() {
+                // Create defs for arrowhead markers
+                const defs = this.svg.append('defs');
+
+                // Direct arrowhead
+                defs.append('marker')
+                    .attr('id', 'arrowhead-direct')
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 8)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', this.colors[0]);
+
+                // Via-SFT arrowhead
+                defs.append('marker')
+                    .attr('id', 'arrowhead-via-sft')
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 8)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', this.colors[1]);
+            }
+
+            getLinkPath(link) {
+                const source = CONFIG.nodes[link.from];
+                const target = CONFIG.nodes[link.to];
+
+                if (!source || !target) return '';
+
+                // Calculate connection points with distance from node edges
+                const nodeDistance = 15; // Distance from node edge
+
+                let sourceX, sourceY, targetX, targetY;
+
+                // Special case for Base -> SFT connection
+                if (link.from === 'base' && link.to === 'sft') {
+                    // Source point (bottom of base node)
+                    sourceX = source.x;
+                    sourceY = source.y + source.height / 2 + nodeDistance;
+
+                    // Target point (top of SFT node)
+                    targetX = target.x;
+                    targetY = target.y - target.height / 2 - nodeDistance;
+                } else {
+                    // Default case: bottom of source to top of target
+                    sourceX = source.x;
+                    sourceY = source.y + source.height / 2 + nodeDistance;
+
+                    targetX = target.x;
+                    targetY = target.y - target.height / 2 - nodeDistance;
+
+                    // Handle multiple connections to the same target node
+                    const targetConnections = CONFIG.links.filter(l => l.to === link.to);
+                    if (targetConnections.length > 1) {
+                        // Special handling for RL and KTO (right side nodes)
+                        if (link.to === 'rl' || link.to === 'kto') {
+                            // Sort connections: SFT connections first (left), then Base model (right)
+                            const sortedConnections = targetConnections.sort((a, b) => {
+                                if (a.from === 'sft' && b.from === 'base') return -1; // SFT first
+                                if (a.from === 'base' && b.from === 'sft') return 1;  // Base second
+                                return 0;
+                            });
+
+                            const linkIndex = sortedConnections.findIndex(l => l.from === link.from && l.to === link.to);
+                            const totalLinks = targetConnections.length;
+                            const spacing = 20; // Gap between connections
+                            const offset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+
+                            targetX += offset;
+                            sourceX += offset;
+                        } else {
+                            // Default behavior for other nodes (ORPO, DPO)
+                            const linkIndex = targetConnections.findIndex(l => l.from === link.from && l.to === link.to);
+                            const totalLinks = targetConnections.length;
+                            const spacing = 20; // Gap between connections
+                            const offset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+
+                            targetX += offset;
+                            sourceX += offset;
+                        }
+                    }
+
+                    // Handle multiple connections from the same source node
+                    const sourceConnections = CONFIG.links.filter(l => l.from === link.from);
+                    if (sourceConnections.length > 1) {
+                        // Sort connections by target node position for even spacing
+                        const sortedConnections = sourceConnections.sort((a, b) => {
+                            const nodeA = CONFIG.nodes[a.to];
+                            const nodeB = CONFIG.nodes[b.to];
+                            return nodeA.x - nodeB.x; // Sort by x position
+                        });
+
+                        const linkIndex = sortedConnections.findIndex(l => l.from === link.from && l.to === link.to);
+                        const totalLinks = sourceConnections.length;
+                        const spacing = 8; // Smaller gap for source connections
+                        const offset = (linkIndex - (totalLinks - 1) / 2) * spacing;
+
+                        sourceX += offset;
+                        targetX += offset;
+                    }
+                }
+
+                // Simple curved line instead of straight line
+                const dx = targetX - sourceX;
+                const dy = targetY - sourceY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Control point for curve (offset perpendicular to the line)
+                const controlOffset = Math.min(distance * 0.3, 50); // Maximum curve offset
+                const controlX = sourceX + dx / 2;
+                const controlY = sourceY + dy / 2 - controlOffset; // Arc vers le haut
+
+                return `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`;
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.querySelector('.post-training-container');
+            new PostTrainingRenderer(container);
+        });
+    </script>
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</body>
+
+</html>

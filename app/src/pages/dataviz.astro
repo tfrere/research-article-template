@@ -1,0 +1,612 @@
+---
+import HtmlEmbed from "../components/HtmlEmbed.astro";
+import Seo from "../components/Seo.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import { loadEmbedsFromMDX } from "../utils/extract-embeds.mjs";
+import * as ArticleMod from "../content/article.mdx";
+import "katex/dist/katex.min.css";
+import "../styles/global.css";
+
+// Import article metadata
+const articleFM = (ArticleMod as any).frontmatter ?? {};
+const stripHtml = (text: string) => String(text || "").replace(/<[^>]*>/g, "");
+const articleTitle = stripHtml(articleFM?.title ?? "Article")
+    .replace(/\\n/g, " ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const articleDesc = articleFM?.description ?? "";
+
+// Page metadata
+const pageTitle = articleTitle;
+const pageDesc = articleDesc;
+
+// Load all embeds from the content
+const allEmbeds = loadEmbedsFromMDX();
+
+// No need to split - we'll use CSS Grid masonry layout
+---
+
+<html lang="en" data-theme="light">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Seo title={pageTitle} description={pageDesc} />
+        <script is:inline>
+            (() => {
+                try {
+                    const saved = localStorage.getItem("theme");
+                    const prefersDark =
+                        window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches;
+                    const theme = saved || (prefersDark ? "dark" : "light");
+                    document.documentElement.setAttribute("data-theme", theme);
+                } catch {}
+            })();
+        </script>
+        <script type="module" src="/scripts/color-palettes.js"></script>
+
+        <!-- External libraries for embeds -->
+        <script src="https://cdn.plot.ly/plotly-3.0.0.min.js" charset="utf-8"
+        ></script>
+        <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"
+        ></script>
+        <script
+            src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"
+        ></script>
+        <script src="/src/scripts/mermaid-zoom.js"></script>
+    </head>
+    <body class="dataviz-page">
+        <ThemeToggle />
+
+        <div class="loading-spinner">
+            <svg class="spinner" viewBox="0 0 50 50">
+                <circle
+                    class="path"
+                    cx="25"
+                    cy="25"
+                    r="20"
+                    fill="none"
+                    stroke-width="4"></circle>
+            </svg>
+        </div>
+
+        <main
+            class="dataviz-content"
+            style="max-width: 1400px; margin: 0 auto; padding: 20px 20px; opacity: 0; visibility: hidden;"
+        >
+            <header class="dataviz-header">
+                <a href="/" class="back-arrow" aria-label="Back to article">
+                    <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                </a>
+                <div class="dataviz-header-content">
+                    <h1 class="dataviz-title">{pageTitle}</h1>
+                    <p class="dataviz-desc">
+                        All <strong>{allEmbeds.length}</strong> interactive visualizations
+                        from this article
+                    </p>
+                </div>
+            </header>
+
+            {
+                allEmbeds.length > 0 ? (
+                    <section class="dataviz-grid">
+                        {allEmbeds
+                            .filter((embed) => !embed.skipGallery)
+                            .map((embed) => (
+                                <div
+                                    class={`dataviz-card${embed.wide ? " dataviz-card--wide" : ""}`}
+                                >
+                                    <HtmlEmbed
+                                        src={embed.src}
+                                        title={embed.title}
+                                        desc={embed.desc}
+                                        frameless={false}
+                                        data={embed.data}
+                                        config={embed.config}
+                                    />
+                                </div>
+                            ))}
+                    </section>
+                ) : (
+                    <div style="text-align: center; padding: 60px 20px;">
+                        <p style="font-size: 1.2rem; color: var(--muted-color);">
+                            No embeds found in the content.
+                        </p>
+                    </div>
+                )
+            }
+        </main>
+
+        <script>
+            // @ts-nocheck
+            // Initialize masonry with Masonry.js library
+            let masonryInstance = null;
+            let relayoutScheduled = false;
+            let contentShown = false;
+
+            function showContent() {
+                if (contentShown) return;
+                contentShown = true;
+
+                const spinner = document.querySelector(".loading-spinner");
+                const content = document.querySelector(".dataviz-content");
+
+                if (spinner) {
+                    spinner.style.opacity = "0";
+                    setTimeout(() => {
+                        spinner.style.display = "none";
+                    }, 300);
+                }
+
+                if (content) {
+                    content.style.visibility = "visible";
+                    content.style.opacity = "1";
+                    content.style.transition = "opacity 0.3s ease";
+                }
+
+                console.log("✨ Content displayed");
+            }
+
+            function scheduleRelayout() {
+                if (!relayoutScheduled && masonryInstance) {
+                    relayoutScheduled = true;
+                    requestAnimationFrame(() => {
+                        if (masonryInstance) {
+                            masonryInstance.reloadItems();
+                            masonryInstance.layout();
+                        }
+                        relayoutScheduled = false;
+                    });
+                }
+            }
+
+            function initializeMasonry() {
+                const grid = document.querySelector(".dataviz-grid");
+                if (!grid || grid.children.length === 0) return;
+
+                // Wait for Masonry library to load
+                if (typeof Masonry === "undefined") {
+                    setTimeout(initializeMasonry, 50);
+                    return;
+                }
+
+                // Check embed load status
+                const allCards = Array.from(
+                    grid.querySelectorAll(".dataviz-card"),
+                );
+                const allEmbeds = allCards.map((card) =>
+                    card.querySelector(".html-embed"),
+                );
+                const loadedCount = allEmbeds.filter(
+                    (embed) =>
+                        embed && embed.classList.contains("html-embed--loaded"),
+                ).length;
+
+                // Wait for at least 60% of embeds to load (max 1.5 seconds)
+                if (!masonryInstance) {
+                    const startTime = window.masonryWaitStart || Date.now();
+                    window.masonryWaitStart = startTime;
+                    const elapsed = Date.now() - startTime;
+                    const loadPercent = loadedCount / allEmbeds.length;
+
+                    if (loadPercent < 0.6 && elapsed < 1500) {
+                        console.log(
+                            `⏳ Waiting: ${loadedCount}/${allEmbeds.length} embeds loaded (${Math.round(loadPercent * 100)}%)`,
+                        );
+                        setTimeout(initializeMasonry, 150);
+                        return;
+                    }
+                }
+
+                if (masonryInstance) {
+                    scheduleRelayout();
+                    return;
+                }
+
+                // Calculate column width based on grid width
+                const getColumnWidth = () => {
+                    const gridWidth = grid.offsetWidth;
+                    const gutterSize = 16;
+                    const cols =
+                        window.innerWidth <= 600
+                            ? 1
+                            : window.innerWidth <= 1199
+                              ? 2
+                              : 3;
+                    return (gridWidth - gutterSize * (cols - 1)) / cols;
+                };
+
+                // Initialize Masonry
+                masonryInstance = new Masonry(grid, {
+                    itemSelector: ".dataviz-card",
+                    columnWidth: getColumnWidth(),
+                    gutter: 16,
+                    percentPosition: false,
+                    horizontalOrder: false,
+                    fitWidth: false,
+                    transitionDuration: "0.3s",
+                    initLayout: true,
+                    stagger: 30,
+                    originLeft: true,
+                    originTop: true,
+                    resize: true,
+                    isResizeBound: true,
+                });
+
+                console.log(
+                    `✅ Masonry initialized (${loadedCount}/${allEmbeds.length} embeds loaded)`,
+                );
+
+                // Show content after first layout
+                setTimeout(() => {
+                    showContent();
+                }, 100);
+
+                // ResizeObserver to detect size changes on cards - most reliable
+                const resizeObserver = new ResizeObserver((entries) => {
+                    scheduleRelayout();
+                });
+
+                // Observe all cards for size changes
+                allCards.forEach((card) => {
+                    resizeObserver.observe(card);
+                });
+
+                // Progressive relayouts for remaining embeds
+                setTimeout(scheduleRelayout, 200);
+                setTimeout(scheduleRelayout, 600);
+                setTimeout(scheduleRelayout, 1200);
+                setTimeout(scheduleRelayout, 2000);
+
+                // Recalculate on window resize
+                let resizeTimeout;
+                const resizeHandler = () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        if (masonryInstance) {
+                            masonryInstance.destroy();
+                            masonryInstance = null;
+                            resizeObserver.disconnect();
+                            window.masonryWaitStart = null;
+                            initializeMasonry();
+                        }
+                    }, 200);
+                };
+
+                window.removeEventListener("resize", resizeHandler);
+                window.addEventListener("resize", resizeHandler);
+            }
+
+            // Initialize image zoom
+            function initializeZoom() {
+                const zoomableImages = document.querySelectorAll(
+                    'img[data-zoomable="1"]',
+                );
+                if ((window as any).mediumZoom && zoomableImages.length > 0) {
+                    zoomableImages.forEach((img) => {
+                        if (!img.classList.contains("medium-zoom-image")) {
+                            try {
+                                (window as any).mediumZoom(img, {
+                                    background: "rgba(0,0,0,.85)",
+                                    margin: 24,
+                                    scrollOffset: 0,
+                                });
+                            } catch (error) {
+                                console.error(
+                                    "Error initializing zoom:",
+                                    error,
+                                );
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Initialize immediately
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", () => {
+                    initializeMasonry();
+                    initializeZoom();
+                });
+            } else {
+                initializeMasonry();
+                initializeZoom();
+            }
+        </script>
+
+        <style is:global>
+            /* Loading spinner */
+            .loading-spinner {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--page-bg);
+                z-index: 9999;
+                transition: opacity 0.3s ease;
+            }
+
+            .spinner {
+                width: 50px;
+                height: 50px;
+                animation: rotate 2s linear infinite;
+            }
+
+            .spinner .path {
+                stroke: var(--primary-color);
+                stroke-linecap: round;
+                animation: dash 1.5s ease-in-out infinite;
+            }
+
+            @keyframes rotate {
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes dash {
+                0% {
+                    stroke-dasharray: 1, 150;
+                    stroke-dashoffset: 0;
+                }
+                50% {
+                    stroke-dasharray: 90, 150;
+                    stroke-dashoffset: -35;
+                }
+                100% {
+                    stroke-dasharray: 90, 150;
+                    stroke-dashoffset: -124;
+                }
+            }
+
+            /* Position theme toggle on the right for dataviz page */
+            .dataviz-page #theme-toggle {
+                left: auto;
+                right: var(--spacing-3);
+            }
+
+            .dataviz-header {
+                display: flex;
+                align-items: flex-start;
+                gap: 16px;
+                margin-bottom: 0;
+                padding-top: 0px;
+                padding-bottom: 16px;
+                padding-left: 16px;
+                max-width: 100%;
+            }
+
+            .back-arrow {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--primary-color);
+                text-decoration: none;
+                flex-shrink: 0;
+                transition: opacity 0.2s ease;
+                margin-top: 2px;
+            }
+
+            .back-arrow:hover {
+                opacity: 0.7;
+            }
+
+            .dataviz-header-content {
+                flex: 1;
+                max-width: 750px;
+            }
+
+            .dataviz-title {
+                font-size: 1.35rem;
+                font-weight: 700;
+                margin: 0 0 6px 0;
+                color: var(--text-color);
+                line-height: 1.2;
+            }
+
+            .dataviz-desc {
+                margin: 0;
+                padding: 0;
+                font-size: 0.8125rem;
+                line-height: 1.4;
+                color: var(--muted-color);
+                opacity: 0.8;
+            }
+
+            .dataviz-desc strong {
+                color: var(--text-color);
+                font-weight: 600;
+                opacity: 1;
+            }
+
+            @media (max-width: 768px) {
+                .dataviz-header {
+                    gap: 12px;
+                }
+
+                .dataviz-title {
+                    font-size: 1.2rem;
+                }
+
+                .dataviz-desc {
+                    font-size: 0.8rem;
+                }
+
+                .back-arrow svg {
+                    width: 20px;
+                    height: 20px;
+                }
+            }
+
+            .dataviz-grid {
+                width: 100%;
+                margin: 0 auto;
+                padding: 0;
+                padding-top: 20px;
+            }
+
+            .dataviz-card {
+                width: calc((100% - 32px) / 3);
+                margin-bottom: 16px;
+                box-sizing: border-box;
+                min-height: 300px;
+                position: relative;
+            }
+
+            .dataviz-page .dataviz-card .html-embed {
+                margin-bottom: 0 !important;
+                min-height: 250px;
+            }
+
+            .dataviz-page .dataviz-card--wide .html-embed {
+                min-height: 350px;
+            }
+
+            .dataviz-card--wide {
+                width: calc((100% - 32px) / 3 * 2 + 16px) !important;
+            }
+
+            @media (max-width: 1199px) {
+                .dataviz-card {
+                    width: calc((100% - 16px) / 2);
+                }
+
+                .dataviz-card--wide {
+                    width: 100% !important;
+                }
+            }
+
+            @media (max-width: 600px) {
+                .dataviz-card {
+                    width: 100% !important;
+                }
+
+                .dataviz-card--wide {
+                    width: 100% !important;
+                }
+            }
+
+            .dataviz-card h2 {
+                margin-top: 0 !important;
+            }
+
+            .dataviz-page .dataviz-card .html-embed {
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                display: block;
+            }
+
+            .dataviz-page .dataviz-card .html-embed__card {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box;
+            }
+
+            /* Réorganiser avec flexbox : chart en haut, titre+desc en bas */
+            .dataviz-page .dataviz-card .html-embed {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Le chart reste en position 0 */
+            .dataviz-page .dataviz-card .html-embed__card {
+                order: 0;
+            }
+
+            /* Le titre passe en position 1 (après le chart) - discret */
+            .dataviz-page .dataviz-card .html-embed__title {
+                order: 1;
+                font-size: 0.8rem;
+                font-weight: 500;
+                margin-bottom: 3px;
+                margin-top: 10px;
+                padding-bottom: 0;
+                padding-top: 0;
+                color: var(--text-color);
+                opacity: 0.85;
+            }
+
+            /* La description en position 2 (après le titre) - discrète */
+            .dataviz-page .dataviz-card .html-embed__desc {
+                order: 2;
+                font-size: 0.75rem;
+                line-height: 1.35;
+                margin-top: 0;
+                padding-top: 0;
+                opacity: 0.7;
+            }
+
+            /* Constraint SVG and Plotly to fit container */
+            .dataviz-card :global(svg) {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                display: block;
+                box-sizing: border-box;
+            }
+
+            .dataviz-card :global(.plotly-graph-div) {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                display: block;
+            }
+
+            /* Force all D3 chart root elements to respect container bounds */
+            .dataviz-card :global(.d3-benchmark),
+            .dataviz-card :global(.d3-line),
+            .dataviz-card :global(.d3-pie),
+            .dataviz-card :global(.d3-matrix),
+            .dataviz-card :global(.d3-equation-editor),
+            .dataviz-card :global(.d3-neural),
+            .dataviz-card :global([class^="d3-"]) {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                display: block;
+                box-sizing: border-box;
+            }
+
+            /* Prevent chart-card divs from growing infinitely */
+            .dataviz-card :global(.chart-card) {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box;
+            }
+
+            /* Ensure mount div respects container bounds */
+            .dataviz-card :global(div[id]) {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box;
+            }
+
+            /* Responsive géré par le masonry JS */
+        </style>
+    </body>
+</html>

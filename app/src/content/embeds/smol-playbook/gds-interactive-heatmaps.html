@@ -1,0 +1,560 @@
+<div class="gds-interactive-heatmaps"></div>
+<style>
+  .gds-interactive-heatmaps {
+    position: relative;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .gds-interactive-heatmaps .controls {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .gds-interactive-heatmaps .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .gds-interactive-heatmaps .control-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .gds-interactive-heatmaps select {
+    min-width: 160px;
+  }
+
+  .gds-interactive-heatmaps .grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 16px;
+    min-height: 600px;
+  }
+
+  .gds-interactive-heatmaps .heatmap-panel {
+    background: var(--page-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gds-interactive-heatmaps .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .gds-interactive-heatmaps .axis-label {
+    fill: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .gds-interactive-heatmaps .cell-border {
+    stroke: var(--border-color);
+    stroke-width: 1px;
+    fill: none;
+  }
+
+  .gds-interactive-heatmaps .cell-text {
+    fill: var(--muted-color);
+    font-size: 9px;
+    pointer-events: none;
+  }
+
+  .gds-interactive-heatmaps .colorbar {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 120px;
+  }
+
+  .gds-interactive-heatmaps .colorbar-gradient {
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+  }
+
+  .gds-interactive-heatmaps .colorbar-labels {
+    position: absolute;
+    right: 22px;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted-color);
+  }
+
+  .gds-interactive-heatmaps .heatmap-panel svg {
+    max-width: 100%;
+  }
+
+  @media (max-width: 800px) {
+    .gds-interactive-heatmaps .grid-2x2 {
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(4, 1fr);
+    }
+
+    .gds-interactive-heatmaps .controls {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .gds-interactive-heatmaps .heatmap-panel svg {
+      width: 100%;
+      max-width: 500px;
+    }
+  }
+</style>
+<script>
+  (() => {
+    // Prevent multiple executions
+    if (window.gdsInteractiveHeatmapsInitialized) return;
+    window.gdsInteractiveHeatmapsInitialized = true;
+
+    // Load D3 from CDN once
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('gds-interactive-heatmaps'))) {
+        const cs = Array.from(document.querySelectorAll('.gds-interactive-heatmaps')).filter(el => !(el.dataset && el.dataset.mounted === 'true'));
+        container = cs[cs.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset) {
+        if (container.dataset.mounted === 'true') return;
+        container.dataset.mounted = 'true';
+      }
+
+      // Tooltip
+      container.style.position = container.style.position || 'relative';
+      let tip = container.querySelector('.d3-tooltip');
+      let tipInner;
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.className = 'd3-tooltip';
+        Object.assign(tip.style, {
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          transform: 'translate(-9999px, -9999px)',
+          pointerEvents: 'none',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          border: '1px solid var(--border-color)',
+          background: 'var(--surface-bg)',
+          color: 'var(--text-color)',
+          boxShadow: '0 4px 24px rgba(0,0,0,.18)',
+          opacity: '0',
+          transition: 'opacity .12s ease',
+          zIndex: 'var(--z-tooltip)'
+        });
+        tipInner = document.createElement('div');
+        tipInner.className = 'd3-tooltip__inner';
+        tipInner.style.textAlign = 'left';
+        tip.appendChild(tipInner);
+        container.appendChild(tip);
+      } else {
+        tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+      }
+
+      let allData = {};
+      let currentStorage = 'scratch';
+      let currentXferType = 'CPUONLY';
+
+      // Create controls
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+
+      const xferGroup = document.createElement('div');
+      xferGroup.className = 'control-group';
+      xferGroup.innerHTML = `
+        <label class="control-label">Transfer Type</label>
+        <select id="xfer-select">
+          <option value="CPUONLY">CPU ONLY</option>
+          <option value="GPUD">GPU DIRECT</option>
+          <option value="CPU_GPU">CPU_GPU</option>
+        </select>
+      `;
+
+      const metricGroup = document.createElement('div');
+      metricGroup.className = 'control-group';
+      metricGroup.innerHTML = `
+        <label class="control-label">Metric</label>
+        <select id="metric-select">
+          <option value="throughput">Bandwidth</option>
+          <option value="iops">IOPS</option>
+        </select>
+      `;
+
+      controls.appendChild(xferGroup);
+      controls.appendChild(metricGroup);
+
+      // Create 2x2 grid
+      const grid = document.createElement('div');
+      grid.className = 'grid-2x2';
+      container.appendChild(grid);
+
+      // Add controls after the grid
+      container.appendChild(controls);
+
+      // Create 4 panels - one for each storage type
+      const panelConfigs = [
+        { id: 'panel-1', title: '/scratch', storage: 'scratch' },
+        { id: 'panel-2', title: '/root', storage: 'root' },
+        { id: 'panel-3', title: '/fsx', storage: 'fsx' },
+        { id: 'panel-4', title: '/admin', storage: 'admin' }
+      ];
+
+      const panels = {};
+      panelConfigs.forEach((config, i) => {
+        const panel = document.createElement('div');
+        panel.className = 'heatmap-panel';
+        panel.id = config.id;
+
+        const title = document.createElement('div');
+        title.className = 'panel-title';
+        title.textContent = `${config.title} - Bandwidth (GiB/s)`;
+        panel.appendChild(title);
+
+        const svg = d3.select(panel).append('svg').attr('width', '100%').style('display', 'block');
+        const gRoot = svg.append('g');
+        const gCells = gRoot.append('g');
+        const gAxes = gRoot.append('g');
+
+        grid.appendChild(panel);
+
+        panels[config.id] = {
+          panel,
+          svg,
+          gRoot,
+          gCells,
+          gAxes,
+          config
+        };
+      });
+
+      // Load data from multiple sources
+      async function loadAllData() {
+        const storageFiles = {
+          scratch: '/data/scratch_seq_write.json',
+          root: '/data/root_seq_write.json',
+          fsx: '/data/fsx_seq_write.json',
+          admin: '/data/admin_seq_write.json'
+        };
+
+        for (const [storage, filePath] of Object.entries(storageFiles)) {
+          try {
+            const response = await fetch(filePath);
+            if (!response.ok) continue;
+            allData[storage] = await response.json();
+            console.log(`Loaded ${storage} data:`, allData[storage]);
+          } catch (error) {
+            console.warn(`Failed to load ${storage} data:`, error);
+          }
+        }
+
+        renderAllHeatmaps();
+      }
+
+
+      function createHeatmap(panelData) {
+        const { gRoot, gCells, gAxes, config } = panelData;
+
+        function render() {
+          const storageData = allData[config.storage];
+          if (!storageData) return;
+
+          const xferType = document.getElementById('xfer-select').value;
+          const metric = document.getElementById('metric-select').value;
+
+          if (!storageData.data[xferType]) return;
+
+          const { innerWidth, innerHeight } = updateSize(panelData);
+          const threadCounts = storageData.metadata.thread_counts;
+          const ioSizeLabels = storageData.metadata.io_size_labels;
+          const matrix = storageData.data[xferType][metric];
+
+          if (!matrix) return;
+
+          const nRows = threadCounts.length;
+          const nCols = ioSizeLabels.length;
+          const gridSize = Math.min(innerWidth, innerHeight);
+
+          // Center the grid horizontally if it's smaller than innerWidth
+          const gridOffsetX = (innerWidth - gridSize) / 2;
+          gCells.attr('transform', `translate(${gridOffsetX}, 0)`);
+          gAxes.attr('transform', `translate(${gridOffsetX}, 0)`);
+
+          const x = d3.scaleBand().domain(d3.range(nCols)).range([0, gridSize]).paddingInner(0.06);
+          const y = d3.scaleBand().domain(d3.range(nRows)).range([0, gridSize]).paddingInner(0.06);
+
+          // Flatten matrix data
+          const flatData = [];
+          let minVal = Infinity, maxVal = -Infinity;
+
+          for (let r = 0; r < nRows; r++) {
+            for (let c = 0; c < nCols; c++) {
+              const value = matrix[r][c];
+              if (value < minVal) minVal = value;
+              if (value > maxVal) maxVal = value;
+              flatData.push({ r, c, value, threadCount: threadCounts[r], ioSize: ioSizeLabels[c] });
+            }
+          }
+
+          // Color scale using ColorPalettes
+          let colorScale;
+          try {
+            if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
+              const colors = window.ColorPalettes.getColors('diverging', 10);
+              if (colors && colors.length > 0) {
+                colorScale = d3.scaleSequential()
+                  .domain([maxVal, minVal])
+                  .interpolator(d3.interpolateRgbBasis(colors));
+              } else {
+                throw new Error('No colors returned');
+              }
+            } else {
+              throw new Error('ColorPalettes not available');
+            }
+          } catch (_) {
+            // Fallback to D3 built-in scales
+            if (metric === 'throughput') {
+              colorScale = d3.scaleSequential(d3.interpolateViridis)
+                .domain([maxVal, minVal]);
+            } else {
+              colorScale = d3.scaleSequential(d3.interpolatePlasma)
+                .domain([maxVal, minVal]);
+            }
+          }
+
+          // Clear previous content
+          gCells.selectAll('*').remove();
+          gAxes.selectAll('*').remove();
+
+          // Background
+          gCells.append('rect')
+            .attr('class', 'cell-bg')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', gridSize)
+            .attr('height', gridSize)
+            .attr('fill', 'none')
+            .attr('stroke', 'var(--border-color)')
+            .attr('stroke-width', 1);
+
+          // Cells
+          const cells = gCells.selectAll('g.cell')
+            .data(flatData, d => `${d.r}-${d.c}`);
+
+          const cellsEnter = cells.enter()
+            .append('g')
+            .attr('class', 'cell');
+
+          cellsEnter.append('rect')
+            .attr('rx', 2)
+            .attr('ry', 2)
+            .on('mousemove', (event, d) => {
+              const [px, py] = d3.pointer(event, container);
+              const storageData = allData[config.storage];
+              const iops = storageData.data[xferType].iops[d.r][d.c];
+              const throughput = storageData.data[xferType].throughput[d.r][d.c];
+
+              if (metric === 'throughput') {
+                tipInner.innerHTML = `<strong>${config.storage.toUpperCase()} - ${xferType}</strong><br/>Threads: ${d.threadCount}<br/>IO Size: ${d.ioSize}<br/>Throughput: ${d.value.toFixed(2)} GiB/s<br/>IOPS: ${iops.toFixed(0)}`;
+              } else {
+                tipInner.innerHTML = `<strong>${config.storage.toUpperCase()} - ${xferType}</strong><br/>Threads: ${d.threadCount}<br/>IO Size: ${d.ioSize}<br/>IOPS: ${d.value.toFixed(0)}<br/>Throughput: ${throughput.toFixed(2)} GiB/s`;
+              }
+              tip.style.transform = `translate(${px + 10}px, ${py + 10}px)`;
+              tip.style.opacity = '1';
+            })
+            .on('mouseleave', () => {
+              tip.style.opacity = '0';
+            });
+
+          cellsEnter.append('text')
+            .attr('class', 'cell-text')
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle');
+
+          const cellsMerged = cellsEnter.merge(cells);
+
+          cellsMerged.select('rect')
+            .attr('x', d => x(d.c))
+            .attr('y', d => y(d.r))
+            .attr('width', Math.max(1, x.bandwidth()))
+            .attr('height', Math.max(1, y.bandwidth()))
+            .attr('fill', d => colorScale(d.value));
+
+          cellsMerged.select('text')
+            .attr('x', d => x(d.c) + x.bandwidth() / 2)
+            .attr('y', d => y(d.r) + y.bandwidth() / 2)
+            .text(d => {
+              if (metric === 'throughput') {
+                return d.value.toFixed(2);
+              } else {
+                return d.value.toFixed(0);
+              }
+            })
+            .style('fill', function (d) {
+              try {
+                const rect = this && this.parentNode ? this.parentNode.querySelector('rect') : null;
+                const bg = rect ? getComputedStyle(rect).fill : colorScale(d.value);
+                return chooseReadableTextColor(bg);
+              } catch (_) {
+                return '#0e1116';
+              }
+            });
+
+          cells.exit().remove();
+
+          // Axes
+          gAxes.append('g')
+            .selectAll('text')
+            .data(ioSizeLabels)
+            .join('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', (_, i) => x(i) + x.bandwidth() / 2)
+            .attr('y', -8)
+            .text(d => d);
+
+          gAxes.append('g')
+            .selectAll('text')
+            .data(threadCounts)
+            .join('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'end')
+            .attr('x', -8)
+            .attr('y', (_, i) => y(i) + y.bandwidth() / 2)
+            .attr('dominant-baseline', 'middle')
+            .text(d => d);
+
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', gridSize / 2)
+            .attr('y', innerHeight + 20)
+            .text('IO Size');
+
+          gAxes.append('text')
+            .attr('class', 'axis-label')
+            .attr('text-anchor', 'middle')
+            .attr('transform', `translate(${-40}, ${gridSize / 2}) rotate(-90)`)
+            .text('Thread Count');
+        }
+
+        return { render };
+      }
+
+      function updateSize(panelData) {
+        const { panel, svg, gRoot } = panelData;
+        const width = panel.clientWidth || 400;
+        const height = 280;
+        const margin = { top: 30, right: 20, bottom: 20, left: 50 };
+
+        svg
+          .attr('viewBox', `0 0 ${width} ${height}`)
+          .attr('preserveAspectRatio', 'xMidYMid meet')
+          .style('width', '100%')
+          .style('height', 'auto');
+
+        gRoot.attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        return { innerWidth, innerHeight };
+      }
+
+      function chooseReadableTextColor(bgCss) {
+        try {
+          const m = String(bgCss || '').match(/rgba?\(([^)]+)\)/);
+          if (!m) return '#0e1116';
+          const parts = m[1].split(',').map(s => parseFloat(s.trim()));
+          const [r, g, b] = parts;
+          const srgb = [r, g, b].map(v => Math.max(0, Math.min(255, v)) / 255);
+          const linear = srgb.map(c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+          const L = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+          return L < 0.5 ? '#ffffff' : '#0e1116';
+        } catch (_) { return '#0e1116'; }
+      }
+
+      function renderAllHeatmaps() {
+        Object.values(panels).forEach(panelData => {
+          const chart = createHeatmap(panelData);
+          chart.render();
+        });
+      }
+
+      function updatePanelTitles() {
+        const xferType = document.getElementById('xfer-select').value;
+        const metric = document.getElementById('metric-select').value;
+        const metricLabel = metric === 'throughput' ? 'Bandwidth (GiB/s)' : 'IOPS';
+
+        // Update titles for all panels
+        Object.values(panels).forEach(panelData => {
+          const title = panelData.panel.querySelector('.panel-title');
+          title.textContent = `${panelData.config.storage.toUpperCase()} - ${metricLabel}`;
+        });
+
+        renderAllHeatmaps();
+      }
+
+      // Event listeners
+      document.getElementById('xfer-select').addEventListener('change', updatePanelTitles);
+      document.getElementById('metric-select').addEventListener('change', updatePanelTitles);
+
+      // Initial load
+      loadAllData();
+
+      // Resize handling
+      const rerender = () => renderAllHeatmaps();
+      if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => rerender());
+        ro.observe(container);
+      } else {
+        window.addEventListener('resize', rerender);
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    } else {
+      ensureD3(bootstrap);
+    }
+  })();
+</script>
