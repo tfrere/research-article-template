@@ -1,5 +1,5 @@
 ---
-title: 'Bringing paper to life:<br/>A modern template for scientific writing'
+title: 'Bringing paper to life: A modern template for scientific writing'
 short_desc: 'A practical journey behind training SOTA LLMs'
 emoji: 📝
 colorFrom: blue
