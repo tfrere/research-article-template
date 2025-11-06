@@ -32,10 +32,10 @@ export class AdaptiveSampler {
     }
 
     const actualStrategy = strategy || this.options.adaptiveStrategy;
-    
+
     if (!this.needsSampling(data.length)) {
-      return { 
-        data: data.slice(), 
+      return {
+        data: data.slice(),
         sampledIndices: data.map((_, i) => i),
         compressionRatio: 1,
         strategy: 'none'
@@ -88,29 +88,29 @@ export class AdaptiveSampler {
   }
 
   /**
-   * Smart sampling - préserve les features importantes
-   * Inspiré de l'algorithme de Douglas-Peucker adapté pour les time series
+   * Smart sampling - preserves important features
+   * Inspired by Douglas-Peucker algorithm adapted for time series
    */
   smartSampling(data) {
     const targetPoints = this.options.targetPoints;
     const features = this.detectFeatures(data);
-    
-    // Étape 1: Points critiques (début, fin, features importantes)
+
+    // Step 1: Critical points (start, end, important features)
     const criticalPoints = new Set([0, data.length - 1]);
-    
-    // Ajouter les features détectés
+
+    // Add detected features
     features.peaks.forEach(idx => criticalPoints.add(idx));
     features.valleys.forEach(idx => criticalPoints.add(idx));
     features.inflectionPoints.forEach(idx => criticalPoints.add(idx));
 
-    // Étape 2: Répartition logarithmique pour préserver la densité
+    // Step 2: Logarithmic distribution to preserve density
     const remaining = targetPoints - criticalPoints.size;
     if (remaining > 0) {
       const logSamples = this.generateLogSpacing(data.length, remaining);
       logSamples.forEach(idx => criticalPoints.add(idx));
     }
 
-    // Étape 3: Densité adaptive dans les zones de changement
+    // Step 3: Adaptive density in zones of change
     if (criticalPoints.size < targetPoints) {
       const variationSamples = this.sampleByVariation(data, targetPoints - criticalPoints.size);
       variationSamples.forEach(idx => criticalPoints.add(idx));
@@ -129,30 +129,30 @@ export class AdaptiveSampler {
   }
 
   /**
-   * Level-of-Detail sampling - adaptatif selon le zoom/contexte
+   * Level-of-Detail sampling - adaptive based on zoom/context
    */
   lodSampling(data, viewportStart = 0, viewportEnd = 1, zoomLevel = 1) {
     const viewStart = Math.floor(viewportStart * data.length);
     const viewEnd = Math.ceil(viewportEnd * data.length);
     const viewData = data.slice(viewStart, viewEnd);
-    
-    // Plus de détails dans la zone visible
+
+    // More detail in the visible area
     const visibleTargetPoints = Math.floor(this.options.targetPoints * 0.7);
     const contextTargetPoints = this.options.targetPoints - visibleTargetPoints;
-    
-    // Sampling dense dans la zone visible
+
+    // Dense sampling in the visible area
     const visibleSample = this.smartSampling(viewData);
-    
-    // Sampling sparse dans le contexte
+
+    // Sparse sampling in the context
     const beforeContext = data.slice(0, viewStart);
     const afterContext = data.slice(viewEnd);
-    
-    const beforeSample = beforeContext.length > 0 ? 
+
+    const beforeSample = beforeContext.length > 0 ?
       this.uniformSampling(beforeContext) : { data: [], sampledIndices: [] };
-    const afterSample = afterContext.length > 0 ? 
+    const afterSample = afterContext.length > 0 ?
       this.uniformSampling(afterContext) : { data: [], sampledIndices: [] };
 
-    // Combiner les résultats
+    // Combine results
     const combinedData = [
       ...beforeSample.data,
       ...visibleSample.data,
@@ -174,7 +174,7 @@ export class AdaptiveSampler {
   }
 
   /**
-   * Détection des features importantes dans la série
+   * Detect important features in the series
    */
   detectFeatures(data) {
     const peaks = [];
@@ -186,10 +186,10 @@ export class AdaptiveSampler {
       const current = data[i].value;
       const prev = data[i - 1].value;
       const next = data[i + 1].value;
-      
-      // Détection des pics locaux
+
+      // Detect local peaks
       if (current > prev && current > next) {
-        // Vérifier si c'est un pic significatif
+        // Check if it's a significant peak
         const localMax = Math.max(
           ...data.slice(i - window, i + window + 1).map(d => d.value)
         );
@@ -197,8 +197,8 @@ export class AdaptiveSampler {
           peaks.push(i);
         }
       }
-      
-      // Détection des vallées locales
+
+      // Detect local valleys
       if (current < prev && current < next) {
         const localMin = Math.min(
           ...data.slice(i - window, i + window + 1).map(d => d.value)
@@ -207,12 +207,12 @@ export class AdaptiveSampler {
           valleys.push(i);
         }
       }
-      
-      // Détection des points d'inflection (changement de courbure)
+
+      // Detect inflection points (curvature change)
       if (i >= 2 && i < data.length - 2) {
         const trend1 = data[i].value - data[i - 2].value;
         const trend2 = data[i + 2].value - data[i].value;
-        
+
         if (Math.sign(trend1) !== Math.sign(trend2) && Math.abs(trend1) > 0.01 && Math.abs(trend2) > 0.01) {
           inflectionPoints.push(i);
         }
@@ -223,13 +223,13 @@ export class AdaptiveSampler {
   }
 
   /**
-   * Génère des indices avec espacement logarithmique
+   * Generate indices with logarithmic spacing
    */
   generateLogSpacing(totalLength, count) {
     const indices = [];
     for (let i = 1; i <= count; i++) {
       const progress = i / (count + 1);
-      // Fonction logarithmique pour plus de densité au début
+      // Logarithmic function for more density at the beginning
       const logProgress = Math.log(1 + progress * (Math.E - 1)) / Math.log(Math.E);
       const index = Math.floor(logProgress * (totalLength - 1));
       indices.push(Math.max(1, Math.min(totalLength - 2, index)));
@@ -242,28 +242,28 @@ export class AdaptiveSampler {
    */
   sampleByVariation(data, targetPoints) {
     const variations = [];
-    
-    // Calculer la variation locale pour chaque point
+
+    // Calculate local variation for each point
     for (let i = 1; i < data.length - 1; i++) {
       const prev = data[i - 1].value;
       const curr = data[i].value;
       const next = data[i + 1].value;
-      
-      // Variation = différence avec la moyenne des voisins
+
+      // Variation = difference from the average of neighbors
       const avgNeighbors = (prev + next) / 2;
       const variation = Math.abs(curr - avgNeighbors);
-      
+
       variations.push({ index: i, variation });
     }
-    
-    // Trier par variation décroissante et prendre les plus importantes
+
+    // Sort by decreasing variation and take the most important ones
     variations.sort((a, b) => b.variation - a.variation);
-    
+
     return variations.slice(0, targetPoints).map(v => v.index);
   }
 
   /**
-   * Applique le sampling sur un objet de données complètes (multi-run)
+   * Apply sampling on a complete data object (multi-run)
    */
   sampleMetricData(metricData, strategy = null) {
     const sampledData = {};
@@ -272,7 +272,7 @@ export class AdaptiveSampler {
     Object.keys(metricData).forEach(runName => {
       const runData = metricData[runName] || [];
       const result = this.sampleSeries(runData, strategy);
-      
+
       sampledData[runName] = result.data;
       samplingInfo[runName] = {
         originalLength: runData.length,
@@ -287,20 +287,20 @@ export class AdaptiveSampler {
   }
 
   /**
-   * Reconstruit les données complètes pour une zone spécifique (pour le zoom)
+   * Rebuild full data for a specific range (for zoom)
    */
   getFullDataForRange(originalData, samplingInfo, startStep, endStep) {
     // This method would allow recovering more details
-    // quand l'utilisateur zoom sur une zone spécifique
+    // when the user zooms on a specific area
     const startIdx = originalData.findIndex(d => d.step >= startStep);
     const endIdx = originalData.findIndex(d => d.step > endStep);
-    
+
     return originalData.slice(startIdx, endIdx === -1 ? undefined : endIdx);
   }
 }
 
 /**
- * Instance globale configurée pour TrackIO
+ * Global instance configured for TrackIO
  */
 export const trackioSampler = new AdaptiveSampler({
   maxPoints: 400,
@@ -310,7 +310,7 @@ export const trackioSampler = new AdaptiveSampler({
 });
 
 /**
- * Fonction utilitaire pour usage direct
+ * Utility function for direct usage
  */
 export function sampleLargeDataset(metricData, options = {}) {
   const sampler = new AdaptiveSampler(options);

@@ -85,6 +85,9 @@
 
       zoomManager.initialize();
 
+      // Share zoom overlay with interaction manager
+      interactionManager.setExternalOverlay(zoomManager.getOverlay());
+
       // Setup zoom callback
       zoomManager.on("zoom", ({ xScale, yScale, hasMoved }) => {
         renderWithZoomedScales(xScale, yScale);

@@ -247,6 +247,25 @@ export class ZoomManager {
     }
 
     /**
+     * Get the overlay element (for attaching additional event handlers)
+     */
+    getOverlay() {
+        return this.overlay;
+    }
+
+    /**
+     * Attach additional event handlers to the overlay
+     * This allows other managers (like InteractionManager) to use the same overlay
+     */
+    attachEventHandlers(handlers) {
+        if (!this.overlay) return;
+
+        Object.keys(handlers).forEach(eventName => {
+            this.overlay.on(eventName, handlers[eventName]);
+        });
+    }
+
+    /**
      * Cleanup
      */
     destroy() {

@@ -192,7 +192,7 @@ import Trackio from "./Trackio.svelte";
 
     // Function to generate a new simulated metric value
     function generateSimulatedValue(step, metric) {
-      const baseProgress = Math.min(1, step / 100); // Normalise sur 100 steps
+      const baseProgress = Math.min(1, step / 100); // Normalize over 100 steps
 
       if (metric === "loss") {
         // Loss that decreases with noise
@@ -214,7 +214,7 @@ import Trackio from "./Trackio.svelte";
         clearInterval(simulationInterval);
       }
 
-      // Générer un nouveau nom de run
+      // Generate a new run name
       const adjectives = [
         "live",
         "real-time",
@@ -235,19 +235,19 @@ import Trackio from "./Trackio.svelte";
         adjectives[Math.floor(Math.random() * adjectives.length)];
       const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
       currentSimulationRun = `${randomAdj}-${randomNoun}-${Date.now().toString().slice(-4)}`;
-      currentStep = 1; // Commencer à step 1
+      currentStep = 1; // Start at step 1
 
       console.log(`Starting simulation for run: ${currentSimulationRun}`);
 
-      // Interface UI
+      // UI interface
       startSimulationBtn.style.display = "none";
       stopSimulationBtn.style.display = "inline-flex";
       startSimulationBtn.disabled = true;
 
-      // Ajouter le premier point
+      // Add the first point
       addSimulationStep();
 
-      // Continuer chaque seconde
+      // Continue every second
       simulationInterval = setInterval(() => {
         currentStep++;
         addSimulationStep();
@@ -256,7 +256,7 @@ import Trackio from "./Trackio.svelte";
         if (currentStep > 200) {
           stopSimulation();
         }
-      }, 1000); // Chaque seconde
+      }, 1000); // Every second
     }
 
     // Function to add a new data point
@@ -274,7 +274,7 @@ import Trackio from "./Trackio.svelte";
           newDataPoint,
         );
 
-        // Ajouter le point via l'instance Trackio
+        // Add the point via the Trackio instance
         if (
           typeof trackioEl.__trackioInstance.addLiveDataPoint === "function"
         ) {
@@ -310,14 +310,14 @@ import Trackio from "./Trackio.svelte";
     startSimulationBtn.addEventListener("click", startSimulation);
     stopSimulationBtn.addEventListener("click", stopSimulation);
 
-    // Arrêter la simulation si l'utilisateur quitte la page
+    // Stop the simulation if the user leaves the page
     window.addEventListener("beforeunload", stopSimulation);
 
     // Randomize data handler - now uses the store
     randomizeBtn.addEventListener("click", () => {
       console.log("Randomize button clicked - triggering jitter via store"); // Debug log
 
-      // Arrêter la simulation en cours si elle tourne
+      // Stop the current simulation if it's running
       if (simulationInterval) {
         stopSimulation();
       }
