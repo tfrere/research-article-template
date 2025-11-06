@@ -38,22 +38,22 @@
     margin: 0 !important;
 }
 
-.card .ri-root,
-.card .ri-root figure {
+.card .image-wrapper,
+.card .image-wrapper figure {
     margin: 0 !important;
+    width: 100% !important;
+    display: block !important;
 }
 
 .card img {
     border-radius: 8px 8px 0 0 !important;
-    width: 100%;
-    height: 120px;
-    object-fit: cover;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 120px !important;
+    object-fit: cover !important;
+    display: block !important;
     border-bottom: 1px solid var(--border-color) !important;
     transition: all 0.2s ease;
-}
-
-.card:hover img {
-    border-color: var(--muted-color) !important;
 }
 
 

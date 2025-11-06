@@ -96,10 +96,10 @@ const hasCaption =
   hasCaptionSlot || (typeof caption === "string" && caption.length > 0);
 const hasTitle = Astro.slots.has("title");
 const uid = `ri_${Math.random().toString(36).slice(2)}`;
-const dataZoomable =
-  zoomable !== false || (imgProps as any)["data-zoomable"] ? "1" : "1";
+// Use booleans instead of strings to avoid truthy "0" problem
+const dataZoomable = zoomable !== false || !!(imgProps as any)["data-zoomable"];
 const dataDownloadable =
-  downloadable !== false || (imgProps as any)["data-downloadable"] ? "1" : "1";
+  downloadable !== false || !!(imgProps as any)["data-downloadable"];
 const hasLink = typeof linkHref === "string" && linkHref.length > 0;
 const resolvedTarget = hasLink ? linkTarget || "_blank" : undefined;
 const resolvedRel = hasLink ? linkRel || "noopener noreferrer" : undefined;
@@ -109,8 +109,8 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
 ---
 
 <div
-  class={`ri-root`}
-  data-ri-root={uid}
+  class={`image-wrapper`}
+  data-image-wrapper={uid}
   data-has-title={hasTitle}
   data-has-caption={hasCaption}
 >
@@ -123,7 +123,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
           <span class="img-dl-wrap">
             {hasLink ? (
               <a
-                class="ri-link"
+                class="image-link"
                 href={linkHref}
                 target={resolvedTarget}
                 rel={resolvedRel}
@@ -166,7 +166,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
           </span>
         ) : hasLink ? (
           <a
-            class="ri-link"
+            class="image-link"
             href={linkHref}
             target={resolvedTarget}
             rel={resolvedRel}
@@ -200,7 +200,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
       <span class="img-dl-wrap">
         {hasLink ? (
           <a
-            class="ri-link"
+            class="image-link"
             href={linkHref}
             target={resolvedTarget}
             rel={resolvedRel}
@@ -241,7 +241,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
       </span>
     ) : hasLink ? (
       <a
-        class="ri-link"
+        class="image-link"
         href={linkHref}
         target={resolvedTarget}
         rel={resolvedRel}
@@ -300,7 +300,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
     };
 
     const initZoomIfNeeded = () => {
-      if (img.getAttribute("data-zoomable") !== "1") return;
+      if (img.getAttribute("data-zoomable") !== "true") return;
       const isDark =
         document.documentElement.getAttribute("data-theme") === "dark";
       const background = isDark ? "rgba(0,0,0,.9)" : "rgba(0,0,0,.85)";
@@ -355,13 +355,13 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
     // Global zoom management to hide other Figures
     const setupGlobalZoomBehavior = () => {
       img.addEventListener("click", () => {
-        if (img.getAttribute("data-zoomable") === "1") {
-          // Enlever zoom-active de tous les autres ri-root
+        if (img.getAttribute("data-zoomable") === "true") {
+          // Remove zoom-active from all other image wrappers
           document
-            .querySelectorAll(".ri-root.zoom-active")
+            .querySelectorAll(".image-wrapper.zoom-active")
             .forEach((el) => el.classList.remove("zoom-active"));
 
-          // Add zoom-active to this ri-root
+          // Add zoom-active to this image wrapper
           root.classList.add("zoom-active");
         }
       });
@@ -427,9 +427,28 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
 </script>
 
 <style>
+  .image-wrapper {
+    display: block;
+    width: 100%;
+  }
+
+  .image-link {
+    display: block;
+    width: 100%;
+  }
+
+  .image-wrapper img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
   figure {
     margin: var(--block-spacing-y) 0;
+    display: block;
+    width: 100%;
   }
+
   figcaption {
     text-align: left;
     font-size: 0.9rem;
@@ -480,10 +499,10 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
   }
 
   /* Opt-in zoomable images */
-  img[data-zoomable] {
+  img[data-zoomable="true"] {
     cursor: zoom-in;
   }
-  .medium-zoom--opened img[data-zoomable] {
+  .medium-zoom--opened img[data-zoomable="true"] {
     cursor: zoom-out;
   }
 
@@ -495,6 +514,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
     position: relative;
   }
   .img-dl-wrap {
+    width: 100%;
     position: relative;
     display: inline-block;
   }
@@ -516,20 +536,20 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
   }
 
   /* When an image is zoomed, hide ALL Figures on the page */
-  :global(.medium-zoom--opened) .ri-root {
+  :global(.medium-zoom--opened) .image-wrapper {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);
     transition: opacity 0.3s ease;
   }
 
   /* The currently zoomed image remains visible */
-  :global(.medium-zoom--opened) .ri-root:has(.medium-zoom--opened) {
+  :global(.medium-zoom--opened) .image-wrapper:has(.medium-zoom--opened) {
     opacity: 1;
     z-index: var(--z-overlay);
   }
 
   /* Fallback for browsers without :has() support */
-  :global(.medium-zoom--opened) .ri-root.zoom-active {
+  :global(.medium-zoom--opened) .image-wrapper.zoom-active {
     opacity: 1 !important;
     z-index: var(--z-overlay) !important;
   }
@@ -548,12 +568,12 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
   }
 
   /* Even for active zoomed image, hide button and caption for clean experience */
-  :global(.medium-zoom--opened) .ri-root.zoom-active .img-dl-btn {
+  :global(.medium-zoom--opened) .image-wrapper.zoom-active .img-dl-btn {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);
   }
 
-  :global(.medium-zoom--opened) .ri-root.zoom-active figcaption {
+  :global(.medium-zoom--opened) .image-wrapper.zoom-active figcaption {
     opacity: 0;
     z-index: calc(var(--z-base) - 1);
   }
@@ -579,11 +599,11 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
   }
 
   /* Conditional margins based on title and caption presence */
-  .ri-root:not([data-has-title="true"]) {
+  .image-wrapper:not([data-has-title="true"]) {
     margin-top: 20px;
   }
 
-  .ri-root:not([data-has-caption="true"]) {
+  .image-wrapper:not([data-has-caption="true"]) {
     margin-bottom: 20px;
   }
 
@@ -595,7 +615,7 @@ const resolvedDownloadSrc = downloadSrc || originalSrc;
   }
 
   /* Dark mode: invert luminosity while preserving color harmony */
-  :global([data-theme="dark"]) .ri-root img {
+  :global([data-theme="dark"]) .image-wrapper img {
     filter: invert(0.925) hue-rotate(180deg);
   }
 
