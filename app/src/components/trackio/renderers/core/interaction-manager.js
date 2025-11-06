@@ -205,13 +205,44 @@ export class InteractionManager {
   }
 
   /**
-   * Prepare data for hover tooltip
+   * Prepare data for hover tooltip with interpolation for missing points
    */
   prepareHoverData(series, nearestStep, normalizeY, isAccuracy) {
     const entries = series.map(s => {
-      const m = new Map(s.values.map(v => [v.step, v]));
-      const pt = m.get(nearestStep);
-      return { run: s.run, color: s.color, pt };
+      const values = s.values.sort((a, b) => a.step - b.step);
+      const m = new Map(values.map(v => [v.step, v]));
+      let pt = m.get(nearestStep);
+
+      // If no exact point, interpolate from surrounding points
+      if (!pt) {
+        // Find the two closest points (one before, one after)
+        let before = null;
+        let after = null;
+
+        for (let i = 0; i < values.length; i++) {
+          if (values[i].step < nearestStep) {
+            before = values[i];
+          } else if (values[i].step > nearestStep && !after) {
+            after = values[i];
+            break;
+          }
+        }
+
+        // Interpolate if we have both surrounding points
+        if (before && after) {
+          const ratio = (nearestStep - before.step) / (after.step - before.step);
+          const interpolatedValue = before.value + ratio * (after.value - before.value);
+          pt = { step: nearestStep, value: interpolatedValue };
+        } else if (before) {
+          // Use the last known value
+          pt = before;
+        } else if (after) {
+          // Use the first known value
+          pt = after;
+        }
+      }
+
+      return { run: s.run, color: s.color, pt, hasExactPoint: !!m.get(nearestStep) };
     }).filter(e => e.pt && e.pt.value != null)
       .sort((a, b) => a.pt.value - b.pt.value);
 
