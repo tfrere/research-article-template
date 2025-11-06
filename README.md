@@ -1,5 +1,5 @@
 ---
-title: 'The Smol Training Playbook: The Secrets to Building World-Class LLMs'
+title: 'Bringing paper to life:<br/>A modern template for scientific writing'
 short_desc: 'A practical journey behind training SOTA LLMs'
 emoji: 📝
 colorFrom: blue

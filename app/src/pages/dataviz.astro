@@ -22,7 +22,22 @@ const pageTitle = articleTitle;
 const pageDesc = articleDesc;
 
 // Load all embeds from the content
-const allEmbeds = loadEmbedsFromMDX();
+const contentEmbeds = loadEmbedsFromMDX();
+
+// Add banner as first embed (wide)
+const bannerEmbed = {
+    src: "banner.html",
+    wide: true,
+    frameless: false,
+    skipGallery: false,
+    title: undefined,
+    desc: undefined,
+    data: undefined,
+    config: undefined,
+};
+
+// Combine banner + content embeds
+const allEmbeds = [bannerEmbed, ...contentEmbeds];
 
 // No need to split - we'll use CSS Grid masonry layout
 ---
