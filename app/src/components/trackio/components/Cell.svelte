@@ -1,19 +1,19 @@
 <script>
-  import ChartRenderer from '../renderers/ChartRendererRefactored.svelte';
-  import ChartTooltip from '../renderers/ChartTooltip.svelte';
-  import { formatAbbrev } from '../core/chart-utils.js';
-  
+  import ChartRenderer from "../renderers/ChartRendererRefactored.svelte";
+  import ChartTooltip from "../renderers/ChartTooltip.svelte";
+  import { formatAbbrev } from "../core/chart-utils.js";
+
   // Props
   export let metricKey;
   export let titleText;
   export let wide = false;
-  export let variant = 'classic';
+  export let variant = "classic";
   export let normalizeLoss = true;
   export let logScaleX = false;
   export let smoothing = false;
   export let metricData = {}; // { run -> [{step,value}] } - smoothed data
   export let rawMetricData = {}; // { run -> [{step,value}] } - original data for background when smoothing
-  export let colorForRun = (name) => '#999';
+  export let colorForRun = (name) => "#999";
   export let hostEl = null;
 
   // Navigation props
@@ -23,105 +23,131 @@
   // Component state
   let root;
   let chartRenderer; // Reference to ChartRenderer component
-  
+
   // Tooltip state
   let tooltipVisible = false;
   let tooltipX = -9999;
   let tooltipY = -9999;
-  let tooltipTitle = '';
-  let tooltipSubtitle = '';
+  let tooltipTitle = "";
+  let tooltipSubtitle = "";
   let tooltipEntries = [];
-  
+
+  // Zoom state
+  let hasZoom = false;
+
   // Handlers
   function openFullscreen() {
     if (onOpenModal) {
       onOpenModal(currentIndex);
     }
   }
-  
+
+  function resetZoom() {
+    if (chartRenderer) {
+      chartRenderer.resetZoom(true);
+    }
+  }
+
+  function handleZoomChange({ hasMoved }) {
+    hasZoom = hasMoved;
+  }
+
   function handleChartHover(data) {
-    console.log('🎯 Cell.svelte handleChartHover called with:', data);
+    console.log("🎯 Cell.svelte handleChartHover called with:", data);
     const { step, entries, position } = data;
-    
+
     if (entries.length) {
       // Use global mouse coordinates for tooltip positioning
-      const trackioEl = hostEl.closest('.trackio');
+      const trackioEl = hostEl.closest(".trackio");
       const trackioRect = trackioEl.getBoundingClientRect();
-      
+
       // Position tooltip near global cursor with small offset
-      const relativeX = (position.globalX || position.x) - trackioRect.left + 15;
+      const relativeX =
+        (position.globalX || position.x) - trackioRect.left + 15;
       const relativeY = (position.globalY || position.y) - trackioRect.top + 15;
-      
+
       tooltipVisible = true;
       tooltipX = Math.round(relativeX);
       tooltipY = Math.round(relativeY);
       tooltipTitle = `Step ${formatAbbrev(step)}`;
       tooltipSubtitle = titleText;
       tooltipEntries = entries;
-      
-      console.log('📍 Tooltip state updated:', { tooltipVisible, tooltipX, tooltipY, tooltipTitle, entriesCount: tooltipEntries.length });
-      
+
+      console.log("📍 Tooltip state updated:", {
+        tooltipVisible,
+        tooltipX,
+        tooltipY,
+        tooltipTitle,
+        entriesCount: tooltipEntries.length,
+      });
+
       // Dispatch to host for cross-cell synchronization
-      try { 
-        hostEl && hostEl.dispatchEvent(new CustomEvent('trackio-hover-step', { 
-          detail: { step, sourceMetric: metricKey } 
-        })); 
-      } catch(_) {}
+      try {
+        hostEl &&
+          hostEl.dispatchEvent(
+            new CustomEvent("trackio-hover-step", {
+              detail: { step, sourceMetric: metricKey },
+            }),
+          );
+      } catch (_) {}
     }
   }
-  
+
   function handleChartLeave() {
     tooltipVisible = false;
     tooltipX = -9999;
     tooltipY = -9999;
-    
+
     // Dispatch leave event
-    try { 
-      hostEl && hostEl.dispatchEvent(new CustomEvent('trackio-hover-clear', {
-        detail: { sourceMetric: metricKey }
-      })); 
-    } catch(_) {} 
+    try {
+      hostEl &&
+        hostEl.dispatchEvent(
+          new CustomEvent("trackio-hover-clear", {
+            detail: { sourceMetric: metricKey },
+          }),
+        );
+    } catch (_) {}
   }
-  
+
   // External hover synchronization
   function setupExternalHover() {
     if (!root || root.__syncAttached || !hostEl) return;
-    
-    hostEl.addEventListener('trackio-hover-step', (ev) => {
+
+    hostEl.addEventListener("trackio-hover-step", (ev) => {
       const d = ev && ev.detail;
       if (!d || !chartRenderer) return;
-      
+
       // Don't sync to self - avoid infinite loops
       if (d.sourceMetric === metricKey) return;
-      
+
       // Show hover line at the specified step
       chartRenderer.showHoverLine(d.step);
     });
-    
-    hostEl.addEventListener('trackio-hover-clear', (ev) => {
+
+    hostEl.addEventListener("trackio-hover-clear", (ev) => {
       if (!chartRenderer) return;
-      
+
       // Don't sync to self
       const d = ev && ev.detail;
       if (d && d.sourceMetric === metricKey) return;
-      
+
       // Hide hover line
       chartRenderer.hideHoverLine();
     });
-    
+
     root.__syncAttached = true;
   }
-  
+
   $: if (root && hostEl) {
     setupExternalHover();
   }
 </script>
 
-<div 
-  class="cell {wide ? 'cell--wide' : ''}" 
-  bind:this={root} 
-  data-metric={metricKey} 
-  data-title={titleText} 
+<div
+  class="cell {wide ? 'cell--wide' : ''}"
+  bind:this={root}
+  data-metric={metricKey}
+  data-title={titleText}
   data-variant={variant}
 >
   <div class="cell-bg"></div>
@@ -131,18 +157,32 @@
       <div class="cell-title">
         {titleText}
       </div>
-      <button 
-        class="cell-fullscreen-btn" 
-        type="button" 
-        on:click={openFullscreen} 
-        title="Fullscreen"
-      >
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM6 18h3v2H4v-5h2v3zm12-3h2v5h-5v-2h3v-3z"/>
-        </svg>
-      </button>
+      <div class="cell-header-buttons">
+        {#if hasZoom}
+          <button
+            class="cell-reset-btn"
+            type="button"
+            on:click={resetZoom}
+            title="Reset zoom"
+          >
+            Reset
+          </button>
+        {/if}
+        <button
+          class="cell-fullscreen-btn"
+          type="button"
+          on:click={openFullscreen}
+          title="Fullscreen"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path
+              d="M4 9V4h5v2H6v3H4zm10-5h5v5h-2V6h-3V4zM6 18h3v2H4v-5h2v3zm12-3h2v5h-5v-2h3v-3z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
-    
+
     <div class="cell-body">
       <ChartRenderer
         bind:this={chartRenderer}
@@ -158,6 +198,8 @@
         {hostEl}
         width={800}
         height={150}
+        enableZoom={true}
+        onZoomChange={handleZoomChange}
         onHover={handleChartHover}
         onLeave={handleChartLeave}
       />
@@ -176,13 +218,11 @@
   parentElement={root}
 />
 
-
-
 <style>
   /* =========================
      CELL BASE STYLES
      ========================= */
-     
+
   :global(.trackio .cell) {
     border: 1px solid var(--trackio-cell-border);
     border-radius: 10px;
@@ -191,7 +231,7 @@
     flex-direction: column;
     position: relative;
   }
-  
+
   /* Default cell background - hidden */
   :global(.trackio .cell-bg) {
     position: absolute;
@@ -201,7 +241,7 @@
     border-radius: 4px;
     display: none;
   }
-  
+
   /* Default cell corners - hidden */
   :global(.trackio .cell-corners) {
     position: absolute;
@@ -211,7 +251,7 @@
     display: none;
     opacity: 0.85;
   }
-  
+
   :global(.trackio .cell-inner) {
     position: relative;
     z-index: 2;
@@ -219,28 +259,47 @@
     display: flex;
     flex-direction: column;
   }
-  
+
   /* Oblivion theme: adjust inner padding to account for corners and gap */
   :global(.trackio.theme--oblivion .cell-inner) {
-    padding: var(--trackio-oblivion-hud-corner-size, 8px) 12px 10px var(--trackio-oblivion-hud-gap, 10px);
+    padding: var(--trackio-oblivion-hud-corner-size, 8px) 12px 10px
+      var(--trackio-oblivion-hud-gap, 10px);
   }
-  
+
   /* Oblivion theme: show background and corners with proper styling */
   :global(.trackio.theme--oblivion .cell-bg) {
     display: block !important;
-    background: 
-      radial-gradient(1200px 200px at 20% -10%, rgba(0,0,0,.05), transparent 80%),
-      radial-gradient(900px 200px at 80% 110%, rgba(0,0,0,.05), transparent 80%);
+    background: radial-gradient(
+        1200px 200px at 20% -10%,
+        rgba(0, 0, 0, 0.05),
+        transparent 80%
+      ),
+      radial-gradient(
+        900px 200px at 80% 110%,
+        rgba(0, 0, 0, 0.05),
+        transparent 80%
+      );
   }
-  
+
   /* Dark mode: richer gradient for Oblivion */
   :global([data-theme="dark"]) :global(.trackio.theme--oblivion .cell-bg) {
-    background:
-      radial-gradient(1400px 260px at 20% -10%, color-mix(in srgb, #ffffff 6.5%, transparent), transparent 80%),
-      radial-gradient(1100px 240px at 80% 110%, color-mix(in srgb, #ffffff 6%, transparent), transparent 80%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 3.5%, transparent), transparent 45%);
+    background: radial-gradient(
+        1400px 260px at 20% -10%,
+        color-mix(in srgb, #ffffff 6.5%, transparent),
+        transparent 80%
+      ),
+      radial-gradient(
+        1100px 240px at 80% 110%,
+        color-mix(in srgb, #ffffff 6%, transparent),
+        transparent 80%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, #ffffff 3.5%, transparent),
+        transparent 45%
+      );
   }
-  
+
   :global(.trackio.theme--oblivion .cell-corners) {
     display: block !important;
     inset: 6px;
@@ -256,7 +315,7 @@
     opacity: 1;
     z-index: 3;
   }
-  
+
   /* Dark mode: bright corners for Oblivion */
   :global([data-theme="dark"]) :global(.trackio.theme--oblivion .cell-corners) {
     background:
@@ -269,47 +328,48 @@
       linear-gradient(#ffffff, #ffffff) bottom right / 8px 1px no-repeat,
       linear-gradient(#ffffff, #ffffff) bottom right / 1px 8px no-repeat;
   }
-  
+
   :global(.trackio .cell-header) {
-    padding: 0 0px 10px 10px; 
+    padding: 0 0px 10px 10px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
-  
+
   /* Oblivion theme: adjust header padding */
   :global(.trackio.theme--oblivion .cell-header) {
     padding: 5px 0px 18px 12px;
   }
-  
+
   :global(.trackio .cell-title) {
     font-size: 13px;
     font-weight: 700;
     color: var(--trackio-text-primary);
     font-family: var(--trackio-font-family);
   }
-  
+
   :global(.trackio .cell-body) {
     position: relative;
     width: 100%;
     overflow: hidden;
   }
-  
+
   /* Oblivion theme overrides */
   :global(.trackio.theme--oblivion .cell) {
     border: none !important;
     background: transparent !important;
   }
-  
+
   :global(.trackio.theme--classic .cell) {
     border: 1px solid var(--trackio-cell-border) !important;
     background: var(--trackio-cell-background) !important;
     border-radius: 10px !important;
   }
-  
+
   :global(.trackio.theme--oblivion .cell-title) {
-    font-family: 'Roboto Mono', 'Roboto Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace !important;
+    font-family: "Roboto Mono", "Roboto Mono Fallback", ui-monospace,
+      SFMono-Regular, Menlo, monospace !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
     font-weight: 800 !important;
@@ -317,7 +377,7 @@
     position: relative;
     padding-left: 14px;
   }
-  
+
   /* Oblivion theme: add indicator dot before title */
   :global(.trackio.theme--oblivion .cell-title)::before {
     content: "";
@@ -334,13 +394,12 @@
     opacity: 0.6;
   }
 
-
   /* Ghost hover effect */
   :global(.trackio.hovering .ghost) {
     opacity: 0.2;
     transition: opacity 0.15s ease;
   }
-  
+
   /* Specific ghost effect for raw lines when smoothing is active */
   :global(.trackio.hovering path.raw-line.ghost) {
     opacity: 0.1;
@@ -349,6 +408,13 @@
   /* Wide cell spans full width */
   :global(.trackio__grid .cell--wide) {
     grid-column: 1 / -1;
+  }
+
+  /* Header buttons container */
+  .cell-header-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
   /* Fullscreen button */
@@ -366,14 +432,38 @@
     border-radius: 6px;
     transition: opacity 0.15s ease;
   }
-  
+
   .cell-fullscreen-btn:hover {
     opacity: 1;
   }
-  
+
   .cell-fullscreen-btn svg {
     width: 18px;
     height: 18px;
     fill: var(--trackio-chart-axis-text);
+  }
+
+  /* Reset zoom button */
+  .cell-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--trackio-chart-axis-stroke);
+    background: transparent;
+    color: var(--trackio-chart-axis-text);
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.7;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-family: var(--trackio-font-family);
+  }
+
+  .cell-reset-btn:hover {
+    opacity: 1;
+    background: var(--trackio-chart-grid-stroke);
   }
 </style>

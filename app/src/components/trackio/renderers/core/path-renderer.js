@@ -15,12 +15,12 @@ export class PathRenderer {
   renderSeries(runs, metricData, rawMetricData, colorForRun, smoothing, logScaleX, stepIndex, normalizeY) {
     const { lines: gLines, points: gPoints } = this.svgManager.getGroups();
     const { line: lineGen } = this.svgManager.getScales();
-    
+
     // Prepare series data
-    const series = runs.map(r => ({ 
-      run: r, 
-      color: colorForRun(r), 
-      values: (metricData[r] || []).slice().sort((a, b) => a.step - b.step) 
+    const series = runs.map(r => ({
+      run: r,
+      color: colorForRun(r),
+      values: (metricData[r] || []).slice().sort((a, b) => a.step - b.step)
     }));
 
     // Render background lines for smoothing
@@ -41,15 +41,15 @@ export class PathRenderer {
    * Render raw data lines (background when smoothing is enabled)
    */
   renderRawLines(gLines, runs, rawMetricData, colorForRun, lineGen) {
-    const rawSeries = runs.map(r => ({ 
-      run: r, 
-      color: colorForRun(r), 
-      values: (rawMetricData[r] || []).slice().sort((a, b) => a.step - b.step) 
+    const rawSeries = runs.map(r => ({
+      run: r,
+      color: colorForRun(r),
+      values: (rawMetricData[r] || []).slice().sort((a, b) => a.step - b.step)
     }));
-    
+
     const rawPaths = gLines.selectAll('path.raw-line')
-      .data(rawSeries, d => d.run + '-raw'); 
-    
+      .data(rawSeries, d => d.run + '-raw');
+
     // Enter
     rawPaths.enter()
       .append('path')
@@ -60,14 +60,14 @@ export class PathRenderer {
       .attr('opacity', 0.2)
       .attr('stroke', d => d.color)
       .style('pointer-events', 'none')
-      .attr('d', d => lineGen(d.values)); 
-    
+      .attr('d', d => lineGen(d.values));
+
     // Update
     rawPaths
       .attr('stroke', d => d.color)
       .attr('opacity', 0.2)
       .attr('d', d => lineGen(d.values));
-    
+
     // Exit
     rawPaths.exit().remove();
   }
@@ -77,8 +77,8 @@ export class PathRenderer {
    */
   renderMainLines(gLines, series, lineGen) {
     const paths = gLines.selectAll('path.run-line')
-      .data(series, d => d.run); 
-    
+      .data(series, d => d.run);
+
     // Enter
     paths.enter()
       .append('path')
@@ -89,15 +89,15 @@ export class PathRenderer {
       .attr('opacity', 0.9)
       .attr('stroke', d => d.color)
       .style('pointer-events', 'none')
-      .attr('d', d => lineGen(d.values)); 
-    
+      .attr('d', d => lineGen(d.values));
+
     // Update with transition
     paths.transition()
       .duration(160)
       .attr('stroke', d => d.color)
       .attr('opacity', 0.9)
       .attr('d', d => lineGen(d.values));
-    
+
     // Exit
     paths.exit().remove();
   }
@@ -107,19 +107,19 @@ export class PathRenderer {
    */
   renderPoints(gPoints, series, logScaleX, stepIndex, normalizeY) {
     const { x: xScale, y: yScale } = this.svgManager.getScales();
-    
-    const allPoints = series.flatMap(s => 
-      s.values.map(v => ({ 
-        run: s.run, 
-        color: s.color, 
-        step: v.step, 
-        value: v.value 
+
+    const allPoints = series.flatMap(s =>
+      s.values.map(v => ({
+        run: s.run,
+        color: s.color,
+        step: v.step,
+        value: v.value
       }))
     );
-    
+
     const ptsSel = gPoints.selectAll('circle.pt')
-      .data(allPoints, d => `${d.run}-${d.step}`); 
-    
+      .data(allPoints, d => `${d.run}-${d.step}`);
+
     // Enter
     ptsSel.enter()
       .append('circle')
@@ -134,8 +134,8 @@ export class PathRenderer {
       .attr('cy', d => yScale(normalizeY(d.value)))
       .merge(ptsSel)
       .attr('cx', d => logScaleX ? xScale(d.step) : xScale(stepIndex.get(d.step)))
-      .attr('cy', d => yScale(normalizeY(d.value))); 
-    
+      .attr('cy', d => yScale(normalizeY(d.value)));
+
     // Exit
     ptsSel.exit().remove();
   }
@@ -145,11 +145,11 @@ export class PathRenderer {
    */
   updatePointVisibility(nearestStep) {
     const { points: gPoints } = this.svgManager.getGroups();
-    
-    try { 
+
+    try {
       gPoints.selectAll('circle.pt')
-        .attr('r', d => (d && d.step === nearestStep ? 4 : 0)); 
-    } catch(_) {} 
+        .attr('r', d => (d && d.step === nearestStep ? 4 : 0));
+    } catch (_) { }
   }
 
   /**
@@ -157,9 +157,74 @@ export class PathRenderer {
    */
   hideAllPoints() {
     const { points: gPoints } = this.svgManager.getGroups();
-    
-    try { 
-      gPoints.selectAll('circle.pt').attr('r', 0); 
-    } catch(_) {} 
+
+    try {
+      gPoints.selectAll('circle.pt').attr('r', 0);
+    } catch (_) { }
+  }
+
+  /**
+   * Render series with custom scales (for zoom)
+   * Similar to renderSeries but uses provided scales instead of svgManager's scales
+   */
+  renderSeriesWithCustomScales(runs, metricData, rawMetricData, colorForRun, smoothing, logScaleX, stepIndex, normalizeY, customXScale, customYScale) {
+    const { lines: gLines, points: gPoints } = this.svgManager.getGroups();
+
+    // Create custom line generator with zoomed scales
+    const customLineGen = d3.line()
+      .x(d => {
+        if (logScaleX) {
+          return customXScale(d.step);
+        } else {
+          const idx = stepIndex ? stepIndex.get(d.step) : 0;
+          return customXScale(idx);
+        }
+      })
+      .y(d => customYScale(normalizeY(d.value)));
+
+    // Prepare series data
+    const series = runs.map(r => ({
+      run: r,
+      color: colorForRun(r),
+      values: (metricData[r] || []).slice().sort((a, b) => a.step - b.step)
+    }));
+
+    // Update raw lines if smoothing is enabled
+    if (smoothing && rawMetricData && Object.keys(rawMetricData).length > 0) {
+      const rawSeries = runs.map(r => ({
+        run: r,
+        color: colorForRun(r),
+        values: (rawMetricData[r] || []).slice().sort((a, b) => a.step - b.step)
+      }));
+
+      gLines.selectAll('path.raw-line')
+        .data(rawSeries, d => d.run + '-raw')
+        .attr('d', d => customLineGen(d.values));
+    }
+
+    // Update main lines
+    gLines.selectAll('path.run-line')
+      .data(series, d => d.run)
+      .attr('d', d => customLineGen(d.values));
+
+    // Update points positions
+    const allPoints = [];
+    series.forEach(s => {
+      s.values.forEach(v => {
+        allPoints.push({ run: s.run, color: s.color, step: v.step, value: v.value });
+      });
+    });
+
+    gPoints.selectAll('circle.pt')
+      .data(allPoints, d => `${d.run}-${d.step}`)
+      .attr('cx', d => {
+        if (logScaleX) {
+          return customXScale(d.step);
+        } else {
+          const idx = stepIndex ? stepIndex.get(d.step) : 0;
+          return customXScale(idx);
+        }
+      })
+      .attr('cy', d => customYScale(normalizeY(d.value)));
   }
 }
