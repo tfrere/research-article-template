@@ -41,34 +41,59 @@ Set `ENABLE_LATEX_CONVERSION=true` in your Hugging Face Space to enable automati
 
 Convert Notion pages into interactive web articles.
 
-### Quick Start
+### Prerequisites
+
+You need **2 things**:
+
+1. **NOTION_TOKEN** — Your Notion integration token
+   - Go to [notion.so/my-integrations](https://www.notion.so/my-integrations)
+   - Create a new integration → copy the token (starts with `secret_` or `ntn_`)
+   
+2. **NOTION_PAGE_ID** — The ID of your Notion page
+   - Open your page in browser: `https://www.notion.so/My-Page-abc123def456`
+   - The ID is the last part after the title: `abc123def456`
+
+### Share Your Page with the Integration
+
+<Note variant="warning">
+**This step is required!** Having a token is not enough — you must explicitly share the page with your integration.
+</Note>
+
+1. Open your Notion page
+2. Click **"..."** (top right corner)
+3. Click **"Connections"** or **"Add connections"**
+4. Select your integration from the list
+5. Confirm access
+
+If your page is nested inside another page or database, you can either share the parent page (the integration will have access to all sub-pages) or share each page individually.
+
+### Option A: Automatic on HF Space
+
+Add these to your Space settings (Settings → Variables and secrets):
+
+| Type | Name | Value |
+|------|------|-------|
+| Secret | `NOTION_TOKEN` | your token |
+| Variable | `NOTION_PAGE_ID` | your page ID |
+| Variable | `ENABLE_NOTION_CONVERSION` | `true` |
+
+Then restart the Space. Every rebuild will fetch the latest Notion content automatically.
+
+### Option B: Local Development
 
 ```bash
 cd app/scripts/notion-importer/
 npm install
 cp env.example .env
-# Edit .env with your Notion token
-# Edit input/pages.json with your page IDs
-node index.mjs
+# Edit .env with NOTION_TOKEN and NOTION_PAGE_ID
+npm run notion:import   # or: node index.mjs
 ```
+
+This rewrites `src/content/article.mdx` with your Notion content. Push to deploy.
 
 ### What Gets Converted
 
-- Images
-- Callouts → `<Sidenote>` components
+- Images (downloaded locally)
+- Callouts → `<Note>` components
 - Enhanced tables and code blocks
 - Smart link conversion
-
-### Prerequisites
-
-- **Node.js** with ESM support
-- **Notion Integration** with token
-- **Shared Pages** with your integration
-
-<Note variant="info">
-💡 **Hugging Face Spaces** — Add your `NOTION_TOKEN` to Space secrets for secure access.
-</Note>
-
-### Docker Deployment
-
-Set `ENABLE_NOTION_CONVERSION=true` in your Hugging Face Space to enable automatic conversion during build.
