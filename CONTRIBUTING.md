@@ -85,6 +85,7 @@ We welcome feature suggestions! Please:
 - **Components**: Place in `src/components/`
 - **Styles**: Use CSS modules or component-scoped styles
 - **Assets**: Organize in `src/content/assets/`
+- **HTML Embeds**: Place in `src/content/embeds/` — see `.cursor/skills/create-html-embed/` for conventions and directives
 - **Documentation**: Update relevant `.mdx` files
 
 ### Commit Message Format

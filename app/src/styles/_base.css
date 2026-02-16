@@ -41,7 +41,7 @@ html {
 .content-grid main a {
   color: var(--primary-color);
   text-decoration: none;
-  background: var(--sufrace-bg);
+  background: var(--surface-bg);
   border-bottom: 1px solid color-mix(in srgb, var(--primary-color, #007AFF) 40%, transparent);
   ;
 }

@@ -207,7 +207,7 @@ The **Reference** component provides a flexible wrapper for any content with an 
   **Note:** The `Image` and `HtmlEmbed` components also support the same `id` and `caption` props for consistent referencing across your article.
 </Note>
 
-<Reference id="example-reference" caption="<strong>Figure 1:</strong> Example reference with HTML caption and <em>styling</em>">
+<Reference id="example-reference" caption="Example reference with HTML caption and <em>styling</em>">
   you content here...
 </Reference>
 
@@ -220,13 +220,13 @@ The **Reference** component provides a flexible wrapper for any content with an 
 ```mdx
 import Reference from '../../../components/Reference.astro'
 
-<Reference id="my-reference" caption="<strong>Reference 1:</strong> This is a <em>flexible</em> content wrapper">
+<Reference id="my-reference" caption="This is a <em>flexible</em> content wrapper">
   <p>Any content can go here...</p>
   <img src={myImage} alt="Description" />
   <div>Even complex HTML structures!</div>
 </Reference>
 
-<Reference id="another-ref" caption="<strong>Table 1:</strong> Data comparison with <a href='#'>source link</a>">
+<Reference id="another-ref" caption="Data comparison with <a href='#'>source link</a>">
   <table>
     <thead>
       <tr><th>Column 1</th><th>Column 2</th></tr>
@@ -498,17 +498,16 @@ import Stack from '../../../components/Stack.astro'
 
 ### Iframes
 
-You can embed external content in your article using **iframes**. For example, **TrackIO**, **Gradio** or even **Github code embeds** can be used this way.
+You can embed external content in your article using **iframes**. For example, **Gradio** or even **Github code embeds** can be used this way.
 
-<small className="muted">Trackio embed example</small>
+<small className="muted">Gradio embed example</small>
 <div className="card">
-<iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="630" frameborder="0"></iframe>
+<iframe title="Gradio Hello World demo" src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 </div>
 <Accordion title="Code example">
 ```mdx
-<iframe frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
-<iframe src="https://trackio-documentation.hf.space/?project=fake-training-750735&metrics=train_loss,train_accuracy&sidebar=hidden&lang=en" width="100%" height="600" frameborder="0"></iframe>
-<iframe src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
+<iframe title="GitHub code embed" frameborder="0" scrolling="no" style="width:100%; height:292px;" allow="clipboard-write" src="https://emgithub.com/iframe.html?target=https%3A%2F%2Fgithub.com%2Fhuggingface%2Fpicotron%2Fblob%2F1004ae37b87887cde597c9060fb067faa060bafe%2Fsetup.py&style=default&type=code&showBorder=on&showLineNumbers=on"></iframe>
+<iframe title="Gradio Hello World demo" src="https://gradio-hello-world.hf.space" width="100%" height="380" frameborder="0"></iframe>
 ```
 </Accordion>
 

@@ -53,6 +53,17 @@ section.content-grid pre code {
   min-width: 100%;
 }
 
+/* Plain-text blocks: always wrap lines (prompts, prose, etc.) */
+.astro-code[data-language="text"] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.astro-code[data-language="text"] .line {
+  display: block;
+}
+
 /* Wrap long lines only on small screens to prevent layout overflow */
 @media (--bp-content-collapse) {
 

@@ -48,7 +48,7 @@
     gap: 16px;
   }
 
-  .footer-inner>h3 {
+  .footer-inner>.footer-heading {
     grid-column: auto;
     margin-top: 16px;
   }
@@ -70,7 +70,7 @@
   box-sizing: border-box;
   position: relative;
   z-index: var(--z-elevated);
-  background-color: var(--background-color);
+  background-color: var(--page-bg);
 }
 
 .wide {
@@ -195,4 +195,30 @@
     width: 100%;
     min-width: 0;
   }
+}
+
+/* ============================================================================ */
+/* Auto figure numbering                                                        */
+/* Applies a CSS counter across all figure-bearing components:                  */
+/* Reference (.reference-wrapper), Image (.image-wrapper figure),               */
+/* and HtmlEmbed (.html-embed)                                                  */
+/* ============================================================================ */
+
+.content-grid > main {
+  counter-reset: figure;
+}
+
+/* Increment on every figure-like component */
+.content-grid > main .reference-wrapper,
+.content-grid > main .image-wrapper > figure,
+.content-grid > main figure.html-embed {
+  counter-increment: figure;
+}
+
+/* Display "Figure N · " before each figcaption */
+.content-grid > main .reference-wrapper .reference__caption::before,
+.content-grid > main .image-wrapper > figure > figcaption::before,
+.content-grid > main figure.html-embed > .html-embed__desc::before {
+  content: "Figure " counter(figure) " · ";
+  font-weight: 600;
 }

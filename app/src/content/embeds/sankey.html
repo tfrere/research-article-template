@@ -1,0 +1,452 @@
+<div class="d3-synth-sankey" style="width:100%;margin:10px 0;aspect-ratio:5/2;min-height:360px;"></div>
+<script>
+    (() => {
+        const ensureD3 = (cb) => {
+            if (window.d3 && typeof window.d3.select === 'function' && typeof window.d3.sankey === 'function') return cb();
+            const loadSankey = () => {
+                if (typeof window.d3.sankey === 'function') return cb();
+                let s2 = document.getElementById('d3-sankey-cdn');
+                if (!s2) {
+                    s2 = document.createElement('script');
+                    s2.id = 'd3-sankey-cdn';
+                    s2.src = 'https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js';
+                    document.head.appendChild(s2);
+                }
+                s2.addEventListener('load', cb, { once: true });
+            };
+            let s = document.getElementById('d3-cdn-script');
+            if (!s) {
+                s = document.createElement('script');
+                s.id = 'd3-cdn-script';
+                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+                document.head.appendChild(s);
+            }
+            if (window.d3 && typeof window.d3.select === 'function') { loadSankey(); return; }
+            s.addEventListener('load', loadSankey, { once: true });
+        };
+
+        const bootstrap = () => {
+            const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
+            const container = (mount && mount.querySelector && mount.querySelector('.d3-synth-sankey')) ||
+                Array.from(document.querySelectorAll('.d3-synth-sankey')).find(el => el.dataset.mounted !== 'true');
+            if (!container) return;
+            if (container.dataset) {
+                if (container.dataset.mounted === 'true') return;
+                container.dataset.mounted = 'true';
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // NODES
+            // ═══════════════════════════════════════════════════════════════
+            // Column 0: Sources
+            // Column 1: Prompts (14 individual)
+            // Column 2: Model families
+            const nodes = [
+                // Sources (0-3)
+                { name: 'FW-Edu HQ',   col: 'source' },
+                { name: 'FW-Edu LQ',   col: 'source' },
+                { name: 'DCLM',        col: 'source' },
+                { name: 'Cosmopedia',  col: 'source' },
+                // Format prompts (4-10)
+                { name: 'Tutorial',    col: 'prompt', cat: 'Format' },
+                { name: 'FAQ',         col: 'prompt', cat: 'Format' },
+                { name: 'Math',        col: 'prompt', cat: 'Format' },
+                { name: 'Table',       col: 'prompt', cat: 'Format' },
+                { name: 'Commentary',  col: 'prompt', cat: 'Format' },
+                { name: 'Discussion',  col: 'prompt', cat: 'Format' },
+                { name: 'Article',     col: 'prompt', cat: 'Format' },
+                // Nemotron prompts (11-15)
+                { name: 'Diverse QA',        col: 'prompt', cat: 'Nemotron' },
+                { name: 'Knowledge List',    col: 'prompt', cat: 'Nemotron' },
+                { name: 'Wikipedia Style',   col: 'prompt', cat: 'Nemotron' },
+                { name: 'Extract Knowledge', col: 'prompt', cat: 'Nemotron' },
+                { name: 'Distill',           col: 'prompt', cat: 'Nemotron' },
+                // REWIRE prompts (16-17)
+                { name: 'Guided Rewrite',  col: 'prompt', cat: 'REWIRE' },
+                { name: 'Guided Rewrite+', col: 'prompt', cat: 'REWIRE' },
+                // Model families (18-23)
+                { name: 'Gemma',    col: 'model' },
+                { name: 'Qwen',     col: 'model' },
+                { name: 'Falcon',   col: 'model' },
+                { name: 'Granite',  col: 'model' },
+                { name: 'Llama',    col: 'model' },
+                { name: 'SmolLM2',  col: 'model' },
+            ];
+
+            const ni = (name) => nodes.findIndex(n => n.name === name);
+
+            // ═══════════════════════════════════════════════════════════════
+            // LINKS (value = number of experiments)
+            // ═══════════════════════════════════════════════════════════════
+            const links = [
+                // Source -> Prompt
+                { source: ni('FW-Edu HQ'), target: ni('Tutorial'), value: 15 },
+                { source: ni('FW-Edu HQ'), target: ni('FAQ'), value: 7 },
+                { source: ni('FW-Edu HQ'), target: ni('Math'), value: 10 },
+                { source: ni('FW-Edu HQ'), target: ni('Table'), value: 7 },
+                { source: ni('FW-Edu HQ'), target: ni('Commentary'), value: 2 },
+                { source: ni('FW-Edu HQ'), target: ni('Discussion'), value: 2 },
+                { source: ni('FW-Edu HQ'), target: ni('Article'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Diverse QA'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Knowledge List'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Wikipedia Style'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Extract Knowledge'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Distill'), value: 1 },
+                { source: ni('FW-Edu HQ'), target: ni('Guided Rewrite'), value: 5 },
+                { source: ni('FW-Edu HQ'), target: ni('Guided Rewrite+'), value: 2 },
+                { source: ni('FW-Edu LQ'), target: ni('FAQ'), value: 2 },
+                { source: ni('FW-Edu LQ'), target: ni('Tutorial'), value: 2 },
+                { source: ni('DCLM'), target: ni('FAQ'), value: 1 },
+                { source: ni('DCLM'), target: ni('Tutorial'), value: 1 },
+                { source: ni('DCLM'), target: ni('Commentary'), value: 1 },
+                { source: ni('Cosmopedia'), target: ni('FAQ'), value: 1 },
+                { source: ni('Cosmopedia'), target: ni('Tutorial'), value: 1 },
+                // Prompt -> Model family
+                { source: ni('Tutorial'), target: ni('Gemma'), value: 9 },
+                { source: ni('Tutorial'), target: ni('Qwen'), value: 4 },
+                { source: ni('Tutorial'), target: ni('Falcon'), value: 1 },
+                { source: ni('Tutorial'), target: ni('Granite'), value: 1 },
+                { source: ni('Tutorial'), target: ni('Llama'), value: 1 },
+                { source: ni('Tutorial'), target: ni('SmolLM2'), value: 3 },
+                { source: ni('FAQ'), target: ni('Gemma'), value: 6 },
+                { source: ni('FAQ'), target: ni('Qwen'), value: 1 },
+                { source: ni('FAQ'), target: ni('Falcon'), value: 1 },
+                { source: ni('FAQ'), target: ni('Granite'), value: 1 },
+                { source: ni('FAQ'), target: ni('Llama'), value: 1 },
+                { source: ni('FAQ'), target: ni('SmolLM2'), value: 1 },
+                { source: ni('Math'), target: ni('Gemma'), value: 5 },
+                { source: ni('Math'), target: ni('Qwen'), value: 1 },
+                { source: ni('Math'), target: ni('Falcon'), value: 1 },
+                { source: ni('Math'), target: ni('Granite'), value: 1 },
+                { source: ni('Math'), target: ni('Llama'), value: 1 },
+                { source: ni('Math'), target: ni('SmolLM2'), value: 1 },
+                { source: ni('Table'), target: ni('Gemma'), value: 2 },
+                { source: ni('Table'), target: ni('Qwen'), value: 1 },
+                { source: ni('Table'), target: ni('Falcon'), value: 1 },
+                { source: ni('Table'), target: ni('Granite'), value: 1 },
+                { source: ni('Table'), target: ni('Llama'), value: 1 },
+                { source: ni('Table'), target: ni('SmolLM2'), value: 1 },
+                { source: ni('Commentary'), target: ni('Gemma'), value: 2 },
+                { source: ni('Commentary'), target: ni('Qwen'), value: 1 },
+                { source: ni('Discussion'), target: ni('Gemma'), value: 1 },
+                { source: ni('Discussion'), target: ni('Qwen'), value: 1 },
+                { source: ni('Article'), target: ni('Gemma'), value: 1 },
+                { source: ni('Diverse QA'), target: ni('Gemma'), value: 1 },
+                { source: ni('Knowledge List'), target: ni('Gemma'), value: 1 },
+                { source: ni('Wikipedia Style'), target: ni('Gemma'), value: 1 },
+                { source: ni('Extract Knowledge'), target: ni('Gemma'), value: 1 },
+                { source: ni('Distill'), target: ni('Gemma'), value: 1 },
+                { source: ni('Guided Rewrite'), target: ni('Gemma'), value: 5 },
+                { source: ni('Guided Rewrite+'), target: ni('Gemma'), value: 2 },
+            ];
+
+            // ═══════════════════════════════════════════════════════════════
+            // COLORS
+            // ═══════════════════════════════════════════════════════════════
+            const sourceColors = {
+                'FW-Edu HQ':  '#6B8DB5',
+                'FW-Edu LQ':  '#B58B9B',
+                'DCLM':       '#7B82C8',
+                'Cosmopedia': '#8BA878',
+            };
+            const catColors = {
+                'Format':   '#4EA5B7',
+                'Nemotron': '#D4A850',
+                'REWIRE':   '#C87878',
+            };
+            const familyColors = {
+                'Gemma':   '#4EA5B7',
+                'Qwen':    '#8B7BE8',
+                'SmolLM2': '#E8C44A',
+                'Falcon':  '#E889AB',
+                'Granite': '#5BC0A4',
+                'Llama':   '#D09090',
+            };
+
+            const nodeColor = (d) => {
+                if (d.col === 'source') return sourceColors[d.name] || '#888';
+                if (d.col === 'prompt') return catColors[d.cat] || '#888';
+                if (d.col === 'model') return familyColors[d.name] || '#888';
+                return '#888';
+            };
+
+            // ═══════════════════════════════════════════════════════════════
+            // SVG
+            // ═══════════════════════════════════════════════════════════════
+            const svg = d3.select(container).append('svg')
+                .attr('width', '100%')
+                .style('display', 'block');
+
+            const render = () => {
+                const width = container.clientWidth || 800;
+                const height = Math.max(360, Math.round(width / 2.5));
+                svg.attr('width', width).attr('height', height);
+                svg.selectAll('*').remove();
+
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const textColor = isDark ? 'rgba(255,255,255,0.78)' : 'rgba(0,0,0,0.68)';
+                const mutedText = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)';
+                const linkOpacity = isDark ? 0.20 : 0.18;
+                const linkHoverOpacity = isDark ? 0.50 : 0.45;
+
+                const fontSize = Math.max(8, Math.min(11, width / 90));
+
+                // Layout margins
+                const ml = width * 0.005, mr = width * 0.005;
+                const mt = height * 0.08, mb = height * 0.03;
+
+                // Sankey layout
+                const sankeyGen = d3.sankey()
+                    .nodeId(d => d.index)
+                    .nodeWidth(Math.max(8, width * 0.012))
+                    .nodePadding(Math.max(3, height * 0.012))
+                    .nodeSort(null)
+                    .extent([[ml, mt], [width - mr, height - mb]]);
+
+                // Deep copy for layout
+                const graph = sankeyGen({
+                    nodes: nodes.map((d, i) => ({ ...d, index: i })),
+                    links: links.map(d => ({ ...d }))
+                });
+
+                // ─── COLUMN HEADERS ───
+                const colLabels = [
+                    { text: 'Source Dataset', x: graph.nodes.filter(n => n.col === 'source')[0]?.x0 || ml },
+                    { text: 'Prompt Strategy', x: graph.nodes.filter(n => n.col === 'prompt')[0]?.x0 || width * 0.35 },
+                    { text: 'Model Family', x: graph.nodes.filter(n => n.col === 'model')[0]?.x0 || width * 0.75 },
+                ];
+                svg.selectAll('text.col-header')
+                    .data(colLabels)
+                    .join('text')
+                    .attr('class', 'col-header')
+                    .attr('x', d => d.x)
+                    .attr('y', mt - 8)
+                    .attr('text-anchor', 'start')
+                    .attr('fill', mutedText)
+                    .attr('font-size', (fontSize * 0.82) + 'px')
+                    .attr('font-weight', '700')
+                    .attr('font-family', 'system-ui, -apple-system, sans-serif')
+                    .attr('letter-spacing', '0.5px')
+                    .attr('text-transform', 'uppercase')
+                    .text(d => d.text);
+
+                // ─── CATEGORY BRACKETS for prompts ───
+                const catGroups = {};
+                graph.nodes.filter(n => n.col === 'prompt').forEach(n => {
+                    if (!catGroups[n.cat]) catGroups[n.cat] = { min: Infinity, max: -Infinity };
+                    catGroups[n.cat].min = Math.min(catGroups[n.cat].min, n.y0);
+                    catGroups[n.cat].max = Math.max(catGroups[n.cat].max, n.y1);
+                });
+                const bracketX = (graph.nodes.find(n => n.col === 'prompt')?.x1 || 0) + 5;
+                Object.entries(catGroups).forEach(([cat, { min: y0, max: y1 }]) => {
+                    const midY = (y0 + y1) / 2;
+                    svg.append('line')
+                        .attr('x1', bracketX).attr('x2', bracketX)
+                        .attr('y1', y0 + 2).attr('y2', y1 - 2)
+                        .attr('stroke', catColors[cat])
+                        .attr('stroke-width', 1.5)
+                        .attr('stroke-opacity', 0.35)
+                        .attr('stroke-linecap', 'round');
+                    svg.append('text')
+                        .attr('x', bracketX + 4).attr('y', midY)
+                        .attr('dominant-baseline', 'central')
+                        .attr('fill', catColors[cat])
+                        .attr('fill-opacity', 0.45)
+                        .attr('font-size', (fontSize * 0.6) + 'px')
+                        .attr('font-weight', '600')
+                        .attr('font-family', 'system-ui, -apple-system, sans-serif')
+                        .attr('letter-spacing', '0.3px')
+                        .text(cat);
+                });
+
+                // ─── LINKS ───
+                const gLinks = svg.append('g').attr('class', 'links');
+                const linkPath = d3.sankeyLinkHorizontal();
+
+                const linkEls = gLinks.selectAll('path')
+                    .data(graph.links)
+                    .join('path')
+                    .attr('d', linkPath)
+                    .attr('fill', 'none')
+                    .attr('stroke', d => nodeColor(d.source))
+                    .attr('stroke-width', d => Math.max(1, d.width))
+                    .attr('stroke-opacity', linkOpacity)
+                    .style('mix-blend-mode', isDark ? 'screen' : 'multiply');
+
+                // ─── NODES ───
+                const gNodes = svg.append('g').attr('class', 'nodes');
+
+                const nodeEls = gNodes.selectAll('rect')
+                    .data(graph.nodes)
+                    .join('rect')
+                    .attr('x', d => d.x0)
+                    .attr('y', d => d.y0)
+                    .attr('width', d => d.x1 - d.x0)
+                    .attr('height', d => Math.max(1, d.y1 - d.y0))
+                    .attr('fill', d => nodeColor(d))
+                    .attr('fill-opacity', 0.85)
+                    .attr('rx', 2)
+                    .attr('stroke', d => nodeColor(d))
+                    .attr('stroke-width', 0.5)
+                    .attr('stroke-opacity', 0.3);
+
+                // ─── NODE LABELS ───
+                const gLabels = svg.append('g').attr('class', 'labels');
+                const nodeW = graph.nodes[0] ? (graph.nodes[0].x1 - graph.nodes[0].x0) : 10;
+
+                graph.nodes.forEach(d => {
+                    const midY = (d.y0 + d.y1) / 2;
+                    const isSource = d.col === 'source';
+                    const isModel = d.col === 'model';
+                    const isPrompt = d.col === 'prompt';
+
+                    let labelX, anchor;
+                    if (isSource) {
+                        labelX = d.x1 + 5;
+                        anchor = 'start';
+                    } else if (isModel) {
+                        labelX = d.x0 - 5;
+                        anchor = 'end';
+                    } else {
+                        labelX = d.x0 - 5;
+                        anchor = 'end';
+                    }
+
+                    // Count total experiments through this node
+                    const totalIn = (d.targetLinks || []).reduce((s, l) => s + l.value, 0);
+                    const totalOut = (d.sourceLinks || []).reduce((s, l) => s + l.value, 0);
+                    const total = Math.max(totalIn, totalOut);
+
+                    gLabels.append('text')
+                        .attr('x', labelX)
+                        .attr('y', midY - (total > 1 ? fontSize * 0.3 : 0))
+                        .attr('text-anchor', anchor)
+                        .attr('dominant-baseline', 'central')
+                        .attr('fill', textColor)
+                        .attr('font-size', fontSize + 'px')
+                        .attr('font-weight', '600')
+                        .attr('font-family', 'system-ui, -apple-system, sans-serif')
+                        .text(d.name);
+
+                    if (total > 1) {
+                        gLabels.append('text')
+                            .attr('x', labelX)
+                            .attr('y', midY + fontSize * 0.55)
+                            .attr('text-anchor', anchor)
+                            .attr('dominant-baseline', 'central')
+                            .attr('fill', mutedText)
+                            .attr('font-size', (fontSize * 0.7) + 'px')
+                            .attr('font-family', 'system-ui, -apple-system, sans-serif')
+                            .text(total + ' exp.');
+                    }
+                });
+
+                // ─── TOOLTIP ───
+                container.style.position = container.style.position || 'relative';
+                let tip = container.querySelector('.d3-tooltip');
+                let tipInner;
+                if (!tip) {
+                    tip = document.createElement('div');
+                    tip.className = 'd3-tooltip';
+                    Object.assign(tip.style, {
+                        position: 'absolute', top: '0px', left: '0px',
+                        transform: 'translate(-9999px, -9999px)',
+                        pointerEvents: 'none',
+                        padding: '8px 12px', borderRadius: '10px',
+                        fontSize: '12px', lineHeight: '1.4',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--surface-bg)',
+                        color: 'var(--text-color)',
+                        boxShadow: '0 6px 24px rgba(0,0,0,.25)',
+                        opacity: '0', transition: 'opacity .12s ease',
+                        backdropFilter: 'saturate(1.12) blur(8px)',
+                        zIndex: '20', maxWidth: '280px'
+                    });
+                    tipInner = document.createElement('div');
+                    tipInner.className = 'd3-tooltip__inner';
+                    tip.appendChild(tipInner);
+                    container.appendChild(tip);
+                } else {
+                    tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
+                }
+
+                const showTip = (ev, html) => {
+                    tipInner.innerHTML = html;
+                    tip.style.opacity = '1';
+                    const [mx, my] = d3.pointer(ev, container);
+                    const bw = tip.offsetWidth || 220;
+                    const bh = tip.offsetHeight || 60;
+                    const ox = (mx + bw + 20 > width) ? -(bw + 12) : 12;
+                    const oy = (my + bh + 20 > height) ? -(bh + 12) : 14;
+                    tip.style.transform = `translate(${Math.round(mx + ox)}px, ${Math.round(my + oy)}px)`;
+                };
+                const hideTip = () => {
+                    tip.style.opacity = '0';
+                    tip.style.transform = 'translate(-9999px, -9999px)';
+                };
+
+                // ─── INTERACTION: highlight connected paths ───
+                linkEls
+                    .on('mouseenter', function (ev, d) {
+                        linkEls.attr('stroke-opacity', l =>
+                            l === d ? linkHoverOpacity * 1.5 : linkOpacity * 0.3);
+                        showTip(ev,
+                            `<b>${d.source.name}</b> \u2192 <b>${d.target.name}</b><br/>` +
+                            `<span style="color:var(--muted-color);">${d.value} experiment${d.value > 1 ? 's' : ''}</span>`);
+                    })
+                    .on('mousemove', (ev) => {
+                        const [mx, my] = d3.pointer(ev, container);
+                        const bw = tip.offsetWidth || 220;
+                        const bh = tip.offsetHeight || 60;
+                        const ox = (mx + bw + 20 > width) ? -(bw + 12) : 12;
+                        const oy = (my + bh + 20 > height) ? -(bh + 12) : 14;
+                        tip.style.transform = `translate(${Math.round(mx + ox)}px, ${Math.round(my + oy)}px)`;
+                    })
+                    .on('mouseleave', function () {
+                        linkEls.attr('stroke-opacity', linkOpacity);
+                        hideTip();
+                    });
+
+                nodeEls
+                    .style('cursor', 'pointer')
+                    .on('mouseenter', function (ev, d) {
+                        const connected = new Set();
+                        (d.sourceLinks || []).forEach(l => { connected.add(l.index); });
+                        (d.targetLinks || []).forEach(l => { connected.add(l.index); });
+                        linkEls.attr('stroke-opacity', l =>
+                            connected.has(l.index) ? linkHoverOpacity : linkOpacity * 0.15);
+                        const totalIn = (d.targetLinks || []).reduce((s, l) => s + l.value, 0);
+                        const totalOut = (d.sourceLinks || []).reduce((s, l) => s + l.value, 0);
+                        const total = Math.max(totalIn, totalOut);
+                        let info = `<b style="font-size:13px;">${d.name}</b>`;
+                        if (d.cat) info += ` <span style="color:${catColors[d.cat]};font-size:11px;">(${d.cat})</span>`;
+                        info += `<br/><span style="color:var(--muted-color);">${total} experiment${total > 1 ? 's' : ''}</span>`;
+                        showTip(ev, info);
+                    })
+                    .on('mousemove', (ev) => {
+                        const [mx, my] = d3.pointer(ev, container);
+                        const bw = tip.offsetWidth || 220;
+                        const bh = tip.offsetHeight || 60;
+                        const ox = (mx + bw + 20 > width) ? -(bw + 12) : 12;
+                        const oy = (my + bh + 20 > height) ? -(bh + 12) : 14;
+                        tip.style.transform = `translate(${Math.round(mx + ox)}px, ${Math.round(my + oy)}px)`;
+                    })
+                    .on('mouseleave', function () {
+                        linkEls.attr('stroke-opacity', linkOpacity);
+                        hideTip();
+                    });
+            };
+
+            if (window.ResizeObserver) {
+                new ResizeObserver(() => render()).observe(container);
+            } else {
+                window.addEventListener('resize', render);
+            }
+            render();
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+        } else { ensureD3(bootstrap); }
+    })();
+</script>

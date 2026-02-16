@@ -4,6 +4,7 @@ interface Props {
   description?: string;
   authors?: string[];
   published?: string;
+  modified?: string;
   tags?: string[];
   image?: string; // Preferred absolute URL
 }
@@ -13,6 +14,7 @@ const {
   description = "",
   authors = [],
   published,
+  modified,
   tags = [],
   image,
 } = Astro.props as Props;
@@ -20,12 +22,15 @@ const {
 const url = Astro.url?.toString?.() ?? "";
 const site = (Astro.site ? String(Astro.site) : "") as string;
 
+// Build base URL: prefer Astro.site, fallback to origin from Astro.url
+const baseUrl = site || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : "");
+
 const ogImage =
   image && image.length > 0
     ? image.startsWith("http")
       ? image
-      : site
-        ? new URL(image, site).toString()
+      : baseUrl
+        ? new URL(image, baseUrl).toString()
         : image
     : undefined;
 
@@ -35,7 +40,13 @@ const jsonLd = {
   headline: title,
   description: description || undefined,
   datePublished: published || undefined,
+  dateModified: modified || published || undefined,
   author: authors.map((name) => ({ "@type": "Person", name })),
+  publisher: {
+    "@type": "Organization",
+    name: "Hugging Face",
+    url: "https://huggingface.co",
+  },
   keywords: tags.length ? tags.join(", ") : undefined,
   mainEntityOfPage: url || undefined,
   image: ogImage ? [ogImage] : undefined,
@@ -50,17 +61,12 @@ const jsonLd = {
 <meta property="og:title" content={title} />
 {description && <meta property="og:description" content={description} />}
 <meta property="og:url" content={url} />
-{
-  ogImage && (
-    <meta
-      property="og:image"
-      content={
-        "https://HuggingFaceTB-smol-training-playbook.hf.space/thumb.png"
-      }
-    />
-  )
-}
+<meta property="og:locale" content="en_US" />
+{baseUrl && <meta property="og:site_name" content={title} />}
+{ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && <meta property="og:image:alt" content={title} />}
 {published && <meta property="article:published_time" content={published} />}
+{modified && <meta property="article:modified_time" content={modified} />}
 {authors.map((a) => <meta property="article:author" content={a} />)}
 
 <meta
@@ -69,15 +75,7 @@ const jsonLd = {
 />
 <meta name="twitter:title" content={title} />
 {description && <meta name="twitter:description" content={description} />}
-{
-  ogImage && (
-    <meta
-      name="twitter:image"
-      content={
-        "https://HuggingFaceTB-smol-training-playbook.hf.space/thumb.png"
-      }
-    />
-  )
-}
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && <meta name="twitter:image:alt" content={title} />}
 
 <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />

@@ -306,7 +306,8 @@ export default function rehypeReferencesAndFootnotes() {
         if (found) return;
         if (!isElement(node)) return;
         const id = getAttr(node, 'id');
-        if (id === 'references' || hasClass(node, 'references') || hasClass(node, 'bibliography')) {
+        // Support both 'references' (manual) and 'refs' (rehype-citation default)
+        if (id === 'references' || id === 'refs' || hasClass(node, 'references') || hasClass(node, 'bibliography') || hasClass(node, 'csl-bib-body')) {
           found = node;
         }
       });

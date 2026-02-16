@@ -1,6 +1,5 @@
 import HtmlEmbed from '../../../components/HtmlEmbed.astro';
 import Note from '../../../components/Note.astro';
-import TrackioWrapper from '../../../components/trackio/TrackioWrapper.astro';
 import Sidenote from '../../../components/Sidenote.astro';
 import Wide from '../../../components/Wide.astro';  
 
@@ -15,7 +14,7 @@ Using claude code works better.
 
 The goal is to make **responsive**, **accessible**, **interactive** and **dark mode ready** charts.
 
-1. Use this ref a a baseprompt: `app/src/content/embeds/vibe-code-d3-embeds-directives.md`.
+1. The embed directives are available as a Cursor skill in `.cursor/skills/create-html-embed/` (the agent picks it up automatically). Full conventions: `.cursor/skills/create-html-embed/directives.md`.
 2. Opt: use an already existing chart as a starting point.
 3. Ask claude to code the chart. Here's a typical prompt:
 
@@ -33,9 +32,6 @@ I want you to code a d3 chart that visualizes the data.
 
 These are fundamental chart types that serve as building blocks for more complex visualizations. You can find all the source code in `app/src/content/embeds`.
 
-
-
-
 ---
 
 <HtmlEmbed
@@ -49,6 +45,16 @@ These are fundamental chart types that serve as building blocks for more complex
 ### Advanced examples
 
 These are more complex, interactive visualizations that demonstrate advanced D3 capabilities and real-world applications.
+
+<HtmlEmbed
+  id="fig-sankey"
+  src="sankey.html"
+  frameless
+  title="The Experiment Map — Source × Prompt × Model"
+  desc="Sankey diagram showing the flow of 65 experiments through source dataset, prompt strategy, and model family. Width = number of experiments."
+/>
+
+---
 
 <HtmlEmbed
   id="fig10"
@@ -195,8 +201,3 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   title="Interactive Mathematical Function Plotter" 
   desc={`Figure 8: Interactive <strong>equation editor</strong> with real-time function plotting. Edit mathematical expressions and see their graphs update instantly. Supports common functions (sin, cos, exp, etc.) with customizable domain range.`} 
 />
-
-
-{/* ### Trackio redesign experiment
-<TrackioWrapper /> */}
-

@@ -21,6 +21,7 @@ node_modules/
 *.env
 *.cache
 .notion-to-md
+.playwright-mcp/
 
 app/scripts/latex-to-mdx/output/
 app/scripts/notion-importer/output/**/*
@@ -38,4 +39,13 @@ app/public/data/**/*
 .template-sync/
 .temp-*/
 .backup-*/
+
+# IDE / agent
+.cursor/
+
+# Temporary screenshots & exports at root
+/*.png
+/*.zip
+/rephrasing_metadata.json
+/RAPPORT-ARBRE-COMPETENCES-AUTONOMIE.md
 

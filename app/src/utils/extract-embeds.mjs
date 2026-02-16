@@ -1,14 +1,182 @@
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createHash } from 'crypto';
 
 /**
- * Extract HtmlEmbed components from MDX/Markdown content
- * Simple utility to find <HtmlEmbed> tags and their props
+ * Extract HtmlEmbed, Image components and tables from MDX/Markdown content
+ * Simple utility to find visual elements and their props
  */
 
-export function extractHtmlEmbeds(content) {
+/**
+ * Parse image import statements from MDX content.
+ * Returns a Map of variable name → filename (just the basename).
+ * e.g. import placeholder from '../../assets/image/placeholder.png'
+ *      → Map { 'placeholder' => 'placeholder.png' }
+ */
+function parseImageImports(content) {
+    const importMap = new Map();
+    const importPattern = /import\s+(\w+)\s+from\s+["']([^"']+)["']/g;
+    let match;
+    while ((match = importPattern.exec(content)) !== null) {
+        const varName = match[1];
+        const importPath = match[2];
+        // Extract just the filename from the path
+        const filename = importPath.split('/').pop();
+        if (filename && /\.(png|jpe?g|gif|webp|svg)$/i.test(filename)) {
+            importMap.set(varName, filename);
+        }
+    }
+    return importMap;
+}
+
+/**
+ * Strip fenced code blocks (``` ... ```) from content.
+ * Replaces code block content with whitespace of equal length
+ * to preserve character positions for downstream extraction.
+ */
+function stripCodeBlocks(content) {
+    return content.replace(/```[\s\S]*?```/g, (match) => ' '.repeat(match.length));
+}
+
+/**
+ * Simple Markdown to HTML converter for table cells
+ * Handles: links, bold, italic, code, strikethrough
+ */
+function markdownToHtml(md) {
+    if (!md) return '';
+    
+    let html = md;
+    
+    // Escape HTML entities first (but not for already-converted content)
+    // Skip if it already looks like HTML
+    if (!html.includes('<a ') && !html.includes('<strong>')) {
+        html = html
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+    
+    // Links: [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    
+    // Bold: **text** or __text__
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    
+    // Italic: *text* or _text_ (but not inside words)
+    html = html.replace(/(?<![*_])\*([^*]+)\*(?![*_])/g, '<em>$1</em>');
+    html = html.replace(/(?<![*_])_([^_]+)_(?![*_])/g, '<em>$1</em>');
+    
+    // Inline code: `code`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Strikethrough: ~~text~~
+    html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    
+    // Checkboxes (common in tables)
+    html = html.replace(/\[x\]/gi, '✅');
+    html = html.replace(/\[ \]/g, '❌');
+    
+    return html;
+}
+
+/**
+ * Extract Image components from MDX content
+ */
+export function extractImages(content) {
+    const images = [];
+    
+    // Match <Image ... /> components
+    const imagePattern = /<Image[^>]*\/>/gi;
+    let match;
+    
+    while ((match = imagePattern.exec(content)) !== null) {
+        const tag = match[0];
+        
+        // Extract src attribute (variable reference like {myImage})
+        const srcMatch = tag.match(/src\s*=\s*\{([^}]+)\}/i);
+        const src = srcMatch ? srcMatch[1].trim() : null;
+        
+        // Extract alt
+        const altMatch = tag.match(/alt\s*=\s*["']([^"']+)["']/i);
+        const alt = altMatch ? altMatch[1] : 'Image';
+        
+        // Extract caption
+        const captionMatch = tag.match(/caption\s*=\s*["']([^"']+)["']/i) || 
+                            tag.match(/caption\s*=\s*\{`([^`]+)`\}/i);
+        const caption = captionMatch ? captionMatch[1] : null;
+        
+        // Extract id
+        const idMatch = tag.match(/id\s*=\s*["']([^"']+)["']/i);
+        const id = idMatch ? idMatch[1] : null;
+
+        // Extract skipGallery
+        const skipGallery = /\bskipGallery\b/i.test(tag);
+        
+        if (src) {
+            images.push({
+                type: 'image',
+                src,
+                alt,
+                caption,
+                id,
+                skipGallery
+            });
+        }
+    }
+    
+    return images;
+}
+
+/**
+ * Extract markdown tables from content
+ */
+export function extractTables(content) {
+    const tables = [];
+    
+    // Match markdown tables (lines starting with |)
+    // A table has at least a header row, separator row, and one data row
+    const tablePattern = /(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)/g;
+    let match;
+    let tableIndex = 0;
+    
+    while ((match = tablePattern.exec(content)) !== null) {
+        const tableContent = match[1].trim();
+        const rows = tableContent.split('\n').filter(row => row.trim());
+        
+        if (rows.length >= 3) {
+            // Parse header - convert Markdown to HTML
+            const headerRow = rows[0];
+            const headers = headerRow.split('|')
+                .filter(cell => cell.trim())
+                .map(cell => markdownToHtml(cell.trim()));
+            
+            // Parse data rows (skip separator at index 1) - convert Markdown to HTML
+            const dataRows = rows.slice(2).map(row => {
+                return row.split('|')
+                    .filter(cell => cell.trim())
+                    .map(cell => markdownToHtml(cell.trim()));
+            });
+            
+            tables.push({
+                type: 'table',
+                id: `table-${tableIndex++}`,
+                headers,
+                rows: dataRows,
+                raw: tableContent
+            });
+        }
+    }
+    
+    return tables;
+}
+
+export function extractHtmlEmbeds(rawContent) {
     const embeds = [];
+
+    // Strip code blocks to avoid extracting components from code examples
+    const content = stripCodeBlocks(rawContent);
 
     // First, find all Wide components and mark their content
     // Pattern to match <Wide>...</Wide> blocks
@@ -335,8 +503,9 @@ export function extractHtmlEmbeds(content) {
 
 /**
  * Recursively find all MDX files in a directory
+ * Skips demo chapters by default to avoid missing embeds
  */
-function findMdxFiles(dir, baseDir = dir, files = []) {
+function findMdxFiles(dir, baseDir = dir, files = [], skipDemo = true) {
     const entries = readdirSync(dir);
 
     for (const entry of entries) {
@@ -344,7 +513,11 @@ function findMdxFiles(dir, baseDir = dir, files = []) {
         const stat = statSync(fullPath);
 
         if (stat.isDirectory()) {
-            findMdxFiles(fullPath, baseDir, files);
+            // Skip demo directory if skipDemo is true
+            if (skipDemo && entry === 'demo') {
+                continue;
+            }
+            findMdxFiles(fullPath, baseDir, files, skipDemo);
         } else if (entry.endsWith('.mdx')) {
             files.push(fullPath);
         }
@@ -385,27 +558,48 @@ function parseArticleChapters(articleContent, contentDir) {
 }
 
 /**
+ * Build a unique identity key for an embed.
+ *
+ * Strategy (in priority order):
+ *   1. `id` — if the author gave an explicit id, it's unique by convention.
+ *   2. `src` + deterministic hash of (config, data) — same template with
+ *      different parameters produces different keys.
+ *   3. `src` alone — for embeds with no config/data (unique HTML file).
+ *
+ * This allows the same generic template (e.g. d3-line-chart.html) to appear
+ * multiple times when each instance carries a different config, while still
+ * deduplicating true duplicates (same src + same config that appear in both
+ * article.mdx and a chapter).
+ */
+function embedKey(embed) {
+    if (embed.id) return `id:${embed.id}`;
+
+    const hasConfig = embed.config != null;
+    const hasData = embed.data != null;
+
+    if (!hasConfig && !hasData) return `src:${embed.src}`;
+
+    // Deterministic hash of the variable parts
+    const payload = JSON.stringify({ config: embed.config ?? null, data: embed.data ?? null });
+    const hash = createHash('sha1').update(payload).digest('hex').slice(0, 10);
+    return `src:${embed.src}#${hash}`;
+}
+
+/**
  * Load and extract embeds from MDX content files, following article structure
  */
 export function loadEmbedsFromMDX() {
     // Get absolute path to content directory
-    // In dev: __dirname is app/src/utils, so we go ../content
-    // In build: Astro copies files to dist/pages/, but the source files stay in src/
-    // So we need to resolve relative to the actual source location
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
 
     // Try to resolve content directory - works in both dev and build
-    // First try relative to current file location (dev)
     let contentDir = join(__dirname, '../content');
 
-    // If that doesn't work, try going up more levels (build scenario)
     if (!statSync(contentDir, { throwIfNoEntry: false })) {
-        // dist/pages/../.. -> dist/../src/content
         contentDir = join(__dirname, '../../src/content');
     }
 
-    // If still not found, try one more level (dist/*.mjs)
     if (!statSync(contentDir, { throwIfNoEntry: false })) {
         contentDir = join(__dirname, '../../../src/content');
     }
@@ -446,7 +640,7 @@ export function loadEmbedsFromMDX() {
         }
 
         // Also include any other MDX files not in chapters (for completeness)
-        const allMdxFiles = findMdxFiles(contentDir);
+        const allMdxFiles = findMdxFiles(contentDir, contentDir, [], false);
         const processedFiles = new Set([articleFile, ...chapterOrder]);
 
         for (const filePath of allMdxFiles) {
@@ -467,7 +661,7 @@ export function loadEmbedsFromMDX() {
     } catch (error) {
         console.error('Error processing article:', error);
         // Fallback to old behavior if article.mdx can't be read
-        const mdxFiles = findMdxFiles(contentDir);
+        const mdxFiles = findMdxFiles(contentDir, contentDir, [], false);
         for (const filePath of mdxFiles) {
             try {
                 const rawContent = readFileSync(filePath, 'utf-8');
@@ -483,11 +677,346 @@ export function loadEmbedsFromMDX() {
         }
     }
 
-    // Remove duplicates based on src (keeping first occurrence = order of appearance)
-    const uniqueEmbeds = Array.from(
-        new Map(allEmbeds.map(e => [e.src, e])).values()
-    );
+    // Remove true duplicates (same identity) keeping first occurrence (= order of appearance).
+    // Identity = id (if set), or src + hash(config, data). This means the same generic
+    // template with different configs produces distinct entries.
+    const seen = new Map();
+    const uniqueEmbeds = [];
+    for (const embed of allEmbeds) {
+        const key = embedKey(embed);
+        if (!seen.has(key)) {
+            seen.set(key, true);
+            uniqueEmbeds.push(embed);
+        }
+    }
 
     return uniqueEmbeds;
 }
 
+/**
+ * Helper to extract attribute from tag content
+ */
+function extractAttrFromTag(attrName, tagContent) {
+    // Try JSX template strings first: attr={`...`}
+    const templateMatch = tagContent.match(new RegExp(`${attrName}\\s*=\\s*\\{\`([\\s\\S]*?)\`\\}`, 'i'));
+    if (templateMatch) return templateMatch[1].trim();
+
+    // Try single quotes: attr='...'
+    const singleQuoteMatch = tagContent.match(new RegExp(`${attrName}\\s*=\\s*'([\\s\\S]*?)'`, 'i'));
+    if (singleQuoteMatch) return singleQuoteMatch[1].trim();
+
+    // Try double quotes: attr="..."
+    const doubleQuoteMatch = tagContent.match(new RegExp(`${attrName}\\s*=\\s*"([\\s\\S]*?)"`, 'i'));
+    if (doubleQuoteMatch) return doubleQuoteMatch[1].trim();
+
+    return undefined;
+}
+
+/**
+ * Check if position is inside a Wide component
+ */
+function isPositionInsideWide(content, position) {
+    const widePattern = /<Wide[\s\S]*?>([\s\S]*?)<\/Wide>/gi;
+    let match;
+    while ((match = widePattern.exec(content)) !== null) {
+        if (position >= match.index && position < match.index + match[0].length) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Extract all visual elements from content with their position
+ * Returns sorted by position (order of appearance)
+ */
+function extractAllVisualsWithPosition(rawContent) {
+    const visuals = [];
+    
+    // Parse image imports before stripping code blocks (imports are never in code blocks)
+    const imageImports = parseImageImports(rawContent);
+    
+    // Strip code blocks to avoid extracting components from code examples
+    const content = stripCodeBlocks(rawContent);
+    
+    // Extract HtmlEmbeds with position and ALL props
+    const embedPattern = /<HtmlEmbed/gi;
+    let match;
+    while ((match = embedPattern.exec(content)) !== null) {
+        const position = match.index;
+        // Find the end of this tag
+        let pos = position + 10;
+        let tagContent = '<HtmlEmbed';
+        let inString = false;
+        let stringDelim = null;
+        let inJSXBraces = 0;
+        
+        while (pos < content.length) {
+            const char = content[pos];
+            const prevChar = pos > 0 ? content[pos - 1] : '';
+            tagContent += char;
+            
+            if (!inString) {
+                if ((char === '`' || char === '"' || char === "'") && prevChar !== '\\') {
+                    inString = true;
+                    stringDelim = char;
+                }
+            } else {
+                if (char === stringDelim && prevChar !== '\\') {
+                    inString = false;
+                    stringDelim = null;
+                }
+            }
+            
+            if (!inString) {
+                if (char === '{') inJSXBraces++;
+                else if (char === '}') inJSXBraces--;
+            }
+            
+            if (!inString && inJSXBraces === 0 && char === '/' && pos + 1 < content.length && content[pos + 1] === '>') {
+                tagContent += '>';
+                break;
+            }
+            pos++;
+        }
+        
+        // Extract all props
+        const src = extractAttrFromTag('src', tagContent);
+        if (src) {
+            const title = extractAttrFromTag('title', tagContent);
+            const desc = extractAttrFromTag('desc', tagContent);
+            const id = extractAttrFromTag('id', tagContent);
+            const data = extractAttrFromTag('data', tagContent);
+            const frameless = /\bframeless\b/i.test(tagContent);
+            const wideAttr = /\bwide\b/i.test(tagContent);
+            const skipGallery = /\bskipGallery\b/i.test(tagContent);
+            
+            // Parse config if present
+            let config = null;
+            const jsxConfigMatch = tagContent.match(/config\s*=\s*\{\{/i);
+            if (jsxConfigMatch) {
+                try {
+                    const configStart = tagContent.indexOf('{{', jsxConfigMatch.index) + 2;
+                    let braceCount = 1;
+                    let configEnd = configStart;
+                    for (let i = configStart; i < tagContent.length && braceCount > 0; i++) {
+                        if (tagContent[i] === '{') braceCount++;
+                        if (tagContent[i] === '}') braceCount--;
+                        if (braceCount === 0) configEnd = i;
+                    }
+                    const jsxContent = tagContent.substring(configStart, configEnd).trim();
+                    config = new Function('return ({' + jsxContent + '})')();
+                } catch (e) {
+                    // Config parsing failed, keep null
+                }
+            }
+            
+            const isWide = isPositionInsideWide(content, position) || wideAttr;
+            
+            visuals.push({
+                type: 'embed',
+                position,
+                src,
+                title,
+                desc,
+                id,
+                data,
+                frameless,
+                config,
+                wide: isWide,
+                skipGallery
+            });
+        }
+    }
+    
+    // Find all Stack blocks to detect grouped images
+    const stackBlocks = [];
+    const stackPattern = /<Stack([\s\S]*?)>([\s\S]*?)<\/Stack>/gi;
+    while ((match = stackPattern.exec(content)) !== null) {
+        const stackAttrs = match[1];
+        const stackContent = match[2];
+        const stackStart = match.index;
+        const stackEnd = stackStart + match[0].length;
+        
+        // Check if this Stack contains <Image> components
+        const innerImages = [];
+        const innerImagePattern = /<Image([^>]*)\/?>/gi;
+        let imgMatch;
+        while ((imgMatch = innerImagePattern.exec(stackContent)) !== null) {
+            const tag = imgMatch[0];
+            const srcM = tag.match(/src\s*=\s*\{([^}]+)\}/i);
+            if (srcM) {
+                const varName = srcM[1].trim();
+                const altM = tag.match(/alt\s*=\s*["']([^"']+)["']/i);
+                const captionM = tag.match(/caption\s*=\s*["']([^"']+)["']/i);
+                const imgSkipGallery = /\bskipGallery\b/i.test(tag);
+                innerImages.push({
+                    src: varName,
+                    resolvedFilename: imageImports.get(varName) || null,
+                    alt: altM ? altM[1] : 'Image',
+                    caption: captionM ? captionM[1] : null,
+                    skipGallery: imgSkipGallery,
+                });
+            }
+        }
+        
+        if (innerImages.length > 0) {
+            // Extract Stack layout/gap props
+            const layoutM = stackAttrs.match(/layout\s*=\s*["']([^"']+)["']/i);
+            const gapM = stackAttrs.match(/gap\s*=\s*["']([^"']+)["']/i);
+            
+            // If ALL images have skipGallery, the whole stack is skipped
+            const allSkipped = innerImages.every(img => img.skipGallery);
+            
+            stackBlocks.push({ start: stackStart, end: stackEnd });
+            visuals.push({
+                type: 'stack',
+                position: stackStart,
+                images: innerImages,
+                layout: layoutM ? layoutM[1] : '2-column',
+                gap: gapM ? gapM[1] : 'medium',
+                skipGallery: allSkipped,
+            });
+        }
+    }
+    
+    // Helper to check if position is inside a Stack block
+    const isInsideStack = (pos) => {
+        return stackBlocks.some(b => pos >= b.start && pos < b.end);
+    };
+    
+    // Extract standalone Images (not inside Stack)
+    const imagePattern = /<Image[^>]*\/>/gi;
+    while ((match = imagePattern.exec(content)) !== null) {
+        // Skip images already captured inside a Stack
+        if (isInsideStack(match.index)) continue;
+        
+        const srcMatch = match[0].match(/src\s*=\s*\{([^}]+)\}/i);
+        if (srcMatch) {
+            const varName = srcMatch[1].trim();
+            const altMatch = match[0].match(/alt\s*=\s*["']([^"']+)["']/i);
+            const captionMatch = match[0].match(/caption\s*=\s*["']([^"']+)["']/i);
+            const skipGallery = /\bskipGallery\b/i.test(match[0]);
+            const resolvedFilename = imageImports.get(varName) || null;
+            visuals.push({
+                type: 'image',
+                position: match.index,
+                src: varName,
+                resolvedFilename,
+                alt: altMatch ? altMatch[1] : 'Image',
+                caption: captionMatch ? captionMatch[1] : null,
+                skipGallery,
+            });
+        }
+    }
+    
+    // Extract Tables with position
+    const tablePattern = /(\|[^\n]+\|\n\|[-:\s|]+\|\n(?:\|[^\n]+\|\n?)+)/g;
+    let tableIndex = 0;
+    while ((match = tablePattern.exec(content)) !== null) {
+        const tableContent = match[1].trim();
+        const rows = tableContent.split('\n').filter(row => row.trim());
+        
+        if (rows.length >= 3) {
+            const headerRow = rows[0];
+            // Convert Markdown to HTML in cells
+            const headers = headerRow.split('|')
+                .filter(cell => cell.trim())
+                .map(cell => markdownToHtml(cell.trim()));
+            const dataRows = rows.slice(2).map(row => {
+                return row.split('|')
+                    .filter(cell => cell.trim())
+                    .map(cell => markdownToHtml(cell.trim()));
+            });
+            
+            visuals.push({
+                type: 'table',
+                position: match.index,
+                id: `table-${tableIndex++}`,
+                headers,
+                rows: dataRows,
+            });
+        }
+    }
+    
+    // Sort by position (order of appearance)
+    visuals.sort((a, b) => a.position - b.position);
+    
+    return visuals;
+}
+
+/**
+ * Load all visual elements (embeds, images, tables) from MDX content files
+ * Returns them in order of appearance in the article
+ */
+export function loadAllVisualsFromMDX() {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    let contentDir = join(__dirname, '../content');
+    if (!statSync(contentDir, { throwIfNoEntry: false })) {
+        contentDir = join(__dirname, '../../src/content');
+    }
+    if (!statSync(contentDir, { throwIfNoEntry: false })) {
+        contentDir = join(__dirname, '../../../src/content');
+    }
+
+    const allVisuals = [];
+    const articleFile = join(contentDir, 'article.mdx');
+
+    try {
+        const articleContent = readFileSync(articleFile, 'utf-8');
+
+        // Extract all visual elements from article IN ORDER (with all props)
+        const articleVisuals = extractAllVisualsWithPosition(articleContent);
+        articleVisuals.forEach(item => {
+            item.sourceFile = 'content/article.mdx';
+        });
+        allVisuals.push(...articleVisuals);
+
+        // Parse chapter order and extract from chapters
+        const chapterOrder = parseArticleChapters(articleContent, contentDir);
+
+        for (const chapterPath of chapterOrder) {
+            try {
+                const chapterContent = readFileSync(chapterPath, 'utf-8');
+                
+                // Extract all visuals IN ORDER from this chapter (with all props)
+                const chapterVisuals = extractAllVisualsWithPosition(chapterContent);
+                const relativePath = relative(contentDir, chapterPath);
+                chapterVisuals.forEach(item => {
+                    item.sourceFile = `content/${relativePath}`;
+                });
+                allVisuals.push(...chapterVisuals);
+            } catch (error) {
+                console.error(`Error reading chapter ${chapterPath}:`, error);
+            }
+        }
+
+        // Process other MDX files not already handled
+        const allMdxFiles = findMdxFiles(contentDir, contentDir, [], false);
+        const processedFiles = new Set([articleFile, ...chapterOrder]);
+
+        for (const filePath of allMdxFiles) {
+            if (!processedFiles.has(filePath)) {
+                try {
+                    const rawContent = readFileSync(filePath, 'utf-8');
+                    const fileVisuals = extractAllVisualsWithPosition(rawContent);
+                    const relativePath = relative(contentDir, filePath);
+                    fileVisuals.forEach(item => {
+                        item.sourceFile = `content/${relativePath}`;
+                    });
+                    allVisuals.push(...fileVisuals);
+                } catch (error) {
+                    console.error(`Error reading ${filePath}:`, error);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error processing article:', error);
+    }
+
+    // Keep all occurrences (no deduplication)
+    // Duplicates will be numbered in dataviz.astro (e.g., d3-line-chart, d3-line-chart-2)
+    return allVisuals;
+}

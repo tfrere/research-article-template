@@ -164,6 +164,73 @@ async function waitForStableLayout(page, timeoutMs = 5000) {
   }
 }
 
+/**
+ * Inject viewBox attributes on SVGs that don't have them.
+ * This ensures SVGs scale properly when the viewport changes for PDF generation.
+ */
+async function injectSvgViewBoxes(page) {
+  const stats = await page.evaluate(() => {
+    let fixed = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    // Target all D3 embeds and general HTML embed SVGs
+    const selectors = [
+      '.html-embed__card svg',
+      '.d3-bar svg',
+      '.d3-scatter svg', 
+      '.d3-line svg',
+      '.d3-galaxy svg',
+      '.d3-neural svg',
+      '.d3-pie svg',
+      '.d3-confusion-matrix svg',
+      '.d3-benchmark svg',
+      '[class^="d3-"] svg',
+      '[class*=" d3-"] svg'
+    ].join(', ');
+
+    document.querySelectorAll(selectors).forEach(svg => {
+      try {
+        // Skip if already has a viewBox
+        if (svg.getAttribute('viewBox')) {
+          skipped++;
+          return;
+        }
+
+        // Get current rendered dimensions
+        const rect = svg.getBoundingClientRect();
+        const width = rect.width || svg.clientWidth || parseFloat(svg.getAttribute('width')) || 0;
+        const height = rect.height || svg.clientHeight || parseFloat(svg.getAttribute('height')) || 0;
+
+        if (width > 0 && height > 0) {
+          // Set viewBox based on current dimensions
+          svg.setAttribute('viewBox', `0 0 ${Math.round(width)} ${Math.round(height)}`);
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          
+          // Remove fixed width/height attributes to allow scaling
+          svg.removeAttribute('width');
+          svg.removeAttribute('height');
+          
+          // Set CSS for responsive behavior
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+          svg.style.maxWidth = '100%';
+          
+          fixed++;
+        } else {
+          skipped++;
+        }
+      } catch (e) {
+        errors++;
+      }
+    });
+
+    return { fixed, skipped, errors };
+  });
+
+  return stats;
+}
+
 async function main() {
   const cwd = process.cwd();
   const port = Number(process.env.PREVIEW_PORT || 8080);
@@ -217,11 +284,10 @@ async function main() {
         } catch { }
       }, theme);
       const page = await context.newPage();
-      // Pre-fit viewport width to printable width so charts size correctly
-      const fmt = getFormatSizeMm(format);
-      const mw = fmt.w - cssLengthToMm(margin.left) - cssLengthToMm(margin.right);
-      const printableWidthPx = Math.max(320, Math.round((mw / 25.4) * 96));
-      await page.setViewportSize({ width: printableWidthPx, height: 1200 });
+      // Use a wider viewport initially so D3/Plotly embeds render at their "web" size
+      // We'll inject viewBox attributes later to make them scale properly for PDF
+      const webViewportWidth = 1200;
+      await page.setViewportSize({ width: webViewportWidth, height: 1400 });
       await page.goto(baseUrl, { waitUntil: 'load', timeout: 60000 });
       // Give time for CDN scripts (Plotly/D3) to attach and for our fragment hooks to run
       try { await page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }); } catch { }
@@ -267,6 +333,11 @@ async function main() {
         console.log('⏳ Waiting for stable layout…');
         await waitForStableLayout(page);
       }
+
+      // Inject viewBox on SVGs that don't have them (before changing viewport)
+      console.log('🔧 Fixing SVG viewBox attributes…');
+      const viewBoxStats = await injectSvgViewBoxes(page);
+      console.log(`   Fixed: ${viewBoxStats.fixed}, Skipped: ${viewBoxStats.skipped}, Errors: ${viewBoxStats.errors}`);
 
       // Mode livre : ouvrir tous les accordéons
       if (bookMode) {
@@ -380,14 +451,16 @@ async function main() {
       }
       const outPath = resolve(cwd, 'dist', `${outFileBase}.pdf`);
       // Restore viewport to printable width before PDF (thumbnail changed it)
+      // Now that SVGs have viewBox, they should scale properly
       try {
         const fmt2 = getFormatSizeMm(format);
         const mw2 = fmt2.w - cssLengthToMm(margin.left) - cssLengthToMm(margin.right);
         const printableWidthPx2 = Math.max(320, Math.round((mw2 / 25.4) * 96));
+        console.log(`📐 Setting viewport to printable width: ${printableWidthPx2}px`);
         await page.setViewportSize({ width: printableWidthPx2, height: 1400 });
         await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
-        try { await waitForD3(page, 8000); } catch { }
-        await waitForStableLayout(page);
+        await page.waitForTimeout(500); // Give SVGs time to adapt
+        await waitForStableLayout(page, 2000);
         // Re-apply responsive fixes after viewport change
         try {
           await page.evaluate(() => {
@@ -491,6 +564,61 @@ async function main() {
               width: 100% !important;
               height: auto !important;
               max-width: 980px !important;
+            }
+
+            /* ============================================================ */
+            /* Fix complex flexbox layouts in embeds for narrow PDF viewport */
+            /* ============================================================ */
+            
+            /* Neural network embed: force column layout */
+            .d3-neural .panel {
+              flex-direction: column !important;
+              gap: 16px !important;
+            }
+            .d3-neural .left,
+            .d3-neural .right {
+              flex: 0 0 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              width: 100% !important;
+            }
+            .d3-neural .arrow-sep {
+              display: none !important;
+            }
+            .d3-neural .canvas-wrap {
+              max-width: 280px !important;
+              margin: 0 auto !important;
+            }
+            .d3-neural canvas {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+            .d3-neural .right svg {
+              width: 100% !important;
+              height: auto !important;
+              min-height: 300px !important;
+            }
+
+            /* Generic fix for any two-column panel layouts */
+            .html-embed__card .panel {
+              flex-direction: column !important;
+            }
+            .html-embed__card .panel > * {
+              flex: 0 0 auto !important;
+              max-width: 100% !important;
+              width: 100% !important;
+            }
+
+            /* Controls should wrap */
+            .html-embed__card .controls {
+              flex-wrap: wrap !important;
+              justify-content: flex-start !important;
+            }
+
+            /* Chart cards - ensure full width */
+            .html-embed__card .chart-card {
+              width: 100% !important;
+              max-width: 100% !important;
             }
           ` });
         }

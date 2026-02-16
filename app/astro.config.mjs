@@ -1,6 +1,7 @@
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import svelte from '@astrojs/svelte';
+import sitemap from '@astrojs/sitemap';
 import mermaid from 'astro-mermaid';
 import compressor from 'astro-compressor';
 import remarkMath from 'remark-math';
@@ -22,12 +23,20 @@ import rehypeWrapOutput from './plugins/rehype/wrap-outputs.mjs';
 
 // Plugins moved to app/plugins/*
 
+// Auto-detect HF Space URL for SEO (og:image needs absolute URLs)
+const spaceId = process.env.SPACE_ID; // e.g. "tfrere/research-article-template"
+const siteUrl = spaceId
+  ? `https://${spaceId.replace('/', '-').toLowerCase()}.hf.space`
+  : undefined;
+
 export default defineConfig({
+  ...(siteUrl ? { site: siteUrl } : {}),
   output: 'static',
   integrations: [
     mermaid({ theme: 'neutral', autoTheme: true }),
     mdx(),
     svelte(),
+    sitemap(),
     // Precompress output with Gzip only (Brotli disabled due to server module mismatch)
     compressor({ brotli: false, gzip: true })
   ],

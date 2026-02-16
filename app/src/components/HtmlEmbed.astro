@@ -10,6 +10,7 @@ interface Props {
   id?: string;
   data?: string | string[];
   config?: any;
+  downloadable?: boolean;
 }
 const {
   src,
@@ -19,10 +20,17 @@ const {
   frameless = false,
   wide = false,
   align = "left",
-  id,
+  id: providedId,
   data,
   config,
+  downloadable = true,
 } = Astro.props as Props;
+
+// Generate filename from src (used for download and as default ID)
+const downloadFilename = src.replace(/\.html$/, '').replace(/^.*\//, '');
+
+// Use provided ID or generate from filename
+const id = providedId || downloadFilename;
 
 // Load all .html embeds under src/content/embeds/** as strings (dev & build)
 const embeds = (import.meta as any).glob("../content/embeds/**/*.html", {
@@ -68,7 +76,7 @@ const htmlWithId =
 
 {
   html ? (
-    <figure class={`html-embed${wide ? " html-embed--wide" : ""}`} id={id}>
+    <figure class={`html-embed${wide ? " html-embed--wide" : ""}${downloadable ? " html-embed--downloadable" : ""}`} id={id}>
       {title && (
         <figcaption class="html-embed__title" style={`text-align:${align}`}>
           {title}
@@ -81,6 +89,20 @@ const htmlWithId =
           data-config={configAttr}
           set:html={htmlWithId}
         />
+        {downloadable && (
+          <button 
+            class="html-embed__download" 
+            data-filename={downloadFilename}
+            title="Download as PNG"
+            aria-label="Download visualization as PNG"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+        )}
       </div>
       {(desc || caption) && (
         <figcaption
@@ -103,6 +125,299 @@ const htmlWithId =
     </figure>
   )
 }
+
+<script>
+  // Download functionality for HtmlEmbed
+  (() => {
+    // Preload snapdom
+    let snapdomModule: any = null;
+    import('@zumer/snapdom').then(m => { snapdomModule = m; }).catch(() => {});
+
+    // ========================================
+    // BATCH EXPORT: Export all embeds to a ZIP
+    // Usage: window.exportAllEmbeds()     - all embeds
+    //        window.exportAllEmbeds(5)    - first 5 only
+    // ========================================
+    (window as any).exportAllEmbeds = async (limit?: number) => {
+      let embeds = Array.from(document.querySelectorAll('.html-embed'));
+      if (embeds.length === 0) {
+        console.log('No embeds found');
+        return;
+      }
+      
+      if (limit && limit > 0) {
+        embeds = embeds.slice(0, limit);
+        console.log(`Limiting to first ${limit} embeds`);
+      }
+      
+      console.log(`Found ${embeds.length} embeds. Starting capture...`);
+      const dpr = window.devicePixelRatio || 1;
+      
+      // Load JSZip
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      // Request screen capture once
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { 
+            displaySurface: 'browser',
+            width: { ideal: 4096 },
+            height: { ideal: 4096 },
+          },
+          preferCurrentTab: true,
+        } as any);
+      } catch (e) {
+        console.error('Screen capture denied');
+        return;
+      }
+      
+      const [track] = stream.getVideoTracks();
+      const settings = track.getSettings();
+      
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.muted = true;
+      await video.play();
+      await new Promise(r => setTimeout(r, 200));
+      
+      const captureScale = (settings.width || video.videoWidth) / window.innerWidth;
+      
+      for (let i = 0; i < embeds.length; i++) {
+        const embed = embeds[i] as HTMLElement;
+        const contentDiv = embed.querySelector('[id^="frag-"]') as HTMLElement;
+        if (!contentDiv) continue;
+        
+        // Get filename from button or generate one
+        const btn = embed.querySelector('.html-embed__download');
+        const filename = btn?.getAttribute('data-filename') || `embed-${i + 1}`;
+        
+        console.log(`[${i + 1}/${embeds.length}] Capturing: ${filename}`);
+        
+        // Scroll into view
+        contentDiv.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+        await new Promise(r => setTimeout(r, 400));
+        
+        // Get bounds and capture
+        const rect = contentDiv.getBoundingClientRect();
+        
+        const cropX = rect.left * captureScale;
+        const cropY = rect.top * captureScale;
+        const cropW = rect.width * captureScale;
+        const cropH = rect.height * captureScale;
+        
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = rect.width * dpr;
+        exportCanvas.height = rect.height * dpr;
+        const ctx = exportCanvas.getContext('2d')!;
+        
+        ctx.drawImage(
+          video,
+          cropX, cropY, cropW, cropH,
+          0, 0, exportCanvas.width, exportCanvas.height
+        );
+        
+        // Add to ZIP as blob
+        const blob = await new Promise<Blob>((resolve) => {
+          exportCanvas.toBlob((b) => resolve(b!), 'image/png');
+        });
+        zip.file(`${filename}.png`, blob);
+      }
+      
+      // Stop capture
+      stream.getTracks().forEach(t => t.stop());
+      
+      // Generate and download ZIP
+      console.log('Creating ZIP file...');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      const link = document.createElement('a');
+      link.download = 'embeds-export.zip';
+      link.href = URL.createObjectURL(zipBlob);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
+      console.log('All embeds exported to embeds-export.zip!');
+    };
+    
+    console.log('To export all embeds, run: exportAllEmbeds()');
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target instanceof Element ? e.target.closest('.html-embed__download') : null;
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      
+      // Prevent double-clicks
+      (btn as HTMLButtonElement).disabled = true;
+      const oldHTML = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>';
+
+      const card = btn.closest('.html-embed__card');
+      if (!card) {
+        (btn as HTMLButtonElement).disabled = false;
+        btn.innerHTML = oldHTML;
+        return;
+      }
+
+      const filename = btn.getAttribute('data-filename') || 'visualization';
+      
+      try {
+        const contentDiv = card.querySelector('[id^="frag-"]') as HTMLElement;
+        if (!contentDiv) {
+          throw new Error('Content not found');
+        }
+        
+        const svg = contentDiv.querySelector('svg');
+        const canvas = contentDiv.querySelector('canvas') as HTMLCanvasElement;
+        const dpr = window.devicePixelRatio || 1;
+        
+        let dataUrl: string;
+        
+        if (canvas) {
+          // Canvas: direct export (Three.js, etc.)
+          dataUrl = canvas.toDataURL('image/png');
+          
+        } else if (svg) {
+          // SVG: native export - fast and accurate
+          const svgClone = svg.cloneNode(true) as SVGElement;
+          const rect = svg.getBoundingClientRect();
+          
+          // Set dimensions
+          svgClone.setAttribute('width', String(rect.width));
+          svgClone.setAttribute('height', String(rect.height));
+          if (!svgClone.getAttribute('xmlns')) {
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          }
+          
+          // Serialize and create image
+          const svgString = new XMLSerializer().serializeToString(svgClone);
+          const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          // Draw to canvas for PNG export
+          const img = new Image();
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = reject;
+            img.src = url;
+          });
+          
+          const exportCanvas = document.createElement('canvas');
+          exportCanvas.width = rect.width * dpr;
+          exportCanvas.height = rect.height * dpr;
+          const ctx = exportCanvas.getContext('2d')!;
+          ctx.scale(dpr, dpr);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, rect.width, rect.height);
+          ctx.drawImage(img, 0, 0, rect.width, rect.height);
+          
+          URL.revokeObjectURL(url);
+          dataUrl = exportCanvas.toDataURL('image/png');
+          
+        } else {
+          // HTML: use Screen Capture API for pixel-perfect screenshot
+          try {
+            // 1. Scroll element into view and center it
+            contentDiv.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+            
+            // 2. Wait for scroll and render to stabilize
+            await new Promise(r => setTimeout(r, 300));
+            
+            // 3. Get fresh bounds after scroll
+            const rect = contentDiv.getBoundingClientRect();
+            
+            // 4. Request screen capture
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+              video: { 
+                displaySurface: 'browser',
+                width: { ideal: 4096 },
+                height: { ideal: 4096 },
+              },
+              preferCurrentTab: true,
+            } as any);
+            
+            const [track] = stream.getVideoTracks();
+            const settings = track.getSettings();
+            
+            // 5. Create video element to capture frame
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.muted = true;
+            await video.play();
+            
+            // Wait for video to be fully ready
+            await new Promise(r => setTimeout(r, 200));
+            
+            // 6. Calculate crop coordinates
+            const captureScale = (settings.width || video.videoWidth) / window.innerWidth;
+            
+            const cropX = rect.left * captureScale;
+            const cropY = rect.top * captureScale;
+            const cropW = rect.width * captureScale;
+            const cropH = rect.height * captureScale;
+            
+            // 7. Draw cropped region to canvas
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = rect.width * dpr;
+            exportCanvas.height = rect.height * dpr;
+            const ctx = exportCanvas.getContext('2d')!;
+            
+            ctx.drawImage(
+              video,
+              cropX, cropY, cropW, cropH,
+              0, 0, exportCanvas.width, exportCanvas.height
+            );
+            
+            // 8. Stop capture
+            stream.getTracks().forEach(t => t.stop());
+            
+            dataUrl = exportCanvas.toDataURL('image/png');
+            
+          } catch (captureErr) {
+            // Fallback to html2canvas if user denies or API unavailable
+            console.log('Screen Capture failed, falling back to html2canvas:', captureErr);
+            const { default: html2canvas } = await import('html2canvas');
+            
+            const exportCanvas = await html2canvas(contentDiv, {
+              scale: dpr,
+              backgroundColor: '#ffffff',
+              useCORS: true,
+              allowTaint: true,
+              logging: false,
+            });
+            
+            dataUrl = exportCanvas.toDataURL('image/png');
+          }
+        }
+        
+        // Trigger download
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Success feedback
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+        setTimeout(() => {
+          btn.innerHTML = oldHTML;
+          (btn as HTMLButtonElement).disabled = false;
+        }, 1500);
+        
+      } catch (err) {
+        console.error('Download failed:', err);
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        setTimeout(() => {
+          btn.innerHTML = oldHTML;
+          (btn as HTMLButtonElement).disabled = false;
+        }, 2000);
+      }
+    });
+  })();
+</script>
 
 <script>
   // Re-execute <script> tags inside the injected fragment (innerHTML doesn't run scripts)
@@ -214,6 +529,67 @@ const htmlWithId =
     margin: 0 0 var(--block-spacing-y);
     z-index: var(--z-elevated);
     position: relative;
+  }
+
+  /* Download button */
+  .html-embed__download {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 10;
+  }
+
+  .html-embed__download svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .html-embed__card:hover .html-embed__download,
+  .html-embed__download:focus {
+    opacity: 1;
+  }
+
+  .html-embed__download:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  .html-embed__download:active {
+    transform: scale(0.95);
+  }
+
+  .html-embed__download:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  .html-embed__download .spin {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Hide download button in print */
+  @media print {
+    .html-embed__download {
+      display: none !important;
+    }
   }
 
   /* Wide mode - same styling as Wide.astro component */

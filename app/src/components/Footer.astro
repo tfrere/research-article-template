@@ -11,7 +11,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
 <footer class="footer">
   <div class="footer-inner">
     <section class="citation-block">
-      <h3>Citation</h3>
+      <p class="footer-heading" role="heading" aria-level="2">Citation</p>
       <p>For attribution in academic contexts, please cite this work as</p>
       <pre class="citation short">{citationText}</pre>
 
@@ -21,7 +21,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     {
       doi && (
         <section class="doi-block">
-          <h3>DOI</h3>
+          <p class="footer-heading" role="heading" aria-level="2">DOI</p>
           <p>
             <a
               href={`https://doi.org/${doi}`}
@@ -37,7 +37,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     {
       licence && (
         <section class="reuse-block">
-          <h3>Reuse</h3>
+          <p class="footer-heading" role="heading" aria-level="2">Reuse</p>
           <p set:html={licence} />
         </section>
       )
@@ -75,11 +75,14 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     const ensureHeading = (text) => {
       const exists = Array.from(target.children).some(
         (c) =>
-          c.tagName === "H3" &&
+          c.classList.contains("footer-heading") &&
           c.textContent.trim().toLowerCase() === text.toLowerCase(),
       );
       if (!exists) {
-        const h = document.createElement("h3");
+        const h = document.createElement("p");
+        h.className = "footer-heading";
+        h.setAttribute("role", "heading");
+        h.setAttribute("aria-level", "2");
         h.textContent = text;
         target.appendChild(h);
       }
@@ -90,7 +93,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
 
       // Remove an eventual heading already included inside the block (avoid duplicates)
       const firstHeading = element.querySelector(
-        ":scope > h1, :scope > h2, :scope > h3",
+        ":scope > h1, :scope > h2, :scope > h3, :scope > .footer-heading",
       );
       if (firstHeading) {
         const txt = (firstHeading.textContent || "").trim().toLowerCase();
@@ -129,25 +132,36 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
       // Prevent multiple runs
       if (footer.dataset.processed === "true") return false;
 
-      const findFirstOutsideFooter = (selectors) => {
-        // Try contentRoot first, then document.body
+      const findAllOutsideFooter = (selectors) => {
+        // Find ALL matching elements outside the footer (not just the first)
+        const results = [];
         const searchRoots = [contentRoot, document.body].filter(Boolean);
 
         for (const root of searchRoots) {
           for (const sel of selectors) {
-            const el = root.querySelector(sel);
-            if (el && !footer.contains(el)) return el;
+            const elements = root.querySelectorAll(sel);
+            elements.forEach((el) => {
+              if (el && !footer.contains(el) && !results.includes(el)) {
+                results.push(el);
+              }
+            });
           }
         }
-        return null;
+        return results;
       };
 
-      const referencesEl = findFirstOutsideFooter([
+      const findFirstOutsideFooter = (selectors) => {
+        const all = findAllOutsideFooter(selectors);
+        return all.length > 0 ? all[0] : null;
+      };
+
+      // Move ALL references from content to footer (handles duplicate bibliography issue)
+      const allRefsEls = findAllOutsideFooter([
         "#bibliography-references-list",
         "[data-bibliography-block]",
         "#references",
         "#refs",
-        ".references",
+        ".references:not(ol.references)", // Avoid selecting normalized <ol> inside the container
         ".bibliography",
       ]);
 
@@ -159,7 +173,14 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
         "div.footnotes",
       ]);
 
-      const movedRefs = moveIntoFooter(referencesEl, "References");
+      // Move all reference blocks found outside the footer
+      let movedRefs = false;
+      allRefsEls.forEach((el) => {
+        if (moveIntoFooter(el, "References")) {
+          movedRefs = true;
+        }
+      });
+
       const movedNotes = moveIntoFooter(footnotesEl, "Footnotes");
 
       if (movedRefs || movedNotes) {
@@ -230,25 +251,26 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     display: contents;
   }
 
-  .citation-block > h3,
-  .references-block > h3,
-  .reuse-block > h3,
-  .doi-block > h3 {
+  .citation-block > .footer-heading,
+  .references-block > .footer-heading,
+  .reuse-block > .footer-heading,
+  .doi-block > .footer-heading {
     grid-column: 1;
     font-size: 15px;
+    font-weight: 600;
     margin: 0;
     text-align: right;
     padding-right: 30px;
   }
 
-  .citation-block > :not(h3),
-  .references-block > :not(h3),
-  .reuse-block > :not(h3),
-  .doi-block > :not(h3) {
+  .citation-block > :not(.footer-heading),
+  .references-block > :not(.footer-heading),
+  .reuse-block > :not(.footer-heading),
+  .doi-block > :not(.footer-heading) {
     grid-column: 2;
   }
 
-  .citation-block h3 {
+  .citation-block .footer-heading {
     margin: 0 0 8px;
   }
 
@@ -325,7 +347,7 @@ const { citationText, bibtex, licence, doi } = Astro.props as Props;
     margin-top: -4px;
   }
 
-  .references-block h3 {
+  .references-block .footer-heading {
     margin: 0;
   }
 

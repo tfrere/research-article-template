@@ -238,7 +238,6 @@ label {
 /* Ensure labels in flex containers don't break alignment */
 div[style*="display: flex"] label,
 div[class*="flex"] label,
-.trackio-controls label,
 .scale-controls label,
 .theme-selector label {
   margin-bottom: 0 !important;

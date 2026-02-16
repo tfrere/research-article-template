@@ -9,6 +9,7 @@
   --neutral-200: rgb(245, 245, 245);
 
   --default-font-family: Source Sans Pro, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Brand (OKLCH base + derived states) */
   --primary-base: oklch(0.75 0.12 47);

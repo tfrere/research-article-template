@@ -252,16 +252,14 @@ const licence =
       });
     </script>
     <script>
-      // Rafraîchir certaines iframes (Trackio/Spaces) lors d'un changement de thème
+      // Refresh HF Space iframes on theme change
       (function () {
         try {
           let reloadTimer: number | null = null;
           const isTargetIframe = (el) => {
             if (!el || el.tagName !== "IFRAME") return false;
             const src = el.getAttribute("src") || "";
-            return (
-              src.includes(".hf.space") || src.toLowerCase().includes("trackio")
-            );
+            return src.includes(".hf.space");
           };
           const reloadIframes = () => {
             const iframes = Array.from(
@@ -274,7 +272,6 @@ const licence =
                 const currentSrc = iframe.getAttribute("src");
                 if (!currentSrc) return;
                 const url = new URL(currentSrc, window.location.href);
-                // Bump a cache-buster param et communiquer le thème courant si jamais le Space le lit
                 url.searchParams.set("_theme", theme);
                 url.searchParams.set("_ts", Date.now().toString());
                 iframe.setAttribute("src", url.toString());
@@ -297,15 +294,6 @@ const licence =
             attributes: true,
             attributeFilter: ["data-theme"],
           });
-
-          // Appliquer immédiatement au chargement pour couvrir les iframes lazy
-          if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", reloadIframes, {
-              once: true,
-            });
-          } else {
-            reloadIframes();
-          }
         } catch {}
       })();
     </script>
