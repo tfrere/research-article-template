@@ -557,3 +557,50 @@ As long as your files are there, they will be served from the **`public/data`** 
 You can fetch them with this address: **`[domain]/data/your-data.ext`**
 
 <Note emoji="⚠️" variant="danger"><b>Be careful</b>, unlike images, <b>data files are not optimized</b> by Astro. You need to optimize them manually.</Note>
+
+---
+
+### Dataviz page
+
+The template includes a dedicated **`/dataviz`** page that automatically collects and displays **all visual assets** from your article in one place. It's useful for reviewing your figures, exporting them, or sharing a visual summary of your paper.
+
+**What it extracts:**
+
+| Type | Source | Details |
+|------|--------|---------|
+| **Charts** | `<HtmlEmbed>` components | Rendered live with all props (config, data, wide) |
+| **Images** | `<Image>` components | Resolved from MDX imports to actual files |
+| **Stacks** | `<Stack>` containing `<Image>` | Grouped as a single item, preserving layout |
+| **Tables** | Markdown tables (`\| ... \|`) | Parsed with headers and rows |
+
+The page is accessible at **`/dataviz`** and displays each item with:
+- A **type badge** (Chart, Image, Stack, Table)
+- A sequential **number** (#1, #2, ...)
+- The **title** or caption when available
+- A **"View in article"** link back to the source
+
+**Excluding items from the gallery:**
+
+Add the `skipGallery` prop to any `<Image>` or `<HtmlEmbed>` you don't want on the dataviz page. For `<Stack>` components, if **all** images inside have `skipGallery`, the entire stack is excluded.
+
+<Accordion title="Code example">
+```mdx
+{/* This image will NOT appear on /dataviz */}
+<Image
+  src={decorativeImage}
+  alt="A decorative banner"
+  skipGallery
+/>
+
+{/* This embed will NOT appear on /dataviz */}
+<HtmlEmbed src="internal-debug.html" skipGallery />
+```
+</Accordion>
+
+**Downloading charts:**
+
+Each chart on the dataviz page has a **download button** (PNG export). You can also batch-export all charts as a ZIP by running this in the browser console:
+
+```js
+window.exportAllEmbeds()
+```
