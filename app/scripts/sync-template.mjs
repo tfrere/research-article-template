@@ -33,10 +33,8 @@ const PRESERVE_PATHS = [
 
     // Local configuration
     'app/package-lock.json',
+    'app/yarn.lock',
     'app/node_modules',
-
-    // Project-specific scripts (preserve our sync script)
-    'app/scripts/sync-template.mjs',
 
     // Project configuration files
     'README.md',
@@ -51,12 +49,19 @@ const PRESERVE_PATHS = [
     '.gitignore'
 ];
 
-// Files to handle with caution (require confirmation)
+// Files to handle with caution (require --force to overwrite)
 const SENSITIVE_FILES = [
     'app/package.json',
     'app/astro.config.mjs',
+    'app/src/components/Seo.astro',
     'Dockerfile',
     'nginx.conf'
+];
+
+// Glob-like patterns for files to preserve (checked via startsWith/includes)
+// These are user-specific assets that should never be overwritten
+const PRESERVE_PATTERNS = [
+    'app/public/thumb',   // thumbnail images (thumb.png, thumb.auto.jpg, etc.)
 ];
 
 const args = process.argv.slice(2);
@@ -102,10 +107,15 @@ async function pathExists(filePath) {
 }
 
 async function isPathPreserved(relativePath) {
-    return PRESERVE_PATHS.some(preserve =>
+    if (PRESERVE_PATHS.some(preserve =>
         relativePath === preserve ||
         relativePath.startsWith(preserve + '/')
-    );
+    )) return true;
+
+    // Check glob-like patterns (prefix matching)
+    if (PRESERVE_PATTERNS.some(pattern => relativePath.startsWith(pattern))) return true;
+
+    return false;
 }
 
 async function createBackup(filePath) {
