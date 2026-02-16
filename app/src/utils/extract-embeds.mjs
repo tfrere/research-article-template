@@ -130,6 +130,60 @@ export function extractImages(content) {
 }
 
 /**
+ * Split a markdown table row on pipe characters, respecting backtick spans.
+ * Pipes inside `inline code` are treated as literal text, not separators.
+ * Returns the array of trimmed, non-empty cell strings.
+ */
+function splitTableRow(row) {
+    const cells = [];
+    let current = '';
+    let inBacktick = false;
+    
+    for (let i = 0; i < row.length; i++) {
+        const ch = row[i];
+        if (ch === '`') {
+            inBacktick = !inBacktick;
+            current += ch;
+        } else if (ch === '|' && !inBacktick) {
+            cells.push(current);
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    cells.push(current);
+    return cells;
+}
+
+/**
+ * Parse a markdown table row into exactly `expectedCols` cells.
+ * First splits respecting backticks (splitTableRow), then if the row
+ * has too many cells (e.g. unescaped | in values), merges overflow
+ * cells back together to match the expected column count.
+ */
+function parseTableRow(row, expectedCols) {
+    let cells = splitTableRow(row).filter(c => c.trim());
+    
+    if (cells.length <= expectedCols) return cells;
+    
+    // Too many cells: merge overflow into the last "overflowing" column.
+    // Strategy: keep first (expectedCols - 1) cells, merge the rest into one,
+    // then take the last cell separately (it's usually the description).
+    // This handles: | val | No | 'a' | 'b' | 'c' | Description |
+    //  → [val, No, 'a' | 'b' | 'c', Description]
+    const head = cells.slice(0, expectedCols - 1);
+    const tail = cells.slice(expectedCols - 1);
+    // The last element is the final column; everything in between is the overflowing column
+    if (tail.length > 1) {
+        const lastCell = tail.pop();
+        const merged = tail.join(' | ');
+        return [...head, merged, lastCell].slice(0, expectedCols);
+    }
+    
+    return cells.slice(0, expectedCols);
+}
+
+/**
  * Extract markdown tables from content
  */
 export function extractTables(content) {
@@ -146,16 +200,18 @@ export function extractTables(content) {
         const rows = tableContent.split('\n').filter(row => row.trim());
         
         if (rows.length >= 3) {
-            // Parse header - convert Markdown to HTML
+            // Parse header
             const headerRow = rows[0];
-            const headers = headerRow.split('|')
+            const headers = splitTableRow(headerRow)
                 .filter(cell => cell.trim())
                 .map(cell => markdownToHtml(cell.trim()));
             
-            // Parse data rows (skip separator at index 1) - convert Markdown to HTML
+            const expectedCols = headers.length;
+            
+            // Parse data rows (skip separator at index 1)
+            // Use parseTableRow to handle overflow pipes (e.g. union types)
             const dataRows = rows.slice(2).map(row => {
-                return row.split('|')
-                    .filter(cell => cell.trim())
+                return parseTableRow(row, expectedCols)
                     .map(cell => markdownToHtml(cell.trim()));
             });
             
@@ -919,13 +975,14 @@ function extractAllVisualsWithPosition(rawContent) {
         
         if (rows.length >= 3) {
             const headerRow = rows[0];
-            // Convert Markdown to HTML in cells
-            const headers = headerRow.split('|')
+            const headers = splitTableRow(headerRow)
                 .filter(cell => cell.trim())
                 .map(cell => markdownToHtml(cell.trim()));
+            
+            const expectedCols = headers.length;
+            
             const dataRows = rows.slice(2).map(row => {
-                return row.split('|')
-                    .filter(cell => cell.trim())
+                return parseTableRow(row, expectedCols)
                     .map(cell => markdownToHtml(cell.trim()));
             });
             
