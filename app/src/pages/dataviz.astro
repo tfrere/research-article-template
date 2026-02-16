@@ -273,8 +273,6 @@ const visualsWithMeta = visuals.map((item: any) => {
                                     {(item.type === 'embed' || item.type === 'banner') && !isWide && (
                                         <HtmlEmbed
                                             src={item.src}
-                                            title={item.title}
-                                            desc={item.desc}
                                             frameless={item.frameless}
                                             data={item.data}
                                             config={item.config}
@@ -285,8 +283,6 @@ const visualsWithMeta = visuals.map((item: any) => {
                                         <Wide>
                                             <HtmlEmbed
                                                 src={item.src}
-                                                title={item.title}
-                                                desc={item.desc}
                                                 frameless={item.frameless}
                                                 data={item.data}
                                                 config={item.config}
