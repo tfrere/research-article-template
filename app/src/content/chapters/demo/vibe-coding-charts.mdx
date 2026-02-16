@@ -38,7 +38,7 @@ These are fundamental chart types that serve as building blocks for more complex
   id="fig17"
   src="smol-playbook/post-training-adventure.html"
   title="Post-Training Adventure"
-  desc={`Figure 17: Interactive visualization of a model's post-training journey, showing the different stages and decisions.`}
+  desc={`Interactive visualization of a model's post-training journey, showing the different stages and decisions.`}
 />
 
 
@@ -60,7 +60,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig10"
   src="smol-playbook/parameter-calculator.html"
   title="Parameter Calculator"
-  desc={`Figure 10: Interactive parameter calculator to visualize the parameter distribution of a dense transformer model. Useful for making architectural decisions or configuring ablations.`}
+  desc={`Interactive parameter calculator to visualize the parameter distribution of a dense transformer model. Useful for making architectural decisions or configuring ablations.`}
 />
 
 
@@ -70,7 +70,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig6"
   src="arxiv/arxiv.html" 
   title="arXiv: Research Paper Clustering" 
-  desc={`Figure 6: Interactive visualization of ~8k recent arXiv submissions via UMAP dimensionality reduction. Each point represents a research paper positioned by semantic similarity. Colors indicate academic categories (cs.AI, cs.LG, cs.CV, etc.).`} 
+  desc={`Interactive visualization of ~8k recent arXiv submissions via UMAP dimensionality reduction. Each point represents a research paper positioned by semantic similarity. Colors indicate academic categories (cs.AI, cs.LG, cs.CV, etc.).`} 
   data="data.json"
   frameless 
   align="center" 
@@ -85,7 +85,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig7"
   src="d3-umap-typography.html" 
   title="Visual Similarity of Typefaces" 
-  desc={`Figure 7: Interactive 2D visualization of 382 <strong>Google Fonts</strong> clustered by visual similarity via <strong>UMAP</strong>. Each point represents a typeface positioned based on pixel-level differences computed from font matrices.`} 
+  desc={`Interactive 2D visualization of 382 <strong>Google Fonts</strong> clustered by visual similarity via <strong>UMAP</strong>. Each point represents a typeface positioned based on pixel-level differences computed from font matrices.`} 
   frameless 
   align="center" 
 />
@@ -98,7 +98,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   src="d3-neural-network.html"
   frameless
   title="MNIST-like Neural Network"
-  desc={`Figure 5: Interactive MNIST-like neural network. Draw a digit on the left canvas; activations propagate through hidden layers (node size/opacity reflect activation). The right side displays class probabilities (0–9) with the top class emphasized.`}
+  desc={`Interactive MNIST-like neural network. Draw a digit on the left canvas; activations propagate through hidden layers (node size/opacity reflect activation). The right side displays class probabilities (0–9) with the top class emphasized.`}
 />
 ---
 
@@ -106,7 +106,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig12"
   src="smol-playbook/parameter-comparison.html"
   title="Parameter Comparison"
-  desc={`Figure 12: Visual comparison of parameter distribution between different model sizes (8B vs 70B). Shows how embeddings represent a larger fraction in smaller models.`}
+  desc={`Visual comparison of parameter distribution between different model sizes (8B vs 70B). Shows how embeddings represent a larger fraction in smaller models.`}
 />
 
 ---
@@ -116,7 +116,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   src="smol-playbook/attention-mechanisms.html"
   title="Attention Mechanisms"
   wide
-  desc={`Figure 13: Simplified illustration of Multi-Head Attention (MHA), Grouped-Query Attention (GQA), Multi-Query Attention (MQA), and Multi-head Latent Attention (MLA). Demonstrates how MLA compresses keys and values into a latent vector.`}
+  desc={`Simplified illustration of Multi-Head Attention (MHA), Grouped-Query Attention (GQA), Multi-Query Attention (MQA), and Multi-head Latent Attention (MLA). Demonstrates how MLA compresses keys and values into a latent vector.`}
 />
 
 ---
@@ -126,7 +126,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   src="smol-playbook/aws-bandwidth-bottleneck.html"
   title="AWS Bandwidth Bottleneck"
   wide
-  desc={`Figure 14: Interactive diagram of key components and communication links in an AWS p5 instance. Shows the different GPU-GPU communication paths with their actual bandwidths.`}
+  desc={`Interactive diagram of key components and communication links in an AWS p5 instance. Shows the different GPU-GPU communication paths with their actual bandwidths.`}
   config={{
     initialFilter: 'cpu-gpu',
     showRealBandwidths: true
@@ -140,7 +140,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   src="smol-playbook/gds-interactive-heatmaps.html"
   title="Storage Performance Heatmaps"
   wide
-  desc={`Figure 15: Interactive heatmaps comparing storage system performance (scratch, root, FSx, admin) across different thread counts and I/O sizes. Visualizes throughput (GiB/s) and IOPS to identify optimal configurations for each storage tier.`}
+  desc={`Interactive heatmaps comparing storage system performance (scratch, root, FSx, admin) across different thread counts and I/O sizes. Visualizes throughput (GiB/s) and IOPS to identify optimal configurations for each storage tier.`}
 />
 
 ---
@@ -149,7 +149,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig16"
   src="smol-playbook/train-model-decision-flowchart.html"
   title="Should You Train Your Own Model?"
-  desc={`Figure 16: Interactive decision tree to determine whether you should train your own model. Guides the thought process through key questions: Can existing models handle your use case? Should you fine-tune or train from scratch? For research, production, or strategic open-source?`}
+  desc={`Interactive decision tree to determine whether you should train your own model. Guides the thought process through key questions: Can existing models handle your use case? Should you fine-tune or train from scratch? For research, production, or strategic open-source?`}
 />
 
 
@@ -159,7 +159,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig18"
   src="smol-playbook/generic-d3-line-chart.html"
   title="Generic Line Chart"
-  desc={`Figure 18: Configurable line chart with zoom/pan, smoothing and interactive tooltips. Example with loss data for different attention configurations.<br/>Credit: <a href="https://huggingface.co/blog/smollm-training-playbook" target="_blank">SmolLM Training Playbook</a>`}
+  desc={`Configurable line chart with zoom/pan, smoothing and interactive tooltips. Example with loss data for different attention configurations.<br/>Credit: <a href="https://huggingface.co/blog/smollm-training-playbook" target="_blank">SmolLM Training Playbook</a>`}
   config={{
     dataUrl: "./data/attention_loss.csv",
     xDomain: [0, 45e9],
@@ -175,7 +175,7 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   id="fig19"
   src="smol-playbook/generic-d3-six-line-charts.html"
   title="Generic Six Line Charts Grid"
-  desc={`Figure 19: Configurable grid of line charts with synchronized zoom/pan. Example with evaluations of different metrics.<br/>Credit: <a href="https://huggingface.co/blog/smollm-training-playbook" target="_blank">SmolLM Training Playbook</a>`}
+  desc={`Configurable grid of line charts with synchronized zoom/pan. Example with evaluations of different metrics.<br/>Credit: <a href="https://huggingface.co/blog/smollm-training-playbook" target="_blank">SmolLM Training Playbook</a>`}
   config={{
     dataUrl: "./data/attention_evals.csv",
     charts: [
@@ -199,5 +199,5 @@ These are more complex, interactive visualizations that demonstrate advanced D3 
   src="d3-equation-editor.html" 
   frameless
   title="Interactive Mathematical Function Plotter" 
-  desc={`Figure 8: Interactive <strong>equation editor</strong> with real-time function plotting. Edit mathematical expressions and see their graphs update instantly. Supports common functions (sin, cos, exp, etc.) with customizable domain range.`} 
+  desc={`Interactive <strong>equation editor</strong> with real-time function plotting. Edit mathematical expressions and see their graphs update instantly. Supports common functions (sin, cos, exp, etc.) with customizable domain range.`} 
 />

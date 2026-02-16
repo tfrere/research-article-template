@@ -259,7 +259,7 @@ const visualsWithMeta = visuals.map((item: any) => {
                                             <h2 class="header-title">{item.displayName}</h2>
                                         )}
                                         {(item.desc || item.caption) && (
-                                            <p class="header-desc">{item.desc || item.caption}</p>
+                                            <p class="header-desc" set:html={item.desc || item.caption} />
                                         )}
                                         {item.anchorId && (
                                             <a href={`/#${item.anchorId}`} class="header-link">
