@@ -274,6 +274,78 @@ async function ensureDataSymlink() {
     }
 }
 
+async function mergePackageDependencies(templateDir) {
+    const localPkgPath = path.join(APP_ROOT, 'package.json');
+    const templatePkgPath = path.join(templateDir, 'app', 'package.json');
+
+    if (!(await pathExists(templatePkgPath)) || !(await pathExists(localPkgPath))) {
+        console.log('⚠️  Cannot merge dependencies: package.json not found');
+        return;
+    }
+
+    const localPkg = JSON.parse(await fs.readFile(localPkgPath, 'utf8'));
+    const templatePkg = JSON.parse(await fs.readFile(templatePkgPath, 'utf8'));
+
+    const mergeSection = (sectionName) => {
+        const local = localPkg[sectionName] || {};
+        const template = templatePkg[sectionName] || {};
+        const added = [];
+        const updated = [];
+
+        for (const [pkg, version] of Object.entries(template)) {
+            if (!(pkg in local)) {
+                local[pkg] = version;
+                added.push(`${pkg}@${version}`);
+            } else if (local[pkg] !== version) {
+                const localVer = local[pkg];
+                local[pkg] = version;
+                updated.push(`${pkg}: ${localVer} → ${version}`);
+            }
+        }
+
+        if (added.length || updated.length) {
+            localPkg[sectionName] = Object.fromEntries(
+                Object.entries(local).sort(([a], [b]) => a.localeCompare(b))
+            );
+        }
+
+        return { added, updated };
+    };
+
+    const deps = mergeSection('dependencies');
+    const devDeps = mergeSection('devDependencies');
+
+    // Also sync scripts that might be new
+    const scripts = mergeSection('scripts');
+
+    const totalAdded = [...deps.added, ...devDeps.added];
+    const totalUpdated = [...deps.updated, ...devDeps.updated];
+
+    if (totalAdded.length || totalUpdated.length || scripts.added.length) {
+        if (totalAdded.length) {
+            console.log('\n📦 New dependencies added:');
+            totalAdded.forEach(d => console.log(`   + ${d}`));
+        }
+        if (totalUpdated.length) {
+            console.log('\n📦 Dependencies updated:');
+            totalUpdated.forEach(d => console.log(`   ↑ ${d}`));
+        }
+        if (scripts.added.length) {
+            console.log('\n📜 New scripts added:');
+            scripts.added.forEach(s => console.log(`   + ${s}`));
+        }
+
+        if (!isDryRun) {
+            await fs.writeFile(localPkgPath, JSON.stringify(localPkg, null, 2) + '\n');
+            console.log('\n✅ package.json updated — run `yarn install` or `npm install` to install new dependencies');
+        } else {
+            console.log('\n[DRY-RUN] Would update package.json with above changes');
+        }
+    } else {
+        console.log('\n📦 Dependencies are up to date');
+    }
+}
+
 async function showSummary(templateDir) {
     console.log('\n📊 SYNCHRONIZATION SUMMARY');
     console.log('================================');
@@ -326,6 +398,10 @@ async function main() {
         // Synchroniser
         console.log('\n🔄 Synchronisation en cours...');
         await syncDirectory(templateDir, PROJECT_ROOT);
+
+        // Merge package.json dependencies (add new deps without overwriting)
+        console.log('\n📦 Merging package.json dependencies...');
+        await mergePackageDependencies(templateDir);
 
         // S'assurer que le lien symbolique des données est correct
         console.log('\n🔗 Vérification du lien symbolique des données...');
