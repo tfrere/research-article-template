@@ -179,12 +179,12 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
         </div>
       )
     }
-    <!-- {doi && (
+    {doi && (
       <div class="meta-container-cell">
         <h3>DOI</h3>
         <p><a href={`https://doi.org/${doi}`} target="_blank" rel="noopener noreferrer">{doi}</a></p>
       </div>
-    )} -->
+    )}
     {showPdf && (
       <div class="meta-container-cell meta-container-cell--pdf">
         <div class="pdf-header-wrapper">
@@ -299,8 +299,7 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
       const isPro = isProUser(plan);
       updatePdfAccess(isPro, pdfProOnly);
       
-      // Optional: log for debugging
-      console.log("[PDF Access]", { plan, isPro });
+    
     }
 
     /**
@@ -410,6 +409,14 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   .hero-banner {
     max-width: 980px;
     margin: 0 auto;
+    aspect-ratio: 5 / 2;
+    overflow: hidden;
+  }
+  .hero-banner :global(.html-embed) {
+    height: 100%;
+  }
+  .hero-banner :global(.html-embed__card) {
+    height: 100%;
   }
   .hero-desc {
     color: var(--muted-color);
@@ -498,8 +505,13 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   }
 
   @media (max-width: 768px) {
-    .meta-container-cell--affiliations,
-    .meta-container-cell--pdf {
+    .meta-container-cell:nth-child(even) {
+      text-align: right;
+    }
+    .meta-container-cell:last-child:nth-child(odd) {
+      flex-grow: 0;
+      flex-basis: auto;
+      margin-left: auto;
       text-align: right;
     }
   }

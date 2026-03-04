@@ -165,70 +165,109 @@ async function waitForStableLayout(page, timeoutMs = 5000) {
 }
 
 /**
- * Inject viewBox attributes on SVGs that don't have them.
- * This ensures SVGs scale properly when the viewport changes for PDF generation.
+ * Make all remaining SVGs, Mermaid diagrams, and iframes responsive for print.
+ * Small icon SVGs are locked to their current pixel size to prevent breakage.
  */
-async function injectSvgViewBoxes(page) {
-  const stats = await page.evaluate(() => {
-    let fixed = 0;
-    let skipped = 0;
-    let errors = 0;
-
-    // Target all D3 embeds and general HTML embed SVGs
-    const selectors = [
-      '.html-embed__card svg',
-      '.d3-bar svg',
-      '.d3-scatter svg', 
-      '.d3-line svg',
-      '.d3-galaxy svg',
-      '.d3-neural svg',
-      '.d3-pie svg',
-      '.d3-confusion-matrix svg',
-      '.d3-benchmark svg',
-      '[class^="d3-"] svg',
-      '[class*=" d3-"] svg'
-    ].join(', ');
-
-    document.querySelectorAll(selectors).forEach(svg => {
+async function makeMediaResponsive(page) {
+  await page.evaluate(() => {
+    function isSmallSvg(svg) {
       try {
-        // Skip if already has a viewBox
-        if (svg.getAttribute('viewBox')) {
-          skipped++;
-          return;
-        }
-
-        // Get current rendered dimensions
+        const vb = svg?.viewBox?.baseVal;
+        if (vb && vb.width <= 50 && vb.height <= 50) return true;
+        const r = svg.getBoundingClientRect?.();
+        if (r && r.width <= 50 && r.height <= 50) return true;
+      } catch { }
+      return false;
+    }
+    function lockSmallSvgSize(svg) {
+      try {
+        const r = svg.getBoundingClientRect?.();
+        if (r?.width) svg.style.setProperty('width', Math.round(r.width) + 'px', 'important');
+        if (r?.height) svg.style.setProperty('height', Math.round(r.height) + 'px', 'important');
+        svg.style.setProperty('max-width', 'none', 'important');
+      } catch { }
+    }
+    function fixSvg(svg) {
+      if (!svg) return;
+      if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
+      if (!svg.getAttribute('viewBox')) {
         const rect = svg.getBoundingClientRect();
-        const width = rect.width || svg.clientWidth || parseFloat(svg.getAttribute('width')) || 0;
-        const height = rect.height || svg.clientHeight || parseFloat(svg.getAttribute('height')) || 0;
-
-        if (width > 0 && height > 0) {
-          // Set viewBox based on current dimensions
-          svg.setAttribute('viewBox', `0 0 ${Math.round(width)} ${Math.round(height)}`);
-          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          
-          // Remove fixed width/height attributes to allow scaling
-          svg.removeAttribute('width');
-          svg.removeAttribute('height');
-          
-          // Set CSS for responsive behavior
-          svg.style.width = '100%';
-          svg.style.height = 'auto';
-          svg.style.maxWidth = '100%';
-          
-          fixed++;
-        } else {
-          skipped++;
-        }
-      } catch (e) {
-        errors++;
+        const w = rect.width || svg.clientWidth || parseFloat(svg.getAttribute('width')) || 0;
+        const h = rect.height || svg.clientHeight || parseFloat(svg.getAttribute('height')) || 0;
+        if (w > 0 && h > 0) svg.setAttribute('viewBox', `0 0 ${Math.round(w)} ${Math.round(h)}`);
       }
+      try { svg.removeAttribute('width'); } catch { }
+      try { svg.removeAttribute('height'); } catch { }
+      svg.style.maxWidth = '100%';
+      svg.style.width = '100%';
+      svg.style.height = 'auto';
+      if (!svg.getAttribute('preserveAspectRatio')) svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    }
+
+    document.querySelectorAll('svg').forEach(fixSvg);
+    document.querySelectorAll('.mermaid, .mermaid svg').forEach(el => {
+      if (el.tagName?.toLowerCase() === 'svg') fixSvg(el);
+      else { el.style.display = 'block'; el.style.width = '100%'; el.style.maxWidth = '100%'; }
     });
-
-    return { fixed, skipped, errors };
+    document.querySelectorAll('iframe, embed, object').forEach(el => {
+      el.style.width = '100%';
+      el.style.maxWidth = '100%';
+      try { el.removeAttribute('width'); } catch { }
+      try {
+        const doc = el.contentDocument;
+        if (doc?.head) {
+          const s = doc.createElement('style');
+          s.textContent = 'html,body{overflow-x:hidden} svg,canvas,img,video{max-width:100%!important;height:auto!important} svg[width]{width:100%!important}';
+          doc.head.appendChild(s);
+          doc.querySelectorAll('svg').forEach(svg => { if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
+        }
+      } catch { }
+    });
   });
+}
 
-  return stats;
+/**
+ * Screenshot every visible .html-embed and replace its content with a static
+ * <img>. This freezes embeds at their current (web-quality) render, preventing
+ * D3/Plotly re-render issues when the viewport changes for PDF generation.
+ */
+async function screenshotAndReplaceEmbeds(page) {
+  const handles = await page.$$('.html-embed');
+  let replaced = 0;
+
+  for (let i = 0; i < handles.length; i++) {
+    const el = handles[i];
+    try {
+      const visible = await el.evaluate(node => {
+        const r = node.getBoundingClientRect();
+        return r.width > 10 && r.height > 10;
+      });
+      if (!visible) continue;
+
+      await el.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(100);
+
+      const buf = await el.screenshot({ type: 'png' });
+      const b64 = buf.toString('base64');
+
+      await el.evaluate((node, data) => {
+        const r = node.getBoundingClientRect();
+        const img = document.createElement('img');
+        img.src = 'data:image/png;base64,' + data;
+        img.style.cssText = 'width:100%;height:auto;display:block;max-width:100%;';
+        img.setAttribute('width', String(Math.round(r.width)));
+        img.setAttribute('height', String(Math.round(r.height)));
+        node.innerHTML = '';
+        node.appendChild(img);
+      }, b64);
+
+      replaced++;
+    } catch (e) {
+      // Leave the original embed in place if screenshotting fails
+    }
+  }
+
+  return replaced;
 }
 
 async function main() {
@@ -241,7 +280,7 @@ async function main() {
   const format = args.format || 'A4';
   const margin = parseMargin(args.margin);
   const wait = (args.wait || 'full'); // 'networkidle' | 'images' | 'plotly' | 'full'
-  const bookMode = !!args.book; // Activer le mode livre avec --book
+  const bookMode = !!args.book;
 
   // filename can be provided, else computed from DOM (button) or page title later
   let outFileBase = (args.filename && String(args.filename).replace(/\.pdf$/i, '')) || 'article';
@@ -284,8 +323,7 @@ async function main() {
         } catch { }
       }, theme);
       const page = await context.newPage();
-      // Use a wider viewport initially so D3/Plotly embeds render at their "web" size
-      // We'll inject viewBox attributes later to make them scale properly for PDF
+      // Wider viewport so D3/Plotly embeds render at full web size before screenshotting
       const webViewportWidth = 1200;
       await page.setViewportSize({ width: webViewportWidth, height: 1400 });
       await page.goto(baseUrl, { waitUntil: 'load', timeout: 60000 });
@@ -310,7 +348,6 @@ async function main() {
           });
           outFileBase = slugify(title);
         }
-        // Ajouter suffixe -book si en mode livre
         if (bookMode) {
           outFileBase += '-book';
         }
@@ -334,12 +371,17 @@ async function main() {
         await waitForStableLayout(page);
       }
 
-      // Inject viewBox on SVGs that don't have them (before changing viewport)
-      console.log('🔧 Fixing SVG viewBox attributes…');
-      const viewBoxStats = await injectSvgViewBoxes(page);
-      console.log(`   Fixed: ${viewBoxStats.fixed}, Skipped: ${viewBoxStats.skipped}, Errors: ${viewBoxStats.errors}`);
+      // Screenshot all embeds and replace them with static <img> tags.
+      // This freezes the render at 1200px, preventing D3/Plotly re-render
+      // issues when the viewport shrinks to print width later.
+      console.log('📸 Screenshotting embeds…');
+      const embedCount = await screenshotAndReplaceEmbeds(page);
+      console.log(`   ${embedCount} embed(s) replaced with screenshots`);
 
-      // Mode livre : ouvrir tous les accordéons
+      // Make remaining SVGs/iframes responsive (Mermaid diagrams, icons, etc.)
+      console.log('🔧 Fixing remaining SVGs for print…');
+      try { await makeMediaResponsive(page); } catch { }
+
       if (bookMode) {
         console.log('📂 Opening all accordions for book mode…');
         await page.evaluate(() => {
@@ -358,82 +400,196 @@ async function main() {
         await waitForStableLayout(page, 2000);
       }
 
-      await page.emulateMedia({ media: 'print' });
+      // Inject a print-friendly Table of Contents built from actual headings
+      console.log('📑 Injecting Table of Contents for PDF…');
+      const tocCount = await page.evaluate(() => {
+        const main = document.querySelector('main');
+        if (!main) return 0;
+        const headings = Array.from(main.querySelectorAll('h2, h3'));
+        if (headings.length === 0) return 0;
 
-      // Enforce responsive sizing for SVG/iframes by removing hard attrs and injecting CSS (top-level and inside same-origin iframes)
-      try {
-        await page.evaluate(() => {
-          function isSmallSvg(svg) {
-            try {
-              const vb = svg && svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
-              if (vb && vb.width && vb.height && vb.width <= 50 && vb.height <= 50) return true;
-              const r = svg.getBoundingClientRect && svg.getBoundingClientRect();
-              if (r && r.width && r.height && r.width <= 50 && r.height <= 50) return true;
-            } catch { }
-            return false;
+        const tocEl = document.createElement('nav');
+        tocEl.className = 'pdf-toc';
+
+        const title = document.createElement('h2');
+        title.className = 'pdf-toc__title';
+        title.textContent = 'Table of Contents';
+        tocEl.appendChild(title);
+
+        const list = document.createElement('ol');
+        list.className = 'pdf-toc__list';
+
+        let sectionNum = 0;
+        let subNum = 0;
+        let currentSubList = null;
+
+        for (const h of headings) {
+          const text = h.textContent?.trim();
+          if (!text) continue;
+          const id = h.getAttribute('id') || '';
+
+          if (h.tagName === 'H2') {
+            sectionNum++;
+            subNum = 0;
+
+            const li = document.createElement('li');
+            li.className = 'pdf-toc__section';
+
+            const a = document.createElement('a');
+            a.className = 'pdf-toc__link';
+            if (id) a.href = '#' + id;
+
+            const num = document.createElement('span');
+            num.className = 'pdf-toc__num';
+            num.textContent = String(sectionNum);
+
+            const label = document.createElement('span');
+            label.className = 'pdf-toc__label';
+            label.textContent = text;
+
+            a.appendChild(num);
+            a.appendChild(label);
+            li.appendChild(a);
+
+            const subList = document.createElement('ol');
+            subList.className = 'pdf-toc__sublist';
+            li.appendChild(subList);
+            currentSubList = subList;
+
+            list.appendChild(li);
+          } else if (h.tagName === 'H3' && currentSubList) {
+            subNum++;
+
+            const li = document.createElement('li');
+            li.className = 'pdf-toc__subsection';
+
+            const a = document.createElement('a');
+            a.className = 'pdf-toc__link';
+            if (id) a.href = '#' + id;
+
+            const num = document.createElement('span');
+            num.className = 'pdf-toc__num';
+            num.textContent = sectionNum + '.' + subNum;
+
+            const label = document.createElement('span');
+            label.className = 'pdf-toc__label';
+            label.textContent = text;
+
+            a.appendChild(num);
+            a.appendChild(label);
+            li.appendChild(a);
+
+            currentSubList.appendChild(li);
           }
-          function lockSmallSvgSize(svg) {
-            try {
-              const r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
-              const w = (r && r.width) ? Math.round(r.width) : null;
-              const h = (r && r.height) ? Math.round(r.height) : null;
-              if (w) svg.style.setProperty('width', w + 'px', 'important');
-              if (h) svg.style.setProperty('height', h + 'px', 'important');
-              svg.style.setProperty('max-width', 'none', 'important');
-            } catch { }
+        }
+        tocEl.appendChild(list);
+
+        const style = document.createElement('style');
+        style.textContent = `
+          .pdf-toc {
+            page-break-after: always;
+            break-after: page;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 0 0;
+            font-family: Source Sans Pro, ui-sans-serif, system-ui, sans-serif;
           }
-          function fixSvg(svg) {
-            if (!svg) return;
-            // Do not alter hero banner SVG sizing; it may rely on explicit width/height
-            try { if (svg.closest && svg.closest('.hero-banner')) return; } catch { }
-            if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
-            try { svg.removeAttribute('width'); } catch { }
-            try { svg.removeAttribute('height'); } catch { }
-            svg.style.maxWidth = '100%';
-            svg.style.width = '100%';
-            svg.style.height = 'auto';
-            if (!svg.getAttribute('preserveAspectRatio')) svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          .pdf-toc__title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #111827;
+            margin: 0 0 32px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #111827;
           }
-          document.querySelectorAll('svg').forEach(fixSvg);
-          document.querySelectorAll('.mermaid, .mermaid svg').forEach((el) => {
-            if (el.tagName && el.tagName.toLowerCase() === 'svg') fixSvg(el);
-            else { el.style.display = 'block'; el.style.width = '100%'; el.style.maxWidth = '100%'; }
-          });
-          document.querySelectorAll('iframe, embed, object').forEach((el) => {
-            el.style.width = '100%';
-            el.style.maxWidth = '100%';
-            try { el.removeAttribute('width'); } catch { }
-            // Best-effort inject into same-origin frames
-            try {
-              const doc = (el.tagName.toLowerCase() === 'object' ? el.contentDocument : el.contentDocument);
-              if (doc && doc.head) {
-                const s = doc.createElement('style');
-                s.textContent = 'html,body{overflow-x:hidden;} svg,canvas,img,video{max-width:100%!important;height:auto!important;} svg[width]{width:100%!important}';
-                doc.head.appendChild(s);
-                doc.querySelectorAll('svg').forEach((svg) => { if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
-              }
-            } catch (_) { /* cross-origin; ignore */ }
-          });
-        });
-      } catch { }
+          .pdf-toc__list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            counter-reset: none;
+          }
+          .pdf-toc__sublist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+          }
+          .pdf-toc__section {
+            margin: 0;
+            padding: 0;
+          }
+          .pdf-toc__section > .pdf-toc__link {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding: 10px 0;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+          }
+          .pdf-toc__section > .pdf-toc__link .pdf-toc__num {
+            flex-shrink: 0;
+            width: 24px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #6b7280;
+          }
+          .pdf-toc__section > .pdf-toc__link .pdf-toc__label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #111827;
+            line-height: 1.4;
+          }
+          .pdf-toc__subsection {
+            margin: 0;
+            padding: 0;
+          }
+          .pdf-toc__subsection > .pdf-toc__link {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 5px 0 5px 36px;
+            text-decoration: none;
+          }
+          .pdf-toc__subsection > .pdf-toc__link .pdf-toc__num {
+            flex-shrink: 0;
+            width: 32px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #9ca3af;
+          }
+          .pdf-toc__subsection > .pdf-toc__link .pdf-toc__label {
+            font-size: 13px;
+            font-weight: 400;
+            color: #6b7280;
+            line-height: 1.4;
+          }
+        `;
+        document.head.appendChild(style);
+
+        const meta = document.querySelector('header.meta');
+        if (meta && meta.nextElementSibling) {
+          meta.parentNode.insertBefore(tocEl, meta.nextElementSibling);
+        } else {
+          const contentGrid = document.querySelector('.content-grid');
+          if (contentGrid) {
+            contentGrid.parentNode.insertBefore(tocEl, contentGrid);
+          }
+        }
+        return headings.length;
+      });
+      console.log(`   ${tocCount} headings indexed`);
+
+      await page.emulateMedia({ media: 'print' });
 
       // Generate OG thumbnail (1200x630)
       try {
-        const ogW = 1200, ogH = 630;
-        await page.setViewportSize({ width: ogW, height: ogH });
-        // Give layout a tick to adjust
+        await page.setViewportSize({ width: 1200, height: 630 });
         await page.waitForTimeout(200);
-        // Ensure layout & D3 re-rendered after viewport change
-        await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
-        try { await waitForD3(page, 8000); } catch { }
+        await page.evaluate(() => window.scrollTo(0, 0));
 
-        // Temporarily improve visibility for light theme thumbnails
-        // - Force normal blend for points
-        // - Ensure an SVG background (CSS background on svg element)
         const cssHandle = await page.addStyleTag({
-          content: `
-          .hero .points { mix-blend-mode: normal !important; }
-        ` });
+          content: `.hero .points { mix-blend-mode: normal !important; }`
+        });
         const thumbPath = resolve(cwd, 'dist', 'thumb.auto.jpg');
         await page.screenshot({ path: thumbPath, type: 'jpeg', quality: 85, fullPage: false });
         // Also emit PNG for compatibility if needed
@@ -449,176 +605,72 @@ async function main() {
       } catch (e) {
         console.warn('Unable to generate OG thumbnail:', e?.message || e);
       }
+      // Restore viewport to printable width before PDF generation
       const outPath = resolve(cwd, 'dist', `${outFileBase}.pdf`);
-      // Restore viewport to printable width before PDF (thumbnail changed it)
-      // Now that SVGs have viewBox, they should scale properly
       try {
         const fmt2 = getFormatSizeMm(format);
         const mw2 = fmt2.w - cssLengthToMm(margin.left) - cssLengthToMm(margin.right);
-        const printableWidthPx2 = Math.max(320, Math.round((mw2 / 25.4) * 96));
-        console.log(`📐 Setting viewport to printable width: ${printableWidthPx2}px`);
-        await page.setViewportSize({ width: printableWidthPx2, height: 1400 });
-        await page.evaluate(() => { window.scrollTo(0, 0); window.dispatchEvent(new Event('resize')); });
-        await page.waitForTimeout(500); // Give SVGs time to adapt
+        const printableWidthPx = Math.max(320, Math.round((mw2 / 25.4) * 96));
+        console.log(`📐 Setting viewport to printable width: ${printableWidthPx}px`);
+        await page.setViewportSize({ width: printableWidthPx, height: 1400 });
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(300);
         await waitForStableLayout(page, 2000);
-        // Re-apply responsive fixes after viewport change
-        try {
-          await page.evaluate(() => {
-            function isSmallSvg(svg) {
-              try {
-                const vb = svg && svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
-                if (vb && vb.width && vb.height && vb.width <= 50 && vb.height <= 50) return true;
-                const r = svg.getBoundingClientRect && svg.getBoundingClientRect();
-                if (r && r.width && r.height && r.width <= 50 && r.height <= 50) return true;
-              } catch { }
-              return false;
-            }
-            function lockSmallSvgSize(svg) {
-              try {
-                const r = svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
-                const w = (r && r.width) ? Math.round(r.width) : null;
-                const h = (r && r.height) ? Math.round(r.height) : null;
-                if (w) svg.style.setProperty('width', w + 'px', 'important');
-                if (h) svg.style.setProperty('height', h + 'px', 'important');
-                svg.style.setProperty('max-width', 'none', 'important');
-              } catch { }
-            }
-            function fixSvg(svg) {
-              if (!svg) return;
-              // Do not alter hero banner SVG sizing; it may rely on explicit width/height
-              try { if (svg.closest && svg.closest('.hero-banner')) return; } catch { }
-              if (isSmallSvg(svg)) { lockSmallSvgSize(svg); return; }
-              try { svg.removeAttribute('width'); } catch { }
-              try { svg.removeAttribute('height'); } catch { }
-              svg.style.maxWidth = '100%';
-              svg.style.width = '100%';
-              svg.style.height = 'auto';
-              if (!svg.getAttribute('preserveAspectRatio')) svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-            }
-            document.querySelectorAll('svg').forEach((svg) => { if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
-            document.querySelectorAll('.mermaid, .mermaid svg').forEach((el) => {
-              if (el.tagName && el.tagName.toLowerCase() === 'svg') fixSvg(el);
-              else { el.style.display = 'block'; el.style.width = '100%'; el.style.maxWidth = '100%'; }
-            });
-            document.querySelectorAll('iframe, embed, object').forEach((el) => {
-              el.style.width = '100%';
-              el.style.maxWidth = '100%';
-              try { el.removeAttribute('width'); } catch { }
-              try {
-                const doc = (el.tagName.toLowerCase() === 'object' ? el.contentDocument : el.contentDocument);
-                if (doc && doc.head) {
-                  const s = doc.createElement('style');
-                  s.textContent = 'html,body{overflow-x:hidden;} svg,canvas,img,video{max-width:100%!important;height:auto!important;} svg[width]{width:100%!important}';
-                  doc.head.appendChild(s);
-                  doc.querySelectorAll('svg').forEach((svg) => { if (isSmallSvg(svg)) lockSmallSvgSize(svg); else fixSvg(svg); });
-                }
-              } catch (_) { }
-            });
-          });
-        } catch { }
       } catch { }
 
       // Inject styles for PDF
       let pdfCssHandle = null;
       try {
         if (bookMode) {
-          // Mode livre : injecter le CSS livre complet
           console.log('📚 Applying book styles…');
           const bookCssPath = resolve(cwd, 'src', 'styles', '_print-book.css');
           const bookCss = await fs.readFile(bookCssPath, 'utf-8');
           pdfCssHandle = await page.addStyleTag({ content: bookCss });
           await page.waitForTimeout(500);
         } else {
-          // Mode normal : styles responsive de base
           pdfCssHandle = await page.addStyleTag({
             content: `
             /* General container safety */
             html, body { overflow-x: hidden !important; }
 
-            /* Make all vector/bitmap media responsive for print */
+            /* Make all media responsive for print */
             svg, canvas, img, video { max-width: 100% !important; height: auto !important; }
-            /* Mermaid diagrams */
             .mermaid, .mermaid svg { display: block; width: 100% !important; max-width: 100% !important; height: auto !important; }
-            /* Any explicit width attributes */
             svg[width] { width: 100% !important; }
-            /* Iframes and similar embeds */
             iframe, embed, object { width: 100% !important; max-width: 100% !important; height: auto; }
 
-            /* HtmlEmbed wrappers (defensive) */
+            /* Embeds are screenshots - just ensure they scale */
             .html-embed, .html-embed__card { max-width: 100% !important; width: 100% !important; }
-            .html-embed__card > div[id^="frag-"] { width: 100% !important; max-width: 100% !important; }
+            .html-embed img { width: 100% !important; height: auto !important; display: block; }
 
-            /* Banner centering & visibility */
-            .hero .points { mix-blend-mode: normal !important; }
-            /* Do NOT force a fixed height to avoid clipping in PDF */
-            .hero-banner { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; }
-            /* Generalize banner styles for all banner types */
-            .hero-banner svg,
-            .hero-banner canvas,
-            .hero-banner .d3-galaxy,
-            .hero-banner .threejs-galaxy,
-            .hero-banner .d3-latent-space,
-            .hero-banner .neural-flow,
-            .hero-banner .molecular-space,
-            .hero-banner [class*="banner"] {
+            /* --- Cover page: hero + meta centered, then page break --- */
+            .hero {
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              min-height: 50vh;
+              padding-top: 15vh !important;
+            }
+
+            /* Banner: 80% width, centered */
+            .hero-banner {
+              width: 80% !important;
+              margin-left: auto !important;
+              margin-right: auto !important;
+              overflow: hidden;
+            }
+            .hero-banner > * {
               width: 100% !important;
               height: auto !important;
-              max-width: 980px !important;
+              max-width: 100% !important;
+              display: block;
             }
 
-            /* ============================================================ */
-            /* Fix complex flexbox layouts in embeds for narrow PDF viewport */
-            /* ============================================================ */
-            
-            /* Neural network embed: force column layout */
-            .d3-neural .panel {
-              flex-direction: column !important;
-              gap: 16px !important;
-            }
-            .d3-neural .left,
-            .d3-neural .right {
-              flex: 0 0 100% !important;
-              max-width: 100% !important;
-              min-width: 0 !important;
-              width: 100% !important;
-            }
-            .d3-neural .arrow-sep {
-              display: none !important;
-            }
-            .d3-neural .canvas-wrap {
-              max-width: 280px !important;
-              margin: 0 auto !important;
-            }
-            .d3-neural canvas {
-              max-width: 100% !important;
-              height: auto !important;
-            }
-            .d3-neural .right svg {
-              width: 100% !important;
-              height: auto !important;
-              min-height: 300px !important;
-            }
-
-            /* Generic fix for any two-column panel layouts */
-            .html-embed__card .panel {
-              flex-direction: column !important;
-            }
-            .html-embed__card .panel > * {
-              flex: 0 0 auto !important;
-              max-width: 100% !important;
-              width: 100% !important;
-            }
-
-            /* Controls should wrap */
-            .html-embed__card .controls {
-              flex-wrap: wrap !important;
-              justify-content: flex-start !important;
-            }
-
-            /* Chart cards - ensure full width */
-            .html-embed__card .chart-card {
-              width: 100% !important;
-              max-width: 100% !important;
+            /* Force page break after meta (end of cover page) */
+            header.meta {
+              page-break-after: always !important;
+              break-after: page !important;
             }
           ` });
         }
@@ -678,5 +730,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
-

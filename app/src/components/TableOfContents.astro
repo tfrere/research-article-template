@@ -13,10 +13,46 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
   <div class="title">Table of Contents</div>
   <div id="article-toc-placeholder"></div>
 </nav>
-<details class="table-of-contents-mobile toc-loading">
-  <summary>Table of Contents</summary>
-  <div id="article-toc-mobile-placeholder"></div>
-</details>
+
+<!-- Mobile sidebar -->
+<button class="toc-mobile-toggle" aria-label="Open table of contents" aria-expanded="false">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+</button>
+<div class="toc-mobile-backdrop" aria-hidden="true"></div>
+<aside class="toc-mobile-sidebar toc-loading" aria-label="Table of Contents">
+  <div class="toc-mobile-sidebar__header">
+    <span class="toc-mobile-sidebar__title">Table of Contents</span>
+    <div class="toc-mobile-sidebar__actions">
+      <button class="toc-mobile-sidebar__theme" aria-label="Toggle color theme">
+        <svg class="icon light" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="4"></line>
+          <line x1="12" y1="20" x2="12" y2="23"></line>
+          <line x1="1" y1="12" x2="4" y2="12"></line>
+          <line x1="20" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line>
+          <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line>
+          <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line>
+          <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="icon dark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+      <button class="toc-mobile-sidebar__close" aria-label="Close table of contents">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="toc-mobile-sidebar__body" id="article-toc-mobile-placeholder"></div>
+</aside>
 
 <script is:inline>
   // Build TOC from article headings (h2/h3/h4) and render into the sticky aside
@@ -123,9 +159,9 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       style.id = "toc-collapse-style";
       style.textContent = `
         .table-of-contents nav.table-of-contents-collapsible li > ul,
-        details.table-of-contents-mobile nav.table-of-contents-collapsible li > ul { overflow: hidden; transition: height 200ms ease; }
+        .toc-mobile-sidebar nav.table-of-contents-collapsible li > ul { overflow: hidden; transition: height 200ms ease; }
         .table-of-contents nav.table-of-contents-collapsible li.collapsed > ul,
-        details.table-of-contents-mobile nav.table-of-contents-collapsible li.collapsed > ul { display: block; }
+        .toc-mobile-sidebar nav.table-of-contents-collapsible li.collapsed > ul { display: block; }
       `;
       document.head.appendChild(style);
     };
@@ -741,7 +777,7 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
           setTimeout(() => {
             const tocElement = document.querySelector(".table-of-contents");
             const tocMobileElement = document.querySelector(
-              ".table-of-contents-mobile",
+              ".toc-mobile-sidebar",
             );
             if (tocElement) {
               tocElement.classList.remove("toc-loading");
@@ -820,18 +856,71 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
       });
     });
 
-    // Close mobile accordion when a link inside it is clicked
+    // Mobile sidebar open/close logic
+    const sidebar = document.querySelector(".toc-mobile-sidebar");
+    const backdrop = document.querySelector(".toc-mobile-backdrop");
+    const toggleBtn = document.querySelector(".toc-mobile-toggle");
+    const closeBtn = document.querySelector(".toc-mobile-sidebar__close");
+
+    const openSidebar = () => {
+      if (!sidebar || !backdrop || !toggleBtn) return;
+      sidebar.classList.add("open");
+      backdrop.classList.add("open");
+      toggleBtn.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+
+      // Scroll to the active link so the user sees where they are
+      requestAnimationFrame(() => {
+        const activeLink = sidebar.querySelector("a.active");
+        if (activeLink) {
+          const body = sidebar.querySelector(".toc-mobile-sidebar__body");
+          if (body) {
+            const linkTop = activeLink.offsetTop - body.offsetTop;
+            body.scrollTop = Math.max(0, linkTop - body.clientHeight / 3);
+          }
+        }
+      });
+    };
+    const closeSidebar = () => {
+      if (!sidebar || !backdrop || !toggleBtn) return;
+      sidebar.classList.remove("open");
+      backdrop.classList.remove("open");
+      toggleBtn.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
+    };
+
+    if (toggleBtn) toggleBtn.addEventListener("click", openSidebar);
+    if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+    if (backdrop) backdrop.addEventListener("click", closeSidebar);
+
+    // Sidebar theme toggle — reuses the same logic as the main #theme-toggle
+    const sidebarThemeBtn = document.querySelector(".toc-mobile-sidebar__theme");
+    if (sidebarThemeBtn) {
+      sidebarThemeBtn.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        localStorage.setItem("theme", next);
+        document.documentElement.dataset.theme = next;
+      });
+    }
+
+    // Close sidebar when a TOC link is clicked
     if (holderMobile) {
-      const details = holderMobile.closest("details");
       holderMobile.addEventListener("click", (ev) => {
         const target = ev.target;
         const anchor =
           target && "closest" in target ? target.closest("a") : null;
-        if (anchor instanceof HTMLAnchorElement && details && details.open) {
-          details.open = false;
+        if (anchor instanceof HTMLAnchorElement) {
+          closeSidebar();
         }
       });
     }
+
+    // Close sidebar on Escape key
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && sidebar?.classList.contains("open")) {
+        closeSidebar();
+      }
+    });
   };
 
   if (document.readyState === "loading") {
@@ -844,13 +933,13 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
 <style is:global>
   /* Fade-in animation pour le chargement du TOC */
   .table-of-contents.toc-loading,
-  .table-of-contents-mobile.toc-loading {
+  .toc-mobile-sidebar.toc-loading {
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
   }
 
   .table-of-contents.toc-loaded,
-  .table-of-contents-mobile.toc-loaded {
+  .toc-mobile-sidebar.toc-loaded {
     opacity: 1;
   }
 
@@ -904,84 +993,160 @@ const { tableOfContentAutoCollapse = false } = Astro.props as Props;
     text-decoration: underline;
   }
 
-  /* Mobile accordion */
-  .table-of-contents-mobile {
-    display: none;
-    margin: 8px 0 16px;
-  }
-
-  .table-of-contents-mobile > summary {
-    cursor: pointer;
-    list-style: none;
-    padding: var(--spacing-3) var(--spacing-4);
+  /* ------------------------------------------------------------------ */
+  /* Mobile sidebar toggle button                                       */
+  /* ------------------------------------------------------------------ */
+  .toc-mobile-toggle {
+    display: none; /* hidden on desktop */
+    position: fixed;
+    top: var(--spacing-4);
+    left: var(--spacing-4);
+    z-index: var(--z-overlay);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: var(--page-bg);
     color: var(--text-color);
-    font-weight: 600;
-    position: relative;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    transition: transform 150ms ease, box-shadow 150ms ease;
   }
 
-  .table-of-contents-mobile[open] > summary {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+  .toc-mobile-toggle:active {
+    transform: scale(0.92);
   }
 
-  /* Disclosure arrow for mobile summary */
-  .table-of-contents-mobile > summary::after {
-    content: "";
-    position: absolute;
-    right: var(--spacing-4);
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid currentColor;
-    border-bottom: 2px solid currentColor;
-    transform: translateY(-70%) rotate(45deg);
-    transition: transform 150ms ease;
-    opacity: 0.7;
+  /* ------------------------------------------------------------------ */
+  /* Mobile sidebar backdrop                                             */
+  /* ------------------------------------------------------------------ */
+  .toc-mobile-backdrop {
+    display: none; /* hidden on desktop */
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-overlay) + 1);
+    background: rgba(0,0,0,.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease;
+  }
+  .toc-mobile-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
-  .table-of-contents-mobile[open] > summary::after {
-    transform: translateY(-30%) rotate(-135deg);
+  /* ------------------------------------------------------------------ */
+  /* Mobile sidebar panel                                                */
+  /* ------------------------------------------------------------------ */
+  .toc-mobile-sidebar {
+    display: none; /* hidden on desktop */
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: calc(var(--z-overlay) + 2);
+    width: min(320px, 85vw);
+    background: var(--page-bg);
+    border-right: 1px solid var(--border-color);
+    transform: translateX(-100%);
+    transition: transform 300ms cubic-bezier(.4,0,.2,1);
+    flex-direction: column;
+  }
+  .toc-mobile-sidebar.open {
+    transform: translateX(0);
   }
 
-  .table-of-contents-mobile nav {
-    border-left: none;
-    padding: 10px 12px;
-    font-size: 14px;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+  .toc-mobile-sidebar__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
   }
 
-  .table-of-contents-mobile nav ul {
+  .toc-mobile-sidebar__title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-color);
+  }
+
+  .toc-mobile-sidebar__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .toc-mobile-sidebar__close,
+  .toc-mobile-sidebar__theme {
+    background: none;
+    border: none;
+    color: var(--muted-color);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 150ms ease, background 150ms ease;
+  }
+  .toc-mobile-sidebar__close:hover,
+  .toc-mobile-sidebar__theme:hover {
+    color: var(--text-color);
+    background: var(--surface-bg);
+  }
+
+  /* Theme icon visibility in sidebar */
+  .toc-mobile-sidebar__theme .icon.dark {
+    display: none;
+  }
+  [data-theme="dark"] .toc-mobile-sidebar__theme .icon.light {
+    display: none;
+  }
+  [data-theme="dark"] .toc-mobile-sidebar__theme .icon.dark {
+    display: inline;
+  }
+
+  .toc-mobile-sidebar__body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--spacing-3) var(--spacing-4) var(--spacing-6);
+  }
+
+  /* TOC styles inside sidebar */
+  .toc-mobile-sidebar nav ul {
     margin: 0 0 6px;
     padding-left: 1em;
   }
 
-  .table-of-contents-mobile nav li {
+  .toc-mobile-sidebar nav li {
     list-style: none;
-    margin: 0.25em 0;
+    margin: 0.35em 0;
   }
 
-  .table-of-contents-mobile nav a,
-  .table-of-contents-mobile nav a:link,
-  .table-of-contents-mobile nav a:visited {
+  .toc-mobile-sidebar nav a,
+  .toc-mobile-sidebar nav a:link,
+  .toc-mobile-sidebar nav a:visited {
     color: var(--text-color);
     text-decoration: none;
     border-bottom: none;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
-  .table-of-contents-mobile nav > ul > li > a {
+  .toc-mobile-sidebar nav > ul > li > a {
     font-weight: 700;
   }
 
-  .table-of-contents-mobile nav a:hover {
+  .toc-mobile-sidebar nav a:hover {
     text-decoration: underline solid var(--muted-color);
   }
 
-  .table-of-contents-mobile nav a.active {
+  .toc-mobile-sidebar nav a.active {
+    color: var(--primary-color);
     text-decoration: underline;
   }
 </style>

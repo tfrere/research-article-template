@@ -132,10 +132,11 @@ export function extractImages(content) {
 /**
  * Split a markdown table row on pipe characters, respecting backtick spans.
  * Pipes inside `inline code` are treated as literal text, not separators.
- * Returns the array of trimmed, non-empty cell strings.
+ * Strips the leading/trailing empty strings from outer pipes but keeps
+ * internal empty cells (e.g. | val | | → ['val', '']).
  */
 function splitTableRow(row) {
-    const cells = [];
+    const raw = [];
     let current = '';
     let inBacktick = false;
     
@@ -145,14 +146,22 @@ function splitTableRow(row) {
             inBacktick = !inBacktick;
             current += ch;
         } else if (ch === '|' && !inBacktick) {
-            cells.push(current);
+            raw.push(current);
             current = '';
         } else {
             current += ch;
         }
     }
-    cells.push(current);
-    return cells;
+    raw.push(current);
+    
+    // Remove leading/trailing empty strings from outer | delimiters
+    // but preserve internal empty cells
+    let start = 0;
+    let end = raw.length - 1;
+    while (start <= end && !raw[start].trim()) start++;
+    while (end >= start && !raw[end].trim()) end--;
+    
+    return raw.slice(start, end + 1).map(c => c.trim());
 }
 
 /**
@@ -162,7 +171,7 @@ function splitTableRow(row) {
  * cells back together to match the expected column count.
  */
 function parseTableRow(row, expectedCols) {
-    let cells = splitTableRow(row).filter(c => c.trim());
+    let cells = splitTableRow(row);
     
     if (cells.length <= expectedCols) return cells;
     
@@ -200,19 +209,20 @@ export function extractTables(content) {
         const rows = tableContent.split('\n').filter(row => row.trim());
         
         if (rows.length >= 3) {
-            // Parse header
+            // Parse header (filter empty = no empty header columns)
             const headerRow = rows[0];
             const headers = splitTableRow(headerRow)
-                .filter(cell => cell.trim())
-                .map(cell => markdownToHtml(cell.trim()));
+                .filter(cell => cell !== '')
+                .map(cell => markdownToHtml(cell));
             
             const expectedCols = headers.length;
             
             // Parse data rows (skip separator at index 1)
             // Use parseTableRow to handle overflow pipes (e.g. union types)
+            // Keep empty cells to preserve column alignment
             const dataRows = rows.slice(2).map(row => {
                 return parseTableRow(row, expectedCols)
-                    .map(cell => markdownToHtml(cell.trim()));
+                    .map(cell => markdownToHtml(cell));
             });
             
             tables.push({
@@ -976,14 +986,14 @@ function extractAllVisualsWithPosition(rawContent) {
         if (rows.length >= 3) {
             const headerRow = rows[0];
             const headers = splitTableRow(headerRow)
-                .filter(cell => cell.trim())
-                .map(cell => markdownToHtml(cell.trim()));
+                .filter(cell => cell !== '')
+                .map(cell => markdownToHtml(cell));
             
             const expectedCols = headers.length;
             
             const dataRows = rows.slice(2).map(row => {
                 return parseTableRow(row, expectedCols)
-                    .map(cell => markdownToHtml(cell.trim()));
+                    .map(cell => markdownToHtml(cell));
             });
             
             visuals.push({

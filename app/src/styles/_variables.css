@@ -3,10 +3,12 @@
 /* ============================================================================ */
 :root {
   /* Neutrals */
+  --neutral-900: rgb(17, 24, 39);
   --neutral-600: rgb(107, 114, 128);
   --neutral-400: rgb(185, 185, 185);
   --neutral-300: rgb(228, 228, 228);
   --neutral-200: rgb(245, 245, 245);
+  --neutral-50: rgb(249, 250, 251);
 
   --default-font-family: Source Sans Pro, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;

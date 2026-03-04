@@ -59,7 +59,9 @@
 
   .table-of-contents,
   .right-aside,
-  .table-of-contents-mobile {
+  .toc-mobile-toggle,
+  .toc-mobile-backdrop,
+  .toc-mobile-sidebar {
     display: none !important;
   }
 
@@ -70,17 +72,6 @@
   /* Avoid page breaks inside complex visual blocks */
   .hero,
   .hero-banner,
-  .hero-banner svg,
-  .hero-banner canvas,
-  .hero-banner .d3-galaxy,
-  .hero-banner .threejs-galaxy,
-  .hero-banner .d3-latent-space,
-  .hero-banner .neural-flow,
-  .hero-banner .molecular-space,
-  .hero-banner [class*="banner"],
-  .d3-banner,
-  .d3-banner svg,
-  .html-embed__card,
   .html-embed__card,
   .js-plotly-plot,
   figure,
@@ -96,6 +87,28 @@
   /* Prefer keeping header+lead together */
   .hero {
     page-break-after: avoid;
+  }
+
+  /* Center the hero banner and constrain all its children generically */
+  .hero-banner {
+    width: 100% !important;
+    max-width: 980px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow: hidden;
+  }
+
+  .hero-banner > *,
+  .hero-banner svg,
+  .hero-banner canvas,
+  .hero-banner img,
+  .hero-banner video {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: block;
   }
 }
 

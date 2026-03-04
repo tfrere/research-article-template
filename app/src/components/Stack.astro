@@ -17,25 +17,7 @@ const {
     id,
 } = Astro.props as Props;
 
-// Generate flex properties based on layout
-const getFlexProperties = () => {
-    switch (layout) {
-        case "2-column":
-            return { flexBasis: "50%", maxWidth: "50%" };
-        case "3-column":
-            return { flexBasis: "33.333%", maxWidth: "33.333%" };
-        case "4-column":
-            return { flexBasis: "25%", maxWidth: "25%" };
-        case "auto":
-            return { flexBasis: "auto", maxWidth: "none" };
-        default:
-            // By default, all children on one line with equal width
-            return { flexBasis: "auto", maxWidth: "none" };
-    }
-};
-
 const getGapSize = () => {
-    // If it's a predefined size, return the corresponding value
     switch (gap) {
         case "small":
             return "0.5rem";
@@ -44,12 +26,10 @@ const getGapSize = () => {
         case "large":
             return "1.5rem";
         default:
-            // If it's a custom value, return it as-is (e.g., "2rem", "20px", "1.5em")
             return gap;
     }
 };
 
-const flexProps = getFlexProperties();
 const gapSize = getGapSize();
 ---
 
@@ -57,7 +37,7 @@ const gapSize = getGapSize();
     class={`stack ${className || ""}`}
     data-layout={layout}
     data-gap={gap}
-    {id}
+    id={id}
     style={`gap: ${gapSize}`}
 >
     <slot />

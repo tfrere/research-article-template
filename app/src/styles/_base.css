@@ -4,6 +4,7 @@ html {
   font-size: 16px;
   line-height: 1.6;
   background-color: var(--page-bg);
+  overflow-x: hidden;
 }
 
 .content-grid main {
@@ -43,30 +44,11 @@ html {
   text-decoration: none;
   background: var(--surface-bg);
   border-bottom: 1px solid color-mix(in srgb, var(--primary-color, #007AFF) 40%, transparent);
-  ;
 }
-
-/* External links with arrow indicator */
-/* .content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"])::after {
-  content: "↗";
-  display: inline-block;
-  margin-left: 2px;
-  font-size: 0.5em;
-  opacity: 0.8;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  transform: translateY(-5px);
-  font-weight: 600;
-} */
-
-/* External links with arrow indicator */
-/* .content-grid main a[href^="http"]:not([href*="localhost"]):not([href*="127.0.0.1"]):not([href*="0.0.0.0"]) {
-  white-space: nowrap;
-} */
 
 .content-grid main a:hover {
   color: var(--primary-color-hover);
   border-bottom: 1px solid color-mix(in srgb, var(--primary-color, #007AFF) 40%, transparent);
-  ;
 }
 
 /* Do not underline heading links inside the article (not the TOC) */

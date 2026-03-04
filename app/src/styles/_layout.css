@@ -39,8 +39,16 @@
     display: none;
   }
 
-  .table-of-contents-mobile {
+  .toc-mobile-toggle {
+    display: flex;
+  }
+
+  .toc-mobile-backdrop {
     display: block;
+  }
+
+  .toc-mobile-sidebar {
+    display: flex;
   }
 
   .footer-inner {
@@ -132,16 +140,38 @@
 #theme-toggle {
   position: absolute;
   top: var(--spacing-4);
-  left: var(--spacing-3);
+  left: var(--spacing-4);
   margin: 0;
   z-index: var(--z-overlay);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--page-bg);
+  box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-color);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+#theme-toggle:active {
+  transform: scale(0.92);
+}
+
+@media (--bp-content-collapse) {
+  #theme-toggle {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------------------- */
 /* Hero meta bar responsiveness                                               */
 /* Two columns at collapse breakpoint, then one column below small screens    */
 /* ------------------------------------------------------------------------- */
-@media (--bp-sm) {
+@media (--bp-md) {
   header.meta .meta-container {
     display: flex;
     flex-wrap: wrap;

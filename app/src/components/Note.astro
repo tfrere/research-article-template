@@ -15,8 +15,6 @@ const {
 const wrapperClass = ["note", `note--${variant}`, className]
   .filter(Boolean)
   .join(" ");
-const hasHeader =
-  (emoji && String(emoji).length > 0) || (title && String(title).length > 0);
 ---
 
 <div class={wrapperClass} {...props}>

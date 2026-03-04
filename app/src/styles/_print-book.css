@@ -1,668 +1,513 @@
-/* ============================================================================ */
-/* CSS Paged Media - Style Livre Professionnel AAA */
-/* Utilise les typos du site: Source Sans Pro pour titres, Georgia pour texte */
-/* Note: Source Sans Pro est déjà chargée par le site via _base.css */
-/* ============================================================================ */
+/* ==========================================================================
+   Book Print Styles — "A Book Apart" inspired
+   
+   Design principles:
+   - Georgia body, Source Sans Pro headings (ABA uses Expo Serif + Titling Gothic)
+   - Single accent color (#E85D3A — warm orange-red, ABA signature)
+   - Generous white space, the page breathes
+   - Chapter openings: large number + title on their own page
+   - Figures numbered and captioned cleanly
+   - Minimal decoration — typography does the work
+   ========================================================================== */
 
 @media print {
-  /* ========================================================================== */
-  /* Configuration des pages */
-  /* ========================================================================== */
 
+  /* PAGE */
   @page {
     size: A4;
-    margin-top: 20mm;
-    margin-bottom: 25mm;
-    margin-left: 25mm;
-    margin-right: 20mm;
-
-    /* Footer avec numéro de page */
-    @bottom-center {
-      content: counter(page);
-      font-size: 10pt;
-      font-family: "Source Sans Pro", sans-serif;
-      color: #666;
-    }
+    margin: 28mm 24mm 32mm 24mm;
   }
 
-  /* Pages de gauche (verso) - marge intérieure à droite pour reliure */
-  @page :left {
-    margin-left: 20mm;
-    margin-right: 25mm;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.01) 0%, transparent 15mm);
-
-    @top-left {
-      content: "· " string(chapter-title) " ·";
-      font-size: 8.5pt;
-      font-style: italic;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.8pt;
-      font-weight: 400;
-      font-family: "Source Sans Pro", sans-serif;
-    }
-
-    @bottom-left {
-      content: "〈 " counter(page) " 〉";
-      font-size: 10pt;
-      font-family: "Source Sans Pro", sans-serif;
-      color: #555;
-      letter-spacing: 1pt;
-      font-weight: 300;
-    }
-
-    @bottom-center {
-      content: none;
-    }
-  }
-
-  /* Pages de droite (recto) - marge intérieure à gauche pour reliure */
-  @page :right {
-    margin-left: 25mm;
-    margin-right: 20mm;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.01) 0%, transparent 15mm);
-
-    @top-right {
-      content: "· " string(section-title) " ·";
-      font-size: 8.5pt;
-      font-style: italic;
-      color: #888;
-      letter-spacing: 0.8pt;
-      font-weight: 400;
-      font-family: "Source Sans Pro", sans-serif;
-    }
-
-    @bottom-right {
-      content: "〈 " counter(page) " 〉";
-      font-size: 10pt;
-      font-family: "Source Sans Pro", sans-serif;
-      color: #555;
-      letter-spacing: 1pt;
-      font-weight: 300;
-    }
-
-    @bottom-center {
-      content: none;
-    }
-  }
-
-  /* Première page (titre) - pas de headers/footers + fond spécial */
-  @page :first {
-    margin-top: 40mm;
-    margin-bottom: 40mm;
-    background:
-      /* Motif géométrique subtil en haut */
-      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.008) 48%, rgba(0, 0, 0, 0.008) 52%, transparent 52%),
-      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.008) 48%, rgba(0, 0, 0, 0.008) 52%, transparent 52%),
-      /* Dégradés radiaux pour profondeur */
-      radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.035) 0%, transparent 45%),
-      radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.035) 0%, transparent 45%),
-      /* Base légèrement teintée */
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.012) 0%, rgba(0, 0, 0, 0.002) 100%);
-    background-size: 40mm 40mm, 40mm 40mm, 100% 100%, 100% 100%, 100% 100%;
-    background-position: 0 0, 20mm 20mm, center, center, center;
-
-    @top-left {
-      content: none;
-    }
-
-    @top-right {
-      content: none;
-    }
-
-    @bottom-left {
-      content: none;
-    }
-
-    @bottom-right {
-      content: none;
-    }
-
-    @bottom-center {
-      content: none;
-    }
-  }
-
-  /* Pages blanches (pour chapitres commençant à droite) */
-  @page blank {
-    background: white;
-
-    @top-left {
-      content: none;
-    }
-
-    @top-right {
-      content: none;
-    }
-
-    @bottom-left {
-      content: none;
-    }
-
-    @bottom-right {
-      content: none;
-    }
-
-    @bottom-center {
-      content: none;
-    }
-  }
-
-  /* Page de chapitre - commence toujours à droite avec fond spécial */
-  @page chapter {
-    background:
-      /* Barre décorative en haut */
-      linear-gradient(to right, rgba(0, 0, 0, 0.08) 0mm, rgba(0, 0, 0, 0.05) 15mm, transparent 40mm),
-      /* Motif géométrique subtil */
-      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.006) 48%, rgba(0, 0, 0, 0.006) 52%, transparent 52%),
-      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.006) 48%, rgba(0, 0, 0, 0.006) 52%, transparent 52%),
-      /* Dégradé doux du haut */
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.025) 0%, transparent 35mm),
-      /* Accent latéral gauche */
-      radial-gradient(ellipse at 0% 25%, rgba(0, 0, 0, 0.02) 0%, transparent 60%);
-    background-size: 100% 3pt, 30mm 30mm, 30mm 30mm, 100% 100%, 100% 100%;
-    background-position: 0 0, 0 0, 15mm 15mm, center, left center;
-    background-repeat: no-repeat, repeat, repeat, no-repeat, no-repeat;
-
-    @top-left {
-      content: none;
-    }
-
-    @top-right {
-      content: none;
-    }
-  }
-
-  /* ========================================================================== */
-  /* Typographie générale */
-  /* ========================================================================== */
+  /* RESET */
+  *, *::before, *::after { box-sizing: border-box; }
 
   html {
-    font-size: 11pt;
-    line-height: 1.6;
+    font-size: 11.5pt;
+    line-height: 1.65;
   }
 
   body {
-    font-family: "Georgia", "Palatino", "Times New Roman", serif;
+    font-family: Georgia, "Palatino Linotype", "Book Antiqua", Palatino, serif;
     color: #1a1a1a;
     background: white;
     margin: 0;
-    hyphens: auto;
-    -webkit-hyphens: auto;
+    padding: 0;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Éviter les veuves et orphelines */
-  p,
-  li {
+  /* LAYOUT */
+  .content-grid {
+    display: block !important;
+    max-width: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* ========================================================================
+     HIDDEN ELEMENTS
+     ======================================================================== */
+
+  #theme-toggle,
+  .table-of-contents,
+  .toc-mobile-toggle,
+  .toc-mobile-backdrop,
+  .toc-mobile-sidebar,
+  .right-aside,
+  nav:not(.book-toc),
+  .code-lang-chip,
+  .meta-container-cell--pdf,
+  .interactive-only,
+  .html-embed__download,
+  .accordion__chevron,
+  button,
+  .button,
+  a.button {
+    display: none !important;
+  }
+
+  /* ========================================================================
+     TITLE PAGE
+     ======================================================================== */
+
+  .hero {
+    text-align: left;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 220mm;
+    padding: 0;
+  }
+
+  .hero-title {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 36pt;
+    font-weight: 800;
+    line-height: 1.08;
+    margin: 0 0 8mm;
+    color: #1a1a1a;
+    letter-spacing: -0.8pt;
+  }
+
+  .hero-banner {
+    width: 100%;
+    max-width: 130mm;
+    margin: 0 auto 15mm;
+    overflow: hidden;
+  }
+
+  .hero-banner svg {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 70mm !important;
+    display: block;
+  }
+
+  .hero-desc {
+    font-size: 13pt;
+    color: #555;
+    font-style: normal;
+    margin: 0 0 0;
+    max-width: 100%;
+    line-height: 1.5;
+    border-top: 0.75pt solid #1a1a1a;
+    padding-top: 4mm;
+  }
+
+  .hero a {
+    border: none;
+    text-decoration: none;
+    font-weight: inherit;
+    color: inherit;
+  }
+
+  /* ========================================================================
+     META (author, date, DOI) — right after title page
+     ======================================================================== */
+
+  .meta {
+    padding: 0;
+    margin: 0;
+    border: none;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 200mm;
+    padding-bottom: 25mm;
+  }
+
+  .meta-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5mm 15mm;
+    font-size: 9.5pt;
+    color: #444;
+    max-width: none;
+    padding: 0;
+  }
+
+  .meta-container-cell {
+    text-align: left;
+    max-width: none;
+  }
+
+  .meta-container-cell h3 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 1.5pt;
+    color: #999;
+    margin: 0 0 1.5mm;
+    font-weight: 600;
+  }
+
+  .meta-container-cell p,
+  .meta-container-cell ul {
+    margin: 0;
+  }
+
+  .meta a {
+    color: #1a1a1a !important;
+    text-decoration: none !important;
+    border: none !important;
+  }
+
+  .meta-container-cell p,
+  .meta-container-cell a {
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  .meta h3,
+  .hero h3,
+  header h3 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  .authors {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .authors li {
+    display: inline;
+  }
+
+  .authors li::after {
+    content: ", ";
+  }
+
+  .authors li:last-child::after {
+    content: "";
+  }
+
+  .authors li {
+    padding: 0;
+  }
+
+  /* ========================================================================
+     TABLE OF CONTENTS
+     ======================================================================== */
+
+  .book-toc {
+    break-after: page;
+    padding: 0;
+    break-inside: avoid;
+  }
+
+  .book-toc__title {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3pt;
+    text-align: left;
+    margin: 0 0 10mm;
+    color: #1a1a1a;
+    padding: 0;
+    border: none;
+    break-before: auto;
+    counter-increment: none;
+  }
+
+  .book-toc__title::before,
+  .book-toc__title::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .book-toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .book-toc__chapter {
+    padding: 1.5mm 0;
+    border: none;
+    display: grid;
+    grid-template-columns: 10mm 1fr;
+    align-items: baseline;
+    gap: 0;
+  }
+
+  .book-toc__number {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #E85D3A;
+    text-align: right;
+    padding-right: 4mm;
+  }
+
+  .book-toc__label {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .book-toc__sections {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 1mm 0;
+    grid-column: 2;
+  }
+
+  .book-toc__section {
+    display: grid;
+    grid-template-columns: 10mm 1fr;
+    align-items: baseline;
+    padding: 0.5mm 0;
+    font-size: 9pt;
+    color: #666;
+  }
+
+  .book-toc__section-number {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #999;
+    text-align: right;
+    padding-right: 3mm;
+  }
+
+  .book-toc__section-number {
+    font-weight: 400;
+    color: #aaa;
+    min-width: 10mm;
+  }
+
+  /* ========================================================================
+     HEADINGS
+     ======================================================================== */
+
+  /* ── Chapter opener (dedicated page) ── */
+
+  .book-chapter-opener {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 160mm;
+    padding-bottom: 30mm;
+    break-before: page;
+    break-after: page;
+    break-inside: avoid;
+    page-break-before: always;
+    page-break-after: always;
+  }
+
+  h2 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 28pt;
+    font-weight: 800;
+    margin: 0;
+    padding: 0;
+    line-height: 1.1;
+    color: #1a1a1a;
+    letter-spacing: -0.5pt;
+    break-after: avoid-page;
+  }
+
+  .book-chapter-opener h2 {
+    break-before: auto;
+    border-bottom: 0.75pt solid #1a1a1a;
+    padding-bottom: 5mm;
+  }
+
+  h2:not(.book-chapter-opener h2) {
+    break-before: page;
+  }
+
+  h2[data-chapter-num]::before {
+    content: attr(data-chapter-num);
+    display: block;
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 80pt;
+    font-weight: 800;
+    color: #E85D3A;
+    line-height: 1;
+    margin-bottom: 8mm;
+    letter-spacing: -1pt;
+  }
+
+  h2::after {
+    content: none;
+  }
+
+  .hero + section h2:first-child,
+  .hero + div h2:first-child {
+    break-before: auto;
+  }
+
+  .hero + section h2:first-child::before,
+  .hero + div h2:first-child::before,
+  .hero + section h2:first-child::after,
+  .hero + div h2:first-child::after {
+    content: none;
+  }
+
+  h3 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 10mm 0 4mm;
+    line-height: 1.3;
+    color: #1a1a1a;
+    break-after: avoid-page;
+  }
+
+  h3[data-section-num]::before {
+    content: attr(data-section-num) "\2003";
+    font-weight: 400;
+    color: #E85D3A;
+    font-size: 12pt;
+  }
+
+  h4 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    font-weight: 700;
+    margin: 7mm 0 3mm;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    break-after: avoid-page;
+  }
+
+  h5, h6 {
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    margin: 5mm 0 2mm;
+    color: #333;
+  }
+
+  /* ========================================================================
+     BODY TEXT
+     ======================================================================== */
+
+  p {
+    text-align: left;
+    margin: 0 0 3.5mm;
+    line-height: 1.7;
+    text-indent: 0;
+    hyphens: auto;
+    -webkit-hyphens: auto;
     orphans: 3;
     widows: 3;
   }
 
-  /* ========================================================================== */
-  /* Titres et structure */
-  /* ========================================================================== */
-
-  /* ========================================================================== */
-  /* PAGE DE TITRE - DESIGN AAA */
-  /* ========================================================================== */
-
-  .hero {
-    text-align: center;
-    margin-bottom: 0;
-    break-after: page;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 220mm;
-    padding-top: 30mm;
-  }
-
-  /* Ornement supérieur */
-  .hero::before {
-    content: "";
-    display: block;
-    width: 60mm;
-    height: 1pt;
-    background: linear-gradient(to right, transparent, #333 30%, #333 70%, transparent);
-    margin: 0 auto 15mm;
-  }
-
-  /* Zone titre */
-  .hero-title {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 42pt;
-    font-weight: 300;
-    line-height: 1.1;
-    margin-bottom: 8mm;
-    color: #1a1a1a;
-    string-set: document-title content();
-    letter-spacing: 1pt;
-    text-transform: uppercase;
-    max-width: 140mm;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .hero-subtitle {
-    font-size: 14pt;
-    color: #555;
-    font-style: italic;
-    margin-bottom: 20mm;
-    font-weight: 300;
-    line-height: 1.5;
-    max-width: 120mm;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  /* Séparateur central */
-  .hero::after {
-    content: "✦";
-    display: block;
-    font-size: 16pt;
-    color: #999;
-    margin: 0 auto;
-  }
-
-  /* Zone métadonnées en bas de page */
-  .hero-authors,
-  .hero-meta {
-    margin-top: auto;
-  }
-
-  .hero-authors {
-    font-size: 12pt;
-    margin-bottom: 8mm;
-    color: #333;
-    font-weight: 400;
-    letter-spacing: 0.5pt;
-  }
-
-  .hero-authors .author {
-    display: block;
-    margin-bottom: 2mm;
-  }
-
-  .hero-authors .author-name {
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 1pt;
-    font-size: 11pt;
-  }
-
-  .hero-authors sup {
-    font-size: 8pt;
-    margin-left: 1mm;
-  }
-
-  /* Affiliations */
-  .hero-affiliations {
-    font-size: 10pt;
-    color: #666;
-    margin-bottom: 10mm;
-    font-style: italic;
-  }
-
-  .hero-affiliations .affiliation {
-    display: block;
-    margin-bottom: 2mm;
-  }
-
-  /* Métadonnées (date, DOI, etc.) */
-  .hero-meta {
-    font-size: 9pt;
-    color: #888;
-    font-style: normal;
-    padding-top: 8mm;
-    border-top: 0.5pt solid #ddd;
-    max-width: 120mm;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .hero-meta p {
-    margin: 2mm 0;
-    text-indent: 0 !important;
-  }
-
-  /* Masquer le banner décoratif en mode livre */
-  .hero-banner {
-    display: none !important;
-  }
-
-  /* ========================================================================== */
-  /* ABSTRACT / INTRODUCTION - Style AAA */
-  /* ========================================================================== */
-
-  /* Premier paragraphe/section après le hero (souvent l'abstract) */
-  .hero+section,
-  .hero+div,
-  .abstract,
-  main>section:first-of-type,
-  main>div:first-of-type {
-    padding: 8mm 12mm;
-    background:
-      /* Motif géométrique léger */
-      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.004) 48%, rgba(0, 0, 0, 0.004) 52%, transparent 52%),
-      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.004) 48%, rgba(0, 0, 0, 0.004) 52%, transparent 52%),
-      /* Dégradé principal */
-      linear-gradient(to bottom, #fafafa, #fcfcfc 30%, white);
-    background-size: 20mm 20mm, 20mm 20mm, 100% 100%;
-    background-position: 0 0, 10mm 10mm, center;
-    border-left: 3pt solid #ddd;
-    margin-bottom: 15mm;
-    break-inside: avoid;
-    position: relative;
-  }
-
-  /* Accent décoratif en haut de l'abstract */
-  .hero+section::before,
-  .hero+div::before,
-  .abstract::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2pt;
-    background: linear-gradient(to right, #ccc 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
-  }
-
-  .hero+section p:first-of-type::first-line,
-  .hero+div p:first-of-type::first-line,
-  .abstract p:first-of-type::first-line {
-    font-variant: small-caps;
-    letter-spacing: 0.5pt;
-    font-weight: 500;
-  }
-
-  /* Titre "Abstract" ou premier H2 après hero */
-  .hero+section h2:first-child,
-  .hero+div h2:first-child,
-  .abstract h2 {
-    font-size: 14pt;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 2pt;
-    font-weight: 300;
-    color: #666;
-    margin-bottom: 8mm;
-    padding-bottom: 4mm;
-    border-bottom: 0.5pt solid #ddd;
-  }
-
-  .hero+section h2:first-child::before,
-  .hero+div h2:first-child::before,
-  .abstract h2::before {
-    content: none !important;
-  }
-
-  .hero+section h2:first-child::after,
-  .hero+div h2:first-child::after,
-  .abstract h2::after {
-    content: none !important;
-  }
-
-  /* Chapitres H2 - Typo du site */
-  h2 {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 28pt;
-    font-weight: 600;
-    margin-top: 20mm;
-    margin-bottom: 12mm;
-    line-height: 1.2;
-    page-break-after: avoid;
-    break-after: avoid-page;
-    string-set: chapter-title content();
-    counter-increment: chapter;
-    page: chapter;
-    color: #1a1a1a;
-    letter-spacing: -0.5pt;
-    position: relative;
-    padding-top: 8mm;
-  }
-
-  h2::before {
-    content: counter(chapter);
-    display: block;
-    font-size: 48pt;
-    font-weight: 200;
-    color: #ddd;
-    position: absolute;
-    top: -5mm;
-    left: 0;
-    line-height: 1;
-  }
-
-  h2::after {
-    content: "";
-    display: block;
-    width: 30mm;
-    height: 1pt;
-    background: linear-gradient(to right, #666, transparent);
-    margin-top: 4mm;
-  }
-
-  /* Sections H3 - Typo du site */
-  h3 {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 18pt;
-    font-weight: 700;
-    margin-top: 12mm;
-    margin-bottom: 6mm;
-    page-break-after: avoid;
-    break-after: avoid-page;
-    string-set: section-title content();
-    counter-increment: section;
-    color: #333;
-    letter-spacing: -0.2pt;
-  }
-
-  h3::before {
-    content: counter(chapter) "." counter(section);
-    display: inline-block;
-    margin-right: 1.5mm;
-    color: #999;
-    font-size: 12pt;
-    font-weight: 300;
-  }
-
-  /* Sous-sections H4 - Typo du site */
-  h4 {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 14pt;
-    font-weight: 600;
-    margin-top: 8mm;
-    margin-bottom: 4mm;
-    page-break-after: avoid;
-    break-after: avoid-page;
-    color: #444;
-    text-transform: uppercase;
-    letter-spacing: 0.5pt;
-  }
-
-  /* ========================================================================== */
-  /* Paragraphes et texte */
-  /* ========================================================================== */
-
-  p {
-    text-align: justify;
-    margin-bottom: 4mm;
-    text-indent: 0;
-    line-height: 1.65;
-  }
-
-  /* Premier paragraphe après titre sans retrait */
-  h2+p,
-  h3+p,
-  h4+p {
+  h2 + p,
+  h3 + p,
+  h4 + p {
     text-indent: 0;
   }
 
-  /* Lettrine (drop cap) pour le premier paragraphe d'un chapitre */
-  h2+p::first-letter {
-    float: left;
-    font-size: 48pt;
-    line-height: 0.85;
-    margin: 0 4mm -2mm 0;
-    font-weight: 400;
-    color: #333;
-  }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
 
-  /* Paragraphes suivants avec retrait */
-  p+p {
-    text-indent: 5mm;
-    margin-top: 0;
-  }
-
-  /* Liens */
   a {
-    color: #000;
+    color: #E85D3A;
     text-decoration: none;
-    border-bottom: 0.5pt solid #999;
+    border: none;
   }
 
-  a[href]::after {
+  a[href^="http"]::after {
     content: "";
   }
 
-  /* Pas de bordure pour les liens dans le hero */
-  .hero a {
-    border: none;
-    font-weight: inherit;
-  }
+  /* ========================================================================
+     LISTS
+     ======================================================================== */
 
-  /* ========================================================================== */
-  /* Listes */
-  /* ========================================================================== */
-
-  ul,
-  ol {
-    margin-left: 8mm;
-    margin-bottom: 5mm;
+  ul, ol {
+    margin: 0 0 4mm 5mm;
+    padding-left: 4mm;
   }
 
   li {
-    margin-bottom: 2mm;
+    margin-bottom: 1.5mm;
+    line-height: 1.6;
   }
 
-  /* ========================================================================== */
-  /* FEATURES / BADGES - Mise en page colonnes AAA */
-  /* ========================================================================== */
-
-  /* Premier chapitre avec features : layout multi-colonnes */
-  main>section:first-of-type ul:first-of-type,
-  main>div:first-of-type ul:first-of-type,
-  .features-list {
-    columns: 2;
-    column-gap: 8mm;
-    column-rule: 0.5pt solid #ddd;
-    margin-left: 0;
-    list-style: none;
-    break-inside: auto;
-    margin-bottom: 12mm;
-    padding: 8mm;
-    background:
-      /* Motif de points subtils */
-      radial-gradient(circle at center, rgba(0, 0, 0, 0.03) 1pt, transparent 1pt),
-      /* Motif géométrique */
-      linear-gradient(135deg, transparent 48%, rgba(0, 0, 0, 0.005) 48%, rgba(0, 0, 0, 0.005) 52%, transparent 52%),
-      linear-gradient(45deg, transparent 48%, rgba(0, 0, 0, 0.005) 48%, rgba(0, 0, 0, 0.005) 52%, transparent 52%),
-      /* Dégradé de base */
-      linear-gradient(135deg, #fafafa 0%, #f5f5f5 50%, #fafafa 100%);
-    background-size: 8mm 8mm, 15mm 15mm, 15mm 15mm, 100% 100%;
-    background-position: 0 0, 0 0, 7.5mm 7.5mm, center;
-    border: 0.5pt solid #e0e0e0;
-    border-radius: 2pt;
-    position: relative;
-  }
-
-  /* Accent décoratif pour la features list */
-  main>section:first-of-type ul:first-of-type::before,
-  main>div:first-of-type ul:first-of-type::before,
-  .features-list::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4mm;
-    height: 100%;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.02));
-    border-radius: 2pt 0 0 2pt;
-  }
-
-  main>section:first-of-type ul:first-of-type li,
-  main>div:first-of-type ul:first-of-type li,
-  .features-list li {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    margin-bottom: 3mm;
-    padding-left: 9mm;
-    /* 5mm + 4mm de la barre décorative */
-    position: relative;
-    font-size: 10pt;
-    line-height: 1.4;
-  }
-
-  /* Puces décoratives */
-  main>section:first-of-type ul:first-of-type li::before,
-  main>div:first-of-type ul:first-of-type li::before,
-  .features-list li::before {
-    content: "▸";
-    position: absolute;
-    left: 5mm;
-    /* Après la barre décorative */
-    color: #999;
-    font-size: 10pt;
-  }
-
-  /* Tags/badges dans les listes */
   li code,
   .tag,
   .badge {
-    background: white;
+    background: #f3f3f3;
     border: 0.5pt solid #ddd;
-    padding: 0.5mm 2mm;
-    border-radius: 2pt;
-    font-size: 8.5pt;
-    font-weight: 500;
-    color: #555;
+    padding: 0.2mm 1.5mm;
+    border-radius: 1pt;
+    font-size: 8pt;
+    color: #444;
     white-space: nowrap;
   }
 
-  /* ========================================================================== */
-  /* Code */
-  /* ========================================================================== */
+  /* ========================================================================
+     CODE
+     ======================================================================== */
 
-  pre,
-  code {
-    font-family: "Monaco", "Courier New", monospace;
-    font-size: 9pt;
+  pre, code {
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Courier New", monospace;
+    font-size: 8pt;
   }
 
   pre {
-    background: linear-gradient(to right, #f8f8f8, #fafafa);
-    padding: 5mm;
-    border: 0.5pt solid #e0e0e0;
-    border-left: 3pt solid #bbb;
-    overflow-x: auto;
+    background: #f7f7f7;
+    padding: 4mm 5mm;
+    border: none;
+    border-left: 3pt solid #E85D3A;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    white-space: pre-wrap;
     break-inside: avoid;
     page-break-inside: avoid;
-    margin: 6mm 0;
-    border-radius: 1pt;
-    box-shadow: 0 1pt 2pt rgba(0, 0, 0, 0.05);
+    margin: 5mm 0;
+    line-height: 1.55;
   }
 
   code {
-    background: #f0f0f0;
-    padding: 1pt 2pt;
-    border-radius: 2pt;
+    background: #f3f3f3;
+    padding: 0.3pt 2pt;
+    border-radius: 1pt;
   }
 
-  /* ========================================================================== */
-  /* Figures et images */
-  /* ========================================================================== */
+  pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  /* ========================================================================
+     FIGURES & IMAGES
+     ======================================================================== */
 
   figure {
     margin: 8mm 0;
@@ -677,379 +522,258 @@
   }
 
   figcaption {
-    font-size: 9pt;
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 8.5pt;
     color: #666;
-    font-style: italic;
-    margin-top: 3mm;
+    margin-top: 2.5mm;
     text-align: left;
-    padding-left: 5mm;
-    border-left: 2pt solid #e0e0e0;
+    line-height: 1.45;
   }
 
-  /* ========================================================================== */
-  /* Tableaux */
-  /* ========================================================================== */
+  figcaption strong {
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+
+  /* ========================================================================
+     TABLES
+     ======================================================================== */
 
   table {
     width: 100%;
     border-collapse: collapse;
-    margin: 8mm 0;
-    font-size: 10pt;
+    margin: 5mm 0;
+    font-size: 9.5pt;
     break-inside: avoid;
     page-break-inside: avoid;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
   }
 
-  thead {
-    display: table-header-group;
-  }
+  thead { display: table-header-group; }
 
-  tfoot {
-    display: table-footer-group;
+  th,
+  td {
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
   }
 
   th {
-    background: linear-gradient(to bottom, #fafafa, #f0f0f0);
-    font-weight: 500;
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 700;
     text-align: left;
-    padding: 3mm;
-    border-bottom: 1.5pt solid #555;
-    border-top: 1.5pt solid #555;
-    font-size: 10pt;
-    letter-spacing: 0.5pt;
+    padding: 2mm 2.5mm;
+    border: none;
+    border-bottom: 1.5pt solid #1a1a1a;
+    font-size: 8pt;
+    letter-spacing: 0.3pt;
     text-transform: uppercase;
-    color: #333;
+    color: #1a1a1a;
   }
 
   td {
-    padding: 3mm;
+    padding: 2mm 2.5mm;
+    border: none;
     border-bottom: 0.5pt solid #e0e0e0;
+    vertical-align: top;
+    color: #1a1a1a;
+  }
+
+  tr,
+  tr:nth-child(even),
+  tr:nth-child(odd) {
+    background: none !important;
+    background-color: transparent !important;
   }
 
   tr:last-child td {
-    border-bottom: 1.5pt solid #555;
+    border-bottom: 1pt solid #1a1a1a;
   }
 
-  /* ========================================================================== */
-  /* Blockquotes */
-  /* ========================================================================== */
+  td code,
+  th code {
+    background: #f5f5f5 !important;
+    box-shadow: none !important;
+  }
+
+  /* ========================================================================
+     BLOCKQUOTES
+     ======================================================================== */
 
   blockquote {
-    margin: 10mm 12mm;
-    padding: 6mm 8mm;
-    border-left: none;
+    margin: 6mm 0 6mm 0;
+    padding: 0 0 0 5mm;
+    border-left: 3pt solid #E85D3A;
     font-style: italic;
     color: #444;
     break-inside: avoid;
     page-break-inside: avoid;
-    position: relative;
-    background: linear-gradient(to right, #f8f8f8, transparent 40mm);
-  }
-
-  blockquote::before {
-    content: "" ";
- position: absolute;
-    left: -3mm;
-    top: 0;
-    font-size: 48pt;
-    color: #ddd;
-    font-family: Georgia, serif;
-    line-height: 0.7;
   }
 
   blockquote p {
     text-indent: 0 !important;
   }
 
-  /* ========================================================================== */
-  /* Notes de bas de page (Paged.js) */
-  /* ========================================================================== */
-
-  .footnote {
-    float: footnote;
-    footnote-display: block;
-    font-size: 8pt;
-    line-height: 1.4;
-  }
-
-  ::footnote-call {
-    content: "[" counter(footnote) "]";
-    font-size: 0.8em;
-    vertical-align: super;
-    line-height: 0;
-  }
-
-  ::footnote-marker {
-    content: counter(footnote) ". ";
-    font-weight: bold;
-  }
-
-  /* ========================================================================== */
-  /* ACCORDIONS - Ouverts et stylisés pour le livre */
-  /* ========================================================================== */
-
-  .accordion,
-  details.accordion {
-    margin: 8mm 0;
-    border: 1pt solid #ddd !important;
-    border-radius: 2pt;
-    background: rgba(0, 0, 0, 0.015) !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .accordion__summary,
-  details.accordion>summary {
-    font-family: "Source Sans Pro", sans-serif;
-    font-size: 11pt;
-    font-weight: 600;
-    padding: 4mm !important;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.01)) !important;
-    border-bottom: 0.5pt solid #ddd !important;
-    color: #333 !important;
-  }
-
-  /* Masquer le chevron en print */
-  .accordion__chevron {
-    display: none !important;
-  }
-
-  /* Forcer l'affichage du contenu */
-  .accordion__content-wrapper {
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .accordion__content {
-    padding: 5mm !important;
-  }
-
-  /* Titre de l'accordéon */
-  .accordion__title {
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5pt;
-    font-size: 10pt;
-  }
-
-  /* Code dans les accordéons */
-  .accordion pre {
-    margin: 3mm 0 !important;
-  }
-
-  /* ========================================================================== */
-  /* Éléments à masquer en mode livre */
-  /* ========================================================================== */
-
-  #theme-toggle,
-  .table-of-contents,
-  .table-of-contents-mobile,
-  .right-aside,
-  nav,
-  .code-lang-chip,
-  .meta-container-cell--pdf,
-  button,
-  .interactive-only {
-    display: none !important;
-  }
-
-  /* ========================================================================== */
-  /* Table des matières */
-  /* ========================================================================== */
-
-  .toc {
-    page: toc;
-    break-after: page;
-  }
-
-  .toc h2 {
-    font-size: 20pt;
-    margin-bottom: 10mm;
-    text-align: center;
-  }
-
-  .toc ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .toc li {
-    margin-bottom: 3mm;
-  }
-
-  .toc a {
-    text-decoration: none;
-    border: none;
-  }
-
-  .toc a::after {
-    content: leader('.') target-counter(attr(href), page);
-    font-style: italic;
-  }
-
-  /* ========================================================================== */
-  /* Compteurs */
-  /* ========================================================================== */
-
-  body {
-    counter-reset: chapter section figure table;
-  }
-
-  h2 {
-    counter-reset: section;
-  }
-
-  figure {
-    counter-increment: figure;
-  }
-
-  figure figcaption::before {
-    content: "Figure " counter(chapter) "." counter(figure) " · ";
-    font-weight: 500;
-    font-style: normal;
-    color: #888;
-    font-variant: small-caps;
-    letter-spacing: 0.5pt;
-  }
-
-  table {
-    counter-increment: table;
-  }
-
-  /* ========================================================================== */
-  /* HTML EMBEDS - Gestion AAA pour le print */
-  /* ========================================================================== */
+  /* ========================================================================
+     HTML EMBEDS (now replaced by screenshots)
+     ======================================================================== */
 
   .html-embed {
     break-inside: avoid;
     page-break-inside: avoid;
-    margin: 10mm 0;
+    margin: 6mm 0;
     width: 100%;
+  }
+
+  .html-embed--wide,
+  .html-embed--full {
+    width: 100% !important;
+    margin-left: 0 !important;
+    transform: none !important;
+    padding: 0 !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  /* Strip backgrounds/gradients from wide and full-width wrappers */
+  .wide,
+  .full-width {
+    width: 100% !important;
+    margin-left: 0 !important;
+    transform: none !important;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+  }
+
+  .wide > *,
+  .full-width > * {
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
   }
 
   .html-embed__card {
     width: 100% !important;
     max-width: 100% !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     break-inside: avoid;
     page-break-inside: avoid;
     background: white !important;
-    padding: 6mm !important;
-    border: 1pt solid #ddd !important;
-    box-shadow: 0 1pt 3pt rgba(0, 0, 0, 0.08) !important;
-    border-radius: 2pt;
-  }
-
-  /* Frameless embeds */
-  .html-embed__card.is-frameless {
-    padding: 2mm !important;
-    background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
+    border-radius: 0;
+    padding: 0 !important;
   }
 
-  /* Container des fragments HTML */
-  .html-embed__card>div[id^="frag-"] {
+  .html-embed__card.is-frameless {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .html-embed__card > div[id^="frag-"] {
     width: 100% !important;
     max-width: 100% !important;
-    overflow: visible !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
+    overflow: hidden !important;
   }
 
-  /* Containers D3 - respecter leur structure */
-  .html-embed__card [class^="d3-"],
-  .html-embed__card [class*=" d3-"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* SVG dans les embeds - contraindre sans forcer 100% width */
   .html-embed__card svg {
     max-width: 100% !important;
-    max-height: 130mm !important;
-    width: auto !important;
+    max-height: 120mm !important;
     height: auto !important;
     display: block !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    margin: 0 auto !important;
   }
 
-  /* SVG avec viewBox - les laisser responsive */
   .html-embed__card svg[viewBox] {
     width: 100% !important;
     height: auto !important;
   }
 
-  /* Canvas dans les embeds */
   .html-embed__card canvas {
     max-width: 100% !important;
-    max-height: 130mm !important;
-    width: auto !important;
+    max-height: 120mm !important;
     height: auto !important;
     display: block !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    object-fit: contain !important;
+    margin: 0 auto !important;
   }
 
-  /* Charts qui utilisent chart-card */
+  .html-embed__card img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block !important;
+  }
+
   .html-embed__card .chart-card {
     width: 100% !important;
-    max-width: 100% !important;
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
   }
 
-  /* Titre des embeds */
   .html-embed__title {
     font-family: "Source Sans Pro", sans-serif;
-    font-size: 11pt;
-    font-weight: 600;
-    color: #555;
-    margin-bottom: 4mm;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 2mm;
     text-transform: uppercase;
-    letter-spacing: 0.5pt;
+    letter-spacing: 0.8pt;
   }
 
-  /* Description/caption des embeds */
   .html-embed__desc {
-    font-size: 9pt;
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 8.5pt;
     color: #666;
     font-style: italic;
-    margin-top: 4mm;
-    padding-left: 5mm;
-    border-left: 2pt solid #e0e0e0;
+    margin-top: 2.5mm;
+    line-height: 1.45;
   }
 
-  /* Embeds wide */
-  .html-embed--wide .html-embed__card {
-    max-width: none !important;
+  .html-embed__desc strong,
+  figcaption strong {
+    font-style: normal;
+    color: #1a1a1a;
+    font-weight: 700;
   }
 
-  /* Légendes */
+  /* Disable CSS counter-based figure numbering (JS handles it) */
+  .content-grid > main .reference-wrapper .reference__caption::before,
+  .content-grid > main .image-wrapper > figure > figcaption::before,
+  .content-grid > main figure.html-embed > .html-embed__desc::before {
+    content: none !important;
+  }
+
   .html-embed__card .legend {
-    font-size: 8pt !important;
-    width: 100% !important;
+    font-size: 7.5pt !important;
   }
 
-  /* Masquer tooltips en print */
   .html-embed__card .tooltip,
   .html-embed__card .d3-tooltip,
   .html-embed__card [class*="tooltip"] {
     display: none !important;
   }
 
-  /* ========================================================================== */
-  /* Visualisations D3/Plotly - adaptation pour print */
-  /* ========================================================================== */
+  .html-embed__card input[type="range"],
+  .html-embed__card select,
+  .html-embed__card .controls,
+  .html-embed__card .plotly_controls {
+    opacity: 0.4;
+    pointer-events: none;
+  }
 
-  svg,
-  canvas {
+  /* ========================================================================
+     D3/PLOTLY
+     ======================================================================== */
+
+  svg, canvas {
     max-width: 100%;
     height: auto;
     break-inside: avoid;
@@ -1061,38 +785,151 @@
   .d3-bar {
     break-inside: avoid;
     page-break-inside: avoid;
-    margin: 8mm 0;
+    margin: 5mm 0;
     background: white !important;
-    padding: 4mm;
-    border: 0.5pt solid #e0e0e0;
   }
 
-  /* Conteneurs D3 spécifiques */
-  .d3-line svg,
-  .d3-bar svg,
-  .d3-scatter svg {
-    max-width: 100% !important;
-    width: 100% !important;
+  /* ========================================================================
+     ACCORDIONS (opened for print)
+     ======================================================================== */
+
+  .accordion,
+  details.accordion,
+  details {
+    margin: 5mm 0;
+    border: none;
+    border-left: 3pt solid #ddd;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .accordion__summary,
+  details.accordion > summary,
+  details > summary {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 9.5pt;
+    font-weight: 700;
+    padding: 2mm 4mm !important;
+    background: transparent !important;
+    border: none !important;
+    color: #1a1a1a !important;
+    list-style: none;
+  }
+
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .accordion__content-wrapper {
     height: auto !important;
+    overflow: visible !important;
   }
 
-  /* ========================================================================== */
-  /* Layout simple colonne */
-  /* ========================================================================== */
-
-  .content-grid {
-    grid-template-columns: 1fr !important;
-    max-width: none !important;
+  .accordion__content {
+    padding: 2mm 4mm !important;
   }
 
-  main {
-    max-width: none !important;
-    padding: 0 !important;
+  /* ========================================================================
+     NOTES
+     ======================================================================== */
+
+  .note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 5mm 0;
+    padding: 4mm 5mm;
+    border: none;
+    border-left: 3pt solid #E85D3A;
+    background: #fdf8f6;
   }
 
-  /* ========================================================================== */
-  /* Citations académiques */
-  /* ========================================================================== */
+  .note--warning {
+    border-left-color: #d4a017;
+    background: #fdfaf0;
+  }
+
+  .note--danger {
+    border-left-color: #c62828;
+    background: #fdf2f2;
+  }
+
+  .note--info {
+    border-left-color: #1565c0;
+    background: #f0f5fd;
+  }
+
+  .note--success {
+    border-left-color: #2e7d32;
+    background: #f2faf3;
+  }
+
+  /* ========================================================================
+     STACKS (grid cards)
+     ======================================================================== */
+
+  .stack {
+    display: grid !important;
+    gap: 3mm !important;
+    margin: 5mm 0 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .stack[data-layout="2-column"] { grid-template-columns: repeat(2, 1fr) !important; }
+  .stack[data-layout="3-column"] { grid-template-columns: repeat(3, 1fr) !important; }
+  .stack[data-layout="4-column"] { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .stack > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* ========================================================================
+     IMAGE WRAPPER
+     ======================================================================== */
+
+  .image-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 5mm 0;
+  }
+
+  .image-wrapper img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
+
+  .image-credit {
+    font-size: 7pt;
+    color: #999;
+    margin-top: 1mm;
+  }
+
+  /* ========================================================================
+     FOOTNOTE MARKS & SUPERSCRIPT
+     ======================================================================== */
+
+  sup a {
+    font-size: 7.5pt;
+    color: #E85D3A;
+    text-decoration: none;
+    border: none;
+  }
+
+  /* ========================================================================
+     HORIZONTAL RULES
+     ======================================================================== */
+
+  hr {
+    border: none;
+    border-top: 0.5pt solid #ddd;
+    margin: 8mm 0;
+  }
+
+  /* ========================================================================
+     CITATIONS & REFERENCES
+     ======================================================================== */
 
   .citation {
     font-size: 0.9em;
@@ -1101,16 +938,65 @@
 
   .references {
     break-before: page;
-    page-break-before: always;
   }
 
   .references h2 {
-    text-align: center;
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 3pt;
+    font-weight: 700;
+    break-before: auto;
+  }
+
+  .references h2::before,
+  .references h2::after {
+    content: none !important;
   }
 
   .reference-item {
-    margin-bottom: 4mm;
+    margin-bottom: 2.5mm;
     text-indent: -5mm;
     margin-left: 5mm;
+    font-size: 9pt;
+    line-height: 1.5;
+  }
+
+  /* ========================================================================
+     ABSTRACT
+     ======================================================================== */
+
+  .hero + section,
+  .hero + div,
+  .abstract {
+    padding: 5mm 0;
+    background: transparent;
+    border: none;
+    border-top: 0.75pt solid #1a1a1a;
+    border-bottom: 0.75pt solid #ddd;
+    margin-bottom: 8mm;
+    break-inside: avoid;
+  }
+
+  .hero + section h2:first-child,
+  .hero + div h2:first-child,
+  .abstract h2 {
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 3pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 3mm;
+    padding: 0;
+    border: none;
+    break-before: auto;
+  }
+
+  .hero + section h2:first-child::before,
+  .hero + div h2:first-child::before,
+  .abstract h2::before,
+  .hero + section h2:first-child::after,
+  .hero + div h2:first-child::after,
+  .abstract h2::after {
+    content: none !important;
   }
 }

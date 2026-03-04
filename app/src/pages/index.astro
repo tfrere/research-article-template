@@ -197,6 +197,29 @@ const licence =
         } catch {}
       })();
     </script>
+    <script is:inline>
+      // Debounce all ResizeObserver callbacks to prevent layout thrashing
+      // during window resize (10+ D3 embeds re-render simultaneously otherwise)
+      (() => {
+        const _RO = window.ResizeObserver;
+        if (!_RO) return;
+        const DEBOUNCE_MS = 100;
+        window.ResizeObserver = class {
+          constructor(cb) {
+            this._timer = null;
+            this._ro = new _RO((entries, observer) => {
+              clearTimeout(this._timer);
+              this._timer = setTimeout(() => {
+                requestAnimationFrame(() => cb(entries, observer));
+              }, DEBOUNCE_MS);
+            });
+          }
+          observe(el, opts) { this._ro.observe(el, opts); }
+          unobserve(el) { this._ro.unobserve(el); }
+          disconnect() { this._ro.disconnect(); clearTimeout(this._timer); }
+        };
+      })();
+    </script>
     <script type="module" src="/scripts/color-palettes.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>

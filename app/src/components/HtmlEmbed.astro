@@ -23,7 +23,7 @@ const {
   id: providedId,
   data,
   config,
-  downloadable = true,
+  downloadable = false,
 } = Astro.props as Props;
 
 // Generate filename from src (used for download and as default ID)
@@ -129,10 +129,6 @@ const htmlWithId =
 <script>
   // Download functionality for HtmlEmbed
   (() => {
-    // Preload snapdom
-    let snapdomModule: any = null;
-    import('@zumer/snapdom').then(m => { snapdomModule = m; }).catch(() => {});
-
     // ========================================
     // BATCH EXPORT: Export all embeds to a ZIP
     // Usage: window.exportAllEmbeds()     - all embeds
@@ -690,14 +686,14 @@ const htmlWithId =
   }
   /* Error state for missing embeds */
   .html-embed__card--error {
-    background: #fef2f2;
-    border: 2px solid #dc2626;
+    background: color-mix(in srgb, var(--danger-color) 8%, var(--surface-bg));
+    border: 2px solid var(--danger-color);
     border-radius: 8px;
     padding: 20px;
   }
   .html-embed__error {
     text-align: center;
-    color: #dc2626;
+    color: var(--danger-color);
   }
   .html-embed__error strong {
     display: block;
@@ -711,23 +707,12 @@ const htmlWithId =
     line-height: 1.5;
   }
   .html-embed__error code {
-    background: rgba(220, 38, 38, 0.1);
+    background: color-mix(in srgb, var(--danger-color) 10%, transparent);
     padding: 2px 6px;
     border-radius: 4px;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     word-break: break-all;
-  }
-  /* Dark mode for error state */
-  [data-theme="dark"] .html-embed__card--error {
-    background: #1f2937;
-    border-color: #ef4444;
-  }
-  [data-theme="dark"] .html-embed__error {
-    color: #ef4444;
-  }
-  [data-theme="dark"] .html-embed__error code {
-    background: rgba(239, 68, 68, 0.2);
   }
   /* Plotly – fragments & controls */
   .html-embed__card svg text {
