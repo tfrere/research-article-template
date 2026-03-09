@@ -25,6 +25,7 @@
     </svg>
     <svg
       class="icon icon--moon"
+      style="opacity:0"
       width="20"
       height="20"
       viewBox="0 0 24 24"
@@ -58,6 +59,7 @@
     }
 
     apply(saved || (prefersDark ? "dark" : "light"));
+    requestAnimationFrame(() => wrapper?.classList.add("animated"));
 
     if (!saved && media) {
       const syncWithSystem = (e) => apply(e.matches ? "dark" : "light");
@@ -101,6 +103,8 @@
   .icon-wrapper .icon {
     grid-area: 1 / 1;
     filter: none !important;
+  }
+  .icon-wrapper.animated .icon {
     transition: opacity 0.35s ease;
   }
 
