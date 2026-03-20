@@ -1,165 +1,165 @@
 # Research Article Template — Roadmap 2026
 
-> Rapport stratégique — Février 2026
-> Objectif : identifier les actions à fort impact sur l'adoption pour les 6 prochains mois.
+> Strategic report — February 2026
+> Goal: identify high-impact actions for adoption over the next 6 months.
 
 ---
 
-## 1. État des lieux
+## 1. Current State
 
-### 1.1 Le projet aujourd'hui
+### 1.1 The project today
 
-| Métrique | Valeur |
-|----------|--------|
-| Première version | Oct 2025 (extrait de smol-training-playbook) |
-| Commits totaux | ~310 |
-| Composants Astro | 20 |
-| Embeds HTML (D3) | 26 |
-| Scripts utilitaires | 19 fichiers .mjs |
-| CSS (styles) | ~3 000 lignes |
-| Total LOC (hors deps) | ~48 600 lignes |
-| Formats d'export | PDF (normal + book), LaTeX |
-| Importeurs | LaTeX → MDX, Notion → MDX |
+| Metric | Value |
+|--------|-------|
+| First version | Oct 2025 (extracted from smol-training-playbook) |
+| Total commits | ~310 |
+| Astro components | 20 |
+| HTML embeds (D3) | 26 |
+| Utility scripts | 19 .mjs files |
+| CSS (styles) | ~3,000 lines |
+| Total LOC (excl. deps) | ~48,600 lines |
+| Export formats | PDF (normal + book), LaTeX |
+| Importers | LaTeX → MDX, Notion → MDX |
 
-### 1.2 Stack technique
+### 1.2 Tech stack
 
-- **Astro 4.10** + MDX pour le contenu
-- **D3.js v7** (CDN) pour les visualisations interactives
-- **Svelte 4** pour les composants interactifs (Trackio)
-- **CSS custom properties** pour le theming light/dark
-- **Playwright** pour l'export PDF
-- **Pandoc** pour l'export LaTeX
-- **Docker + Nginx** pour le déploiement HF Spaces
+- **Astro 4.10** + MDX for content
+- **D3.js v7** (CDN) for interactive visualizations
+- **Svelte 4** for interactive components (Trackio)
+- **CSS custom properties** for light/dark theming
+- **Playwright** for PDF export
+- **Pandoc** for LaTeX export
+- **Docker + Nginx** for HF Spaces deployment
 
-### 1.3 Points forts actuels
+### 1.3 Current strengths
 
-- **Architecture embed solide** : les charts D3 sont auto-contenus, themés, responsifs, et documentés pour les agents AI via une skill Cursor de très haute qualité (~500 lignes de directives).
-- **Export multi-format** : PDF (normal + book), LaTeX, DOCX, TXT — rare pour un template web.
-- **Sync-template** : mise à jour du template sans écraser le contenu utilisateur — feature unique dans l'écosystème.
-- **Theming CSS variables** : dark mode complet, palette dynamique via `ColorPalettes`.
-- **Contenu scientifique complet** : citations BibTeX, KaTeX, footnotes, sidenotes, glossaire, mermaid diagrams.
+- **Solid embed architecture**: D3 charts are self-contained, themed, responsive, and documented for AI agents via a high-quality Cursor skill (~500 lines of directives).
+- **Multi-format export**: PDF (normal + book), LaTeX, DOCX, TXT - rare for a web template.
+- **Sync-template**: update the template without overwriting user content - unique feature in the ecosystem.
+- **CSS variables theming**: full dark mode, dynamic palette via `ColorPalettes`.
+- **Complete scientific content**: BibTeX citations, KaTeX, footnotes, sidenotes, glossary, mermaid diagrams.
 
-### 1.4 Points faibles identifiés
+### 1.4 Identified weaknesses
 
-- **Onboarding lourd** : il faut cloner, supprimer le contenu demo, comprendre la structure. Pas de CLI.
-- **Zéro CI/CD** : pas de GitHub Actions, pas de preview deployments, pas de build check.
-- **Scripts d'export incomplets** : 4 scripts référencés dans package.json n'existent pas (docx, txt, images, bundle), parsing YAML manuel dans l'export LaTeX produit du LaTeX invalide.
-- **Pas de recherche** dans les articles longs — paradoxalement moins navigable qu'un PDF.
-- **Accessibilité incomplète** : pas de skip link, pas de focus trap sidebar, `:focus` au lieu de `:focus-visible`.
-- **Documentation du sync-template** absente — la killer feature est invisible.
-- **Pas de gallery d'embeds** — les 26 charts sont enfouis dans le filesystem.
-- **Skills AI limitées** à la création d'embeds — manque "créer un article", "ajouter un chapitre", "debug export".
+- **Heavy onboarding**: you need to clone, delete demo content, understand the structure. No CLI.
+- **Zero CI/CD**: no GitHub Actions, no preview deployments, no build checks.
+- **Incomplete export scripts**: 4 scripts referenced in package.json don't exist (docx, txt, images, bundle), manual YAML parsing in LaTeX export produces invalid LaTeX.
+- **No search** in long articles - paradoxically less navigable than a PDF.
+- **Incomplete accessibility**: no skip link, no focus trap sidebar, `:focus` instead of `:focus-visible`.
+- **Missing sync-template documentation** - the killer feature is invisible.
+- **No embed gallery** - the 26 charts are buried in the filesystem.
+- **AI skills limited** to embed creation - missing "create an article", "add a chapter", "debug export".
 
-### 1.5 Composants les plus lourds (dette technique potentielle)
+### 1.5 Heaviest components (potential technical debt)
 
-| Composant | Lignes | Observation |
-|-----------|--------|-------------|
-| TableOfContents.astro | 1 152 | Logique scroll + collapse complexe, prop naming incohérent avec le frontmatter |
-| HtmlEmbed.astro | 942 | API large (11 props), `desc`/`caption` redondants, `skipGallery` non typé |
-| Hero.astro | 665 | Monolithique, difficile à customiser |
-| Image.astro | 626 | `[key: string]: any` dans les props — trop permissif |
-| Footer.astro | 436 | Citation + BibTeX + licence dans un seul composant |
-
----
-
-## 2. Contexte 2026 : ce qui a changé
-
-### 2.1 Le paysage AI en février 2026
-
-Claude Opus 4.6, GPT-5, Gemini 2.5 — les agents de code sont capables de :
-- Générer un site web interactif complet en 30 secondes
-- Comprendre et suivre des conventions de code complexes via des fichiers de directives
-- Orchestrer des pipelines multi-étapes (import → écriture → build → deploy)
-
-**Conséquence directe** : le concurrent du template n'est plus Overleaf ou un autre template. C'est l'agent qui génère un one-shot. La valeur ajoutée doit être dans ce qu'un one-shot ne peut pas offrir : la structure, l'écosystème, la maintenance continue, et l'intégration HF Spaces.
-
-### 2.2 Ce que les chercheurs attendent en 2026
-
-1. **"Je veux publier mon paper, pas configurer un build system"** — le setup doit être < 2 minutes.
-2. **"J'ai un paper LaTeX, convertis-le"** — l'import doit être un one-liner fiable.
-3. **"Montre-moi mes données de façon interactive"** — les charts doivent être un catalogue, pas un exercice de code.
-4. **"Mon co-auteur a poussé un chapitre, je veux voir le résultat"** — preview deployments.
-5. **"L'AI peut écrire/adapter mes charts"** — les skills doivent couvrir tout le workflow.
+| Component | Lines | Observation |
+|-----------|-------|-------------|
+| TableOfContents.astro | 1,152 | Complex scroll + collapse logic, prop naming inconsistent with frontmatter |
+| HtmlEmbed.astro | 942 | Large API (11 props), `desc`/`caption` redundant, `skipGallery` untyped |
+| Hero.astro | 665 | Monolithic, hard to customize |
+| Image.astro | 626 | `[key: string]: any` in props - too permissive |
+| Footer.astro | 436 | Citation + BibTeX + license in a single component |
 
 ---
 
-## 3. Roadmap : Mars – Août 2026
+## 2. 2026 Context: What Has Changed
 
-### Phase 1 : Fondations (Mars – Avril)
+### 2.1 The AI landscape in February 2026
 
-> Objectif : réduire le friction d'onboarding et stabiliser les outils existants.
+Claude Opus 4.6, GPT-5, Gemini 2.5 - code agents are capable of:
+- Generating a complete interactive website in 30 seconds
+- Understanding and following complex code conventions via directive files
+- Orchestrating multi-step pipelines (import → write → build → deploy)
+
+**Direct consequence**: the template's competitor is no longer Overleaf or another template. It's the agent that generates a one-shot. The added value must lie in what a one-shot cannot offer: structure, ecosystem, ongoing maintenance, and HF Spaces integration.
+
+### 2.2 What researchers expect in 2026
+
+1. **"I want to publish my paper, not configure a build system"** - setup must be < 2 minutes.
+2. **"I have a LaTeX paper, convert it"** - import must be a reliable one-liner.
+3. **"Show me my data interactively"** - charts should be a catalog, not a coding exercise.
+4. **"My co-author pushed a chapter, I want to see the result"** - preview deployments.
+5. **"AI can write/adapt my charts"** - skills must cover the entire workflow.
+
+---
+
+## 3. Roadmap: March – August 2026
+
+### Phase 1: Foundations (March – April)
+
+> Goal: reduce onboarding friction and stabilize existing tools.
 
 #### 3.1.1 — CLI `create-research-article`
 
-**Priorité : P0 — Impact très élevé**
+**Priority: P0 — Very high impact**
 
-Créer un package npm `create-research-article` qui scaffold un projet propre :
+Create an npm package `create-research-article` that scaffolds a clean project:
 
 ```bash
 npm create research-article my-paper
-# ou
+# or
 npx create-research-article my-paper
 ```
 
-Flux interactif :
-1. Titre du paper
-2. Auteur(s) et affiliation(s)
-3. Couleur primaire (preset ou hex)
-4. Inclure les embeds d'exemple ? (oui/non)
-5. Configurer pour HF Spaces ? (oui/non)
+Interactive flow:
+1. Paper title
+2. Author(s) and affiliation(s)
+3. Primary color (preset or hex)
+4. Include example embeds? (yes/no)
+5. Configure for HF Spaces? (yes/no)
 
-Résultat : un `app/` propre avec `article.mdx` pré-rempli, `bibliography.bib` vide, un chapitre starter "Introduction", et un `README.md` personnalisé.
+Result: a clean `app/` with pre-filled `article.mdx`, empty `bibliography.bib`, a starter "Introduction" chapter, and a customized `README.md`.
 
-**Référence** : `create-astro`, `create-next-app`, `create-vite`.
+**Reference**: `create-astro`, `create-next-app`, `create-vite`.
 
-**Livrable** : package npm publié, documenté dans le README.
+**Deliverable**: published npm package, documented in README.
 
-**Estimation** : 1-2 semaines.
-
----
-
-#### 3.1.2 — Stabiliser les scripts d'export
-
-**Priorité : P0 — Impact élevé**
-
-Les exports sont souvent le premier test d'un nouvel utilisateur. Problèmes actuels :
-
-| Script | Problème | Fix |
-|--------|----------|-----|
-| `package.json` | 4 scripts référencés n'existent pas (docx, txt, images, bundle) | Retirer les entrées ou créer les scripts |
-| `export-pdf.mjs` | `waitForD3` ne couvre que `.d3-line` et `.d3-bar` (26 types d'embeds) | Utiliser le sélecteur générique `[class^="d3-"]` |
-| `export-pdf.mjs` | Code SVG fix dupliqué (60 lignes copier-collées) | Extraire en fonction réutilisable |
-| `export-pdf.mjs` | Nombreux `catch {}` vides — erreurs silencieuses | Ajouter au minimum un `console.warn` |
-| `export-latex.mjs` | Parsing YAML frontmatter à la main, ne gère pas les tableaux/objets | Utiliser `js-yaml` |
-| `export-latex.mjs` | Mapping `\author{}` cassé (reçoit du YAML brut au lieu d'un nom) | Mapper `author.name` après parsing correct |
-
-**Livrable** : les 2 exporteurs (PDF, LaTeX) passent un smoke test sans erreur sur le contenu demo. Scripts fantômes retirés de package.json.
-
-**Estimation** : 1 semaine.
+**Estimate**: 1-2 weeks.
 
 ---
 
-#### 3.1.3 — Accessibilité : quick wins
+#### 3.1.2 — Stabilize export scripts
 
-**Priorité : P1 — Impact moyen, effort très faible**
+**Priority: P0 — High impact**
 
-- [ ] Ajouter un lien "Skip to main content" dans le layout principal
-- [ ] Focus trap dans la sidebar mobile (quand ouverte, Tab reste dans la sidebar)
-- [ ] Remplacer `:focus` par `:focus-visible` sur HtmlEmbed download, Glossary, et autres contrôles interactifs
-- [ ] Ajouter `role="main"` sur le conteneur principal si absent
-- [ ] Vérifier que Escape ferme bien tous les modals/overlays
+Exports are often the first test for a new user. Current issues:
 
-**Livrable** : 0 erreur axe-core sur la page d'accueil.
+| Script | Problem | Fix |
+|--------|---------|-----|
+| `package.json` | 4 referenced scripts don't exist (docx, txt, images, bundle) | Remove entries or create the scripts |
+| `export-pdf.mjs` | `waitForD3` only covers `.d3-line` and `.d3-bar` (26 embed types) | Use the generic selector `[class^="d3-"]` |
+| `export-pdf.mjs` | Duplicated SVG fix code (60 copy-pasted lines) | Extract into a reusable function |
+| `export-pdf.mjs` | Many empty `catch {}` - silent errors | Add at minimum a `console.warn` |
+| `export-latex.mjs` | Manual YAML frontmatter parsing, doesn't handle arrays/objects | Use `js-yaml` |
+| `export-latex.mjs` | Broken `\author{}` mapping (receives raw YAML instead of a name) | Map `author.name` after proper parsing |
 
-**Estimation** : 1-2 jours.
+**Deliverable**: both exporters (PDF, LaTeX) pass a smoke test without errors on demo content. Ghost scripts removed from package.json.
+
+**Estimate**: 1 week.
 
 ---
 
-#### 3.1.4 — Documenter `sync-template`
+#### 3.1.3 — Accessibility: quick wins
 
-**Priorité : P1 — Impact moyen, effort très faible**
+**Priority: P1 — Medium impact, very low effort**
 
-Ajouter dans le README une section dédiée :
+- [ ] Add a "Skip to main content" link in the main layout
+- [ ] Focus trap in the mobile sidebar (when open, Tab stays within the sidebar)
+- [ ] Replace `:focus` with `:focus-visible` on HtmlEmbed download, Glossary, and other interactive controls
+- [ ] Add `role="main"` on the main container if missing
+- [ ] Verify that Escape properly closes all modals/overlays
+
+**Deliverable**: 0 axe-core errors on the home page.
+
+**Estimate**: 1-2 days.
+
+---
+
+#### 3.1.4 — Document `sync-template`
+
+**Priority: P1 — Medium impact, very low effort**
+
+Add a dedicated section in the README:
 
 ```markdown
 ## Keeping your article up to date
@@ -174,127 +174,127 @@ Sync preserves your content (article.mdx, chapters/, bibliography.bib,
 assets/data/) and updates only template infrastructure.
 ```
 
-Documenter aussi dans `CONTRIBUTING.md` ce que sync-template touche vs préserve.
+Also document in `CONTRIBUTING.md` what sync-template touches vs preserves.
 
-**Estimation** : 2-3 heures.
-
----
-
-### Phase 2 : Écosystème (Mai – Juin)
-
-> Objectif : transformer le template en plateforme.
-
-#### 3.2.1 — Gallery d'embeds avec preview live
-
-**Priorité : P0 — Impact élevé**
-
-Créer une page `/gallery` (ou enrichir `/dataviz`) qui :
-
-- Liste les 26 embeds existants avec preview live et description
-- Montre le code MDX d'usage (copier en un clic)
-- Filtre par type : bar, line, scatter, matrix, flowchart, custom
-- Indique la complexité et les données requises
-- Permet de tester avec ses propres données (upload CSV → preview)
-
-**Pourquoi c'est stratégique** : cette gallery devient le point d'entrée pour les agents AI. Un chercheur dit "fais-moi un chart comme le scatter de la gallery mais avec mes données", l'agent AI lit la gallery, identifie le bon embed, copie et adapte. La gallery est un **training set implicite**.
-
-**Livrable** : page `/gallery` navigable, avec au moins 15 embeds catégorisés.
-
-**Estimation** : 2 semaines.
+**Estimate**: 2-3 hours.
 
 ---
 
-#### 3.2.2 — Skills AI complètes
+### Phase 2: Ecosystem (May – June)
 
-**Priorité : P0 — Impact très élevé, effort faible**
+> Goal: transform the template into a platform.
 
-Actuellement, seule la skill `create-html-embed` existe. Ajouter :
+#### 3.2.1 — Embed gallery with live preview
 
-| Skill | Fichier | Cas d'usage |
-|-------|---------|-------------|
-| **Créer un article** | `.cursor/skills/create-article/SKILL.md` | Nouveau utilisateur qui veut démarrer from scratch |
-| **Ajouter un chapitre** | `.cursor/skills/add-chapter/SKILL.md` | L'opération la plus fréquente |
-| **Customiser le thème** | `.cursor/skills/customize-theme/SKILL.md` | Changer les couleurs, la typo, le layout |
-| **Debug export** | `.cursor/skills/debug-export/SKILL.md` | PDF cassé, LaTeX qui plante — le pain point #1 |
-| **Importer du contenu** | `.cursor/skills/import-content/SKILL.md` | LaTeX → MDX, Notion → MDX, Markdown → MDX |
+**Priority: P0 — High impact**
 
-Chaque skill doit contenir :
-- Le workflow étape par étape
-- Les fichiers à lire/modifier
-- Les conventions à respecter
-- Un checklist de validation
-- Un prompt modèle pour l'agent
+Create a `/gallery` page (or enrich `/dataviz`) that:
 
-**Vision** : un chercheur ouvre le projet dans Cursor et dit "transforme mon paper ArXiv en article interactif". L'agent sait exactement quoi faire grâce aux skills.
+- Lists the 26 existing embeds with live preview and description
+- Shows the MDX usage code (one-click copy)
+- Filters by type: bar, line, scatter, matrix, flowchart, custom
+- Indicates complexity and required data
+- Allows testing with own data (upload CSV → preview)
 
-**Livrable** : 5 nouvelles skills documentées.
+**Why it's strategic**: this gallery becomes the entry point for AI agents. A researcher says "make me a chart like the scatter in the gallery but with my data", the AI agent reads the gallery, identifies the right embed, copies and adapts. The gallery is an **implicit training set**.
 
-**Estimation** : 3-5 jours.
+**Deliverable**: navigable `/gallery` page, with at least 15 categorized embeds.
+
+**Estimate**: 2 weeks.
 
 ---
 
-#### 3.2.3 — Recherche plein texte (Pagefind)
+#### 3.2.2 — Complete AI skills
 
-**Priorité : P1 — Impact moyen, effort très faible**
+**Priority: P0 — Very high impact, low effort**
 
-Intégrer [Pagefind](https://pagefind.app/) — moteur de recherche statique qui s'intègre nativement avec Astro :
+Currently, only the `create-html-embed` skill exists. Add:
 
-- Indexation au build time (pas de serveur)
-- Recherche instantanée côté client
-- ~50 Ko gzippé
-- Fonctionne avec le contenu MDX, les embeds, les accordéons
+| Skill | File | Use case |
+|-------|------|----------|
+| **Create an article** | `.cursor/skills/create-article/SKILL.md` | New user who wants to start from scratch |
+| **Add a chapter** | `.cursor/skills/add-chapter/SKILL.md` | The most frequent operation |
+| **Customize the theme** | `.cursor/skills/customize-theme/SKILL.md` | Change colors, typography, layout |
+| **Debug export** | `.cursor/skills/debug-export/SKILL.md` | Broken PDF, crashing LaTeX - pain point #1 |
+| **Import content** | `.cursor/skills/import-content/SKILL.md` | LaTeX → MDX, Notion → MDX, Markdown → MDX |
 
-**Pourquoi c'est important** : un article scientifique de 15 000 mots sans recherche est paradoxalement **moins navigable** qu'un PDF. C'est un frein réel à l'adoption par les lecteurs.
+Each skill must contain:
+- Step-by-step workflow
+- Files to read/modify
+- Conventions to follow
+- Validation checklist
+- Model prompt for the agent
 
-**Livrable** : composant `Search` intégré dans le header ou la TOC.
+**Vision**: a researcher opens the project in Cursor and says "turn my ArXiv paper into an interactive article". The agent knows exactly what to do thanks to the skills.
 
-**Estimation** : 1-2 jours.
+**Deliverable**: 5 new documented skills.
+
+**Estimate**: 3-5 days.
 
 ---
 
-#### 3.2.4 — GitHub Actions : build + preview
+#### 3.2.3 — Full-text search (Pagefind)
 
-**Priorité : P1 — Impact élevé, effort faible**
+**Priority: P1 — Medium impact, very low effort**
 
-Mettre en place un pipeline CI minimal :
+Integrate [Pagefind](https://pagefind.app/) - a static search engine that integrates natively with Astro:
+
+- Build-time indexing (no server)
+- Instant client-side search
+- ~50 KB gzipped
+- Works with MDX content, embeds, accordions
+
+**Why it matters**: a 15,000-word scientific article without search is paradoxically **less navigable** than a PDF. This is a real barrier to reader adoption.
+
+**Deliverable**: `Search` component integrated in the header or TOC.
+
+**Estimate**: 1-2 days.
+
+---
+
+#### 3.2.4 — GitHub Actions: build + preview
+
+**Priority: P1 — High impact, low effort**
+
+Set up a minimal CI pipeline:
 
 ```yaml
 # .github/workflows/ci.yml
-- Build check sur chaque PR
-- Export PDF smoke test
-- Lint MDX (frontmatter valide, imports résolus)
+- Build check on every PR
+- PDF export smoke test
+- MDX lint (valid frontmatter, resolved imports)
 - Preview deployment (Vercel/Netlify/Cloudflare Pages)
 ```
 
-**Pourquoi** : les équipes de recherche (2-5 personnes) ont besoin de preview pour collaborer. Sans CI, un co-auteur peut casser le build sans que personne ne le sache.
+**Why**: research teams (2-5 people) need previews to collaborate. Without CI, a co-author can break the build without anyone knowing.
 
-**Livrable** : workflow GitHub Actions fonctionnel + badge dans le README.
+**Deliverable**: working GitHub Actions workflow + badge in README.
 
-**Estimation** : 2-3 jours.
-
----
-
-### Phase 3 : Différenciation (Juillet – Août)
-
-> Objectif : créer un fossé avec les alternatives.
-
-#### 3.3.1 — Mode "Collaboration Light"
-
-Intégrer un système d'annotations/commentaires léger :
-
-- **Option 1** : [Hypothesis](https://web.hypothes.is/) — intégration en une ligne de script, annotations publiques
-- **Option 2** : Commentaires inline custom (stockés en JSON, visibles en mode review)
-- **Option 3** : Intégration HF Discussions comme backend de commentaires
-
-**Pourquoi** : la collaboration est le #1 feature request implicite des chercheurs. Git est le workflow de développeurs, pas de scientifiques.
-
-**Estimation** : 1-2 semaines selon l'option.
+**Estimate**: 2-3 days.
 
 ---
 
-#### 3.3.2 — Schema.org / Structured Data pour papers
+### Phase 3: Differentiation (July – August)
 
-Ajouter des métadonnées structurées (JSON-LD) pour :
+> Goal: create a moat against alternatives.
+
+#### 3.3.1 — "Light Collaboration" mode
+
+Integrate a lightweight annotation/comment system:
+
+- **Option 1**: [Hypothesis](https://web.hypothes.is/) - one-line script integration, public annotations
+- **Option 2**: Custom inline comments (stored in JSON, visible in review mode)
+- **Option 3**: HF Discussions integration as comment backend
+
+**Why**: collaboration is the #1 implicit feature request from researchers. Git is a developer workflow, not a scientist's workflow.
+
+**Estimate**: 1-2 weeks depending on the option.
+
+---
+
+#### 3.3.2 — Schema.org / Structured Data for papers
+
+Add structured metadata (JSON-LD) for:
 
 ```json
 {
@@ -306,150 +306,150 @@ Ajouter des métadonnées structurées (JSON-LD) pour :
 }
 ```
 
-**Impact** : meilleur référencement Google Scholar, rich snippets, et interopérabilité avec les outils de citation.
+**Impact**: better Google Scholar indexing, rich snippets, and interoperability with citation tools.
 
-**Estimation** : 1-2 jours.
-
----
-
-#### 3.3.3 — Refactoring des composants lourds
-
-Réduire la dette technique des composants monolithiques :
-
-| Composant | Action | Bénéfice |
-|-----------|--------|----------|
-| TableOfContents (1 152 L) | Extraire la logique scroll dans un hook, séparer desktop/mobile | Maintenabilité, testabilité |
-| HtmlEmbed (942 L) | Unifier `desc`/`caption`, typer `config`, ajouter `skipGallery` aux props | API plus claire |
-| Hero (665 L) | Extraire AuthorList, AffiliationList, MetadataBar en sous-composants | Customisation plus facile |
-| Image (626 L) | Retirer `[key: string]: any`, séparer BasicImage / ZoomableImage | Sécurité des types |
-
-**Estimation** : 2-3 semaines.
+**Estimate**: 1-2 days.
 
 ---
 
-#### 3.3.4 — Starter templates multiples
+#### 3.3.3 — Refactoring heavy components
 
-Proposer via le CLI plusieurs variantes :
+Reduce technical debt in monolithic components:
 
-| Template | Contenu | Public |
-|----------|---------|--------|
-| **Minimal** | 1 chapitre, pas d'embeds, hero simple | Chercheur pressé |
-| **Standard** | 3 chapitres, 2-3 embeds d'exemple, citations | Paper classique |
-| **Full** | Contenu demo complet, tous les embeds | Exploration du template |
-| **Blog** | Layout simplifié, pas de citations, hero compact | Blog technique / tutoriel |
+| Component | Action | Benefit |
+|-----------|--------|---------|
+| TableOfContents (1,152 L) | Extract scroll logic into a hook, separate desktop/mobile | Maintainability, testability |
+| HtmlEmbed (942 L) | Unify `desc`/`caption`, type `config`, add `skipGallery` to props | Cleaner API |
+| Hero (665 L) | Extract AuthorList, AffiliationList, MetadataBar into sub-components | Easier customization |
+| Image (626 L) | Remove `[key: string]: any`, separate BasicImage / ZoomableImage | Type safety |
 
-**Estimation** : 1 semaine (si le CLI existe déjà).
+**Estimate**: 2-3 weeks.
 
 ---
 
-## 4. Métriques de succès
+#### 3.3.4 — Multiple starter templates
+
+Offer via the CLI several variants:
+
+| Template | Content | Audience |
+|----------|---------|----------|
+| **Minimal** | 1 chapter, no embeds, simple hero | Researcher in a hurry |
+| **Standard** | 3 chapters, 2-3 example embeds, citations | Classic paper |
+| **Full** | Complete demo content, all embeds | Template exploration |
+| **Blog** | Simplified layout, no citations, compact hero | Technical blog / tutorial |
+
+**Estimate**: 1 week (if CLI already exists).
+
+---
+
+## 4. Success Metrics
 
 ### 4.1 Adoption
 
-| Métrique | Objectif H2 2026 | Comment mesurer |
-|----------|-------------------|-----------------|
-| Duplications HF Spaces | +200% vs actuel | Analytics HF |
-| npm downloads (CLI) | 500/mois | npm stats |
-| Stars GitHub/HF | +300% vs actuel | Platform stats |
-| Articles publiés avec le template | 20+ identifiables | Tag `research-article-template` |
+| Metric | H2 2026 Target | How to measure |
+|--------|-----------------|----------------|
+| HF Spaces duplications | +200% vs current | HF Analytics |
+| npm downloads (CLI) | 500/month | npm stats |
+| Stars GitHub/HF | +300% vs current | Platform stats |
+| Articles published with the template | 20+ identifiable | Tag `research-article-template` |
 
-### 4.2 Qualité
+### 4.2 Quality
 
-| Métrique | Objectif | Comment mesurer |
-|----------|----------|-----------------|
-| Build success rate CI | > 98% | GitHub Actions |
-| Lighthouse Accessibility | > 95 | CI automatisé |
-| Export PDF success (smoke test) | 100% | CI automatisé |
-| Time to first article (nouveau user) | < 5 minutes | User testing |
+| Metric | Target | How to measure |
+|--------|--------|----------------|
+| CI build success rate | > 98% | GitHub Actions |
+| Lighthouse Accessibility | > 95 | Automated CI |
+| PDF export success (smoke test) | 100% | Automated CI |
+| Time to first article (new user) | < 5 minutes | User testing |
 
-### 4.3 Communauté
+### 4.3 Community
 
-| Métrique | Objectif | Comment mesurer |
-|----------|----------|-----------------|
-| Contributeurs externes | 5+ | Git history |
-| Issues/discussions actives | 10+/mois | HF Discussions |
-| Embeds communautaires | 10+ | Gallery contributions |
-
----
-
-## 5. Risques et mitigations
-
-| Risque | Probabilité | Impact | Mitigation |
-|--------|-------------|--------|------------|
-| Astro 5 breaking changes | Moyenne | Élevé | Rester sur Astro 4.x stable, prévoir migration Q3 |
-| Playwright instable en CI | Moyenne | Moyen | Docker image dédiée avec browsers pré-installés |
-| Faible contribution externe | Élevée | Moyen | Skills AI qui abaissent la barrière, gallery comme point d'entrée |
-| Concurrence des outils AI one-shot | Élevée | Élevé | Miser sur l'écosystème (gallery, sync, exports, CI) — ce qu'un one-shot ne peut pas offrir |
-| Surcharge de maintenance | Moyenne | Moyen | CI automatisée, refactoring composants, conventions strictes |
+| Metric | Target | How to measure |
+|--------|--------|----------------|
+| External contributors | 5+ | Git history |
+| Active issues/discussions | 10+/month | HF Discussions |
+| Community embeds | 10+ | Gallery contributions |
 
 ---
 
-## 6. Vision long terme
+## 5. Risks and Mitigations
 
-### Le positionnement cible
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Astro 5 breaking changes | Medium | High | Stay on stable Astro 4.x, plan migration Q3 |
+| Playwright unstable in CI | Medium | Medium | Dedicated Docker image with pre-installed browsers |
+| Low external contribution | High | Medium | AI skills that lower the barrier, gallery as entry point |
+| Competition from AI one-shot tools | High | High | Bet on the ecosystem (gallery, sync, exports, CI) - what a one-shot cannot offer |
+| Maintenance overload | Medium | Medium | Automated CI, component refactoring, strict conventions |
 
-> **Research Article Template** n'est pas un template — c'est le **framework open-source pour l'écriture scientifique interactive**.
+---
 
-Ce qui le différencie :
+## 6. Long-term Vision
 
-1. **AI-native** : skills complètes, gallery comme training set, conventions machine-readable
-2. **Écosystème** : CLI + gallery + sync + exports + CI — pas juste du HTML
-3. **HF-native** : déploiement en un clic, intégration avec l'écosystème ML de Hugging Face
-4. **Print-ready** : le seul template web qui produit aussi des PDFs et du LaTeX de qualité
-5. **Community-driven** : contributions via la gallery, starter templates thématiques
+### Target positioning
 
-### Le parcours utilisateur cible (août 2026)
+> **Research Article Template** is not a template - it's the **open-source framework for interactive scientific writing**.
+
+What sets it apart:
+
+1. **AI-native**: complete skills, gallery as training set, machine-readable conventions
+2. **Ecosystem**: CLI + gallery + sync + exports + CI - not just HTML
+3. **HF-native**: one-click deployment, integration with Hugging Face's ML ecosystem
+4. **Print-ready**: the only web template that also produces quality PDFs and LaTeX
+5. **Community-driven**: contributions via the gallery, thematic starter templates
+
+### Target user journey (August 2026)
 
 ```
 1. npm create research-article my-paper     (2 min)
-2. Ouvre dans Cursor, dit "importe mon LaTeX"   (5 min)
-3. Dit "ajoute un scatter plot avec mes données" (30 sec)
-4. Pousse sur HF Spaces                          (1 min)
-5. Co-auteur fait une PR → preview auto           (0 effort)
-6. npm run sync:template quand le template évolue (30 sec)
+2. Open in Cursor, say "import my LaTeX"     (5 min)
+3. Say "add a scatter plot with my data"     (30 sec)
+4. Push to HF Spaces                         (1 min)
+5. Co-author makes a PR → auto preview       (0 effort)
+6. npm run sync:template when template evolves (30 sec)
 ```
 
-**Temps total : < 10 minutes du LaTeX au site web interactif publié.**
+**Total time: < 10 minutes from LaTeX to published interactive website.**
 
-C'est ça le standard à atteindre.
+That's the standard to reach.
 
 ---
 
-## 7. Calendrier synthétique
+## 7. Summary Calendar
 
 ```
-Mars 2026
+March 2026
 ├── CLI create-research-article (MVP)
-├── Stabiliser export PDF/LaTeX/DOCX
-├── Quick wins accessibilité
-└── Documenter sync-template
+├── Stabilize PDF/LaTeX/DOCX export
+├── Accessibility quick wins
+└── Document sync-template
 
-Avril 2026
-├── CLI : tests, publication npm
+April 2026
+├── CLI: tests, npm publication
 ├── GitHub Actions (build + preview)
-└── Recherche plein texte (Pagefind)
+└── Full-text search (Pagefind)
 
-Mai 2026
-├── Gallery d'embeds v1
-├── 5 nouvelles skills AI
+May 2026
+├── Embed gallery v1
+├── 5 new AI skills
 └── Schema.org structured data
 
-Juin 2026
-├── Gallery v2 (upload CSV, contributions)
+June 2026
+├── Gallery v2 (CSV upload, contributions)
 ├── Starter templates (minimal, standard, blog)
-└── Début refactoring composants lourds
+└── Begin heavy component refactoring
 
-Juillet 2026
-├── Collaboration light (Hypothesis ou custom)
-├── Fin refactoring composants
-└── Documentation complète (guides, tutoriels)
+July 2026
+├── Light collaboration (Hypothesis or custom)
+├── Finish component refactoring
+└── Complete documentation (guides, tutorials)
 
-Août 2026
-├── Stabilisation, bug fixes
-├── User testing avec 5-10 chercheurs
-└── Communication : blog post, HF community
+August 2026
+├── Stabilization, bug fixes
+├── User testing with 5-10 researchers
+└── Communication: blog post, HF community
 ```
 
 ---
 
-*Dernière mise à jour : 18 février 2026*
+*Last updated: February 18, 2026*
