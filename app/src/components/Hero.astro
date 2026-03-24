@@ -99,8 +99,8 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   <h1 class="hero-title" set:html={title} />
   <div class="hero-banner">
     <HtmlEmbed src="banner.html" frameless />
-    {description && <p class="hero-desc">{description}</p>}
   </div>
+  {description && <p class="hero-desc">{description}</p>}
 </section>
 
 <header class="meta" aria-label="Article meta information">
@@ -426,6 +426,9 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   }
 
   @media (max-width: 768px) {
+    .hero-banner {
+      aspect-ratio: auto;
+    }
     .hero-desc {
       max-width: 90%;
     }

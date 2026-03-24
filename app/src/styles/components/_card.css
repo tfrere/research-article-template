@@ -124,3 +124,10 @@
     font-size: 0.9rem;
     margin: 0 !important;
 }
+
+@media print {
+    .card,
+    .card-cta {
+        box-shadow: none;
+    }
+}

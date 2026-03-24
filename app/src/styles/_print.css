@@ -18,9 +18,10 @@
     display: none !important;
   }
 
-  /* Links: remove underline */
+  /* Links: remove underline and background */
   .content-grid main a {
     text-decoration: none;
+    background: none;
     border-bottom: 1px solid rgba(0, 0, 0, .2);
   }
 
@@ -47,6 +48,7 @@
 
   /* Adjust more contrasty colors for print */
   :root {
+    --surface-bg: #fff;
     --border-color: rgba(0, 0, 0, .2);
     --link-underline: rgba(0, 0, 0, .3);
     --link-underline-hover: rgba(0, 0, 0, .4);
@@ -79,7 +81,13 @@
   table,
   blockquote,
   .wide,
-  .full-width {
+  .full-width,
+  .stack > *,
+  .card,
+  .palettes,
+  .palette-card,
+  .color-picker,
+  .note {
     break-inside: avoid;
     page-break-inside: avoid;
   }
