@@ -4,21 +4,25 @@ interface Props {
   bibtex: string;
   licence?: string;
   doi?: string;
+  template?: string;
 }
-const { citationText, bibtex, licence, doi } = Astro.props as Props;
+const { citationText, bibtex, licence, doi, template = "paper" } = Astro.props as Props;
+const isArticle = template === "article";
 ---
 
 <footer class="footer">
   <div class="footer-inner">
-    <section class="citation-block">
-      <p class="footer-heading" role="heading" aria-level="2">Citation</p>
-      <p>For attribution in academic contexts, please cite this work as</p>
-      <pre class="citation short">{citationText}</pre>
+    {!isArticle && (
+      <section class="citation-block">
+        <p class="footer-heading" role="heading" aria-level="2">Citation</p>
+        <p>For attribution in academic contexts, please cite this work as</p>
+        <pre class="citation short">{citationText}</pre>
 
-      <p>BibTeX citation</p>
-      <pre class="citation long">{bibtex}</pre>
-    </section>
-    {
+        <p>BibTeX citation</p>
+        <pre class="citation long">{bibtex}</pre>
+      </section>
+    )}
+    {!isArticle &&
       doi && (
         <section class="doi-block">
           <p class="footer-heading" role="heading" aria-level="2">DOI</p>

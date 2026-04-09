@@ -19,104 +19,97 @@ thumbnail: https://HuggingFaceTB-smol-training-playbook.hf.space/thumb.png
 
 # Research Article Template
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
-[![Astro](https://img.shields.io/badge/Astro-4.10.0-orange.svg)](https://astro.build/)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tfrere/research-article-template)
+**A modern, interactive template for scientific writing that brings papers to life.**
 
+Interactive diagrams, math, citations, dark mode, PDF export - all with minimal setup.
 
-**A modern, interactive template for scientific writing** that brings papers to life with web-native features. The web offers what static PDFs can't: **interactive diagrams**, **progressive notation**, and **exploratory views** that show how ideas behave. This template treats interactive artifacts—figures, math, code, and inspectable experiments—as **first-class** alongside prose, helping readers **build intuition** instead of skimming results—all with **minimal setup** and no web knowledge required.
- 
-**[Try the live demo & documentation →](https://huggingface.co/spaces/tfrere/research-article-template)**
+**[Live demo & docs](https://huggingface.co/spaces/tfrere/research-article-template)** | [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/) [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/tfrere/research-article-template)
 
 </div>
 
-## 🚀 Quick Start
+## Quick start
 
-### Option 1: Duplicate on Hugging Face (Recommended)
+```bash
+npx create-research-article my-paper
+```
 
-1. Visit **[🤗 Research Article Template](https://huggingface.co/spaces/tfrere/research-article-template)**
-2. Click **"Duplicate this Space"**
-3. Clone your new repository:
-   ```bash
-   git clone git@hf.co:spaces/<your-username>/<your-space>
-   cd <your-space>
-   ```
+The CLI walks you through setup interactively:
+- **Project name** and basic metadata (title, authors, affiliations)
+- **Template choice**: `paper` (formal, with banner, TOC, citations, figure numbering) or `article` (lighter centered layout, no banner, no figure numbering)
+- **Hugging Face deployment** (optional, auto-creates a Space if `huggingface-cli` is installed)
 
-### Option 2: Clone Directly
+Then start writing:
+
+```bash
+cd my-paper/app
+npm run dev              # dev server at localhost:4321
+```
+
+## Deploy to Hugging Face
+
+If you skipped the auto-deploy during setup, push manually:
+
+```bash
+# create a Docker Space at huggingface.co/new-space, then:
+git remote add space git@hf.co:spaces/<your-username>/<your-space>
+git push space main
+```
+
+The project ships with Dockerfile, nginx config, and HF Space metadata ready to go.
+
+## Template variants
+
+Set `template` in `app/src/content/article.mdx` frontmatter:
+
+| Value | Layout | Best for |
+|-------|--------|----------|
+| `paper` (default) | Banner, sidebar TOC, figure numbering, citation block, PDF export | Formal research papers |
+| `article` | Centered single column, no banner, no figure numbering, minimal footer | Blog posts, lighter articles |
+
+## Edit your content
+
+| File | What |
+|------|------|
+| `app/src/content/article.mdx` | Main article (metadata + chapter imports) |
+| `app/src/content/chapters/` | Chapters (one .mdx per section) |
+| `app/src/content/bibliography.bib` | BibTeX references |
+| `app/src/content/embeds/` | D3.js HTML visualizations |
+| `app/src/content/assets/image/` | Images |
+| `app/src/content/assets/data/` | CSV/JSON data files |
+
+## Commands
+
+| Command | What |
+|---------|------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm run export:pdf` | Export as PDF |
+| `npm run export:latex` | Export as LaTeX |
+| `npm run sync:template` | Pull latest template updates |
+
+## Alternative setup
+
+<details>
+<summary>Duplicate on Hugging Face</summary>
+
+1. Visit **[Research Article Template](https://huggingface.co/spaces/tfrere/research-article-template)**, click **"Duplicate this Space"**
+2. Clone: `git clone git@hf.co:spaces/<your-username>/<your-space>`
+3. `cd <your-space>/app && git lfs pull && npm install && npm run dev`
+</details>
+
+<details>
+<summary>Clone directly</summary>
 
 ```bash
 git clone https://github.com/tfrere/research-article-template.git
-cd research-article-template
+cd research-article-template/app
+git lfs install && git lfs pull
+npm install && npm run dev
 ```
+</details>
 
-### Installation
+## License
 
-```bash
-# Install Node.js 20+ (use nvm for version management)
-nvm install 20
-nvm use 20
+CC-BY-4.0 - [Distill](https://distill.pub/)-inspired, built with [Astro](https://astro.build/) + MDX + D3.js.
 
-# Install Git LFS and pull assets
-git lfs install
-git lfs pull
-
-# Install dependencies
-cd app
-npm install
-
-# Start development server
-npm run dev
-```
-
-Visit `http://localhost:4321` to see your site!
-
-## 🎯 Who This Is For
-
-- **Scientists** writing modern, web-native research papers
-- **Educators** creating interactive, explorable lessons
-- **Researchers** who want to focus on ideas, not infrastructure
-- **Anyone** who values clear, engaging technical communication
-
-## 🌟 Inspired by Distill
-
-This template carries forward the spirit of [Distill](https://distill.pub/) (2016–2021), pushing interactive scientific writing even further with:
-- Accessible, high-quality explanations
-- Reproducible, production-ready demos
-- Modern web technologies and best practices
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### Ways to Contribute
-
-- **Report bugs** - Open an issue with detailed information
-- **Suggest features** - Share ideas for improvements
-- **Improve documentation** - Help others get started
-- **Submit code** - Fix bugs or add features
-- **Join discussions** - Share feedback and ideas
-
-## 📄 License
-
-This project is licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
-
-- **Diagrams and text**: CC-BY 4.0
-- **Source code**: Available on [Hugging Face](https://huggingface.co/spaces/tfrere/research-article-template)
-- **Third-party figures**: Excluded and marked in captions
-
-## 🙏 Acknowledgments
-
-- Inspired by [Distill](https://distill.pub/) and the interactive scientific writing movement
-- Built with [Astro](https://astro.build/), [MDX](https://mdxjs.com/), and modern web technologies
-- Community feedback and contributions from researchers worldwide
-
-## 📞 Support
-
-- **[Community Discussions](https://huggingface.co/spaces/tfrere/research-article-template/discussions)** - Ask questions and share ideas
-- **[Report Issues](https://huggingface.co/spaces/tfrere/research-article-template/discussions?status=open&type=issue)** - Bug reports and feature requests
-- **Contact**: [@tfrere](https://huggingface.co/tfrere) on Hugging Face
-
----
-
-**Made with ❤️ for the scientific community**
+**[Discussions](https://huggingface.co/spaces/tfrere/research-article-template/discussions)** | **[@tfrere](https://huggingface.co/tfrere)**

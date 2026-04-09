@@ -5,49 +5,48 @@ import Note from '../../../components/Note.astro';
 
 ### Installation
 
-The recommended way is to **duplicate this Space** on **Hugging Face** rather than cloning it directly:
-
-1. Open the Space: **[🤗 science-blog-template](https://huggingface.co/spaces/tfrere/science-blog-template)**<br/> and click `Duplicate this Space`.
-2. Give it a **name**, choose **visibility**, and keep the **free CPU instance**.
-3. **Clone** your new Space repository.
-```bash
-git clone git@hf.co:spaces/<your-username>/<your-space>
-cd <your-space>
-```
-<br/>
-4. Use **Node.js 20 or newer**. <br/>To manage versions, consider using **nvm**
-  - macOS/Linux: see [nvm-sh](https://github.com/nvm-sh/nvm)
-  - Windows: see [nvm-windows](https://github.com/coreybutler/nvm-windows)
+The fastest way to get started is with **npx**:
 
 ```bash
-nvm install 20
-nvm use 20
-node -v
+npx create-research-article my-paper
 ```
 
-5. Install lfs and pull files from the repository.
-```bash
-git lfs install
-git lfs pull
-```
-<Note emoji="⚠️" variant="danger">If you attempt to push binary files without Git LFS installed, you will encounter an error.</Note>
+The CLI guides you through the setup: project name, metadata (title, authors, affiliations), and template choice. It also offers to **create and deploy a Hugging Face Space** automatically if you have `huggingface-cli` installed.
 
-
-6. Install dependencies.
+Once done:
 
 ```bash
-cd app
-npm install
+cd my-paper/app
+npm run dev
 ```
-
-<Sidenote>
-  Alternatively, you can use **Yarn** as your package manager.
-</Sidenote>
-
-
-<br/>And that's it!
 
 **You're ready to go!** 🎉
+
+<Note>
+Requires **Node.js 20 or newer**. To manage versions, consider [nvm](https://github.com/nvm-sh/nvm) (macOS/Linux) or [nvm-windows](https://github.com/coreybutler/nvm-windows).
+</Note>
+
+<details>
+<summary>Alternative: duplicate the Space on Hugging Face</summary>
+
+1. Open **[Research Article Template](https://huggingface.co/spaces/tfrere/research-article-template)** and click **Duplicate this Space**.
+2. Clone your new Space:
+```bash
+git clone git@hf.co:spaces/<your-username>/<your-space>
+cd <your-space>/app
+git lfs install && git lfs pull
+npm install && npm run dev
+```
+</details>
+
+### Template variants
+
+You can choose the layout during `npx create-research-article`, or change it later in `article.mdx` frontmatter:
+
+```yaml
+template: "paper"    # formal: banner, sidebar TOC, figure numbering, citation block
+template: "article"  # lighter: centered column, no banner, no figure numbering
+```
 
 ### Development
 
@@ -63,22 +62,28 @@ Once started, the dev server is available at `http://localhost:4321`.
 npm run build
 ```
 
-
 ### Deploy
 
-**Every push** automatically triggers a **build** and **deploy** on Spaces.
+Push to your Hugging Face Space to trigger an automatic build and deploy:
+
 ```bash
-# Make edits locally, then:
 git add .
 git commit -m "Update content"
-git push
+git push space main
+```
+
+If you haven't set up a Space yet:
+```bash
+# create a Docker Space at huggingface.co/new-space, then:
+git remote add space git@hf.co:spaces/<your-username>/<your-space>
+git push space main
 ```
 
 <Note>
-Serving the `dist/` directory on any static host is enough to deliver the site.
+Serving the `dist/` directory on any static host also works.
 </Note>
 <Note>
-A [slugified-title].pdf and thumb.jpg are also generated at build time.<br/>You can find them in the public folder and point to them at `[domain]/public/thumb.jpg`.
+A [slugified-title].pdf and thumb.jpg are generated at build time in the public folder.
 </Note>
 
 ### Template Synchronization

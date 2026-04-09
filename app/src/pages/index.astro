@@ -113,6 +113,7 @@ const normalizedAuthors: Author[] = (
   .filter((a: Author) => a.name && a.name.trim().length > 0);
 const authorNames: string[] = normalizedAuthors.map((a) => a.name);
 const published = articleFM?.published ?? undefined;
+const template: string = (articleFM as any)?.template ?? "paper";
 const tags = articleFM?.tags ?? [];
 // Prefer seoThumbImage from frontmatter if provided
 const fmOg = articleFM?.seoThumbImage as string | undefined;
@@ -172,6 +173,7 @@ const licence =
 <html
   lang="en"
   data-theme="light"
+  data-template={template}
   data-toc-auto-collapse={tableOfContentAutoCollapse ? "1" : "0"}
 >
   <head>
@@ -333,7 +335,7 @@ const licence =
       published={articleFM?.published}
       doi={doi}
       pdfProOnly={articleFM?.pdfProOnly}
-      showPdf={articleFM?.showPdf}
+      showPdf={template === "article" ? false : articleFM?.showPdf}
     />
 
     <section class="content-grid">
@@ -350,6 +352,7 @@ const licence =
       bibtex={bibtex}
       licence={licence}
       doi={doi}
+      template={template}
     />
 
     <script>

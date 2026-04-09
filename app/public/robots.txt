@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: /sitemap-index.xml
+LLMs-Txt: /llms.txt

@@ -252,3 +252,110 @@
   content: "Figure " counter(figure) " · ";
   font-weight: 600;
 }
+
+/* ============================================================================ */
+/* "article" template – single-column centered layout                           */
+/* Activated by frontmatter `template: "article"` → data-template="article"     */
+/* ============================================================================ */
+
+/* ---- Hero: hide banner, tighten spacing ---- */
+
+[data-template="article"] .hero {
+  padding-bottom: 0;
+}
+
+[data-template="article"] .hero-banner {
+  display: none;
+}
+
+[data-template="article"] .hero-desc {
+  max-width: 70%;
+}
+
+/* ---- Meta bar: centered vertical flow, hide labels ---- */
+
+[data-template="article"] .meta {
+  border-top: none;
+  border-bottom: none;
+  padding: 0.5rem 0 1.5rem;
+}
+
+[data-template="article"] .meta-container {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 780px;
+}
+
+[data-template="article"] .meta-container-cell {
+  text-align: center;
+  max-width: none;
+}
+
+[data-template="article"] .meta-container-cell h3 {
+  display: none;
+}
+
+[data-template="article"] .authors {
+  justify-content: center;
+}
+
+[data-template="article"] .meta-container-cell--affiliations .affiliations {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 16px;
+  list-style-position: inside;
+  padding-left: 0;
+}
+
+[data-template="article"] .meta-container-cell--published p {
+  color: var(--muted-color);
+  font-size: 0.85em;
+}
+
+[data-template="article"] .meta-container-cell--doi {
+  display: none;
+}
+
+/* ---- Content grid: single centered column, no TOC ---- */
+
+[data-template="article"] .content-grid {
+  grid-template-columns: minmax(0, 780px);
+  justify-content: center;
+}
+
+[data-template="article"] .table-of-contents {
+  display: none;
+}
+
+/* ---- No figure numbering ---- */
+
+[data-template="article"] .content-grid > main {
+  counter-reset: none;
+}
+
+[data-template="article"] .content-grid > main .reference-wrapper .reference__caption::before,
+[data-template="article"] .content-grid > main .image-wrapper > figure > figcaption::before,
+[data-template="article"] .content-grid > main figure.html-embed > .html-embed__desc::before {
+  content: none;
+}
+
+/* ---- Footer: simple single-column block layout ---- */
+
+[data-template="article"] .footer-inner {
+  display: block;
+  max-width: 780px;
+}
+
+[data-template="article"] .references-block > .footer-heading,
+[data-template="article"] .reuse-block > .footer-heading {
+  text-align: left;
+  padding-right: 0;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+[data-template="article"] .template-credit p {
+  margin-top: 32px;
+}
