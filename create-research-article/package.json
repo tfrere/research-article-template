@@ -1,6 +1,6 @@
 {
   "name": "create-research-article",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Scaffold a new research paper or article from the research-article-template",
   "license": "CC-BY-4.0",
   "type": "module",

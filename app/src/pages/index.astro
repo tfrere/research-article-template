@@ -6,6 +6,7 @@ import Footer from "../components/Footer.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import Seo from "../components/Seo.astro";
 import TableOfContents from "../components/TableOfContents.astro";
+import HtmlEmbed from "../components/HtmlEmbed.astro";
 // Default OG image served from public/
 const ogDefaultUrl = "/thumb.auto.jpg";
 import "katex/dist/katex.min.css";
@@ -113,7 +114,7 @@ const normalizedAuthors: Author[] = (
   .filter((a: Author) => a.name && a.name.trim().length > 0);
 const authorNames: string[] = normalizedAuthors.map((a) => a.name);
 const published = articleFM?.published ?? undefined;
-const template: string = (articleFM as any)?.template ?? "paper";
+const template: string = (articleFM as any)?.template ?? "article";
 const tags = articleFM?.tags ?? [];
 // Prefer seoThumbImage from frontmatter if provided
 const fmOg = articleFM?.seoThumbImage as string | undefined;
@@ -328,15 +329,21 @@ const licence =
     <Hero
       title={docTitleHtml}
       titleRaw={docTitle}
-      description={subtitle}
+      description={subtitle || description}
       authors={normalizedAuthors as any}
       affiliations={normalizedAffiliations as any}
       affiliation={articleFM?.affiliation}
       published={articleFM?.published}
       doi={doi}
       pdfProOnly={articleFM?.pdfProOnly}
-      showPdf={template === "article" ? false : articleFM?.showPdf}
+      showPdf={template === "paper" ? false : articleFM?.showPdf}
     />
+
+    {template === "paper" && (
+      <div class="paper-hero-banner">
+        <HtmlEmbed src="banner.html" frameless />
+      </div>
+    )}
 
     <section class="content-grid">
       <TableOfContents

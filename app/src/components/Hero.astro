@@ -103,6 +103,16 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   {description && <p class="hero-desc">{description}</p>}
 </section>
 
+<script is:inline>
+  (() => {
+    const el = document.querySelector(".hero-title");
+    if (!el) return;
+    const len = (el.textContent || "").length;
+    if (len > 100) el.dataset.titleSize = "sm";
+    else if (len > 60) el.dataset.titleSize = "md";
+  })();
+</script>
+
 <header class="meta" aria-label="Article meta information">
   <div class="meta-container">
     {
@@ -403,8 +413,15 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     font-size: clamp(28px, 4vw, 48px);
     font-weight: 800;
     line-height: 1.1;
-    margin: 0 0 8px;
-    max-width: 100%;
+    margin: 0 auto 8px;
+    max-width: 780px;
+    text-wrap: balance;
+  }
+  .hero-title[data-title-size="md"] {
+    font-size: clamp(24px, 3.2vw, 40px);
+  }
+  .hero-title[data-title-size="sm"] {
+    font-size: clamp(22px, 2.8vw, 36px);
   }
   .hero-banner {
     max-width: 980px;
@@ -676,5 +693,80 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
       flex-direction: column;
       align-items: flex-end;
     }
+  }
+
+  /* Paper template overrides (must be scoped to win over default styles) */
+  :global([data-template="paper"]) .hero {
+    padding: 80px 16px 0;
+  }
+  :global([data-template="paper"]) .hero-title {
+    font-size: clamp(34px, 5vw, 54px);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    max-width: 860px;
+    margin: 0 auto 20px;
+  }
+  :global([data-template="paper"]) .hero-banner {
+    display: none;
+  }
+  :global([data-template="paper"]) .hero-desc {
+    max-width: 680px;
+    margin: 0 auto;
+    font-size: 1.15em;
+    font-style: normal;
+    line-height: 1.6;
+    color: var(--muted-color);
+  }
+  :global([data-template="paper"]) .meta {
+    border-top: none;
+    border-bottom: none;
+    padding: 24px 0 0;
+  }
+  :global([data-template="paper"]) .meta-container {
+    display: block !important;
+    text-align: center;
+    max-width: 860px;
+  }
+  :global([data-template="paper"]) .meta-container-cell {
+    display: inline;
+    max-width: none;
+  }
+  :global([data-template="paper"]) .meta-container-cell h3 {
+    display: none;
+  }
+  :global([data-template="paper"]) .meta-container-cell + .meta-container-cell::before {
+    content: " · ";
+    color: var(--muted-color);
+    font-weight: 400;
+  }
+  :global([data-template="paper"]) .authors {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+  :global([data-template="paper"]) .authors li {
+    display: inline;
+  }
+  :global([data-template="paper"]) .meta-container-cell--affiliations .affiliations {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    color: var(--muted-color);
+  }
+  :global([data-template="paper"]) .meta-container-cell--affiliations .affiliations li {
+    display: inline;
+  }
+  :global([data-template="paper"]) .meta-container-cell--published p {
+    display: inline;
+    color: var(--muted-color);
+  }
+  :global([data-template="paper"]) .meta-container-cell--doi {
+    display: none !important;
+  }
+  :global([data-template="paper"]) .meta-container-cell--pdf {
+    display: none !important;
   }
 </style>

@@ -94,7 +94,7 @@ function generateArticleMdx(cfg) {
     ? `  - name: "${cfg.affiliationName}"\n    url: "${cfg.affiliationUrl}"`
     : `  - name: "${cfg.affiliationName}"`;
 
-  const isPaper = cfg.layout === "paper";
+  const isArticle = cfg.layout === "article";
 
   return `---
 title: "${cfg.title}"
@@ -105,8 +105,8 @@ affiliations:
 ${affiliationLine}
 published: "${todayFormatted()}"
 template: "${cfg.layout}"
-tableOfContentsAutoCollapse: ${isPaper}
-showPdf: ${isPaper}
+tableOfContentsAutoCollapse: ${isArticle}
+showPdf: ${isArticle}
 ---
 
 import Introduction from "./chapters/introduction.mdx";
@@ -116,14 +116,14 @@ import Introduction from "./chapters/introduction.mdx";
 }
 
 function generateIntroChapter(layout) {
-  if (layout === "paper") {
+  if (layout === "article") {
     return `## Abstract
 
 Write your abstract here. This section should briefly summarize the key points of your research.
 
 ## Introduction
 
-Start writing your paper here. You can use all the features of the template:
+Start writing your article here. You can use all the features of the template:
 
 - **Markdown** for text formatting
 - **KaTeX** for math: $E = mc^2$
@@ -137,7 +137,7 @@ See the [template documentation](https://huggingface.co/spaces/tfrere/research-a
 
   return `## Introduction
 
-Start writing your article here. You can use all the features of the template:
+Start writing your paper here. You can use all the features of the template:
 
 - **Markdown** for text formatting
 - **KaTeX** for math: $E = mc^2$
@@ -160,7 +160,7 @@ function generateBibliography() {
 }
 
 function generateReadme(name, layout, title) {
-  const layoutLabel = layout === "paper" ? "Research Paper" : "Research Article";
+  const layoutLabel = layout === "article" ? "Research Article" : "Research Paper";
   const safeTitle = title || name;
   return `---
 title: "${safeTitle}"
@@ -230,7 +230,7 @@ CC-BY-4.0
 
 const CLEANUP_DIRS = [
   ".git",
-  ".cursor",
+  ".cursor/rules",
   ".vscode",
   ".playwright-mcp",
   "app/.claude",
@@ -251,8 +251,6 @@ const CLEANUP_FILES = [
   "ROADMAP-2026.md",
   "CHANGELOG.md",
   "CONTRIBUTING.md",
-  "CLAUDE.md",
-  "AGENTS.md",
   "prototype-project-page.html",
   "app/scripts/fetch-hf-citations.py",
 ];
@@ -392,20 +390,20 @@ async function main() {
     // 2. Layout
     const layout = await prompt.select("Choose a layout:", [
       {
-        value: "paper",
-        label: "Research Paper",
-        hint: "Academic layout with DOI, affiliations, citations, PDF export",
-      },
-      {
         value: "article",
         label: "Research Article",
-        hint: "Lighter editorial layout, blog-friendly",
+        hint: "Full layout with banner, TOC, DOI, citations, PDF export",
+      },
+      {
+        value: "paper",
+        label: "Research Paper",
+        hint: "Lighter single-column layout, blog-friendly",
       },
     ]);
 
     // 3. Metadata
     console.log("");
-    const title = await prompt.ask("Title", "My Research Paper");
+    const title = await prompt.ask("Title", "My Research Article");
     const description = await prompt.ask("Short description", "");
     const authorName = await prompt.ask("Author name", "");
     const authorUrl = await prompt.ask("Author URL", "");

@@ -35,7 +35,7 @@ npx create-research-article my-paper
 
 The CLI walks you through setup interactively:
 - **Project name** and basic metadata (title, authors, affiliations)
-- **Template choice**: `paper` (formal, with banner, TOC, citations, figure numbering) or `article` (lighter centered layout, no banner, no figure numbering)
+- **Template choice**: `article` (full layout with banner, TOC, citations, figure numbering, PDF export) or `paper` (lighter centered single-column layout)
 - **Hugging Face deployment** (optional, auto-creates a Space if `huggingface-cli` is installed)
 
 Then start writing:
@@ -63,8 +63,18 @@ Set `template` in `app/src/content/article.mdx` frontmatter:
 
 | Value | Layout | Best for |
 |-------|--------|----------|
-| `paper` (default) | Banner, sidebar TOC, figure numbering, citation block, PDF export | Formal research papers |
-| `article` | Centered single column, no banner, no figure numbering, minimal footer | Blog posts, lighter articles |
+| `article` (default) | Banner, sidebar TOC, figure numbering, citation block, PDF export | Full research articles |
+| `paper` | Centered single column, no figure numbering, minimal footer | Blog posts, lighter papers |
+
+### Title line breaks
+
+Long titles are automatically balanced across lines. You can also force a line break with `\n`:
+
+```yaml
+title: "Why Open-Source LLMs\nAre Reshaping the AI Landscape"
+```
+
+Titles longer than 60 characters are automatically downsized for readability.
 
 ## Edit your content
 

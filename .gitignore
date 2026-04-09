@@ -41,7 +41,8 @@ app/public/data/**/*
 .backup-*/
 
 # IDE / agent
-.cursor/
+.cursor/*
+!.cursor/skills
 
 # Temporary screenshots & exports at root
 /*.png

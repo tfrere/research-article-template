@@ -81,18 +81,9 @@ const pageDesc = articleDesc;
 // Load all visual elements from the content
 const allVisuals = loadAllVisualsFromMDX();
 
-// Add banner as first item (it's in Hero.astro, not in MDX content)
-const bannerItem = {
-    type: 'banner', // Special type for banner
-    src: 'banner.html',
-    frameless: true,
-    wide: true,
-    hideCaption: true, // No header for banner
-};
-
-// Filter out skipGallery items and prepend banner
-const visuals = [bannerItem, ...allVisuals.filter((item: any) => !item.skipGallery)];
-const embedCount = visuals.filter((v: any) => v.type === 'embed').length;
+// Filter out skipGallery items
+const visuals = allVisuals.filter((item: any) => !item.skipGallery);
+const embedCount = visuals.filter((v: any) => v.type === 'embed').length + 1; // +1 for banner
 const imageCount = visuals.filter((v: any) => v.type === 'image' || v.type === 'stack').length;
 const tableCount = visuals.filter((v: any) => v.type === 'table').length;
 
@@ -129,7 +120,7 @@ function getDisplayName(item: any): string | null {
 function getTypeLabel(type: string): string {
     switch (type) {
         case 'embed': return 'Chart';
-        case 'banner': return 'Banner';
+        
         case 'image': return 'Image';
         case 'stack': return 'Stack';
         case 'table': return 'Table';
@@ -244,8 +235,14 @@ const visualsWithMeta = visuals.map((item: any) => {
                     </div>
                 </header>
 
+                <div class="dataviz-banner">
+                    <Wide>
+                        <HtmlEmbed src="banner.html" frameless />
+                    </Wide>
+                </div>
+
                 <div class="dataviz-list">
-                    {visualsWithMeta.map((item: any) => {
+                    {visualsWithMeta.filter((item: any) => item.type !== 'banner').map((item: any) => {
                         const isWide = item.wide || item.fullWidth;
                         
                         return (
@@ -386,6 +383,7 @@ const visualsWithMeta = visuals.map((item: any) => {
             window.addEventListener("load", () => setTimeout(initializeZoom, 100));
         </script>
 
+
         <style is:global>
             /* Layout */
             .dataviz-layout {
@@ -397,9 +395,18 @@ const visualsWithMeta = visuals.map((item: any) => {
                 grid-column: 2;
             }
 
-            .dataviz-page #theme-toggle {
-                left: auto;
-                right: var(--spacing-3);
+            .dataviz-banner {
+                margin-bottom: 0;
+            }
+            .dataviz-banner .wide {
+                width: min(1100px, 100vw - var(--content-padding-x) * 4);
+                margin-left: 50%;
+                transform: translateX(-50%);
+                padding: 0;
+                background: transparent;
+            }
+            .dataviz-banner .html-embed {
+                margin: 0;
             }
 
             /* Page Header */

@@ -254,108 +254,199 @@
 }
 
 /* ============================================================================ */
-/* "article" template – single-column centered layout                           */
-/* Activated by frontmatter `template: "article"` → data-template="article"     */
+/* "paper" template - academic project-page layout (single centered column)     */
+/* Activated by frontmatter `template: "paper"` -> data-template="paper"        */
+/* Reference: academic project pages like diffusion-cot.github.io               */
 /* ============================================================================ */
 
-/* ---- Hero: hide banner, tighten spacing ---- */
+/* ---- Hero: hide inline banner, large title, venue-style subtitle ---- */
 
-[data-template="article"] .hero {
-  padding-bottom: 0;
+[data-template="paper"] .hero {
+  padding: 80px 16px 0;
 }
 
-[data-template="article"] .hero-banner {
+[data-template="paper"] .hero-title {
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  max-width: 860px;
+  margin: 0 auto 20px;
+}
+
+[data-template="paper"] .hero-banner {
   display: none;
 }
 
-[data-template="article"] .hero-desc {
-  max-width: 70%;
+[data-template="paper"] .hero-desc {
+  max-width: 680px;
+  margin: 0 auto;
+  font-size: 1.15em;
+  font-style: normal;
+  line-height: 1.6;
+  color: var(--muted-color);
 }
 
-/* ---- Meta bar: centered vertical flow, hide labels ---- */
+/* ---- Meta bar: centered academic author/affiliation block ---- */
 
-[data-template="article"] .meta {
+[data-template="paper"] .meta {
   border-top: none;
   border-bottom: none;
-  padding: 0.5rem 0 1.5rem;
+  padding: 24px 0 0;
 }
 
-[data-template="article"] .meta-container {
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  max-width: 780px;
+[data-template="paper"] .meta-container {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 6px;
+  max-width: 860px;
 }
 
-[data-template="article"] .meta-container-cell {
+[data-template="paper"] .meta-container-cell {
   text-align: center;
   max-width: none;
+  flex: 0 0 auto;
 }
 
-[data-template="article"] .meta-container-cell h3 {
+[data-template="paper"] .meta-container-cell h3 {
   display: none;
 }
 
-[data-template="article"] .authors {
-  justify-content: center;
+[data-template="paper"] .meta-container-cell + .meta-container-cell::before {
+  content: "·";
+  color: var(--muted-color);
+  margin-right: 2px;
+  font-weight: 400;
 }
 
-[data-template="article"] .meta-container-cell--affiliations .affiliations {
+[data-template="paper"] .authors {
+  justify-content: center;
+  gap: 0;
+  font-size: 1em;
+}
+
+[data-template="paper"] .meta-container-cell--affiliations .affiliations {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0 16px;
+  gap: 0 20px;
   list-style-position: inside;
   padding-left: 0;
-}
-
-[data-template="article"] .meta-container-cell--published p {
+  font-size: 0.92em;
   color: var(--muted-color);
-  font-size: 0.85em;
 }
 
-[data-template="article"] .meta-container-cell--doi {
+[data-template="paper"] .meta-container-cell--published p {
+  color: var(--muted-color);
+  font-size: 0.92em;
+}
+
+[data-template="paper"] .meta-container-cell--doi {
   display: none;
+}
+
+[data-template="paper"] .meta-container-cell--pdf {
+  display: none;
+}
+
+/* ---- Paper hero banner: placed between meta and content in index.astro ---- */
+
+.paper-hero-banner {
+  max-width: 920px;
+  margin: 32px auto 0;
+  padding: 0 16px;
+}
+
+.paper-hero-banner :global(.html-embed) {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.paper-hero-banner :global(.html-embed__card) {
+  border-radius: 8px;
+}
+
+/* Thin separator between banner area and content */
+[data-template="paper"] .paper-hero-banner + .content-grid {
+  margin-top: 48px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 40px;
+}
+
+/* When no banner, separator is directly below meta */
+[data-template="paper"] .meta + .content-grid {
+  margin-top: 32px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 40px;
 }
 
 /* ---- Content grid: single centered column, no TOC ---- */
 
-[data-template="article"] .content-grid {
+[data-template="paper"] .content-grid {
   grid-template-columns: minmax(0, 780px);
   justify-content: center;
+  margin-top: 0;
 }
 
-[data-template="article"] .table-of-contents {
+[data-template="paper"] .table-of-contents {
   display: none;
+}
+
+/* ---- Typography: generous spacing, centered h2 with decorative rule ---- */
+
+[data-template="paper"] .content-grid > main h2 {
+  text-align: center;
+  font-size: 1.75em;
+  font-weight: 700;
+  margin-top: 3em;
+  margin-bottom: 1em;
+  padding-top: 2em;
+  border-top: 1px solid var(--border-color);
+}
+
+[data-template="paper"] .content-grid > main h2:first-child,
+[data-template="paper"] .content-grid > main > *:first-child h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+[data-template="paper"] .content-grid > main h3 {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
 }
 
 /* ---- No figure numbering ---- */
 
-[data-template="article"] .content-grid > main {
+[data-template="paper"] .content-grid > main {
   counter-reset: none;
 }
 
-[data-template="article"] .content-grid > main .reference-wrapper .reference__caption::before,
-[data-template="article"] .content-grid > main .image-wrapper > figure > figcaption::before,
-[data-template="article"] .content-grid > main figure.html-embed > .html-embed__desc::before {
+[data-template="paper"] .content-grid > main .reference-wrapper .reference__caption::before,
+[data-template="paper"] .content-grid > main .image-wrapper > figure > figcaption::before,
+[data-template="paper"] .content-grid > main figure.html-embed > .html-embed__desc::before {
   content: none;
 }
 
 /* ---- Footer: simple single-column block layout ---- */
 
-[data-template="article"] .footer-inner {
+[data-template="paper"] .footer-inner {
   display: block;
   max-width: 780px;
 }
 
-[data-template="article"] .references-block > .footer-heading,
-[data-template="article"] .reuse-block > .footer-heading {
+[data-template="paper"] .references-block > .footer-heading,
+[data-template="paper"] .reuse-block > .footer-heading {
   text-align: left;
   padding-right: 0;
   margin-top: 16px;
   margin-bottom: 8px;
 }
 
-[data-template="article"] .template-credit p {
+[data-template="paper"] .template-credit p {
   margin-top: 32px;
 }

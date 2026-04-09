@@ -44,8 +44,16 @@ npm install && npm run dev
 You can choose the layout during `npx create-research-article`, or change it later in `article.mdx` frontmatter:
 
 ```yaml
-template: "paper"    # formal: banner, sidebar TOC, figure numbering, citation block
-template: "article"  # lighter: centered column, no banner, no figure numbering
+template: "article"  # full: banner, sidebar TOC, figure numbering, citation block, PDF export
+template: "paper"    # lighter: centered single column, no figure numbering
+```
+
+See them live: [article template](https://huggingface.co/spaces/tfrere/test-article-scaffold) | [paper template](https://huggingface.co/spaces/tfrere/test-paper-scaffold)
+
+Long titles are automatically balanced and downsized. You can force a line break with `\n` in the frontmatter:
+
+```yaml
+title: "Why Open-Source LLMs\nAre Reshaping the AI Landscape"
 ```
 
 ### Development
