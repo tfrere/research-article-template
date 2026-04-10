@@ -371,6 +371,40 @@ async function main() {
         }
       }
 
+      // Generate OG thumbnail BEFORE any print modifications (1200x630, screen mode)
+      try {
+        const savedViewport = { width: webViewportWidth, height: 1400 };
+        await page.setViewportSize({ width: 1200, height: 630 });
+        await page.waitForTimeout(200);
+        await page.evaluate(() => window.scrollTo(0, 0));
+
+        const cssHandle = await page.addStyleTag({
+          content: `.hero .points { mix-blend-mode: normal !important; }`
+        });
+        const thumbPath = resolve(cwd, 'dist', 'thumb.auto.jpg');
+        await page.screenshot({ path: thumbPath, type: 'jpeg', quality: 85, fullPage: false });
+        const thumbPngPath = resolve(cwd, 'dist', 'thumb.auto.png');
+        await page.screenshot({ path: thumbPngPath, type: 'png', fullPage: false });
+        await fs.mkdir(resolve(cwd, 'public'), { recursive: true });
+        try { await fs.copyFile(thumbPath, resolve(cwd, 'public', 'thumb.auto.jpg')); } catch { }
+        try { await fs.copyFile(thumbPngPath, resolve(cwd, 'public', 'thumb.auto.png')); } catch { }
+        try { await cssHandle.evaluate((el) => el.remove()); } catch { }
+        console.log(`✅ OG thumbnail generated: ${thumbPath}`);
+
+        // Restore viewport
+        await page.setViewportSize(savedViewport);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(100);
+      } catch (e) {
+        console.warn('Unable to generate OG thumbnail:', e?.message || e);
+      }
+
+      // If --thumbnail-only, skip everything else
+      if (args['thumbnail-only']) {
+        console.log('🏁 Thumbnail-only mode, skipping PDF generation');
+        return;
+      }
+
       // Screenshot all embeds and replace them with static <img> tags.
       // This freezes the render at 1200px, preventing D3/Plotly re-render
       // issues when the viewport shrinks to print width later.
@@ -581,31 +615,7 @@ async function main() {
 
       await page.emulateMedia({ media: 'print' });
 
-      // Generate OG thumbnail (1200x630)
-      try {
-        await page.setViewportSize({ width: 1200, height: 630 });
-        await page.waitForTimeout(200);
-        await page.evaluate(() => window.scrollTo(0, 0));
-
-        const cssHandle = await page.addStyleTag({
-          content: `.hero .points { mix-blend-mode: normal !important; }`
-        });
-        const thumbPath = resolve(cwd, 'dist', 'thumb.auto.jpg');
-        await page.screenshot({ path: thumbPath, type: 'jpeg', quality: 85, fullPage: false });
-        // Also emit PNG for compatibility if needed
-        const thumbPngPath = resolve(cwd, 'dist', 'thumb.auto.png');
-        await page.screenshot({ path: thumbPngPath, type: 'png', fullPage: false });
-        const publicThumb = resolve(cwd, 'public', 'thumb.auto.jpg');
-        const publicThumbPng = resolve(cwd, 'public', 'thumb.auto.png');
-        try { await fs.copyFile(thumbPath, publicThumb); } catch { }
-        try { await fs.copyFile(thumbPngPath, publicThumbPng); } catch { }
-        // Remove temporary style so PDF is unaffected
-        try { await cssHandle.evaluate((el) => el.remove()); } catch { }
-        console.log(`✅ OG thumbnail generated: ${thumbPath}`);
-      } catch (e) {
-        console.warn('Unable to generate OG thumbnail:', e?.message || e);
-      }
-      // Restore viewport to printable width before PDF generation
+      // Set viewport to printable width for PDF generation
       const outPath = resolve(cwd, 'dist', `${outFileBase}.pdf`);
       try {
         const fmt2 = getFormatSizeMm(format);

@@ -159,9 +159,16 @@ function generateBibliography() {
 `;
 }
 
-function generateReadme(name, layout, title) {
+function spaceIdToUrl(spaceId) {
+  return `https://${spaceId.replace("/", "-").toLowerCase()}.hf.space`;
+}
+
+function generateReadme(name, layout, title, spaceId) {
   const layoutLabel = layout === "article" ? "Research Article" : "Research Paper";
   const safeTitle = title || name;
+  const thumbLine = spaceId
+    ? `\nthumbnail: ${spaceIdToUrl(spaceId)}/thumb.auto.jpg`
+    : "";
   return `---
 title: "${safeTitle}"
 emoji: 📝
@@ -172,7 +179,7 @@ app_port: 8080
 header: mini
 pinned: false
 tags:
-  - research-article-template
+  - research-article-template${thumbLine}
 ---
 
 # ${name}
@@ -537,6 +544,28 @@ async function main() {
             `git remote add space "git@hf.co:spaces/${spaceId}"`,
             { cwd: targetDir, stdio: "pipe" },
           );
+
+          // Update README thumbnail URL to point to the Space's own auto-generated thumb
+          const readmePath = path.join(targetDir, "README.md");
+          const readmeContent = fs.readFileSync(readmePath, "utf8");
+          const thumbUrl = `${spaceIdToUrl(spaceId)}/thumb.auto.jpg`;
+          if (!readmeContent.includes("thumbnail:")) {
+            const updated = readmeContent.replace(
+              /^(tags:\n(?:\s+-[^\n]+\n?)+)/m,
+              `$1thumbnail: ${thumbUrl}\n`,
+            );
+            fs.writeFileSync(readmePath, updated);
+          } else {
+            const updated = readmeContent.replace(
+              /^thumbnail:.*$/m,
+              `thumbnail: ${thumbUrl}`,
+            );
+            fs.writeFileSync(readmePath, updated);
+          }
+          execSync("git add README.md && git commit --amend --no-edit", {
+            cwd: targetDir,
+            stdio: "pipe",
+          });
 
           console.log(fmt.cyan("  Pushing to Hugging Face..."));
           execSync("git push space main", {

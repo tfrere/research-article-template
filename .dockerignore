@@ -27,9 +27,8 @@ app/scripts/latex-importer/node_modules
 app/dist
 app/.astro
 
-# PDF / exports (generated at build time)
+# PDF exports (generated at build time)
 app/public/*.pdf
-app/public/thumb.*
 
 # Dev / local files
 prototype-project-page.html
