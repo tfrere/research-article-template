@@ -56,6 +56,11 @@
     transition: all 0.2s ease;
 }
 
+.card.template-card img {
+    height: auto !important;
+    object-fit: contain !important;
+}
+
 
 .card h3,
 .card h4,

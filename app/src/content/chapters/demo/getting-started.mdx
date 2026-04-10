@@ -1,5 +1,9 @@
 import Sidenote from '../../../components/Sidenote.astro';
 import Note from '../../../components/Note.astro';
+import Image from '../../../components/Image.astro';
+import Stack from '../../../components/Stack.astro';
+import articleTemplate from '../../assets/image/article-template.png';
+import paperTemplate from '../../assets/image/paper-template.png';
 
 ## Getting Started
 
@@ -9,6 +13,13 @@ The fastest way to get started is with **npx**:
 
 ```bash
 npx create-research-article my-paper
+```
+
+You can also pick a template directly:
+
+```bash
+npx create-research-article my-paper --template=article
+npx create-research-article my-paper --template=paper
 ```
 
 The CLI guides you through the setup: project name, metadata (title, authors, affiliations), and template choice. It also offers to **create and deploy a Hugging Face Space** automatically if you have `huggingface-cli` installed.
@@ -49,6 +60,35 @@ template: "paper"    # lighter: centered single column, no figure numbering
 ```
 
 See them live: [article template](https://huggingface.co/spaces/tfrere/test-article-scaffold) | [paper template](https://huggingface.co/spaces/tfrere/test-paper-scaffold)
+
+<Stack layout="2-column" gap="medium">
+  <a href="https://huggingface.co/spaces/tfrere/test-article-scaffold" target="_blank" rel="noopener noreferrer" class="card no-padding template-card" style="flex: 1; min-width: 0; overflow: hidden;">
+    <Image
+      src={articleTemplate}
+      alt="Article template - full layout with banner, sidebar TOC, and PDF export"
+      zoomable={false}
+      downloadable={false}
+      skipGallery
+    />
+    <div class="card-title-container">
+      <h3 class="card-title">Article template</h3>
+      <p class="card-subtitle">Full layout with banner, sidebar TOC, figure numbering, citation block, and PDF export</p>
+    </div>
+  </a>
+  <a href="https://huggingface.co/spaces/tfrere/test-paper-scaffold" target="_blank" rel="noopener noreferrer" class="card no-padding template-card" style="flex: 1; min-width: 0; overflow: hidden;">
+    <Image
+      src={paperTemplate}
+      alt="Paper template - lighter single-column layout with pill buttons"
+      zoomable={false}
+      downloadable={false}
+      skipGallery
+    />
+    <div class="card-title-container">
+      <h3 class="card-title">Paper template</h3>
+      <p class="card-subtitle">Lighter single-column layout with external link pills and centered meta</p>
+    </div>
+  </a>
+</Stack>
 
 The `paper` template also supports external links (Paper, Code, Demo, Data...) displayed as pill buttons below the authors:
 

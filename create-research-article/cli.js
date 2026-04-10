@@ -346,15 +346,20 @@ async function main() {
   Scaffold a new research paper or article.
 
   ${fmt.bold("Usage:")}
-    npx create-research-article [project-name]
+    npx create-research-article [project-name] [options]
 
   ${fmt.bold("Options:")}
-    --help, -h    Show this help message
+    --template=article|paper   Skip template selection prompt
+    --help, -h                 Show this help message
 `);
     process.exit(0);
   }
 
   const positionalName = args.find((a) => !a.startsWith("-"));
+  const templateFlag = args
+    .find((a) => a.startsWith("--template="))
+    ?.split("=")[1]
+    ?.toLowerCase();
 
   console.log("");
   console.log(
@@ -388,18 +393,27 @@ async function main() {
     }
 
     // 2. Layout
-    const layout = await prompt.select("Choose a layout:", [
-      {
-        value: "article",
-        label: "Research Article",
-        hint: "Full layout with banner, TOC, DOI, citations, PDF export",
-      },
-      {
-        value: "paper",
-        label: "Research Paper",
-        hint: "Lighter single-column layout, blog-friendly",
-      },
-    ]);
+    let layout;
+    if (templateFlag && ["article", "paper"].includes(templateFlag)) {
+      layout = templateFlag;
+      console.log(fmt.cyan(`  Using template: ${layout}`));
+    } else {
+      if (templateFlag) {
+        console.log(fmt.yellow(`  Warning: unknown template "${templateFlag}", showing picker.\n`));
+      }
+      layout = await prompt.select("Choose a layout:", [
+        {
+          value: "article",
+          label: "Research Article",
+          hint: "Full layout with banner, TOC, DOI, citations, PDF export",
+        },
+        {
+          value: "paper",
+          label: "Research Paper",
+          hint: "Lighter single-column layout, blog-friendly",
+        },
+      ]);
+    }
 
     // 3. Metadata
     console.log("");
