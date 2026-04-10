@@ -66,6 +66,20 @@ Set `template` in `app/src/content/article.mdx` frontmatter:
 | `article` (default) | Banner, sidebar TOC, figure numbering, citation block, PDF export | Full research articles |
 | `paper` | Centered single column, no figure numbering, minimal footer | Blog posts, lighter papers |
 
+### External links (paper template)
+
+The `paper` template supports external link buttons below the authors:
+
+```yaml
+links:
+  - label: "Paper"
+    url: "https://arxiv.org/abs/..."
+  - label: "Code"
+    url: "https://github.com/..."
+  - label: "Demo"
+    url: "https://huggingface.co/spaces/..."
+```
+
 ### Title line breaks
 
 Long titles are automatically balanced across lines. You can also force a line break with `\n`:

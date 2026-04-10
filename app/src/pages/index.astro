@@ -169,6 +169,14 @@ const licence =
   (articleFM as any)?.licence ??
   (articleFM as any)?.license ??
   (articleFM as any)?.licenseNote;
+
+// External links (paper, code, data, demo, etc.) shown in paper template hero
+const links: Array<{ label: string; url: string; icon?: string }> =
+  ((articleFM as any)?.links ?? []).map((l: any) => ({
+    label: l.label ?? l.name ?? l.text ?? "Link",
+    url: l.url ?? l.href ?? l.link ?? "#",
+    icon: l.icon,
+  }));
 ---
 
 <html
@@ -337,6 +345,7 @@ const licence =
       doi={doi}
       pdfProOnly={articleFM?.pdfProOnly}
       showPdf={template === "paper" ? false : articleFM?.showPdf}
+      links={links}
     />
 
     {template === "paper" && (

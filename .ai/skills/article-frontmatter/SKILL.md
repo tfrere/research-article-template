@@ -24,6 +24,7 @@ All metadata lives in `app/src/content/article.mdx` frontmatter (YAML block).
 | `licence` | string | — | Licence text (HTML allowed), shown in footer. |
 | `pdfProOnly` | boolean | `false` | Gate PDF download behind HF Pro badge. |
 | `seoThumbImage` | string | — | Custom OG image URL for social sharing. |
+| `links` | array | `[]` | External links shown in paper template hero (see below). |
 
 ## Title line breaks
 
@@ -61,6 +62,24 @@ affiliations:
 ```
 
 Affiliation indices are 1-based and rendered as superscript numbers next to author names.
+
+## External links (paper template)
+
+The `links` field adds buttons below the author/affiliation line in the `paper` template hero. Each link has a `label` and a `url`:
+
+```yaml
+links:
+  - label: "Paper"
+    url: "https://arxiv.org/abs/..."
+  - label: "Code"
+    url: "https://github.com/..."
+  - label: "Demo"
+    url: "https://huggingface.co/spaces/..."
+  - label: "Data"
+    url: "https://huggingface.co/datasets/..."
+```
+
+Links are rendered as pill-shaped buttons and only visible in the `paper` template. They are hidden in the `article` template.
 
 ## README tag (critical)
 

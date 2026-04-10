@@ -14,6 +14,7 @@ interface Props {
   doi?: string;
   pdfProOnly?: boolean; // Gate PDF download to Pro users only
   showPdf?: boolean; // Show or hide PDF section in metadata
+  links?: Array<{ label: string; url: string; icon?: string }>;
 }
 
 const {
@@ -27,6 +28,7 @@ const {
   doi,
   pdfProOnly = false,
   showPdf = true,
+  links = [],
 } = Astro.props as Props;
 
 type Author = { name: string; url?: string; affiliationIndices?: number[] };
@@ -241,6 +243,15 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
       </div>
     )}
   </div>
+  {links && links.length > 0 && (
+    <nav class="hero-links" aria-label="External links">
+      {links.map((link) => (
+        <a href={link.url} class="hero-link" target="_blank" rel="noopener noreferrer">
+          {link.label}
+        </a>
+      ))}
+    </nav>
+  )}
 </header>
 
 {showPdf && (
@@ -695,6 +706,11 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
     }
   }
 
+  /* Hero external links (paper template) */
+  .hero-links {
+    display: none;
+  }
+
   /* Paper template overrides (must be scoped to win over default styles) */
   :global([data-template="paper"]) .hero {
     padding: 80px 16px 0;
@@ -759,8 +775,10 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   :global([data-template="paper"]) .meta-container-cell--affiliations .affiliations li {
     display: inline;
   }
+  :global([data-template="paper"]) .meta-container-cell p,
   :global([data-template="paper"]) .meta-container-cell--published p {
     display: inline;
+    margin: 0;
     color: var(--muted-color);
   }
   :global([data-template="paper"]) .meta-container-cell--doi {
@@ -768,5 +786,31 @@ const pdfFilename = `${slugify(pdfBase)}.pdf`;
   }
   :global([data-template="paper"]) .meta-container-cell--pdf {
     display: none !important;
+  }
+  :global([data-template="paper"]) .hero-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 0 var(--content-padding-x);
+  }
+  :global([data-template="paper"]) .hero-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    font-size: 0.85em;
+    font-weight: 500;
+    color: var(--text-color);
+    background: var(--surface-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  :global([data-template="paper"]) .hero-link:hover {
+    border-color: var(--primary-color);
+    background: var(--hover-bg, var(--surface-bg));
   }
 </style>

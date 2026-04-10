@@ -50,6 +50,16 @@ template: "paper"    # lighter: centered single column, no figure numbering
 
 See them live: [article template](https://huggingface.co/spaces/tfrere/test-article-scaffold) | [paper template](https://huggingface.co/spaces/tfrere/test-paper-scaffold)
 
+The `paper` template also supports external links (Paper, Code, Demo, Data...) displayed as pill buttons below the authors:
+
+```yaml
+links:
+  - label: "Paper"
+    url: "https://arxiv.org/abs/..."
+  - label: "Code"
+    url: "https://github.com/..."
+```
+
 Long titles are automatically balanced and downsized. You can force a line break with `\n` in the frontmatter:
 
 ```yaml
