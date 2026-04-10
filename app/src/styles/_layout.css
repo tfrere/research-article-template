@@ -259,98 +259,6 @@
 /* Reference: academic project pages like diffusion-cot.github.io               */
 /* ============================================================================ */
 
-/* ---- Hero: hide inline banner, large title, venue-style subtitle ---- */
-
-[data-template="paper"] .hero {
-  padding: 80px 16px 0;
-}
-
-[data-template="paper"] .hero-title {
-  font-size: clamp(34px, 5vw, 54px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  max-width: 860px;
-  margin: 0 auto 20px;
-}
-
-[data-template="paper"] .hero-banner {
-  display: none;
-}
-
-[data-template="paper"] .hero-desc {
-  max-width: 680px;
-  margin: 0 auto;
-  font-size: 1.15em;
-  font-style: normal;
-  line-height: 1.6;
-  color: var(--muted-color);
-}
-
-/* ---- Meta bar: centered academic author/affiliation block ---- */
-
-[data-template="paper"] .meta {
-  border-top: none;
-  border-bottom: none;
-  padding: 24px 0 0;
-}
-
-[data-template="paper"] .meta-container {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px 6px;
-  max-width: 860px;
-}
-
-[data-template="paper"] .meta-container-cell {
-  text-align: center;
-  max-width: none;
-  flex: 0 0 auto;
-}
-
-[data-template="paper"] .meta-container-cell h3 {
-  display: none;
-}
-
-[data-template="paper"] .meta-container-cell + .meta-container-cell::before {
-  content: "·";
-  color: var(--muted-color);
-  margin-right: 2px;
-  font-weight: 400;
-}
-
-[data-template="paper"] .authors {
-  justify-content: center;
-  gap: 0;
-  font-size: 1em;
-}
-
-[data-template="paper"] .meta-container-cell--affiliations .affiliations {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0 20px;
-  list-style-position: inside;
-  padding-left: 0;
-  font-size: 0.92em;
-  color: var(--muted-color);
-}
-
-[data-template="paper"] .meta-container-cell--published p {
-  color: var(--muted-color);
-  font-size: 0.92em;
-}
-
-[data-template="paper"] .meta-container-cell--doi {
-  display: none;
-}
-
-[data-template="paper"] .meta-container-cell--pdf {
-  display: none;
-}
-
 /* ---- Paper hero banner: placed between meta and content in index.astro ---- */
 
 .paper-hero-banner {
@@ -376,7 +284,8 @@
 }
 
 /* When no banner, separator is directly below meta */
-[data-template="paper"] .meta + .content-grid {
+[data-template="paper"] .meta + .content-grid,
+[data-template="paper"] .hero-paper-meta + .content-grid {
   margin-top: 32px;
   border-top: 1px solid var(--border-color);
   padding-top: 40px;

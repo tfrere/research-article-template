@@ -1,7 +1,8 @@
 ---
 import * as ArticleMod from "../content/article.mdx";
 
-import Hero from "../components/Hero.astro";
+import HeroArticle from "../components/HeroArticle.astro";
+import HeroPaper from "../components/HeroPaper.astro";
 import Footer from "../components/Footer.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import Seo from "../components/Seo.astro";
@@ -334,19 +335,32 @@ const links: Array<{ label: string; url: string; icon?: string }> =
   </head>
   <body>
     <ThemeToggle />
-    <Hero
-      title={docTitleHtml}
-      titleRaw={docTitle}
-      description={subtitle || description}
-      authors={normalizedAuthors as any}
-      affiliations={normalizedAffiliations as any}
-      affiliation={articleFM?.affiliation}
-      published={articleFM?.published}
-      doi={doi}
-      pdfProOnly={articleFM?.pdfProOnly}
-      showPdf={template === "paper" ? false : articleFM?.showPdf}
-      links={links}
-    />
+    {template === "paper" ? (
+      <HeroPaper
+        title={docTitleHtml}
+        titleRaw={docTitle}
+        description={subtitle || description}
+        authors={normalizedAuthors as any}
+        affiliations={normalizedAffiliations as any}
+        affiliation={articleFM?.affiliation}
+        published={articleFM?.published}
+        links={links}
+      />
+    ) : (
+      <HeroArticle
+        title={docTitleHtml}
+        titleRaw={docTitle}
+        description={subtitle || description}
+        authors={normalizedAuthors as any}
+        affiliations={normalizedAffiliations as any}
+        affiliation={articleFM?.affiliation}
+        published={articleFM?.published}
+        doi={doi}
+        pdfProOnly={articleFM?.pdfProOnly}
+        showPdf={articleFM?.showPdf}
+        links={links}
+      />
+    )}
 
     {template === "paper" && (
       <div class="paper-hero-banner">
