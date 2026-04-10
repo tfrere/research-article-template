@@ -394,23 +394,25 @@
   display: none;
 }
 
-/* ---- Typography: generous spacing, centered h2 with decorative rule ---- */
+/* ---- Typography: clean left-aligned headings ---- */
 
 [data-template="paper"] .content-grid > main h2 {
-  text-align: center;
+  text-align: left;
   font-size: 1.75em;
   font-weight: 700;
-  margin-top: 3em;
-  margin-bottom: 1em;
-  padding-top: 2em;
-  border-top: 1px solid var(--border-color);
+  margin-top: 2.5em;
+  margin-bottom: 0.8em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+[data-template="paper"] .content-grid > main h2 a {
+  background: none;
 }
 
 [data-template="paper"] .content-grid > main h2:first-child,
 [data-template="paper"] .content-grid > main > *:first-child h2 {
   margin-top: 0;
-  padding-top: 0;
-  border-top: none;
 }
 
 [data-template="paper"] .content-grid > main h3 {
