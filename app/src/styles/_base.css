@@ -58,6 +58,7 @@ html {
 .content-grid main h5 a,
 .content-grid main h6 a {
   color: inherit;
+  background: none;
   border-bottom: none;
   text-decoration: none;
 }
