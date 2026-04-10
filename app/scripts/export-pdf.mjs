@@ -245,7 +245,7 @@ async function screenshotAndReplaceEmbeds(page) {
       if (!visible) continue;
 
       await el.scrollIntoViewIfNeeded();
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(30);
 
       const buf = await el.screenshot({ type: 'png' });
       const b64 = buf.toString('base64');
@@ -327,9 +327,11 @@ async function main() {
       const webViewportWidth = 1200;
       await page.setViewportSize({ width: webViewportWidth, height: 1400 });
       await page.goto(baseUrl, { waitUntil: 'load', timeout: 60000 });
-      // Give time for CDN scripts (Plotly/D3) to attach and for our fragment hooks to run
-      try { await page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }); } catch { }
-      try { await page.waitForFunction(() => !!window.d3, { timeout: 8000 }); } catch { }
+      // Wait for CDN scripts (Plotly/D3) in parallel to halve the timeout cost
+      await Promise.allSettled([
+        page.waitForFunction(() => !!window.Plotly, { timeout: 8000 }),
+        page.waitForFunction(() => !!window.d3, { timeout: 8000 })
+      ]);
       // Prefer explicit filename from the download button if present
       if (!args.filename) {
         const fromBtn = await page.evaluate(() => {
@@ -353,22 +355,20 @@ async function main() {
         }
       }
 
-      // Wait for render readiness
-      if (wait === 'images' || wait === 'full') {
-        console.log('⏳ Waiting for images…');
-        await waitForImages(page);
-      }
-      if (wait === 'd3' || wait === 'full') {
-        console.log('⏳ Waiting for D3…');
-        await waitForD3(page);
-      }
-      if (wait === 'plotly' || wait === 'full') {
-        console.log('⏳ Waiting for Plotly…');
-        await waitForPlotly(page);
-      }
-      if (wait === 'full') {
-        console.log('⏳ Waiting for stable layout…');
-        await waitForStableLayout(page);
+      // Wait for render readiness (images + D3 + Plotly in parallel)
+      {
+        const waits = [];
+        if (wait === 'images' || wait === 'full') waits.push(waitForImages(page));
+        if (wait === 'd3' || wait === 'full') waits.push(waitForD3(page));
+        if (wait === 'plotly' || wait === 'full') waits.push(waitForPlotly(page));
+        if (waits.length) {
+          console.log('⏳ Waiting for content readiness (parallel)…');
+          await Promise.all(waits);
+        }
+        if (wait === 'full') {
+          console.log('⏳ Waiting for stable layout…');
+          await waitForStableLayout(page);
+        }
       }
 
       // Screenshot all embeds and replace them with static <img> tags.
