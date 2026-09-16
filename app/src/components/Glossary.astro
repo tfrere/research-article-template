@@ -30,7 +30,7 @@ const {
 const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
 ---
 
-<div class="glossary-container" data-glossary-container-id={tooltipId}>
+<span class="glossary-container" data-glossary-container-id={tooltipId}>
   <span
     class={`glossary-term ${className}`}
     style={inlineStyle}
@@ -47,7 +47,7 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
     {term}
   </span>
 
-  <div
+  <span
     id={`${tooltipId}-tooltip`}
     class="glossary-tooltip"
     data-glossary-tooltip-id={tooltipId}
@@ -55,13 +55,13 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
     role="tooltip"
     aria-hidden="true"
   >
-    <div class="glossary-tooltip__content">
-      <div class="glossary-tooltip__term">{term}</div>
-      <div class="glossary-tooltip__definition">{definition}</div>
-    </div>
-    <div class="glossary-tooltip__arrow"></div>
-  </div>
-</div>
+    <span class="glossary-tooltip__content">
+      <span class="glossary-tooltip__term">{term}</span>
+      <span class="glossary-tooltip__definition">{definition}</span>
+    </span>
+    <span class="glossary-tooltip__arrow"></span>
+  </span>
+</span>
 
 <script is:inline>
   // Global script for all Glossary tooltips
@@ -175,7 +175,10 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
       color-mix(in srgb, var(--primary-color) 20%, transparent);
   }
 
+  /* Spans only: a <div> inside a <p> makes the HTML parser close the paragraph,
+     which broke the line around every inline glossary term. */
   .glossary-tooltip {
+    display: block;
     position: fixed;
     top: -9999px;
     left: -9999px;
@@ -197,6 +200,7 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
   }
 
   .glossary-tooltip__content {
+    display: block;
     background: var(--surface-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px 8px 0 0;
@@ -208,6 +212,7 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
   }
 
   .glossary-tooltip__term {
+    display: block;
     font-weight: 600;
     font-size: 14px;
     color: var(--primary-color);
@@ -216,6 +221,7 @@ const tooltipId = `glossary-${Math.random().toString(36).slice(2)}`;
   }
 
   .glossary-tooltip__definition {
+    display: block;
     font-size: 13px;
     color: var(--text-color);
     line-height: 1.4;
