@@ -11,8 +11,9 @@ unaffected: the review layer only loads with `?review`, and only when the Space 
 ## Turn it on
 
 1. README metadata: `hf_oauth: true` (sign in with Hugging Face).
-2. Space settings: enable persistent storage. Threads live in `/data/review-comments/threads/`, one
-   JSON file each. Without it the server refuses to save, so nothing is lost silently.
+2. Space settings → Storage Buckets: mount a private bucket at `/data`, read & write. Threads live in
+   `/data/review-comments/threads/`, one JSON file each. Without the mount the server refuses to
+   save, so nothing is lost silently.
 3. Space variables: `REVIEW_MODE=on`, `REVIEWERS=user1,user2`. The Space owner is always a reviewer
    and is the only one who can accept or reject suggestions.
 4. Share `https://<user>-<space>.hf.space/?review`. Inside the huggingface.co iframe, the page offers
@@ -23,8 +24,8 @@ To publish again, set `REVIEW_MODE=off` (or remove it). Comments stay on disk.
 ## Read and apply the feedback
 
 ```bash
-python review/pull_comments.py --url https://<user>-<space>.hf.space        # open threads
-python review/pull_comments.py --url https://<user>-<space>.hf.space --all  # include resolved
+uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space        # open threads
+uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space --all  # include resolved
 ```
 
 This writes `review/.pulled/comments.md` (git-ignored), grouped by chapter and section, with the

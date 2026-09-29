@@ -62,8 +62,8 @@ The project ships with Dockerfile, nginx config, and HF Space metadata ready to 
 Collect comments and suggested edits on your article from a few reviewers, Google Docs style,
 without any of it showing on the published page.
 
-1. Add `hf_oauth: true` to your Space's README metadata, and enable **persistent storage** in the
-   Space settings (comments are saved under `/data`).
+1. Add `hf_oauth: true` to your Space's README metadata, and in the Space settings under **Storage
+   Buckets** mount a private bucket at `/data` with read & write (comments are saved there).
 2. Set the Space variables `REVIEW_MODE=on` and `REVIEWERS=user1,user2` (Hugging Face usernames; the
    Space owner is always included).
 3. Share `https://<user>-<space>.hf.space/?review`. Reviewers sign in with Hugging Face, select text to
@@ -73,8 +73,8 @@ without any of it showing on the published page.
 
 Without `?review`, or with `REVIEW_MODE` off, the page never loads the review layer and the API
 answers 404. To read every comment at once, run
-`python review/pull_comments.py --url https://<user>-<space>.hf.space` (uses your local Hugging Face
-login). The server is `review/server.py`; the page side is `app/public/review/`.
+`uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space` (uses your local
+Hugging Face login). The server is `review/server.py`; the page side is `app/public/review/`.
 
 ## Template variants
 

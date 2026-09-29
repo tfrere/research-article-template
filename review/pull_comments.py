@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Pull every review thread from the Space into one readable file.
 
-    python review/pull_comments.py --url https://<user>-<space>.hf.space
-    python review/pull_comments.py --url https://<user>-<space>.hf.space --all   # include resolved threads
-    python review/pull_comments.py --url http://localhost:4321                  # local dev server
+    uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space
+    uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space --all   # include resolved threads
+    uv run --with huggingface_hub python review/pull_comments.py --url http://localhost:4321                  # local dev server
 
 Uses the owner-only /api/review/export endpoint with your local Hugging Face login (the token only
 proves to the Space who is asking). Writes review/.pulled/threads/*.json, one per thread, and
