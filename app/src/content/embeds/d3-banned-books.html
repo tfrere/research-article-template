@@ -105,6 +105,42 @@
   .d3-banned-books .legend .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; }
   .d3-banned-books .legend .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); }
 
+  /* What the books are about, and why */
+  .d3-banned-books .bb-h--big { font-size: 22px; font-family: var(--bb-serif); font-weight: 700; line-height: 1.2; max-width: 30em; }
+  .d3-banned-books .bb-duo { display: grid; grid-template-columns: 1fr; gap: 12px 28px; margin: 6px 0 4px; }
+  .d3-banned-books.is-wide .bb-duo { grid-template-columns: 1fr 1fr; }
+  .d3-banned-books .bb-duo__item { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; align-items: baseline; padding: 12px 0; border-top: 3px solid var(--bb-accent, var(--primary-color)); }
+  .d3-banned-books .bb-duo__item + .bb-duo__item { border-top-color: var(--text-color); }
+  .d3-banned-books .bb-duo__n { font-size: 40px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .d3-banned-books .bb-duo__t { font-size: 14px; line-height: 1.35; }
+  .d3-banned-books .bb-duo__src { grid-column: 1 / 3; font-size: 12px; color: var(--muted-color); margin-top: 6px; }
+  .d3-banned-books .bb-sub { margin-top: 20px; min-width: 0; }
+  .d3-banned-books .bb-h2 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+  .d3-banned-books .bb-yr { margin: 0 0 14px; transition: opacity .15s ease; }
+  .d3-banned-books .bb-yr.is-dim { opacity: .38; }
+  .d3-banned-books .bb-yr__head { font-size: 12px; margin: 0 0 4px; }
+  .d3-banned-books .bb-yr__head b { font-weight: 700; margin-right: 6px; }
+  .d3-banned-books .bb-yr__head a { color: var(--muted-color); }
+  .d3-banned-books .bb-bar { display: grid; grid-template-columns: minmax(0, 1fr) 1.15fr 34px; gap: 8px; align-items: center; font-size: 12px; line-height: 1.25; padding: 2px 0; }
+  .d3-banned-books .bb-bar__l { overflow-wrap: anywhere; }
+  .d3-banned-books .bb-bar__track { position: relative; height: 10px; border-radius: 2px; background: var(--bb-track); }
+  .d3-banned-books .bb-bar__fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+  .d3-banned-books .bb-bar__inner { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px 0 0 2px; background: var(--text-color); }
+  .d3-banned-books .bb-bar__v { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bb-bar__note { grid-column: 2 / 4; font-size: 11px; color: var(--muted-color); margin-top: -1px; }
+  .d3-banned-books .bb-subjects { margin-top: 18px; }
+  .d3-banned-books .bb-ala__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; column-gap: 32px; }
+  .d3-banned-books.is-wide .bb-ala__list { grid-template-columns: 1fr 1fr; }
+  .d3-banned-books .bb-ala__list li { padding: 7px 0; border-bottom: 1px solid var(--border-color); display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; }
+  .d3-banned-books .bb-ala__t { font-family: var(--bb-serif); font-style: italic; font-size: 15px; line-height: 1.2; }
+  .d3-banned-books .bb-ala__a { font-size: 12px; color: var(--muted-color); }
+  .d3-banned-books .bb-ala__pen { text-align: right; font-size: 12px; color: var(--muted-color); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .d3-banned-books .bb-ala__pen b { display: block; font-size: 14px; color: var(--text-color); }
+  .d3-banned-books .bb-ala__meta { grid-column: 1 / 3; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .d3-banned-books .bb-chip { font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 999px; border: 1px solid var(--border-color); white-space: nowrap; }
+  .d3-banned-books .bb-chip--rank { border: 0; padding-left: 0; color: var(--muted-color); font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bb-chip--hot { background: var(--bb-accent, var(--primary-color)); border-color: transparent; color: var(--bb-on-accent, #111); }
+
   /* Footer */
   .d3-banned-books .bb-source { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--muted-color); }
   .d3-banned-books .bb-source p { margin: 0 0 6px; }
@@ -310,6 +346,30 @@
         </div>
         <div class="bb-stats"></div>
         <div class="bb-filter" role="group" aria-label="School year"><span class="bb-filter__label">School year</span></div>
+        <section class="bb-panel bb-why">
+          <p class="bb-h bb-h--big" role="heading" aria-level="3"></p>
+          <p class="bb-lead"></p>
+          <div class="bb-duo"></div>
+          <div class="bb-row">
+            <div class="bb-sub bb-themes">
+              <p class="bb-h2" role="heading" aria-level="4">What the banned books contain, according to PEN America</p>
+              <div class="bb-themes__years"></div>
+              <div class="legend"><div class="legend-title">Legend</div><div class="items"></div></div>
+              <p class="bb-note"></p>
+            </div>
+            <div class="bb-sub bb-reasons">
+              <p class="bb-h2" role="heading" aria-level="4">Why they were challenged, according to the American Library Association</p>
+              <p class="bb-lead"></p>
+              <div class="bb-bars"></div>
+              <div class="bb-subjects"></div>
+            </div>
+          </div>
+          <div class="bb-sub bb-ala">
+            <p class="bb-h2" role="heading" aria-level="4"></p>
+            <p class="bb-lead"></p>
+            <ol class="bb-ala__list"></ol>
+          </div>
+        </section>
         <section class="bb-panel bb-time">
           <p class="bb-h" role="heading" aria-level="3"></p>
           <p class="bb-lead"></p>
@@ -678,11 +738,105 @@
         renderStack('.bb-origin', ORIGIN_KEYS, C.origin, L.origin, 'origin');
       }
 
+      // What the books are about (PEN America's coding, Open Library subjects) and why (ALA's cited reasons)
+      const GROUP_LABELS = { identity: 'Identity', sex: 'Sex and sexuality', life: 'Hard life experiences', other: 'Other' };
+      const SUBJECT_GROUPS = {
+        'LGBTQ+': 'identity', 'Race and racism': 'identity', 'Sexuality and sex education': 'sex', 'Rape and sexual abuse': 'life',
+        'Violence and abuse': 'life', 'Drugs and alcohol': 'life', 'Mental health and suicide': 'life', 'Death and grief': 'life',
+        'Family problems': 'life', 'Fantasy and the supernatural': 'other', 'Romance': 'other',
+      };
+      const barRow = (label, value, max, color, text, inner) => `
+        <div class="bb-bar">
+          <span class="bb-bar__l">${esc(label)}</span>
+          <span class="bb-bar__track" aria-hidden="true"><span class="bb-bar__fill" style="width:${(100 * value) / max}%;background:${color}"></span>${inner || ''}</span>
+          <span class="bb-bar__v">${text}</span>
+        </div>`;
+      function renderWhy() {
+        const ctx = data.context;
+        if (!ctx) { $('.bb-why').hidden = true; return; }
+        const P = window.ColorPalettes;
+        const cat = (P && P.getColors && P.getColors('categorical', 3)) || [];
+        const G = { identity: C.primary, sex: cat[1] || C.seq[2], life: C.neutral(0.5), other: C.neutral(0.24) };
+        container.style.setProperty('--bb-on-accent', textOn(C.primary));
+
+        const pen = ctx.penThemes;
+        const last = pen[pen.length - 1];
+        const lifeTop = last.themes.filter((t) => t.group === 'life').slice(0, 2);
+        const ala = ctx.ala;
+        const explicit = ala.tagCounts.find((t) => /sexually explicit/i.test(t.tag));
+        const sexExp = last.themes.find((t) => t.note === 'on the page');
+        $('.bb-why .bb-h--big').textContent = `Challenged as "sexually explicit", but most books banned in ${last.year} deal with ${lifeTop.map((t) => `${t.label.toLowerCase()} (${t.pct}%)`).join(' and ')}`;
+        $('.bb-why > .bb-lead').textContent = "PEN America's index records which books were banned, not why. This section brings in two other sources that measure different things and are kept apart: PEN's own reading of the banned titles, and the reasons the American Library Association cites for the books most challenged in all US libraries.";
+        $('.bb-duo').innerHTML = `
+          <div class="bb-duo__item">
+            <span class="bb-duo__n">${explicit.n} of ${ala.listings}</span>
+            <span class="bb-duo__t">listings on ALA's most challenged books for ${ala.years[0]} to ${ala.years[ala.years.length - 1]} cite a claim that the book is sexually explicit.</span>
+            <span class="bb-duo__src">ALA Office for Intellectual Freedom, Top 10 lists; all US libraries, calendar years.</span>
+          </div>
+          <div class="bb-duo__item">
+            <span class="bb-duo__n">${last.onThePage.pct}%</span>
+            <span class="bb-duo__t">of the ${fmt(last.baseN)} titles banned in US schools in ${last.year} describe sexual experiences on the page; ${last.onThePage.offPct}% only imply them off the page.</span>
+            <span class="bb-duo__src">PEN America, ${esc(last.report)}; PEN's own reading of the banned titles.</span>
+          </div>`;
+
+        // PEN themes, one block per school year with its own base
+        $('.bb-themes__years').innerHTML = pen.map((y) => {
+          const dim = scope !== 'all' && scope !== y.year;
+          const rows = y.themes.map((t) => {
+            const inner = t.note === 'on the page'
+              ? `<span class="bb-bar__inner" style="width:${(100 * y.onThePage.pct) / 100}%"></span>` : '';
+            const row = barRow(t.label, t.pct, 100, G[t.group], `${t.pct}%`, inner);
+            return t.note === 'on the page'
+              ? row.replace(/<\/div>\s*$/, `<span class="bb-bar__note">dark part: ${y.onThePage.pct}% describe it on the page</span></div>`)
+              : row;
+          }).join('');
+          return `<div class="bb-yr${dim ? ' is-dim' : ''}">
+            <p class="bb-yr__head"><b>${y.year}</b>share of ${fmt(y.baseN)} ${y.base === 'bans' ? 'ban instances' : 'banned titles'}, <a href="${y.url}" target="_blank" rel="noopener">${esc(y.report)}</a></p>
+            ${rows}
+          </div>`;
+        }).join('');
+        $('.bb-themes .legend .items').innerHTML = Object.entries(GROUP_LABELS)
+          .map(([k, l]) => `<span class="item"><span class="swatch" style="background:${G[k]}"></span><span>${l}</span></span>`).join('');
+        $('.bb-themes .bb-note').textContent = "PEN America's categories and bases change every year (unique titles in 2021-22 and 2023-24, ban instances in 2022-23), and a book can fall in several categories, so compare within a year rather than across years.";
+
+        // ALA reasons
+        $('.bb-reasons .bb-lead').textContent = `Reasons cited for the ${ala.listings} listings on ALA's lists for ${ala.years.join(', ')} (2022 is a top 13), grouped into tags. A title usually has several reasons. ALA's 2024 and 2025 lists give no reasons.`;
+        const maxTag = Math.max(...ala.tagCounts.map((t) => t.n));
+        $('.bb-reasons .bb-bars').innerHTML = ala.tagCounts.map((t, i) => barRow(t.tag, t.n, ala.listings, i === 0 ? C.primary : C.neutral(0.45), `${t.n}`)).join('')
+          + `<p class="bb-note">Bar length: share of the ${ala.listings} listings; ${maxTag === ala.listings ? 'every' : `${maxTag} of ${ala.listings}`} cite the top reason.</p>`;
+
+        // Open Library subject headings, only when the match rate is good enough to say something
+        const S = ctx.subjects;
+        const subjBox = $('.bb-subjects');
+        if (S && S.lookedUp && S.matched / S.lookedUp >= 0.6) {
+          const shown = S.themes.filter((t) => t.bans > 0).slice(0, 9);
+          subjBox.innerHTML = `<p class="bb-h2" role="heading" aria-level="4">What library catalogs say the most banned titles are about</p>
+            <p class="bb-lead">Open Library subject headings for the ${fmt(S.topTitles)} most banned titles (${pct(S.topBans, S.totalBans)} of all bans); ${fmt(S.matched)} were matched (${pct(S.matched, S.lookedUp)}). Share of their bans whose subjects mention each theme, matched by keyword; catalog headings are sparse, so read these as lower bounds. Catalog subjects describe a book; they are not the reason it was banned.</p>
+            ${shown.map((t) => barRow(t.theme, t.share, 1, G[SUBJECT_GROUPS[t.theme]] || C.neutral(0.3), pct(t.share, 1))).join('')}`;
+        } else {
+          subjBox.innerHTML = '';
+        }
+
+        // ALA titles grid
+        $('.bb-ala .bb-h2').textContent = "ALA's most challenged books, and how often PEN recorded them banned in schools";
+        $('.bb-ala .bb-lead').textContent = `${ala.titles.length} titles on ALA's lists for ${ala.years[0]} to ${ala.years[ala.years.length - 1]}: rank each year, reasons cited, and number of school bans in PEN America's index (${data.years[0]} to ${data.years[data.years.length - 1]}).`;
+        $('.bb-ala__list').innerHTML = ala.titles.map((t) => `
+          <li>
+            <span><span class="bb-ala__t">${esc(t.title)}</span> <span class="bb-ala__a">${esc(t.author)}</span></span>
+            <span class="bb-ala__pen"><b>${fmt(t.penBans)}</b>school bans</span>
+            <span class="bb-ala__meta">
+              ${ala.years.filter((y) => t.ranks[y]).map((y) => `<span class="bb-chip bb-chip--rank">${y} #${t.ranks[y]}</span>`).join('')}
+              ${t.tags.map((g) => `<span class="bb-chip${/sexually explicit/i.test(g) ? ' bb-chip--hot' : ''}">${esc(g)}</span>`).join('')}
+            </span>
+          </li>`).join('');
+      }
+
       function renderFooter() {
         const src = data.meta.sources.map((s) => `<a href="${s.sheet}" target="_blank" rel="noopener">${s.year}</a>`).join(', ');
         $('.bb-source').innerHTML = `
           <p><b>Source:</b> PEN America, <a href="https://pen.org/book-bans/pen-america-book-ban-index-data/" target="_blank" rel="noopener">Index of School Book Bans</a>, school years ${src} (public Google Sheets, retrieved ${data.meta.retrieved}).</p>
           <p><b>Reading the numbers:</b> one ban is one title removed or restricted in one district, so a book banned in 20 districts counts 20 times. The index covers US public K-12 schools only, as documented by PEN America from news reports, public records and local sources; it is not exhaustive and excludes public libraries. The 2024-25 index is not included.</p>
+          ${data.context ? `<p><b>Themes and reasons:</b> PEN America's thematic findings as published in ${data.context.penThemes.map((p) => `<a href="${p.url}" target="_blank" rel="noopener">${esc(p.report)}</a> (${p.year})`).join(', ')}; reasons cited by the <a href="${data.context.ala.url}" target="_blank" rel="noopener">ALA Office for Intellectual Freedom</a> for its most challenged books of ${data.context.ala.years.join(', ')}, grouped into tags by keyword${data.context.subjects ? `; subject headings from <a href="https://openlibrary.org" target="_blank" rel="noopener">Open Library</a>, grouped into themes by keyword` : ''} (retrieved ${data.context.retrieved}). PEN figures are PEN's own coding; ALA covers all US libraries by calendar year and is not a sample of PEN's school bans.</p>` : ''}
           <p><b>Processing:</b> PEN's labels changed between years and are harmonized here ("Banned from libraries and classrooms" and similar become Removed; "Administrator" becomes School administration; combined labels such as "Informal Challenge, Administration" become Challenge and administration). Titles and authors are matched ignoring case and punctuation; district names are matched across years ignoring words like "County" or "School District".</p>`;
       }
 
@@ -701,6 +855,7 @@
         container.classList.toggle('is-wide', W >= 800);
         readColors();
         renderHeader();
+        renderWhy();
         timelineHeader();
         renderTimeline($('.bb-time').clientWidth || W);
         renderMap($('.bb-map').clientWidth || W);
