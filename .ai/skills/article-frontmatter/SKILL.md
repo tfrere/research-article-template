@@ -12,7 +12,7 @@ All metadata lives in `app/src/content/article.mdx` frontmatter (YAML block).
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `title` | string | required | Article title. Supports `\n` for line breaks (rendered as `<br/>`). |
-| `subtitle` | string | — | Subtitle displayed below the banner (article template) or below the title (paper template). |
+| `subtitle` | string | — | Subtitle displayed below the title, above the banner. Falls back to `description`. |
 | `description` | string | `""` | Short description for SEO / meta tags. |
 | `authors` | array | `[]` | List of authors (see below). |
 | `affiliations` | array | `[]` | List of affiliations (see below). |
