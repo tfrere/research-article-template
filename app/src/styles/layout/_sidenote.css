@@ -1,0 +1,48 @@
+/* ============================================================================ */
+/* Sidenotes. Inline under their element by default; from 1280px a sidenote    */
+/* that is a direct child of <main> is auto-placed in the margin column, on the */
+/* row of the element before it. It takes no height in that row, so it never    */
+/* pushes the text; src/scripts/layout/sidenotes.ts aligns it with its element  */
+/* and moves it down when it would overlap another note or a wide figure.      */
+/* ============================================================================ */
+
+.sidenote {
+  --sidenote-in-margin: 0;
+  margin: -6px 0 18px;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--muted-color);
+}
+
+.sidenote > :first-child {
+  margin-top: 0;
+}
+
+.sidenote > :last-child {
+  margin-bottom: 0;
+}
+
+.content-grid main .sidenote :is(p, li) {
+  font-size: inherit;
+}
+
+@media (--bp-margin) {
+  .content-grid > main > .sidenote {
+    --sidenote-in-margin: 1;
+    grid-column: margin;
+    height: 0;
+    margin: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 4;
+  }
+}
+
+@media print {
+  .content-grid > main > .sidenote {
+    grid-column: body;
+    height: auto;
+    margin: -6px 0 18px;
+    transform: none !important;
+  }
+}
