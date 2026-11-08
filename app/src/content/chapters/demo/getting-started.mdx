@@ -1,9 +1,5 @@
 import Sidenote from '../../../components/Sidenote.astro';
 import Note from '../../../components/Note.astro';
-import Image from '../../../components/Image.astro';
-import Stack from '../../../components/Stack.astro';
-import articleTemplate from '../../assets/image/article-template.png';
-import paperTemplate from '../../assets/image/paper-template.png';
 
 ## Getting Started
 
@@ -18,8 +14,8 @@ npx create-research-article my-paper
 You can also pick a template directly:
 
 ```bash
-npx create-research-article my-paper --template=article
-npx create-research-article my-paper --template=paper
+npx create-research-article my-paper --layout article
+npx create-research-article my-paper --layout paper
 ```
 
 The CLI guides you through the setup: project name, metadata (title, authors, affiliations), and template choice. It also offers to **create and deploy a Hugging Face Space** automatically if you have `huggingface-cli` installed.
@@ -52,53 +48,34 @@ npm install && npm run dev
 
 ### Template variants
 
-You can choose the layout during `npx create-research-article`, or change it later in `article.mdx` frontmatter:
+The template ships two layouts. Switching is one line of `article.mdx` frontmatter, and it works the same here and in the collaborative editor:
 
 ```yaml
-template: "article"  # full: banner, sidebar TOC, figure numbering, citation block, PDF export
-template: "paper"    # lighter: centered single column, no figure numbering
+template: "article"  # default: centered hero, meta columns, line TOC, margin sidenotes, figure numbering
+template: "paper"    # lighter: centered single column, no TOC, no figure numbering
 ```
 
-See them live: [article template](https://huggingface.co/spaces/tfrere/test-article-scaffold) | [paper template](https://huggingface.co/spaces/tfrere/test-paper-scaffold)
+You can also pick it when scaffolding: `npx create-research-article my-paper --layout paper`.
 
-<Stack layout="2-column" gap="medium">
-  <a href="https://huggingface.co/spaces/tfrere/test-article-scaffold" target="_blank" rel="noopener noreferrer" class="card no-padding template-card" style="flex: 1; min-width: 0; overflow: hidden;">
-    <Image
-      src={articleTemplate}
-      alt="Article template - full layout with banner, sidebar TOC, and PDF export"
-      zoomable={false}
-      downloadable={false}
-      skipGallery
-    />
-    <div class="card-title-container">
-      <h3 class="card-title">Article template</h3>
-      <p class="card-subtitle">Full layout with banner, sidebar TOC, figure numbering, citation block, and PDF export</p>
-    </div>
-  </a>
-  <a href="https://huggingface.co/spaces/tfrere/test-paper-scaffold" target="_blank" rel="noopener noreferrer" class="card no-padding template-card" style="flex: 1; min-width: 0; overflow: hidden;">
-    <Image
-      src={paperTemplate}
-      alt="Paper template - lighter single-column layout with pill buttons"
-      zoomable={false}
-      downloadable={false}
-      skipGallery
-    />
-    <div class="card-title-container">
-      <h3 class="card-title">Paper template</h3>
-      <p class="card-subtitle">Lighter single-column layout with external link pills and centered meta</p>
-    </div>
-  </a>
-</Stack>
+The `article` layout is the one you are reading:
 
-The `paper` template also supports external links (Paper, Code, Demo, Data...) displayed as pill buttons below the authors:
+- **Centered hero**: title, subtitle and a banner embed. `banner` takes any file in `embeds/`, `banner: false` hides it.
+- **Meta columns**: authors, affiliations, published date and DOI, plus a Resources column (PDF, Cite and your `links`).
+- **Line table of contents**: a reading-progress rail with H2 and H3, expanded by default. `tocExpanded: false` only opens the section being read.
+- **Sidenotes in the margin** from 1280px wide, inline below that.
+- **Heading anchors**: hover a heading to copy a link to it.
 
 ```yaml
+banner: "banner.html"   # or false
+tocExpanded: true
 links:
-  - label: "Paper"
-    url: "https://arxiv.org/abs/..."
   - label: "Code"
     url: "https://github.com/..."
 ```
+
+In the `paper` layout, the same `links` show as pill buttons below the authors.
+
+Every width, gutter and breakpoint is a token in `app/src/styles/_grid.css`. To see the grid, add `?grid` to any URL, or press `G` in `npm run dev`; `Shift+G` toggles the baseline.
 
 Long titles are automatically balanced and downsized. You can force a line break with `\n` in the frontmatter:
 
