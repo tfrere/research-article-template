@@ -14,7 +14,7 @@
 //   --data <file>      Value passed as HtmlEmbed `data` (comma-separated for several)
 //   --config <json>    Value passed as HtmlEmbed `config`
 //   --frameless        Render without the card frame
-//   --banner           Render inside the 5:2 hero banner box (auto for banner.html)
+//   --banner           Render inside the hero banner box (auto for banner*.html)
 //   --widths <a,b>     Container widths in px (default 360,760)
 //   --out <dir>        Screenshot directory (default .embed-check)
 
@@ -110,9 +110,9 @@ function harnessHtml({ fragment, theme, width, data, config, frameless, banner, 
 <style>
   body { margin: 0; padding: 16px; background: var(--page-bg); color: var(--text-color); font-family: var(--default-font-family); }
   #stage { width: ${width}px; }
-  .hero-banner { max-width: 980px; aspect-ratio: 5 / 2; overflow: hidden; }
-  .hero-banner .html-embed, .hero-banner .html-embed__card { height: 100%; margin: 0; }
-  @media (max-width: 768px) { .hero-banner { aspect-ratio: auto; } }
+  /* Mirrors src/styles/layout/_hero.css: the banner root sets its own aspect ratio */
+  .hero-banner { width: min(100%, 1080px); border-radius: 8px; overflow: hidden; }
+  .hero-banner .html-embed { margin: 0; }
 </style>
 <script type="module" src="/scripts/color-palettes.js"></script>
 <script src="/scripts/embed-runtime.js"></script>

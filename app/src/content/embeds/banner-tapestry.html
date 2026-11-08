@@ -1,5 +1,5 @@
-<div role="img" aria-label="This article woven as a tapestry: every section is a vertical warp thread, in reading order and colored by chapter. Horizontal weft bands stand for prose, code, components, and tables and math; a section's thread floats over a band in proportion to how much of that kind it holds." class="banner-tapestry">
-  <canvas class="banner-tapestry__canvas" aria-hidden="true"></canvas>
+<div class="banner-tapestry">
+  <canvas class="banner-tapestry__canvas"></canvas>
   <span class="banner-tapestry__caption"></span>
 </div>
 <style>
@@ -8,12 +8,6 @@
     width: 100%;
     aspect-ratio: 12 / 5;
     min-height: 180px;
-  }
-  .hero-banner .banner-tapestry {
-    position: absolute;
-    inset: 0;
-    aspect-ratio: auto;
-    min-height: 0;
   }
   .banner-tapestry__canvas {
     position: absolute;
@@ -41,7 +35,7 @@
   }
 </style>
 <script>
-  (() => {
+  Embed.mount('banner-tapestry', (embed) => {
     const ROOT = 'banner-tapestry';
     const DATA_FILE = 'article-anatomy.json';
     const MIN_SECTION_WORDS = 40;
@@ -55,50 +49,32 @@
     ];
     const MS_PER_WORD = 8;
 
-    const ensureD3 = (cb) => {
-      if (window.d3 && typeof window.d3.select === 'function') return cb();
-      let s = document.getElementById('d3-cdn-script');
-      if (!s) {
-        s = document.createElement('script');
-        s.id = 'd3-cdn-script';
-        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-        document.head.appendChild(s);
-      }
-      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
-      s.addEventListener('load', onReady, { once: true });
-      if (window.d3) onReady();
+    // Article anatomy built by scripts/generate-article-anatomy.mjs; a `data` prop overrides it
+    const loadData = async (embed) => {
+      if (embed.files.length) return embed.data();
+      const r = await fetch(`/data/${DATA_FILE}`, { signal: embed.signal });
+      if (!r.ok) throw new Error(`${DATA_FILE} not found: run node scripts/generate-article-anatomy.mjs`);
+      return r.json();
     };
 
-    const fetchFirstAvailable = async (paths) => {
-      for (const p of paths) {
-        try {
-          const r = await fetch(p, { cache: 'force-cache' });
-          if (r.ok) return r.json();
-        } catch (_) {}
-      }
-      throw new Error(`${DATA_FILE} not found`);
-    };
-
-    const mount = (root) => {
-      root.dataset.mounted = 'true';
+    const mount = async (embed) => {
+      const root = embed.root;
       const canvas = root.querySelector('canvas');
       const caption = root.querySelector(`.${ROOT}__caption`);
       const ctx = canvas.getContext('2d');
-      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
       let data = null;
       let theme = null;
       let model = null;
       let layer = null;
       let W = 0, H = 0, dpr = 1;
-      let visible = true;
-      let raf = 0, last = 0, clock = 19000;
+      let clock = 19000;
 
       const readTheme = () => {
-        const host = root.closest('[data-theme]') || document.documentElement;
-        const dark = host.getAttribute('data-theme') === 'dark';
+        // Nearest data-theme: the article root, or a themed panel on the /banners page
+        const dark = (root.closest('[data-theme]') || document.documentElement).getAttribute('data-theme') === 'dark';
         const cs = getComputedStyle(root);
-        const got = window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10);
+        const got = embed.colors('categorical', 10);
         const cat = got && got.length ? got : d3.schemeTableau10;
         const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0];
         const hues = d3.interpolateHcl(cat[0], cat[Math.floor(cat.length / 2)]);
@@ -323,20 +299,6 @@
         });
       };
 
-      const animating = () => visible && !reduceMotion.matches && !document.hidden;
-      const frame = (now) => {
-        raf = 0;
-        clock += Math.min(50, now - (last || now));
-        last = now;
-        draw(clock);
-        if (animating()) raf = requestAnimationFrame(frame);
-      };
-      const schedule = () => {
-        if (raf || !animating()) { if (!raf) draw(clock); return; }
-        last = 0;
-        raf = requestAnimationFrame(frame);
-      };
-
       const writeCaption = () => {
         if (!caption || !model) return;
         caption.textContent = `${model.sections.length} sections woven in reading order, each floats over the weft as much as it holds of each kind`;
@@ -363,33 +325,29 @@
         draw(clock);
       };
 
-      ensureD3(async () => {
-        try {
-          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
-        } catch (e) {
-          root.setAttribute('aria-label', 'Banner data unavailable');
-          return;
+      data = await loadData(embed);
+      embed.describe("This article woven as a tapestry: every section is a vertical warp thread, in reading order and colored by chapter. Horizontal weft bands stand for prose, code, components, and tables and math; a section's thread floats over a band in proportion to how much of that kind it holds.");
+
+      // Theme and palette changes re-render; repaint the cached layers only when they changed
+      let themeKey = '';
+      let animating = false;
+      return () => {
+        const key = `${(root.closest('[data-theme]') || document.documentElement).getAttribute('data-theme')}|${embed.colors('categorical', 10).join()}`;
+        if (key !== themeKey) {
+          themeKey = key;
+          retheme();
         }
-        theme = readTheme();
         resize();
-        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
-        else window.addEventListener('resize', resize);
-        if (window.IntersectionObserver) {
-          new IntersectionObserver((entries) => {
-            visible = entries.some((e) => e.isIntersecting);
-            schedule();
-          }).observe(root);
+        if (!animating) {
+          animating = true;
+          embed.animate((now, dt) => {
+            clock += Math.min(50, dt);
+            draw(clock);
+          });
         }
-        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-        document.addEventListener('palettes:updated', retheme);
-        document.addEventListener('visibilitychange', schedule);
-        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
-        schedule();
-      });
+      };
     };
 
-    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
-    else bootstrap();
-  })();
+    return mount(embed);
+  }, { resize: 'size', lazy: false });
 </script>

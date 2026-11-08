@@ -1,5 +1,5 @@
-<div role="img" aria-label="This article drawn as a night sky, in reading order from left to right: chapters are bright stars, sections and components orbit them, every word is a grain of dust around its section, and arcs trace citations and cross-references." class="banner-constellation">
-  <canvas class="banner-constellation__canvas" aria-hidden="true"></canvas>
+<div class="banner-constellation">
+  <canvas class="banner-constellation__canvas"></canvas>
   <span class="banner-constellation__caption"></span>
 </div>
 <style>
@@ -8,12 +8,6 @@
     width: 100%;
     aspect-ratio: 12 / 5;
     min-height: 180px;
-  }
-  .hero-banner .banner-constellation {
-    position: absolute;
-    inset: 0;
-    aspect-ratio: auto;
-    min-height: 0;
   }
   .banner-constellation__canvas {
     position: absolute;
@@ -38,34 +32,18 @@
   }
 </style>
 <script>
-  (() => {
+  Embed.mount('banner-constellation', (embed) => {
     const ROOT = 'banner-constellation';
     const DATA_FILE = 'article-anatomy.json';
     const FIGURES = new Set(['HtmlEmbed', 'Image', 'Wide', 'FullWidth', 'Stack']);
     const MS_PER_WORD = 6;
 
-    const ensureD3 = (cb) => {
-      if (window.d3 && typeof window.d3.select === 'function') return cb();
-      let s = document.getElementById('d3-cdn-script');
-      if (!s) {
-        s = document.createElement('script');
-        s.id = 'd3-cdn-script';
-        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-        document.head.appendChild(s);
-      }
-      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
-      s.addEventListener('load', onReady, { once: true });
-      if (window.d3) onReady();
-    };
-
-    const fetchFirstAvailable = async (paths) => {
-      for (const p of paths) {
-        try {
-          const r = await fetch(p, { cache: 'force-cache' });
-          if (r.ok) return r.json();
-        } catch (_) {}
-      }
-      throw new Error(`${DATA_FILE} not found`);
+    // Article anatomy built by scripts/generate-article-anatomy.mjs; a `data` prop overrides it
+    const loadData = async (embed) => {
+      if (embed.files.length) return embed.data();
+      const r = await fetch(`/data/${DATA_FILE}`, { signal: embed.signal });
+      if (!r.ok) throw new Error(`${DATA_FILE} not found: run node scripts/generate-article-anatomy.mjs`);
+      return r.json();
     };
 
     // Graph of the article: chapter hubs, section stars, component satellites,
@@ -120,12 +98,11 @@
       return { nodes, links, owners, ownerAt, hubs };
     };
 
-    const mount = (root) => {
-      root.dataset.mounted = 'true';
+    const mount = async (embed) => {
+      const root = embed.root;
       const canvas = root.querySelector('canvas');
       const caption = root.querySelector(`.${ROOT}__caption`);
       const ctx = canvas.getContext('2d');
-      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
       let data = null;
       let graph = null;
@@ -133,14 +110,13 @@
       let model = null;
       let dust = null;
       let W = 0, H = 0, dpr = 1;
-      let visible = true;
-      let raf = 0, last = 0, clock = 14000;
+      let clock = 14000;
 
       const readTheme = () => {
-        const host = root.closest('[data-theme]') || document.documentElement;
-        const dark = host.getAttribute('data-theme') === 'dark';
+        // Nearest data-theme: the article root, or a themed panel on the /banners page
+        const dark = (root.closest('[data-theme]') || document.documentElement).getAttribute('data-theme') === 'dark';
         const cs = getComputedStyle(root);
-        const cat = (window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10)) || [];
+        const cat = embed.colors('categorical', 10);
         const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0] || '#e8956b';
         return {
           dark,
@@ -359,20 +335,6 @@
         ctx.fill();
       };
 
-      const animating = () => visible && !reduceMotion.matches && !document.hidden;
-      const frame = (now) => {
-        raf = 0;
-        clock += Math.min(50, now - (last || now));
-        last = now;
-        draw(clock);
-        if (animating()) raf = requestAnimationFrame(frame);
-      };
-      const schedule = () => {
-        if (raf || !animating()) { if (!raf) draw(clock); return; }
-        last = 0;
-        raf = requestAnimationFrame(frame);
-      };
-
       const resize = () => {
         const w = root.clientWidth, h = root.clientHeight;
         if (!w || !h) return;
@@ -396,34 +358,30 @@
         draw(clock);
       };
 
-      ensureD3(async () => {
-        try {
-          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
-        } catch (e) {
-          root.setAttribute('aria-label', 'Banner data unavailable');
-          return;
+      data = await loadData(embed);
+      graph = graphOf(data);
+      embed.describe('This article drawn as a night sky, in reading order from left to right: chapters are bright stars, sections and components orbit them, every word is a grain of dust around its section, and arcs trace citations and cross-references.');
+
+      // Theme and palette changes re-render; repaint the cached layers only when they changed
+      let themeKey = '';
+      let animating = false;
+      return () => {
+        const key = `${(root.closest('[data-theme]') || document.documentElement).getAttribute('data-theme')}|${embed.colors('categorical', 10).join()}`;
+        if (key !== themeKey) {
+          themeKey = key;
+          retheme();
         }
-        graph = graphOf(data);
-        theme = readTheme();
         resize();
-        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
-        else window.addEventListener('resize', resize);
-        if (window.IntersectionObserver) {
-          new IntersectionObserver((entries) => {
-            visible = entries.some((e) => e.isIntersecting);
-            schedule();
-          }).observe(root);
+        if (!animating) {
+          animating = true;
+          embed.animate((now, dt) => {
+            clock += Math.min(50, dt);
+            draw(clock);
+          });
         }
-        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-        document.addEventListener('palettes:updated', retheme);
-        document.addEventListener('visibilitychange', schedule);
-        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
-        schedule();
-      });
+      };
     };
 
-    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
-    else bootstrap();
-  })();
+    return mount(embed);
+  }, { resize: 'size', lazy: false });
 </script>

@@ -1,13 +1,13 @@
 # Banners (article hero)
 
 A banner is the decorative embed at the top of an article, rendered by
-the hero above the title. It follows [runtime.md](runtime.md) with these
+the hero below the title and description. It follows [runtime.md](runtime.md) with these
 differences. Start from [banner-template.html](banner-template.html).
 
 | Constraint | Value |
 |---|---|
-| File | `app/src/content/embeds/banner.html` (the hero always renders this file, frameless). |
-| Box | 5:2, max-width 980px, so 980x392 at full width. |
+| File | Any file in `app/src/content/embeds/`, picked with the `banner` frontmatter field (default `banner.html`, `false` hides it). Rendered frameless. Dev gallery of all banners: `/banners` in `npm run dev`. |
+| Box | The hero box is up to 1080px wide and takes the height of the banner root. 5:2 by default (1080x432), 12:5 for the article-anatomy banners. |
 | Root CSS | `width: 100%; aspect-ratio: 5 / 2; overflow: hidden; position: relative;` |
 | Mount | `Embed.mount('<root-class>', setup, { resize: 'size' })` and draw from both `width` and `height`. |
 | SVG / canvas | Fills the root edge to edge (`width: 100%; height: 100%; display: block`), no margins. |

@@ -11,6 +11,11 @@ if (import.meta.env.PROD) return Astro.redirect("/");
 const current = String((ArticleMod as any).frontmatter?.banner || "banner.html");
 const banners = [
   {
+    src: "banner.html",
+    name: "Galaxy",
+    data: "The template default: a spiral galaxy of points, no article data.",
+  },
+  {
     src: "banner-constellation.html",
     name: "Constellation",
     data: "Chapters, sections, components and citations as a star graph laid out in reading order; every word is a grain of dust around its section.",
@@ -50,7 +55,8 @@ const themes = ["light", "dark"];
       })();
     </script>
     <script type="module" src="/scripts/color-palettes.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script is:inline src="/scripts/embed-runtime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   </head>
   <body class="banners-page">
     <ThemeToggle />

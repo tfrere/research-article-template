@@ -42,17 +42,15 @@
   text-wrap: pretty;
 }
 
+/* The banner root carries its own aspect ratio (see the banners skill) */
 .hero-banner {
   width: min(100%, 1080px);
   margin: 40px 0 0;
-  aspect-ratio: 12 / 5;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.hero-banner .html-embed,
-.hero-banner .html-embed__card {
-  height: 100%;
+.hero-banner .html-embed {
   margin: 0;
 }
 
@@ -62,7 +60,6 @@
   }
 
   .hero-banner {
-    aspect-ratio: 16 / 10;
     margin-top: 28px;
   }
 }
