@@ -16,19 +16,19 @@ const banners = [
     data: "Chapters, sections, components and citations as a star graph laid out in reading order; every word is a grain of dust around its section.",
   },
   {
-    src: "banner-ridges.html",
-    name: "Ridges",
-    data: "One ridge per section, in reading order: the distribution of its word lengths (log scale). Code-heavy sections grow long-word bumps.",
-  },
-  {
     src: "banner-manuscript.html",
     name: "Manuscript",
     data: "The whole article typeset in microscopic newspaper columns, one bar per word, colored by prose, heading, code, component, math or table.",
   },
   {
-    src: "banner.html",
-    name: "Galaxy (previous)",
-    data: "Decorative random spiral, kept for reference.",
+    src: "banner-groove.html",
+    name: "Groove",
+    data: "The article pressed into a record: one spiral groove, every word a stretch as long as the word and colored by kind, chapters as tracks separated by empty grooves, the label split by each chapter's share of words. A needle reads it as it turns.",
+  },
+  {
+    src: "banner-tapestry.html",
+    name: "Tapestry",
+    data: "Every section is a warp thread, in reading order and colored by chapter; weft bands stand for prose, code, components, and tables and math. A thread floats over a band in proportion to how much of that kind its section holds.",
   },
 ];
 const themes = ["light", "dark"];
@@ -58,7 +58,7 @@ const themes = ["light", "dark"];
       <h1>Banners</h1>
       <p class="banners-lead">
         Current article banner: <code>{current}</code>. To swap, set
-        <code>banner: "banner-ridges.html"</code> (or any file below) in the
+        <code>banner: "banner-groove.html"</code> (or any file below) in the
         <code>article.mdx</code> frontmatter.
       </p>
       {
