@@ -1,0 +1,25 @@
+---
+// Debug grid overlay loader. Nothing is loaded until it is asked for:
+//   - in `astro dev`: press G (Shift+G toggles the baseline once shown)
+//   - in any build: add ?grid (or ?debug=grid) to the URL
+// The overlay itself lives in src/scripts/layout/debug-grid.ts.
+---
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const requested =
+    (params.has("grid") && params.get("grid") !== "0") || params.get("debug") === "grid";
+  const show = () =>
+    import("../scripts/layout/debug-grid").then((m) => m.toggleDebugGrid(true));
+
+  if (requested) show();
+  else if (import.meta.env.DEV) {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== "g" || e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as Element | null)?.closest?.("input, textarea, select, [contenteditable]")) return;
+      document.removeEventListener("keydown", onKey);
+      show();
+    };
+    document.addEventListener("keydown", onKey);
+  }
+</script>
