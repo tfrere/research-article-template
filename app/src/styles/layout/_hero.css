@@ -1,0 +1,515 @@
+/* ============================================================================ */
+/* Hero (centered) and meta columns. Both sit on the page grid (_grid.css).     */
+/* ============================================================================ */
+
+.hero {
+  display: grid;
+  grid-template-columns: var(--layout-cols);
+  padding: 72px 0 0;
+}
+
+.hero > * {
+  grid-column: page;
+  justify-self: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.hero-title {
+  margin: 0;
+  max-width: 16em;
+  font-size: clamp(2.25rem, 1.2rem + 3vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+  color: var(--text-color);
+}
+
+.hero-title[data-title-size="long"] {
+  max-width: 24em;
+  font-size: clamp(1.75rem, 1rem + 2.2vw, 2.625rem);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+}
+
+.hero-desc {
+  margin: 20px 0 0;
+  max-width: 34em;
+  font-size: clamp(1.125rem, 1rem + .4vw, 1.3125rem);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-color) 78%, transparent);
+  text-wrap: pretty;
+}
+
+.hero-banner {
+  width: min(100%, 1080px);
+  margin: 40px 0 0;
+  aspect-ratio: 12 / 5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.hero-banner .html-embed,
+.hero-banner .html-embed__card {
+  height: 100%;
+  margin: 0;
+}
+
+@media (--bp-sm) {
+  .hero {
+    padding-top: 56px;
+  }
+
+  .hero-banner {
+    aspect-ratio: 16 / 10;
+    margin-top: 28px;
+  }
+}
+
+/* ============================================================================ */
+/* Meta columns: Authors / Affiliations / Published / Resources between         */
+/* hairlines. The grid gap shows the border color, cells sit on the page.       */
+/* ============================================================================ */
+
+header.meta {
+  display: grid;
+  grid-template-columns: var(--layout-cols);
+}
+
+.meta-cols {
+  --meta-lh: 20px;
+  grid-column: page;
+  justify-self: center;
+  width: min(100%, 980px);
+  display: grid;
+  grid-template-columns: var(--meta-template, repeat(4, minmax(0, 1fr)));
+  gap: 1px;
+  margin-top: 40px;
+  background: var(--border-color);
+  background-clip: padding-box;
+  border-block: 1px solid var(--border-color);
+  align-items: stretch;
+}
+
+.meta-cols--wide,
+.meta-cols--long {
+  width: min(100%, 1120px);
+}
+
+.hero:not(:has(.hero-banner)) + header.meta .meta-cols {
+  margin-top: 32px;
+}
+
+.meta-col {
+  padding: 16px 20px 20px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: var(--meta-lh);
+  background: var(--page-bg);
+  text-align: left;
+  color: var(--text-color);
+}
+
+.meta-cols--wide .meta-col:not(.meta-col--authors),
+.meta-cols--long .meta-col:not(.meta-col--authors) {
+  padding-inline: 16px;
+  font-size: 13.5px;
+}
+
+.meta-label {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  line-height: var(--meta-lh);
+  font-weight: 600;
+  letter-spacing: .05em;
+  font-variant-caps: all-small-caps;
+  color: var(--muted-color);
+}
+
+.meta-col p {
+  margin: 0;
+}
+
+.meta-sub {
+  color: var(--muted-color);
+  font-size: 13px;
+}
+
+.meta-col a {
+  color: inherit;
+  text-decoration: none;
+  border: 0;
+}
+
+/* Lists: one name per line, superscripts kept, no hover needed to read anything */
+.meta-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meta-authors {
+  font-size: 14px;
+  line-height: var(--meta-lh);
+  text-wrap: pretty;
+}
+
+.meta-authors li {
+  display: block;
+  break-inside: avoid;
+  transition: opacity .15s ease;
+}
+
+.meta-authors a {
+  background-image: linear-gradient(var(--border-color), var(--border-color));
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+.meta-authors a:hover {
+  background-image: linear-gradient(currentColor, currentColor);
+}
+
+.meta-cols--wide .meta-authors,
+.meta-cols--long .meta-authors {
+  columns: 2;
+  column-gap: 24px;
+}
+
+.meta-affs {
+  font-size: 13.5px;
+  line-height: var(--meta-lh);
+}
+
+.meta-affs li {
+  position: relative;
+  padding-left: 1.4em;
+  break-inside: avoid;
+  transition: opacity .15s ease;
+}
+
+.meta-affs.is-single li {
+  padding-left: 0;
+}
+
+.meta-authors sup,
+.meta-affs sup {
+  font-size: 10px;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-authors sup {
+  margin-left: 1px;
+}
+
+.meta-affs sup {
+  position: absolute;
+  left: 0;
+  top: .1em;
+  margin: 0;
+  line-height: 1;
+}
+
+.meta-affs a:hover {
+  color: var(--muted-color);
+}
+
+.meta-list.is-collapsed .is-extra {
+  display: none;
+}
+
+.meta-list:not(.is-collapsed) .meta-gap {
+  display: none;
+}
+
+.meta-gap {
+  display: block;
+  color: var(--muted-color);
+  font-style: italic;
+}
+
+/* Hovering an author lights its affiliations (and the reverse) */
+.meta-cols.is-tracing .meta-authors li[data-aff]:not(.on),
+.meta-cols.is-tracing .meta-affs li[data-aff]:not(.on) {
+  opacity: .32;
+}
+
+.meta-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: var(--meta-lh);
+  color: var(--text-color);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border-color);
+  text-underline-offset: 3px;
+}
+
+.meta-expand::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.meta-expand[aria-expanded="true"]::after {
+  transform: translateY(1px) rotate(-135deg);
+}
+
+.meta-expand:hover {
+  text-decoration-color: currentColor;
+}
+
+.meta-doi {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-doi a:hover {
+  color: var(--text-color);
+}
+
+/* Resources: row 1 buttons (PDF, Cite), row 2 plain links */
+.meta-actions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.meta-actions__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-actions__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: var(--meta-lh);
+}
+
+.meta-col .meta-actions__links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-color);
+  background-image: linear-gradient(var(--border-color), var(--border-color));
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+.meta-col .meta-actions__links a:hover {
+  color: var(--text-color);
+  background-image: linear-gradient(currentColor, currentColor);
+}
+
+.meta-actions__links svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  opacity: .7;
+}
+
+.meta-col .meta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color .15s, border-color .15s;
+}
+
+.meta-col .meta-btn:hover,
+.meta-col .meta-btn[aria-expanded="true"] {
+  background: var(--surface-bg);
+  border-color: color-mix(in srgb, var(--text-color) 22%, transparent);
+}
+
+.meta-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  opacity: .7;
+}
+
+.meta-col .meta-btn--locked {
+  color: var(--on-primary);
+  background: var(--primary-color);
+  border-color: transparent;
+}
+
+/* PDF access (pdfProOnly): the matching variant is shown by the meta script */
+.meta-pdf[data-state="checking"] .meta-btn--pdf {
+  opacity: .5;
+  pointer-events: none;
+}
+
+.meta-pdf:not([data-state="locked"]) .meta-btn--locked,
+.meta-pdf[data-state="locked"] .meta-btn--pdf {
+  display: none;
+}
+
+.meta-col :is(.meta-btn, .meta-copy, .meta-expand, a):focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.meta-copy {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+/* Cite popover */
+.meta-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.meta-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+  width: min(440px, calc(100vw - 32px));
+  z-index: var(--z-overlay);
+  padding: 14px 16px 16px;
+  font-size: 13px;
+  text-align: left;
+  background: var(--page-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .08), 0 2px 6px rgba(0, 0, 0, .04);
+}
+
+[data-theme="dark"] .meta-pop {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+}
+
+.meta-pop[hidden] {
+  display: none;
+}
+
+.meta-pop.is-in {
+  animation: meta-pop-in .14s ease-out;
+}
+
+@keyframes meta-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.meta-pop__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 12px;
+}
+
+.meta-pop__row:first-child {
+  margin-top: 0;
+}
+
+.meta-pop .meta-label {
+  margin: 0;
+}
+
+.meta-pop__text {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.meta-pop pre {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow: auto;
+  font: 12px/1.5 var(--font-mono);
+  white-space: pre;
+  color: var(--text-color);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+@media (--bp-meta-grid) {
+  .meta-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .meta-cols--wide .meta-col--authors,
+  .meta-cols--long .meta-col--authors,
+  .meta-cols--wide .meta-col--res,
+  .meta-cols--long .meta-col--res {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (--bp-xs) {
+  .meta-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .meta-cols--wide .meta-authors,
+  .meta-cols--long .meta-authors {
+    columns: 1;
+  }
+
+  .meta-cols .meta-col {
+    padding-inline: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meta-cols *,
+  .meta-pop {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media print {
+  .meta-col--res {
+    display: none !important;
+  }
+}

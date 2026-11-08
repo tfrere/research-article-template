@@ -1,0 +1,279 @@
+---
+// Hero meta columns: Authors / Affiliations / Published / Resources.
+// Styles in src/styles/layout/_hero.css, behaviour in src/scripts/layout/meta.ts.
+import type { Author } from "./heroUtils";
+
+interface Props {
+  authors?: Author[];
+  affiliations?: Array<{ id: number; name: string; url?: string }>;
+  published?: string;
+  doi?: string;
+  showPdf?: boolean;
+  pdfProOnly?: boolean;
+  pdfFilename: string;
+  citationText: string;
+  bibtex: string;
+  links?: Array<{ label: string; url: string }>;
+}
+
+const {
+  authors = [],
+  affiliations = [],
+  published,
+  doi,
+  showPdf = true,
+  pdfProOnly = false,
+  pdfFilename,
+  citationText,
+  bibtex,
+  links = [],
+} = Astro.props as Props;
+
+// Authors are never hidden behind a hover: up to 6 listed, 7-12 listed in a
+// double-width cell, beyond that the first ones plus the last author and an
+// in-place "Show all" toggle.
+const AUTHORS_SHOWN = 10;
+const AFFILIATIONS_MAX = 6;
+const AFFILIATIONS_SHOWN = 5;
+
+const n = authors.length;
+const tier = n <= 6 ? "list" : n <= 12 ? "wide" : "long";
+const keepAuthor = (i: number) =>
+  tier !== "long" || i < AUTHORS_SHOWN - 1 || i === n - 1;
+const hiddenAuthors = authors.filter((_, i) => !keepAuthor(i)).length;
+const firstHidden = authors.findIndex((_, i) => !keepAuthor(i));
+
+const multi = affiliations.length > 1;
+const affName = (id: number) =>
+  affiliations.find((a) => a.id === id)?.name ?? "";
+const affCollapsible = affiliations.length > AFFILIATIONS_MAX;
+
+const publishedDate = published ? new Date(published) : null;
+const pad = (v: number) => String(v).padStart(2, "0");
+const publishedIso =
+  publishedDate && !Number.isNaN(publishedDate.getTime())
+    ? `${publishedDate.getFullYear()}-${pad(publishedDate.getMonth() + 1)}-${pad(publishedDate.getDate())}`
+    : undefined;
+
+const doiUrl = doi ? `https://doi.org/${doi}` : undefined;
+
+const cells = [
+  n > 0,
+  affiliations.length > 0,
+  Boolean(published || doi),
+  true,
+].filter(Boolean).length;
+const template =
+  tier === "list"
+    ? `repeat(${cells}, minmax(0, 1fr))`
+    : `minmax(0, 2fr) repeat(${cells - 1}, minmax(0, 1fr))`;
+
+const ICON = {
+  pdf: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg>',
+  cite: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 4.5h3.5v3.2c0 2-1 3.4-3 3.8l-.4-1c1-.4 1.5-1.1 1.6-2H3zm6.5 0H13v3.2c0 2-1 3.4-3 3.8l-.4-1c1-.4 1.5-1.1 1.6-2h-1.7z"/></svg>',
+  ext: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h6.5V10M12.5 3.5 4 12"/></svg>',
+  lock: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>',
+};
+---
+
+<header class="meta" aria-label="Article information">
+  <section
+    class={`meta-cols meta-cols--${tier}`}
+    style={`--meta-template: ${template}`}
+    data-meta-trace={multi ? "" : undefined}
+  >
+    {
+      n > 0 && (
+        <div class="meta-col meta-col--authors">
+          <p class="meta-label">Author{n > 1 ? "s" : ""}</p>
+          <ul
+            class:list={["meta-authors", "meta-list", { "is-collapsed": tier === "long" }]}
+            id="meta-authors"
+          >
+            {authors.map((a, i) => {
+              const ids = a.affiliationIndices ?? [];
+              const label = multi && ids.length
+                ? `${a.name}, ${ids.map(affName).join(", ")}`
+                : undefined;
+              return (
+                <Fragment>
+                  {i === firstHidden && (
+                    <li class="meta-gap" aria-hidden="true">{hiddenAuthors} more</li>
+                  )}
+                  <li
+                    class:list={[{ "is-extra": !keepAuthor(i) }]}
+                    data-aff={ids.length ? ids.join(" ") : undefined}
+                    aria-label={label}
+                  >
+                    {a.url ? <a href={a.url}>{a.name}</a> : <span>{a.name}</span>}
+                    {multi && ids.length > 0 && <sup aria-hidden="true">{ids.join(",")}</sup>}
+                  </li>
+                </Fragment>
+              );
+            })}
+          </ul>
+          {tier === "long" && (
+            <button
+              class="meta-expand"
+              type="button"
+              aria-expanded="false"
+              aria-controls="meta-authors"
+              data-more={`Show all ${n} authors`}
+            >
+              Show all {n} authors
+            </button>
+          )}
+        </div>
+      )
+    }
+    {
+      affiliations.length > 0 && (
+        <div class="meta-col meta-col--affs">
+          <p class="meta-label">Affiliation{multi ? "s" : ""}</p>
+          <ol
+            class:list={[
+              "meta-affs",
+              "meta-list",
+              { "is-single": !multi, "is-collapsed": affCollapsible },
+            ]}
+            id="meta-affs"
+          >
+            {affiliations.map((f, i) => (
+              <li
+                class:list={[{ "is-extra": affCollapsible && i >= AFFILIATIONS_SHOWN }]}
+                data-aff={String(f.id)}
+              >
+                {multi && <sup aria-hidden="true">{f.id}</sup>}
+                {f.url ? <a href={f.url}>{f.name}</a> : f.name}
+              </li>
+            ))}
+          </ol>
+          {affCollapsible && (
+            <button
+              class="meta-expand"
+              type="button"
+              aria-expanded="false"
+              aria-controls="meta-affs"
+              data-more={`Show all ${affiliations.length} affiliations`}
+            >
+              Show all {affiliations.length} affiliations
+            </button>
+          )}
+        </div>
+      )
+    }
+    {
+      (published || doi) && (
+        <div class="meta-col meta-col--pub">
+          <p class="meta-label">Published</p>
+          {published && (
+            <p>
+              <time datetime={publishedIso}>{published}</time>
+            </p>
+          )}
+          <p class="meta-sub" data-read-time>&nbsp;</p>
+          {doi && (
+            <p class="meta-sub meta-doi">
+              <a href={doiUrl}>DOI {doi}</a>
+              <button
+                class="meta-copy"
+                type="button"
+                data-copy-value={doiUrl}
+                data-copy-done="DOI link copied"
+                aria-label="Copy DOI link"
+              >
+                Copy
+              </button>
+            </p>
+          )}
+        </div>
+      )
+    }
+    <div class="meta-col meta-col--res">
+      <p class="meta-label">Resources</p>
+      <div class="meta-actions">
+        <div class="meta-actions__btns">
+          {
+            showPdf && (
+              <span
+                class="meta-pdf"
+                data-pdf-pro-only={pdfProOnly ? "true" : "false"}
+                data-state={pdfProOnly ? "checking" : "open"}
+              >
+                <a
+                  class="meta-btn meta-btn--pdf"
+                  id="download-pdf-btn"
+                  data-pdf-filename={pdfFilename}
+                  href={`/${pdfFilename}`}
+                  download={pdfFilename}
+                  aria-label={`Download PDF ${pdfFilename}`}
+                >
+                  <Fragment set:html={ICON.pdf} />
+                  PDF
+                </a>
+                <a
+                  class="meta-btn meta-btn--locked"
+                  href="https://huggingface.co/subscribe/pro"
+                  aria-label="PDF for Pro users: subscribe to Pro"
+                >
+                  <Fragment set:html={ICON.lock} />
+                  PDF (Pro)
+                </a>
+              </span>
+            )
+          }
+          <span class="meta-anchor">
+            <button
+              class="meta-btn"
+              type="button"
+              data-pop="meta-cite"
+              aria-expanded="false"
+              aria-controls="meta-cite"
+            >
+              <Fragment set:html={ICON.cite} />
+              Cite
+            </button>
+            <div class="meta-pop" id="meta-cite" role="dialog" aria-label="Cite this article" hidden>
+              <div class="meta-pop__row">
+                <span class="meta-label">Citation</span>
+                <button class="meta-copy" type="button" data-copy-from="meta-cite-text" data-copy-done="Citation copied">Copy</button>
+              </div>
+              <p class="meta-pop__text" id="meta-cite-text">{citationText}</p>
+              <div class="meta-pop__row">
+                <span class="meta-label">BibTeX</span>
+                <button class="meta-copy" type="button" data-copy-from="meta-cite-bib" data-copy-done="BibTeX copied">Copy</button>
+              </div>
+              <pre id="meta-cite-bib">{bibtex}</pre>
+              {doi && (
+                <div class="meta-pop__row">
+                  <span class="meta-label">DOI</span>
+                  <a class="meta-copy" href={doiUrl}>{doi}</a>
+                </div>
+              )}
+            </div>
+          </span>
+        </div>
+        {
+          links.length > 0 && (
+            <ul class="meta-actions__links">
+              {links.map((l) => (
+                <li>
+                  <a href={l.url}>
+                    {l.label}
+                    <Fragment set:html={ICON.ext} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </div>
+    </div>
+    <span class="sr-only" aria-live="polite" data-meta-live></span>
+  </section>
+</header>
+
+<script>
+  import { initMeta } from "../scripts/layout/meta";
+  initMeta();
+</script>

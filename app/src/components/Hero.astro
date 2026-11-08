@@ -1,0 +1,30 @@
+---
+// Article hero: centered title, description, then the banner embed.
+// Styles in src/styles/layout/_hero.css.
+import HtmlEmbed from "./HtmlEmbed.astro";
+
+interface Props {
+  title: string;
+  titleRaw?: string;
+  description?: string;
+  /** Embed filename in src/content/embeds, or false to hide the banner */
+  banner?: string | false;
+}
+
+const { title, titleRaw = "", description, banner = "banner.html" } =
+  Astro.props as Props;
+
+const titleSize = titleRaw.length > 90 ? "long" : undefined;
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <h1 class="hero-title" id="hero-title" data-title-size={titleSize} set:html={title} />
+  {description && <p class="hero-desc">{description}</p>}
+  {
+    banner && (
+      <div class="hero-banner">
+        <HtmlEmbed src={banner} frameless />
+      </div>
+    )
+  }
+</section>
