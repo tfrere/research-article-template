@@ -16,6 +16,7 @@ This is a **research article template** built with Astro + MDX. It produces inte
 | HTML embeds (D3 charts) | `app/src/content/embeds/` |
 | Data files (CSV/JSON) | `app/src/content/assets/data/` |
 | Styles & CSS variables | `app/src/styles/` |
+| Layout grid tokens | `app/src/styles/_grid.css` |
 | Scripts (export, import) | `app/scripts/` |
 
 ### Tech stack
@@ -60,6 +61,16 @@ Key points:
 - `template: "article"` (default) = full layout; `template: "paper"` = lighter single-column
 - Titles support `\n` for line breaks; long titles are auto-sized
 - Authors use 1-based affiliation indices
+
+## Page layout and debug grid
+
+The `article` template is one CSS grid with named lines (`screen`, `page`, `toc`, `outset`, `body`, `margin`).
+
+- **Tokens**: every width, gutter, breakpoint tier and sticky offset lives in `app/src/styles/_grid.css` (`--layout-*`). Change the layout there, not in components.
+- **Placement**: children of `<main>` go to `body`; `.wide` spans `body-start / margin-end`; `.full-width` spans `screen`; a `<Sidenote>` placed right after a block sits in `margin` from 1280px (inline below).
+- **Components**: `Hero.astro`, `MetaColumns.astro`, `Toc.astro`, `Sidenote.astro`, `DebugGrid.astro`; their styles are in `app/src/styles/layout/`, their scripts in `app/src/scripts/layout/` (vanilla TS).
+- **Breakpoints**: use the `@custom-media` aliases from `_variables.css` (`--bp-margin`, `--bp-margin-inline`, `--bp-content-collapse`) in global stylesheets; they are not resolved inside component `<style>` blocks.
+- **Debug grid**: press `G` in `npm run dev`, or add `?grid` to any URL (`Shift+G` toggles the baseline). It reads the live grid, so it always shows the current tokens. Use it to check alignment after layout changes.
 
 ## Deploy to Hugging Face Spaces
 

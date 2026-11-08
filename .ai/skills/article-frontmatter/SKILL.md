@@ -17,14 +17,15 @@ All metadata lives in `app/src/content/article.mdx` frontmatter (YAML block).
 | `affiliations` | array | `[]` | List of affiliations (see below). |
 | `published` | string | — | Publication date, e.g. `"Apr. 04, 2026"`. |
 | `template` | `"article"` or `"paper"` | `"article"` | Layout variant (see below). |
-| `banner` | string | `"banner.html"` | Banner embed filename in `embeds/`. |
+| `banner` | string or `false` | `"banner.html"` | Banner embed filename in `embeds/`, shown under the title. `false` hides it. |
 | `doi` | string | — | DOI identifier, shown in footer. |
-| `showPdf` | boolean | `true` | Show PDF download button in metadata bar. |
-| `tableOfContentsAutoCollapse` | boolean | `false` | Auto-collapse TOC sections on scroll. |
+| `showPdf` | boolean | `true` | Show the PDF button in the hero Resources column. |
+| `tocExpanded` | boolean | `true` | TOC sub-headings (h3) always expanded. `false`: only the section being read expands. |
+| `tableOfContentsAutoCollapse` | boolean | - | Deprecated alias: `true` means `tocExpanded: false`. |
 | `licence` | string | — | Licence text (HTML allowed), shown in footer. |
 | `pdfProOnly` | boolean | `false` | Gate PDF download behind HF Pro badge. |
 | `seoThumbImage` | string | — | Custom OG image URL for social sharing. |
-| `links` | array | `[]` | External links shown in paper template hero (see below). |
+| `links` | array | `[]` | External links (Code, Checkpoints...) shown in the hero (see below). |
 
 ## Title line breaks
 
@@ -42,7 +43,7 @@ This renders as two lines in the Hero section. The plain-text version (for SEO /
 
 | Value | Layout | Features |
 |-------|--------|----------|
-| `article` (default) | Full layout | Banner, sidebar TOC, figure numbering, citation block, DOI, PDF export |
+| `article` (default) | Grid layout: TOC rail, body, margin column | Centered hero with banner, meta columns (authors, affiliations, published + read time, PDF / Cite / links), sticky TOC, sidenotes in the margin, figure numbering, citation block, DOI, PDF export |
 | `paper` | Single centered column | No TOC sidebar, no figure numbering, no citation/DOI block, lighter footer |
 
 ## Authors and affiliations
@@ -61,11 +62,15 @@ affiliations:
     url: "https://mit.edu"
 ```
 
-Affiliation indices are 1-based and rendered as superscript numbers next to author names.
+Affiliation indices are 1-based and rendered as superscript numbers next to author names (only when there is more than one affiliation).
 
-## External links (paper template)
+In the `article` hero, authors are always listed in full: up to 6 in one column, 7 to 12 in a double-width two-column cell, and beyond 12 the first 9 plus the last author with an in-place "Show all" toggle. More than 6 affiliations collapse the same way. Hovering an author highlights their affiliations (and the reverse).
 
-The `links` field adds buttons below the author/affiliation line in the `paper` template hero. Each link has a `label` and a `url`:
+The reading time ("x min read") is computed in the browser from the article text and shown in the Published column and in the TOC.
+
+## External links
+
+The `links` field adds links to the hero. Each link has a `label` and a `url`:
 
 ```yaml
 links:
@@ -79,7 +84,7 @@ links:
     url: "https://huggingface.co/datasets/..."
 ```
 
-Links are rendered as pill-shaped buttons and only visible in the `paper` template. They are hidden in the `article` template.
+In the `article` template they are plain links on the second row of the Resources column (under the PDF / Cite buttons). In the `paper` template they are pill-shaped buttons below the author line.
 
 ## README tag (critical)
 
@@ -110,7 +115,7 @@ template: "article"
 banner: "banner.html"
 doi: "10.1234/example.2026"
 showPdf: true
-tableOfContentsAutoCollapse: true
+tocExpanded: true
 licence: "This work is licensed under <a href='https://creativecommons.org/licenses/by/4.0/'>CC BY 4.0</a>."
 ---
 ```

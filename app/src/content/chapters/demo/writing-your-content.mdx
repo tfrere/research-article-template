@@ -60,9 +60,13 @@ affiliations:
 doi: 10.1234/abcd.efgh
 licence: Diagrams and text are licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC‑BY 4.0</a> with the source available on <a href="https://huggingface.co/spaces/stfrere/research-article-template">Hugging Face</a>, unless noted otherwise. Figures reused from other sources are excluded and marked in their captions ("Figure from …").
 seoThumbImage: "https://example.com/thumb.png"
-tableOfContentsAutoCollapse: true
+banner: "banner.html"
+tocExpanded: true
 pdfProOnly: false
 showPdf: true
+links:
+  - label: "Code"
+    url: "https://github.com/..."
 ---
 ```
 
@@ -79,7 +83,9 @@ showPdf: true
 | doi | No | DOI identifier | string |
 | licence | No | Rendered in footer; HTML supported | string (HTML allowed) |
 | seoThumbImage | No | Overrides default OpenGraph image | string (URL) |
-| tableOfContentsAutoCollapse | No | Controls TOC auto-collapse | boolean |
+| banner | No | Banner embed filename in `app/src/content/embeds`, `false` hides it. Default: `"banner.html"` | string or `false` |
+| tocExpanded | No | TOC sub-headings always expanded (`true`, default) or only for the section being read (`false`). Legacy alias: `tableOfContentsAutoCollapse: true` | boolean |
+| links | No | Extra links shown under the PDF / Cite buttons in the hero (Code, Checkpoints...) | `{ label, url }[]` |
 | pdfProOnly | No | Gate PDF download to Pro users only. Shows "Subscribe to Pro" button for non-Pro users | boolean |
 | showPdf | No | Show or hide PDF section in metadata. Default: `true` | boolean |
 </Accordion>
@@ -122,9 +128,15 @@ import MyChapter from './chapters/my-chapter.mdx';
 
 ### **Table of contents**
  
-The **Table of contents** is generated **automatically** from your **H2–H4** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**.
+The **Table of contents** is generated **automatically** from your **H2** and **H3** headings. Keep headings **short** and **descriptive**; links work on **desktop** and **mobile**. Every heading also gets a link icon on hover: clicking it copies the URL of that section.
 
-<Note variant="info" emoji="💡">You can make the table of contents collapse by changing the `tableOfContentsAutoCollapse` parameter in the <a href="#frontmatter">frontmatter</a>. Which is `true` by default.</Note>
+<Note variant="info" emoji="💡">Sub-headings are expanded by default. Set `tocExpanded: false` in the <a href="#frontmatter">frontmatter</a> to only expand the section being read.</Note>
+
+### Layout grid
+
+The page sits on a single grid with **named columns**: a **rail** for the table of contents, the **body** for text and figures, and a **margin** column for sidenotes. `<Wide>` blocks span the body and the margin, `<FullWidth>` blocks span the whole screen.
+
+All widths, gutters and offsets are **CSS variables** in `app/src/styles/_grid.css`, so adjusting the layout means editing a few values there. To see the grid, press **G** while running `npm run dev`, or add `?grid` to the URL of any build (**Shift+G** toggles the baseline).
 
 ### Theme
 

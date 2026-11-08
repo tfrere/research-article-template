@@ -75,7 +75,7 @@ import HtmlEmbed from '../../components/HtmlEmbed.astro';
 | `title` | string | Title above the card |
 | `desc` | string | Description below (supports HTML) |
 | `frameless` | boolean | Removes card background/border |
-| `wide` | boolean | Wide layout (~1100px) |
+| `wide` | boolean | Wide layout: spans the body and margin columns of the page grid |
 | `data` | string or string[] | Path(s) to data files |
 | `config` | object | JSON config passed via `data-config` attribute |
 
