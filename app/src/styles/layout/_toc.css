@@ -1,0 +1,341 @@
+/* ============================================================================ */
+/* Table of contents ("line"): sticky rail aligned with the first body line.    */
+/* Behaviour in src/scripts/layout/toc.ts.                                      */
+/* ============================================================================ */
+
+.table-of-contents {
+  grid-column: toc;
+  grid-row: 1;
+  justify-self: end;
+  width: min(var(--layout-toc-width), 100%);
+  position: sticky;
+  top: var(--layout-sticky-top);
+  /* matches the cap height of a first-line h2 */
+  margin-top: 3px;
+  z-index: 5;
+  font-size: 13px;
+  transition: opacity .2s ease;
+}
+
+.table-of-contents[hidden],
+.toc-topbar[hidden] {
+  display: none !important;
+}
+
+.table-of-contents.is-occluded {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.table-of-contents ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.table-of-contents a {
+  display: block;
+  color: var(--muted-color);
+  text-decoration: none;
+  border: 0;
+}
+
+.table-of-contents a:hover {
+  color: var(--text-color);
+}
+
+.table-of-contents a[aria-current] {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.table-of-contents a:focus-visible,
+.toc-topbar button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.toc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.toc-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+
+.toc-meta {
+  font-size: 11px;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Reading time appears once the TOC is stuck (space stays reserved, no layout shift) */
+.table-of-contents .toc-meta {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-3px);
+  transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s;
+}
+
+.table-of-contents.is-stuck .toc-meta,
+.toc-open .table-of-contents .toc-meta {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity .2s ease, transform .2s ease, visibility 0s;
+}
+
+/* Internal scroll when the outline is taller than the viewport */
+.toc-scroll {
+  max-height: calc(100vh - var(--layout-sticky-top) - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 6px 4px 10px 0;
+  -webkit-mask-image: linear-gradient(transparent, #000 8px, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(transparent, #000 8px, #000 calc(100% - 14px), transparent);
+}
+
+.toc-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.toc-list {
+  position: relative;
+  padding-left: 14px;
+}
+
+.toc-track,
+.toc-fill,
+.toc-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.toc-track {
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+}
+
+.toc-fill {
+  width: 1px;
+  height: 0;
+  background: color-mix(in srgb, var(--primary-color) 70%, transparent);
+}
+
+.toc-indicator {
+  left: -1px;
+  width: 3px;
+  height: 0;
+  border-radius: 3px;
+  background: var(--primary-color);
+  opacity: 0;
+}
+
+.table-of-contents.is-ready .toc-indicator {
+  opacity: 1;
+  transition: transform .2s cubic-bezier(.2, .7, .2, 1), height .2s cubic-bezier(.2, .7, .2, 1);
+}
+
+.toc-sec > a {
+  padding: 4px 0;
+  line-height: 1.35;
+  transition: color .2s;
+}
+
+.toc-sec.is-read > a {
+  color: color-mix(in srgb, var(--text-color) 45%, transparent);
+}
+
+/* Sub-headings: expanded by default, active section only with data-toc-expanded="false" */
+.toc-sub {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows .22s ease, visibility 0s linear .22s;
+}
+
+.toc-sub > ol {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.toc-sec.is-open > .toc-sub,
+.table-of-contents:not([data-toc-expanded="false"]) .toc-sub {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows .22s ease, visibility 0s;
+}
+
+.toc-sub a {
+  padding: 3px 0 3px 12px;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.toc-sub li:last-child a {
+  padding-bottom: 7px;
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Below the collapse breakpoint: slim sticky bar with the current section,     */
+/* opening the same nav as a drawer                                             */
+/* ---------------------------------------------------------------------------- */
+
+.toc-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--layout-topbar-height);
+  z-index: var(--z-modal);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--page-bg) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(8px);
+  backdrop-filter: saturate(1.4) blur(8px);
+  border-bottom: 1px solid var(--border-color);
+  transform: translateY(-100%);
+  transition: transform .25s ease;
+}
+
+.toc-topbar-visible .toc-topbar {
+  transform: none;
+}
+
+.toc-topbar__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: 1px solid var(--border-color);
+  background: var(--page-bg);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.toc-topbar__crumb {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-topbar__sec {
+  font-weight: 600;
+}
+
+.toc-topbar__sub {
+  color: var(--muted-color);
+}
+
+.toc-topbar__sub:not(:empty)::before {
+  content: " / ";
+}
+
+.toc-topbar__meta {
+  flex: none;
+  color: var(--muted-color);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.toc-topbar__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+}
+
+.toc-topbar__progress i {
+  display: block;
+  height: 100%;
+  background: var(--primary-color);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.toc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: none;
+  background: rgba(0, 0, 0, .25);
+}
+
+[data-theme="dark"] .toc-backdrop {
+  background: rgba(0, 0, 0, .55);
+}
+
+@media (--bp-content-collapse) {
+  .table-of-contents {
+    display: none;
+  }
+
+  .toc-topbar {
+    display: flex;
+  }
+
+  .toc-open .toc-backdrop {
+    display: block;
+  }
+
+  .toc-open .table-of-contents {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 85vw);
+    margin: 0;
+    padding: 72px 24px;
+    overflow: auto;
+    z-index: calc(var(--z-modal) + 1);
+    background: var(--page-bg);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, .12);
+  }
+
+  .toc-open .toc-scroll {
+    max-height: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-of-contents,
+  .table-of-contents *,
+  .toc-topbar,
+  .toc-topbar * {
+    transition: none !important;
+  }
+}
+
+@media print {
+  .table-of-contents,
+  .toc-topbar,
+  .toc-backdrop {
+    display: none !important;
+  }
+}

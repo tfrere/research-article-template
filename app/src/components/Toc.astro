@@ -1,0 +1,57 @@
+---
+// Table of contents rail + slim top bar / drawer below the collapse breakpoint.
+// The outline is built from the article headings by src/scripts/layout/toc.ts,
+// heading ids and link icons by src/scripts/layout/heading-anchors.ts.
+// Styles in src/styles/layout/_toc.css.
+interface Props {
+  /** Sub-headings always expanded (true) or only for the active section (false) */
+  expanded?: boolean;
+}
+const { expanded = true } = Astro.props as Props;
+---
+
+<nav
+  class="table-of-contents"
+  id="toc"
+  aria-label="Table of contents"
+  data-toc-expanded={expanded ? "true" : "false"}
+>
+  <div class="toc-head">
+    <span class="toc-title">Contents</span>
+    <span class="toc-meta" data-toc-meta></span>
+  </div>
+  <div class="toc-scroll" data-toc-scroll>
+    <div class="toc-list">
+      <span class="toc-track" aria-hidden="true"></span>
+      <span class="toc-fill" aria-hidden="true"></span>
+      <span class="toc-indicator" aria-hidden="true"></span>
+      <ol data-toc-list></ol>
+    </div>
+  </div>
+</nav>
+
+<div class="toc-topbar" data-toc-topbar>
+  <button
+    class="toc-topbar__btn"
+    type="button"
+    data-toc-open
+    aria-controls="toc"
+    aria-expanded="false"
+    aria-label="Open table of contents"
+  >
+    <span aria-hidden="true">&#9776;</span> Contents
+  </button>
+  <div class="toc-topbar__crumb">
+    <span class="toc-topbar__sec" data-toc-sec></span><span class="toc-topbar__sub" data-toc-sub></span>
+  </div>
+  <span class="toc-topbar__meta" data-toc-meta></span>
+  <span class="toc-topbar__progress" aria-hidden="true"><i data-toc-progress></i></span>
+</div>
+<div class="toc-backdrop" data-toc-backdrop></div>
+
+<script>
+  import { initHeadingAnchors } from "../scripts/layout/heading-anchors";
+  import { initToc } from "../scripts/layout/toc";
+  initHeadingAnchors();
+  initToc();
+</script>
