@@ -1,0 +1,147 @@
+---
+// Dev-only gallery: every hero banner at hero size, in both themes.
+// Swap the article banner with `banner: "<file>"` in article.mdx frontmatter.
+import HtmlEmbed from "../components/HtmlEmbed.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import * as ArticleMod from "../content/article.mdx";
+import "../styles/global.css";
+
+if (import.meta.env.PROD) return Astro.redirect("/");
+
+const current = String((ArticleMod as any).frontmatter?.banner || "banner.html");
+const banners = [
+  {
+    src: "banner-constellation.html",
+    name: "Constellation",
+    data: "Chapters, sections, components and citations as a star graph laid out in reading order; every word is a grain of dust around its section.",
+  },
+  {
+    src: "banner-ridges.html",
+    name: "Ridges",
+    data: "One ridge per section, in reading order: the distribution of its word lengths (log scale). Code-heavy sections grow long-word bumps.",
+  },
+  {
+    src: "banner-manuscript.html",
+    name: "Manuscript",
+    data: "The whole article typeset in microscopic newspaper columns, one bar per word, colored by prose, heading, code, component, math or table.",
+  },
+  {
+    src: "banner.html",
+    name: "Galaxy (previous)",
+    data: "Decorative random spiral, kept for reference.",
+  },
+];
+const themes = ["light", "dark"];
+---
+
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Banners</title>
+    <script is:inline>
+      (() => {
+        try {
+          const saved = localStorage.getItem("theme");
+          const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-theme", saved || (dark ? "dark" : "light"));
+        } catch {}
+      })();
+    </script>
+    <script type="module" src="/scripts/color-palettes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  </head>
+  <body class="banners-page">
+    <ThemeToggle />
+    <main>
+      <h1>Banners</h1>
+      <p class="banners-lead">
+        Current article banner: <code>{current}</code>. To swap, set
+        <code>banner: "banner-ridges.html"</code> (or any file below) in the
+        <code>article.mdx</code> frontmatter.
+      </p>
+      {
+        banners.map((b) => (
+          <section class="banners-item">
+            <h2>
+              {b.name} <code>{b.src}</code>
+              {b.src === current && <span class="banners-current">current</span>}
+            </h2>
+            <p>{b.data}</p>
+            {themes.map((t) => (
+              <div class="banners-theme" data-theme={t}>
+                <span class="banners-theme__label">{t}</span>
+                <div class="hero-banner">
+                  <HtmlEmbed src={b.src} id={`${b.src.replace(".html", "")}-${t}`} frameless />
+                </div>
+              </div>
+            ))}
+          </section>
+        ))
+      }
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  .banners-page main {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .banners-page h1 {
+    margin: 0 0 8px;
+  }
+  .banners-lead {
+    color: var(--muted-color);
+    margin: 0 0 40px;
+  }
+  .banners-item {
+    margin: 0 0 64px;
+  }
+  .banners-item h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 4px;
+    font-size: 1.25rem;
+  }
+  .banners-item h2 code {
+    font-size: .8rem;
+    font-weight: 400;
+    color: var(--muted-color);
+  }
+  .banners-item > p {
+    margin: 0 0 16px;
+    color: var(--muted-color);
+    max-width: 60em;
+  }
+  .banners-current {
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--primary-color);
+    color: #fff;
+  }
+  .banners-theme {
+    position: relative;
+    padding: 24px 40px;
+    margin: 0 0 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--page-bg);
+    color: var(--text-color);
+  }
+  .banners-theme__label {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    font: 500 11px/1 var(--font-mono, monospace);
+    color: var(--muted-color);
+  }
+  .banners-theme .hero-banner {
+    margin: 0 auto;
+  }
+</style>
