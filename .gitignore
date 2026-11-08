@@ -51,3 +51,7 @@ app/public/data/**/*
 /rephrasing_metadata.json
 /RAPPORT-ARBRE-COMPETENCES-AUTONOMIE.md
 
+
+# Review comments pulled from a Space stay local
+review/.pulled/
+review/__pycache__/

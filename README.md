@@ -57,6 +57,25 @@ git push space main
 
 The project ships with Dockerfile, nginx config, and HF Space metadata ready to go.
 
+## Review mode
+
+Collect comments and suggested edits on your article from a few reviewers, Google Docs style,
+without any of it showing on the published page.
+
+1. Add `hf_oauth: true` to your Space's README metadata, and in the Space settings under **Storage
+   Buckets** mount a private bucket at `/data` with read & write (comments are saved there).
+2. Set the Space variables `REVIEW_MODE=on` and `REVIEWERS=user1,user2` (Hugging Face usernames; the
+   Space owner is always included).
+3. Share `https://<user>-<space>.hf.space/?review`. Reviewers sign in with Hugging Face, select text to
+   comment, suggest a deletion or new wording, or comment on a figure. Cards sit in the margin next
+   to their text, with replies, reactions, resolve and edit, and a Comments panel lists open,
+   resolved and detached threads. Only the owner can accept or reject suggestions.
+
+Without `?review`, or with `REVIEW_MODE` off, the page never loads the review layer and the API
+answers 404. To read every comment at once, run
+`uv run --with huggingface_hub python review/pull_comments.py --url https://<user>-<space>.hf.space` (uses your local
+Hugging Face login). The server is `review/server.py`; the page side is `app/public/review/`.
+
 ## Template variants
 
 Set `template` in `app/src/content/article.mdx` frontmatter:
