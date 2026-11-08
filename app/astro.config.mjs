@@ -12,6 +12,7 @@ import rehypeSlug from 'rehype-slug';
 import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 import rehypeCitation from 'rehype-citation';
 import rehypeCodeCopy from './plugins/rehype/code-copy.mjs';
+import { headingAnchorOptions } from './plugins/rehype/heading-anchors.mjs';
 import rehypeReferencesAndFootnotes from './plugins/rehype/post-citation.mjs';
 import remarkIgnoreCitationsInCode from './plugins/remark/ignore-citations-in-code.mjs';
 import remarkUnwrapCitationLinks from './plugins/remark/unwrap-citation-links.mjs';
@@ -68,7 +69,7 @@ export default defineConfig({
     ],
     rehypePlugins: [
       rehypeSlug,
-      [rehypeAutolinkHeadings, { behavior: 'wrap' }],
+      [rehypeAutolinkHeadings, headingAnchorOptions],
       [rehypeKatex, {
         trust: true,
       }],

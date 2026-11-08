@@ -1,0 +1,117 @@
+/* ============================================================================ */
+/* Heading anchors: link icon after the heading text, shown on hover / focus.   */
+/* Its space is always reserved, so revealing it never shifts the line.        */
+/* Behaviour (copy link, initial scroll) in src/scripts/layout/heading-anchors. */
+/* ============================================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.content-grid main :is(h2, h3, h4) {
+  scroll-margin-top: var(--layout-scroll-offset);
+}
+
+@media (--bp-content-collapse) {
+  .content-grid main :is(h2, h3, h4) {
+    scroll-margin-top: calc(var(--layout-topbar-height) + 20px);
+  }
+}
+
+.content-grid main :is(h2, h3, h4):focus {
+  outline: none;
+}
+
+.content-grid main .h-anchor,
+.content-grid main .h-anchor:hover {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: .35em;
+  width: .6em;
+  height: .6em;
+  min-width: 14px;
+  min-height: 14px;
+  color: var(--muted-color);
+  background: none;
+  border: 0;
+  opacity: 0;
+  transition: opacity .15s ease, color .15s ease;
+}
+
+.content-grid main .h-anchor svg {
+  width: 100%;
+  height: 100%;
+}
+
+.content-grid main :is(h2, h3, h4):hover .h-anchor,
+.content-grid main .h-anchor:focus-visible,
+.content-grid main .h-anchor.is-copied {
+  opacity: 1;
+}
+
+.content-grid main .h-anchor:hover {
+  color: var(--primary-color);
+}
+
+.content-grid main .h-anchor:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* "Copied" tip as a pseudo-element: keeps the heading text clean for the TOC */
+.content-grid main .h-anchor::after {
+  content: "Copied";
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font: 600 11px/1 var(--default-font-family);
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  background: var(--text-color);
+  color: var(--page-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+
+.content-grid main .h-anchor.is-copied::after {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .content-grid main .h-anchor {
+    opacity: .45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .content-grid main .h-anchor,
+  .content-grid main .h-anchor::after {
+    transition: none;
+  }
+}
+
+@media print {
+  .h-anchor {
+    display: none !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
