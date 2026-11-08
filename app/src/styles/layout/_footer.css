@@ -1,0 +1,181 @@
+/* ============================================================================ */
+/* Footer: headings in the TOC rail (right aligned), content in the body column */
+/* ============================================================================ */
+
+.footer {
+  contain: layout style;
+  font-size: 0.8em;
+  line-height: 1.7em;
+  margin-top: 60px;
+  margin-bottom: 0;
+  border-top: 1px solid var(--border-color);
+  color: var(--muted-color);
+  background: var(--page-bg);
+}
+
+.footer-inner {
+  display: grid;
+  grid-template-columns: var(--layout-cols);
+  row-gap: 28px;
+  padding: 60px 0 48px;
+  align-items: start;
+}
+
+/* Blocks flatten into the footer grid */
+.citation-block,
+.references-block,
+.reuse-block,
+.doi-block,
+.template-credit {
+  display: contents;
+}
+
+.footer-inner > * > * {
+  grid-column: body;
+  min-width: 0;
+}
+
+.footer-inner > * > .footer-heading {
+  grid-column: toc;
+  justify-self: end;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
+  padding-right: 30px;
+  color: var(--text-color);
+}
+
+@media (--bp-content-collapse) {
+  .footer-inner {
+    padding: 40px 0;
+    row-gap: 12px;
+  }
+
+  .footer-inner > * > .footer-heading {
+    grid-column: body;
+    justify-self: start;
+    text-align: left;
+    padding: 0;
+    margin-top: 16px;
+  }
+}
+
+.citation-block h4 {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--muted-color);
+}
+
+.citation-block p,
+.reuse-block p,
+.doi-block p,
+.footnotes ol,
+.footnotes ol p,
+.references {
+  margin-top: 0;
+}
+
+/* Preserve KaTeX rendering in footnotes (compensates the footer's 0.8em) */
+.footer .footnotes .katex {
+  font-size: 1.25em;
+  line-height: 1.21;
+}
+
+.footer .footnotes .katex-display {
+  margin: 1em 0;
+  text-align: center;
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.footer .footnotes .katex-display > .katex {
+  display: block;
+  text-align: center;
+}
+
+.footer .footnotes .katex .katex-html,
+.footer .footnotes .katex .base {
+  display: inline-block;
+}
+
+/* Distill-like appendix citation styling */
+.footer .citation {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 15px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-bg);
+  padding: 10px 18px;
+  border-radius: 3px;
+  color: var(--muted-color);
+  overflow: hidden;
+  margin: -12px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.footer .citation.short {
+  margin-top: -4px;
+}
+
+.footer .citation a {
+  color: var(--text-color);
+  text-decoration: underline;
+}
+
+/* Distill-like list styling for references / footnotes */
+.references-block ol {
+  padding: 0 0 0 15px;
+}
+
+@media (min-width: 768px) {
+  .references-block ol {
+    padding: 0 0 0 30px;
+    margin-left: -30px;
+  }
+}
+
+.references-block li {
+  margin-bottom: 1em;
+}
+
+.references-block li:target {
+  color: var(--text-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border-radius: 4px;
+}
+
+.footer a {
+  color: var(--primary-color);
+  border-bottom: 1px solid var(--link-underline);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--primary-color-hover);
+  border-bottom-color: var(--link-underline-hover);
+}
+
+.references-block a {
+  color: var(--text-color);
+}
+
+/* Template credit, discrete at the bottom */
+.template-credit p {
+  margin: 24px 0 0;
+  font-size: 0.85em;
+  color: var(--muted-color);
+}
+
+.footer .template-credit a {
+  color: var(--muted-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.footer .template-credit a:hover {
+  color: var(--text-color);
+  border-bottom-color: var(--muted-color);
+}
