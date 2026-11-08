@@ -1,0 +1,89 @@
+/* ============================================================================ */
+/* Article grid tokens                                                          */
+/* ---------------------------------------------------------------------------- */
+/* Single source of truth for the page grid. The page, the hero, the footer and */
+/* the debug grid overlay (press G in dev, or add ?grid to any URL) all read    */
+/* these tokens, so iterating on the layout means editing this file.            */
+/*                                                                              */
+/* Named lines, left to right:                                                  */
+/*   screen | page, toc (rail) | outset, body | margin | page | screen          */
+/*   - body:   prose and regular figures                                        */
+/*   - toc:    sticky table of contents rail                                    */
+/*   - margin: sidenotes (>= 1280px), wide figures span body-start/margin-end   */
+/*   - screen: full-bleed figures                                               */
+/*                                                                              */
+/* Breakpoints (see @custom-media in _variables.css):                           */
+/*   >= 1280px      rail + body + margin column, sidenotes in the margin        */
+/*   1101-1279px    compact rail, sidenotes inline under their paragraph        */
+/*   <= 1100px      single column, TOC becomes a top bar + drawer               */
+/* ============================================================================ */
+
+:root {
+  --layout-outer: 16px;          /* minimum page gutter */
+  --layout-gap: 32px;            /* gutter between rail, body and margin */
+  --layout-body: 664px;          /* body column */
+  --layout-prose: 620px;         /* max line length of text inside the body */
+  --layout-prose-font-size: 17px;
+  --layout-side-min: 260px;      /* rail and margin column width at 1280px */
+  --layout-side-max: 360px;      /* ...growing up to this on wide screens */
+  --layout-rail-compact: 220px;  /* rail width between 1101 and 1279px */
+  --layout-body-single: 680px;   /* single column below 1100px */
+  --layout-toc-width: 260px;     /* TOC width inside its rail (right aligned) */
+  --layout-content-top: 64px;    /* space between the hero and the first body line */
+  --layout-sticky-top: 32px;     /* sticky TOC offset from the viewport top */
+  --layout-topbar-height: 44px;  /* slim top bar below 1100px */
+  --layout-scroll-offset: 24px;  /* heading position after an anchor jump */
+  --layout-baseline: 8px;        /* debug grid baseline step */
+
+  /* --vw is the viewport width without the scrollbar, set by the layout script */
+  --layout-side: clamp(
+    var(--layout-side-min),
+    (var(--vw, 100vw) - var(--layout-body) - 2 * var(--layout-gap) - 2 * var(--layout-outer)) / 2,
+    var(--layout-side-max)
+  );
+
+  --layout-cols:
+    [screen-start] minmax(var(--layout-outer), 1fr)
+    [page-start toc-start] var(--layout-side)
+    [toc-end outset-start] var(--layout-gap)
+    [body-start] var(--layout-body)
+    [body-end] var(--layout-gap)
+    [outset-end margin-start] var(--layout-side)
+    [margin-end page-end] minmax(var(--layout-outer), 1fr)
+    [screen-end];
+}
+
+@media (--bp-margin-inline) {
+  :root {
+    --layout-cols:
+      [screen-start] var(--layout-outer)
+      [page-start toc-start] var(--layout-rail-compact)
+      [toc-end outset-start] var(--layout-gap)
+      [body-start] minmax(0, var(--layout-body))
+      [body-end] var(--layout-gap)
+      [outset-end margin-start] minmax(0, 1fr)
+      [margin-end page-end] var(--layout-outer)
+      [screen-end];
+  }
+}
+
+@media (--bp-content-collapse) {
+  :root {
+    --layout-cols:
+      [screen-start] minmax(var(--layout-outer), 1fr)
+      [page-start toc-start toc-end outset-start body-start] minmax(0, var(--layout-body-single))
+      [body-end outset-end margin-start margin-end page-end] minmax(var(--layout-outer), 1fr)
+      [screen-end];
+  }
+}
+
+/* "paper" template: one centered column, no rail, no margin */
+:root[data-template="paper"] {
+  --layout-body-single: 780px;
+  --layout-prose: 780px;
+  --layout-cols:
+    [screen-start] minmax(var(--layout-outer), 1fr)
+    [page-start toc-start toc-end outset-start body-start] minmax(0, var(--layout-body-single))
+    [body-end outset-end margin-start margin-end page-end] minmax(var(--layout-outer), 1fr)
+    [screen-end];
+}
