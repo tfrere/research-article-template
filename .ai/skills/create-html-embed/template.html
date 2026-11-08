@@ -1,0 +1,205 @@
+<div class="d3-template-chart"></div>
+<style>
+  .d3-template-chart {
+    position: relative;
+    color: var(--text-color);
+    font-size: 12px;
+  }
+  .d3-template-chart svg {
+    display: block;
+    width: 100%;
+    overflow: visible;
+  }
+  .d3-template-chart .axis path,
+  .d3-template-chart .axis line { stroke: var(--axis-color); }
+  .d3-template-chart .axis text { fill: var(--tick-color); }
+  .d3-template-chart .grid line { stroke: var(--grid-color); }
+  .d3-template-chart .grid path { display: none; }
+  .d3-template-chart .axis-label {
+    fill: var(--muted-color);
+    font-size: 11px;
+  }
+  .d3-template-chart .series-label {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .d3-template-chart .band { opacity: 0.16; }
+  .d3-template-chart .line {
+    fill: none;
+    stroke-width: 2;
+  }
+  .d3-template-chart .hover-rule {
+    stroke: var(--muted-color);
+    stroke-dasharray: 3 3;
+  }
+  .d3-template-chart .d3-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    opacity: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-bg);
+    color: var(--text-color);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+    line-height: 1.4;
+    white-space: nowrap;
+    transition: opacity 0.12s ease;
+  }
+  .d3-template-chart .legend {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 8px;
+  }
+  .d3-template-chart .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .d3-template-chart .swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .d3-template-chart .d3-tooltip .swatch {
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .d3-template-chart .d3-tooltip { transition: none; }
+  }
+</style>
+<script>
+  Embed.mount('d3-template-chart', async (ctx) => {
+    const { root, config } = ctx;
+
+    // Demo data used when no HtmlEmbed `data` file is passed.
+    // Expected columns: series, x, y and optionally lo / hi (uncertainty band).
+    const demoRows = () => {
+      const models = [
+        { series: 'Baseline', base: 3.1, rate: 0.55 },
+        { series: 'Wider MLP', base: 3.0, rate: 0.62 },
+        { series: 'Longer context', base: 3.2, rate: 0.7 },
+      ];
+      return models.flatMap((m, i) => d3.range(1, 41).map((step) => {
+        const y = 2.1 + (m.base - 2.1) * Math.exp(-m.rate * step / 10) + 0.012 * Math.sin(step * (i + 2));
+        const spread = 0.05 * Math.exp(-step / 25) + 0.01;
+        return { series: m.series, x: step * 1e9, y, lo: y - spread, hi: y + spread };
+      }));
+    };
+
+    const rows = (ctx.files.length ? await ctx.data() : demoRows()).map((r) => ({
+      ...r,
+      lo: r.lo ?? r.y,
+      hi: r.hi ?? r.y,
+    }));
+    const series = d3.groups(rows, (d) => d.series).map(([name, values]) => ({
+      name,
+      values: values.sort((a, b) => a.x - b.x),
+    }));
+    const xLabel = config.xLabel || 'Training tokens';
+    const yLabel = config.yLabel || 'Validation loss';
+    const formatX = d3.format('.2s');
+    const formatY = d3.format('.3f');
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+    const best = d3.least(series, (s) => s.values[s.values.length - 1].y);
+    ctx.describe(config.description ||
+      `Line chart of ${yLabel.toLowerCase()} against ${xLabel.toLowerCase()} for ${series.length} runs. ` +
+      `${best.name} ends lowest at ${formatY(best.values[best.values.length - 1].y)}.`);
+
+    const svg = d3.select(root).append('svg');
+    const gGrid = svg.append('g').attr('class', 'grid');
+    const gBands = svg.append('g');
+    const gLines = svg.append('g');
+    const gLabels = svg.append('g');
+    const gx = svg.append('g').attr('class', 'axis');
+    const gy = svg.append('g').attr('class', 'axis');
+    const xTitle = svg.append('text').attr('class', 'axis-label').attr('text-anchor', 'end');
+    const yTitle = svg.append('text').attr('class', 'axis-label');
+    const hoverRule = svg.append('line').attr('class', 'hover-rule').style('opacity', 0);
+    const overlay = svg.append('rect').attr('fill', 'transparent');
+    const legend = d3.select(root).append('div').attr('class', 'legend');
+    const tip = d3.select(root).append('div').attr('class', 'd3-tooltip');
+
+    const x = d3.scaleLinear().domain(d3.extent(rows, (d) => d.x));
+    const y = d3.scaleLinear().domain([d3.min(rows, (d) => d.lo), d3.max(rows, (d) => d.hi)]).nice();
+    const xs = series[0].values.map((d) => d.x);
+
+    // Called on first paint, on width changes and on theme / palette changes.
+    return ({ width }) => {
+      const narrow = width < 520;
+      // Direct labels sit right of the plot, so reserve room for them.
+      const margin = { top: 16, right: narrow ? 16 : 120, bottom: 44, left: 52 };
+      const height = Math.max(240, Math.min(420, Math.round(width * 0.5)));
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+      const palette = ctx.colors('categorical', series.length);
+      const color = new Map(series.map((s, i) => [s.name, palette[i]]));
+
+      svg.attr('viewBox', `0 0 ${width} ${height}`).attr('height', height);
+      x.range([margin.left, margin.left + innerW]);
+      y.range([margin.top + innerH, margin.top]);
+
+      gGrid.attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickSize(-innerW).tickFormat(''));
+      gx.attr('transform', `translate(0,${margin.top + innerH})`)
+        .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(innerW / 90))).tickFormat(formatX).tickSizeOuter(0));
+      gy.attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+      xTitle.attr('x', margin.left + innerW).attr('y', height - 6).text(xLabel);
+      yTitle.attr('x', margin.left).attr('y', margin.top - 4).text(yLabel);
+
+      const area = d3.area().x((d) => x(d.x)).y0((d) => y(d.lo)).y1((d) => y(d.hi));
+      const line = d3.line().x((d) => x(d.x)).y((d) => y(d.y));
+      gBands.selectAll('path').data(series, (s) => s.name).join('path')
+        .attr('class', 'band').attr('fill', (s) => color.get(s.name)).attr('d', (s) => area(s.values));
+      gLines.selectAll('path').data(series, (s) => s.name).join('path')
+        .attr('class', 'line').attr('stroke', (s) => color.get(s.name)).attr('d', (s) => line(s.values));
+
+      // Direct labels at the end of each line, pushed apart so they never
+      // overlap. Narrow screens have no room for them: show a legend instead.
+      const labels = narrow ? [] : series
+        .map((s) => ({ name: s.name, y: y(s.values[s.values.length - 1].y) }))
+        .sort((a, b) => a.y - b.y);
+      for (let i = 1; i < labels.length; i++) labels[i].y = Math.max(labels[i].y, labels[i - 1].y + 15);
+      const overflow = labels.length ? labels[labels.length - 1].y - (margin.top + innerH) : 0;
+      if (overflow > 0) labels.forEach((l) => { l.y -= overflow; });
+      // HtmlEmbed forces `svg text { fill }` from CSS, so colored text needs an inline style.
+      gLabels.selectAll('text').data(labels, (l) => l.name).join('text')
+        .attr('class', 'series-label')
+        .attr('x', margin.left + innerW + 8)
+        .attr('y', (l) => l.y)
+        .attr('dy', '0.35em')
+        .style('fill', (l) => ctx.labelColor(color.get(l.name)))
+        .text((l) => l.name);
+
+      legend.style('display', narrow ? 'flex' : 'none')
+        .html(series.map((s) => `<span class="item"><span class="swatch" style="background:${color.get(s.name)}"></span>${escapeHtml(s.name)}</span>`).join(''));
+
+      const bisect = d3.bisector((d) => d).center;
+      overlay
+        .attr('x', margin.left).attr('y', margin.top).attr('width', innerW).attr('height', innerH)
+        .on('pointermove', (event) => {
+          const xv = xs[bisect(xs, x.invert(d3.pointer(event, svg.node())[0]))];
+          hoverRule.attr('x1', x(xv)).attr('x2', x(xv)).attr('y1', margin.top).attr('y2', margin.top + innerH).style('opacity', 1);
+          tip.html(`<div><b>${formatX(xv)}</b> tokens</div>` + series.map((s) => {
+            const d = s.values.find((v) => v.x === xv);
+            return d ? `<div><span class="swatch" style="background:${color.get(s.name)}"></span>${escapeHtml(s.name)}: <b>${formatY(d.y)}</b></div>` : '';
+          }).join(''));
+          const [cx, cy] = d3.pointer(event, root);
+          const left = Math.min(cx + 12, root.clientWidth - tip.node().offsetWidth - 4);
+          tip.style('transform', `translate(${Math.max(0, left)}px, ${cy + 12}px)`).style('opacity', 1);
+        })
+        .on('pointerleave', () => {
+          hoverRule.style('opacity', 0);
+          tip.style('opacity', 0);
+        });
+    };
+  });
+</script>

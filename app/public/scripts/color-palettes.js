@@ -135,7 +135,9 @@
       const compH = (h + 180) % 360;
       const cSafe = Math.min(0.35, Math.max(0.08, C));
       const rightLab = oklchToOklab(L, cSafe, compH);
-      const whiteLab = { L: 0.98, a: 0, b: 0 }; // center near‑white
+      // Neutral midpoint sits close to the page background so "no change"
+      // reads as empty in both themes.
+      const whiteLab = { L: getTheme() === 'dark' ? 0.3 : 0.98, a: 0, b: 0 };
 
       const hexFromOKLab = (L, a, b) => toHex(oklabToRgb(L, a, b));
       const lerp = (a, b, t) => a + (b - a) * t;
@@ -183,13 +185,18 @@
 
   let lastSignature = '';
 
+  const getTheme = () => (MODE.cssRoot.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+  // Embeds re-paint JS-computed colors on this event, so it must fire on
+  // theme flips too, not only on primary color changes.
   const updatePalettes = () => {
     const primaryOKLCH = getPrimaryOKLCH();
     const primaryHex = getPrimaryHex();
-    const signature = `${primaryOKLCH?.L},${primaryOKLCH?.C},${primaryOKLCH?.h}`;
+    const theme = getTheme();
+    const signature = `${primaryOKLCH?.L},${primaryOKLCH?.C},${primaryOKLCH?.h},${theme}`;
     if (signature === lastSignature) return;
     lastSignature = signature;
-    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH } })); } catch { }
+    try { document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH, theme } })); } catch { }
   };
 
   const bootstrap = () => {
@@ -250,7 +257,8 @@
     };
     window.ColorPalettes = {
       refresh: updatePalettes,
-      notify: () => { try { const primaryOKLCH = getPrimaryOKLCH(); const primaryHex = getPrimaryHex(); document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH } })); } catch { } },
+      notify: () => { try { const primaryOKLCH = getPrimaryOKLCH(); const primaryHex = getPrimaryHex(); document.dispatchEvent(new CustomEvent('palettes:updated', { detail: { primary: primaryHex, primaryOKLCH, theme: getTheme() } })); } catch { } },
+      getTheme: () => getTheme(),
       getPrimary: () => getPrimaryHex(),
       getPrimaryOKLCH: () => getPrimaryOKLCH(),
       getColors: (key, count = 6) => {

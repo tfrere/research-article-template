@@ -253,7 +253,8 @@
             }
             if (fgNode) {
               fgNode.textContent = d.category;
-              fgNode.style.setProperty('fill', base, 'important');
+              // Palette colors are too light for text: pull them toward the text color.
+                            fgNode.style.setProperty('fill', `color-mix(in srgb, ${base} 55%, var(--text-color))`, 'important');
               fgNode.style.setProperty('font-weight','800');
               fgNode.style.setProperty('font-size','16px');
             }

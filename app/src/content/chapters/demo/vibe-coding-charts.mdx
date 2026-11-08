@@ -14,7 +14,7 @@ Using claude code works better.
 
 The goal is to make **responsive**, **accessible**, **interactive** and **dark mode ready** charts.
 
-1. The embed directives are available as a Cursor skill in `.cursor/skills/create-html-embed/` (the agent picks it up automatically). Full conventions: `.cursor/skills/create-html-embed/directives.md`.
+1. Two agent skills ship with the template (Cursor picks them up from `.cursor/skills/`, other agents from `.ai/skills/`): `create-html-embed` for the embed runtime and contract, `design-dataviz` for chart design. Run `npm run check:embed -- your-chart.html` to verify a chart in light, dark and narrow layouts.
 2. Opt: use an already existing chart as a starting point.
 3. Ask claude to code the chart. Here's a typical prompt:
 

@@ -196,21 +196,8 @@
   }
 </style>
 <script>
-  (() => {
-    const ensureD3 = (cb) => {
-      if (window.d3 && typeof window.d3.select === 'function') return cb();
-      let s = document.getElementById('d3-cdn-script');
-      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
-      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
-      s.addEventListener('load', onReady, { once: true });
-      if (window.d3) onReady();
-    };
-
-    const bootstrap = () => {
-      const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-      const container = (mount && mount.querySelector && mount.querySelector('.d3-bar')) || document.querySelector('.d3-bar');
-      if (!container) return;
-      if (container.dataset) { if (container.dataset.mounted === 'true') return; container.dataset.mounted = 'true'; }
+  Embed.mount('d3-bar', (ctx) => {
+      const container = ctx.root;
 
       // Data, matching bar.py
       const seqLabels = ["1024", "2048", "4096", "8192"];
@@ -245,12 +232,13 @@
       const controls = document.createElement('div');
       controls.className = 'controls';
       const groupSize = document.createElement('div'); groupSize.className = 'control-group';
-      const labelSize = document.createElement('label'); labelSize.textContent = 'Model Size';
-      const selSize = document.createElement('select'); modelSizes.forEach((s) => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSize.appendChild(o); });
+      const uid = Math.random().toString(36).slice(2, 8);
+      const labelSize = document.createElement('label'); labelSize.textContent = 'Model Size'; labelSize.htmlFor = `d3-bar-size-${uid}`;
+      const selSize = document.createElement('select'); selSize.id = `d3-bar-size-${uid}`; modelSizes.forEach((s) => { const o = document.createElement('option'); o.value = s; o.textContent = s; selSize.appendChild(o); });
       groupSize.appendChild(labelSize); groupSize.appendChild(selSize);
       const groupRecomp = document.createElement('div'); groupRecomp.className = 'control-group';
-      const labelRecomp = document.createElement('label'); labelRecomp.textContent = 'Recomputation';
-      const selRecomp = document.createElement('select'); recomputeModes.forEach((m) => { const o = document.createElement('option'); o.value = m; o.textContent = m; selRecomp.appendChild(o); });
+      const labelRecomp = document.createElement('label'); labelRecomp.textContent = 'Recomputation'; labelRecomp.htmlFor = `d3-bar-recomp-${uid}`;
+      const selRecomp = document.createElement('select'); selRecomp.id = `d3-bar-recomp-${uid}`; recomputeModes.forEach((m) => { const o = document.createElement('option'); o.value = m; o.textContent = m; selRecomp.appendChild(o); });
       groupRecomp.appendChild(labelRecomp); groupRecomp.appendChild(selRecomp);
 
       // Header (legend + controls) to be placed after chart
@@ -285,21 +273,13 @@
       let width = 800, height = 360; const margin = { top: 16, right: 28, bottom: 56, left: 64 };
       const x0 = d3.scaleBand().paddingInner(0.25).paddingOuter(0.1); // groups (seq)
       const y = d3.scaleLinear();
-      function getCategoricalColors(count) {
-        try {
-          if (window.ColorPalettes && typeof window.ColorPalettes.getColors === 'function') {
-            return window.ColorPalettes.getColors('categorical', count);
-          }
-        } catch (_) { }
-        const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-        const tableau = (window.d3 && window.d3.schemeTableau10) ? window.d3.schemeTableau10 : ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ab'];
-        const pool = [primary, ...tableau];
-        const arr = []; for (let i = 0; i < count; i++) { arr.push(pool[i % pool.length]); }
-        return arr;
-      }
-      const palette = getCategoricalColors(componentKeys.length);
-      const colorMap = new Map(componentKeys.map((k, i) => [k, palette[i]]));
-      const colorOf = (key) => colorMap.get(key) || 'var(--primary-color)';
+      // Re-read on every render so bars follow theme and primary color changes.
+      let palette = [];
+      let colorMap = new Map();
+      const refreshPalette = () => {
+        palette = ctx.colors('categorical', componentKeys.length);
+        colorMap = new Map(componentKeys.map((k, i) => [k, palette[i]]));
+      };
 
       function yMax(sizeKey, mode) {
         const s = Y[mode][sizeKey];
@@ -355,6 +335,7 @@
       }
 
       function drawBars() {
+        refreshPalette();
         const stacks = Y[currentMode][currentSize];
         const series = componentKeys.map((key, i) => ({ key, color: palette[i], values: stacks[key] }));
         // Stack values
@@ -443,17 +424,11 @@
 
       function update() { drawBars(); }
 
-      // Boot
-      update();
-      // controls already appended to footer; populate control groups
       controls.appendChild(groupSize); controls.appendChild(groupRecomp);
-      selSize.addEventListener('change', (e) => { currentSize = e.target.value; update(); });
-      selRecomp.addEventListener('change', (e) => { currentMode = e.target.value; update(); });
+      selSize.addEventListener('change', (e) => { currentSize = e.target.value; ctx.rerender(); });
+      selRecomp.addEventListener('change', (e) => { currentMode = e.target.value; ctx.rerender(); });
+      ctx.describe('Stacked bar chart of training memory (GB) by sequence length, split into parameters, gradients, optimizer states and activations, for a selectable model size and recomputation mode. Activations grow quadratically with sequence length and dominate at long contexts.');
 
-      const rerender = () => { update(); };
-      if (window.ResizeObserver) { const ro = new ResizeObserver(() => rerender()); ro.observe(container); } else { window.addEventListener('resize', rerender); }
-    };
-
-    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true }); } else { ensureD3(bootstrap); }
-  })();
+      return () => update();
+  });
 </script>

@@ -125,10 +125,6 @@
 </style>
 <script>
   (() => {
-    // Prevent multiple executions
-    if (window.gdsInteractiveHeatmapsInitialized) return;
-    window.gdsInteractiveHeatmapsInitialized = true;
-
     // Load D3 from CDN once
     const ensureD3 = (cb) => {
       if (window.d3 && typeof window.d3.select === 'function') return cb();
@@ -509,7 +505,8 @@
           const srgb = [r, g, b].map(v => Math.max(0, Math.min(255, v)) / 255);
           const linear = srgb.map(c => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
           const L = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
-          return L < 0.5 ? '#ffffff' : '#0e1116';
+          // White and near-black have equal contrast at L ~= 0.18, not 0.5.
+          return L < 0.18 ? '#ffffff' : '#0e1116';
         } catch (_) { return '#0e1116'; }
       }
 

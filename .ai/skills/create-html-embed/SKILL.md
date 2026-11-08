@@ -1,133 +1,100 @@
 ---
 name: create-html-embed
-description: Create self-contained D3 HTML embed charts for the research article template. Use when the user asks to create a chart, visualization, embed, D3 chart, line chart, bar chart, scatter plot, sankey diagram, or any data visualization as an HTML embed file.
+description: Build self-contained HTML embeds (D3 charts, interactive widgets, simulations, banners) for the research article template on the shared Embed.mount runtime, and verify them with the embed checker. Use when the user asks to create or fix a chart, visualization, embed, D3 chart, interactive figure, widget, banner, or any HTML fragment rendered through HtmlEmbed.
 ---
 
 # Create HTML Embed
 
-Create self-contained D3.js chart embeds for the research article template.
+An embed is one `.html` fragment in `app/src/content/embeds/` that renders
+inside an article through `<HtmlEmbed>`. This skill is the technical
+contract: how an embed is wired, themed, sized, loaded and verified.
 
-## Before you start
+For the visual and editorial side of a chart (which chart, encodings,
+labels, color use, annotation, density), also read
+[`../design-dataviz/SKILL.md`](../design-dataviz/SKILL.md).
 
-**Read the full directives file** for all conventions, patterns, and checklists:
+## Files in this skill
 
-- [directives.md](directives.md) — single source of truth for embed authoring rules
+| File | Read it when |
+|---|---|
+| [runtime.md](runtime.md) | Always. `Embed.mount` API and the full embed contract. |
+| [template.html](template.html) | Starting any chart. Copy it, it passes the checker. |
+| [banners.md](banners.md) | Building the article hero (`banner.html`). |
+| [banner-template.html](banner-template.html) | Starting a banner. |
 
-This covers: colors & palettes, layout, SVG scope, mounting, theming, controls, tooltips, data loading, responsiveness, legends, accessibility, performance, error handling, printing, and the full agent checklist.
+Working examples in the repo: `app/src/content/embeds/d3-bar.html` (HTML
+controls, stacked bars, legend) and `app/src/content/embeds/banner.html`
+(generative hero).
 
 ## Workflow
 
-### Step 1: Understand the request
+1. **Clarify** what question the figure answers, the data (file, columns,
+   size), and whether it needs interaction. If the user gave a CSV, open it
+   and check its columns before writing code.
+2. **Copy** `template.html` (or `banner-template.html`) to
+   `app/src/content/embeds/d3-<name>.html` and rename the root class to
+   `d3-<name>` everywhere (markup, CSS, `Embed.mount` first argument).
+3. **Adapt** the setup and the render function. Keep the structure: one
+   root `<div>`, one scoped `<style>`, one `<script>` calling
+   `Embed.mount`. Follow [runtime.md](runtime.md).
+4. **Put data** in `app/src/content/assets/data/` (served at `/data/`) and
+   pass it with the `data` prop. Never hardcode a dataset that the article
+   also ships as a file.
+5. **Integrate** in MDX (see below).
+6. **Verify** with the checker and fix every FAIL, then look at the
+   screenshots it writes (light, dark, narrow, live theme flip):
 
-Clarify with the user:
-- What type of chart? (line, bar, scatter, sankey, waffle, heatmap, custom)
-- What data source? (CSV path, JSON, inline data)
-- Interactive controls needed? (metric selector, filters)
-- Any specific design requirements?
-
-### Step 2: Create the HTML file
-
-- Location: `app/src/content/embeds/`
-- Naming: `d3-<descriptive-name>.html` (e.g., `d3-training-loss.html`)
-- Root class: `.d3-<descriptive-name>` (must match filename)
-
-### Step 3: Follow the mandatory structure
-
-Every embed must have this structure:
-
-```html
-<div class="d3-yourname"></div>
-<style>
-  .d3-yourname { /* scoped styles */ }
-</style>
-<script>
-  (() => {
-    const ensureD3 = (cb) => { /* D3 CDN loader */ };
-    const bootstrap = () => {
-      /* mount guard + container selection */
-      /* tooltip setup */
-      /* SVG scaffolding */
-      /* data loading */
-      /* render function with ResizeObserver */
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
-    } else { ensureD3(bootstrap); }
-  })();
-</script>
+```bash
+cd app
+npm run check:embed -- d3-<name>.html --data <file.csv>
+npm run check:embed -- d3-<name>.html --config '{"metric":"loss"}' --widths 360,760,1100
+npm run check:embed -- --all            # every embed in the repo
 ```
 
-### Step 4: Integrate in MDX
+The checker renders the embed in headless Chrome inside the real
+HtmlEmbed styles and reports runtime errors, failed requests, embeds
+that never become ready, leaked globals, unreadable text (contrast below
+2:1 fails, below 3:1 warns), overlapping labels, horizontal overflow and a
+missing description. Screenshots land in `app/.embed-check/<name>/`.
 
-Import and use the `HtmlEmbed` component:
+## Integrate in MDX
 
 ```mdx
 import HtmlEmbed from '../../components/HtmlEmbed.astro';
 
-<HtmlEmbed src="d3-yourname.html" title="Chart Title" desc="Description text" />
+<HtmlEmbed
+  src="d3-training-loss.html"
+  title="Validation loss during pre-training"
+  desc="Lower is better. Shaded bands show the min-max over 3 seeds."
+  data="training_loss.csv"
+  config={{ yLabel: 'Validation loss' }}
+/>
 ```
 
-#### HtmlEmbed props
+| Prop | Type | Effect |
+|---|---|---|
+| `src` | string | File in `embeds/` (subfolders allowed: `demo/x.html`). Required. |
+| `title` | string | Caption title above the card. |
+| `desc` | string (HTML) | Text below the card. |
+| `caption` | string (HTML) | Overrides `desc` as the caption below the card. |
+| `frameless` | boolean | No card background, border or padding. |
+| `wide` | boolean | Breaks out of the text column (about 1100px). |
+| `align` | `left` / `center` / `right` | Title alignment. |
+| `id` | string | Anchor id on the `<figure>` (defaults to the file name). |
+| `data` | string or string[] | Data files, read with `ctx.data()`. Bare names resolve to `/data/`. |
+| `config` | object | Free-form options, read with `ctx.config`. |
+| `downloadable` | boolean | Adds a PNG download button. |
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `src` | string | Path to HTML file in `embeds/` (required) |
-| `title` | string | Title above the card |
-| `desc` | string | Description below (supports HTML) |
-| `frameless` | boolean | Removes card background/border |
-| `wide` | boolean | Wide layout: spans the body and margin columns of the page grid |
-| `data` | string or string[] | Path(s) to data files |
-| `config` | object | JSON config passed via `data-config` attribute |
+The same embed can be reused with different `data` and `config`, so make
+labels, defaults and units configurable instead of baking them in.
 
-#### Usage examples
+## Non-negotiables (details in runtime.md)
 
-```mdx
-<!-- Simple embed -->
-<HtmlEmbed src="d3-training-loss.html" title="Training Loss" />
-
-<!-- With external data -->
-<HtmlEmbed src="d3-line-simple.html" title="Attention" data="attention_loss.csv" />
-
-<!-- With config -->
-<HtmlEmbed
-  src="d3-line-simple.html"
-  title="Learning Rate"
-  data="lr_loss.csv"
-  config={{ defaultMetric: 'loss', xDomain: [0, 45e9] }}
-/>
-
-<!-- Multiple data files -->
-<HtmlEmbed
-  src="d3-comparison.html"
-  title="A vs B"
-  data={['formatting_filters.csv', 'relevance_filters.csv']}
-/>
-
-<!-- Frameless -->
-<HtmlEmbed frameless src="d3-banner.html" />
-```
-
-## Key conventions (quick reference)
-
-Full details in the directives file. The critical ones:
-
-1. **Colors**: Use `window.ColorPalettes.getColors('categorical', n)` — never hardcode palettes
-2. **CSS variables**: `--text-color`, `--surface-bg`, `--border-color`, `--axis-color`, `--tick-color`, `--grid-color`
-3. **Dark mode**: Check `document.documentElement.getAttribute('data-theme') === 'dark'`
-4. **Mount guard**: Always set `container.dataset.mounted = 'true'`
-5. **Data loading**: Try `/data/<file>` first, then `./assets/data/<file>` — use `fetchFirstAvailable()`
-6. **Responsiveness**: `ResizeObserver` on container, recompute on resize
-7. **Legend**: HTML-based, title "Legend", swatch 14x14px
-8. **Controls**: HTML only (no SVG UI), selects labeled "Metric" when applicable
-9. **Tooltip**: Single `.d3-tooltip` absolutely positioned inside container
-10. **No globals**: Everything in IIFE, nothing on `window`
-
-## Data files
-
-- Store data in: `app/src/content/assets/data/`
-- Served from: `/data/` (public) at build time
-- Formats: CSV (preferred for tabular), JSON (for nested/hierarchical)
-
-## Post-creation checklist
-
-After creating the embed, verify against the **Agent Checklist** (section 14.1) and **Definition of Done** (section 14.2) in [directives.md](directives.md).
+- Use `Embed.mount`. Do not hand-roll D3 loading, container lookup, mount
+  guards, `ResizeObserver`, theme observers or data fetching.
+- No globals, no `document.querySelector` outside `ctx.root`, no ids
+  without a per-instance suffix: the same embed can appear twice.
+- Theme through CSS variables first; palette colors from `ctx.colors()`.
+- The root is transparent. The card around it already has a surface.
+- Call `ctx.describe()` with what the figure shows (and its main finding).
+- Respect `ctx.reducedMotion`; animate with `ctx.animate`.

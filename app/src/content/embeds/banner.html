@@ -1,28 +1,7 @@
-<div class="d3-galaxy" style="width:100%;margin:10px 0;aspect-ratio:3/1;min-height:260px;"></div>
+<div class="d3-galaxy"></div>
 <script>
-    (() => {
-        const ensureD3 = (cb) => {
-            if (window.d3 && typeof window.d3.select === 'function') return cb();
-            let s = document.getElementById('d3-cdn-script');
-            if (!s) {
-                s = document.createElement('script');
-                s.id = 'd3-cdn-script';
-                s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-                document.head.appendChild(s);
-            }
-            const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
-            s.addEventListener('load', onReady, { once: true });
-            if (window.d3) onReady();
-        };
-
-        const bootstrap = () => {
-            const mount = document.currentScript ? document.currentScript.previousElementSibling : null;
-            const container = (mount && mount.querySelector && mount.querySelector('.d3-galaxy')) || document.querySelector('.d3-galaxy');
-            if (!container) return;
-            if (container.dataset) {
-                if (container.dataset.mounted === 'true') return;
-                container.dataset.mounted = 'true';
-            }
+    Embed.mount('d3-galaxy', (ctx) => {
+            const container = ctx.root;
             // Scene params (match previous Plotly ranges)
             const cx = 1.5, cy = 0.5;
             const a = 1.3, b = 0.45;
@@ -156,103 +135,49 @@
                     tipInner = tip.querySelector('.d3-tooltip__inner') || tip;
                 }
 
-                // Final filter: remove small dots very close to the galaxy center (after placement)
-                const centerHoleRadius = 0.48; // elliptical radius threshold
-                const smallSizeThreshold = 7.5; // same notion as Python size cut
-                const rTotal = idx.map((i) => Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2));
-                const idxFiltered = idx.filter((i, k) => !(rTotal[k] <= centerHoleRadius && sizesPx[i] < smallSizeThreshold));
-
-                const sel = g.selectAll('circle').data(idxFiltered, (i) => i);
-                sel.join(
-                    (enter) => enter.append('circle')
-                        .attr('cx', (i) => xScale(X[i]))
-                        .attr('cy', (i) => yScale(Y[i]))
-                        .attr('r', (i) => sizesPx[i] / 2)
-                        .attr('fill', (i) => colorFor(Zraw[i]))
-                        .attr('fill-opacity', 0.9)
-                        .on('mouseenter', function (ev, i) {
-                            d3.select(this).raise()
-                                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (sizesPx[i] / 2) * 1.25)
-                                .attr('fill-opacity', 1);
-                            const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
-                            const type = i < lenSpiral ? 'spiral' : 'bulge';
-                            const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-                            tipInner.innerHTML =
-                                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
-                                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
-                                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
-                                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
-                            tip.style.opacity = '1';
-                        })
-                        .on('mousemove', (ev, i) => {
-                            const [mx, my] = d3.pointer(ev, container);
-                            const offsetX = 10, offsetY = 12;
-                            tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
-                        })
-                        .on('mouseleave', function () {
-                            tip.style.opacity = '0';
-                            tip.style.transform = 'translate(-9999px, -9999px)';
-                            d3.select(this)
-                                .style('filter', null)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (i2) => sizesPx[i2] / 2)
-                                .attr('fill-opacity', 0.9);
-                        }),
-                    (update) => update
-                        .attr('cx', (i) => xScale(X[i]))
-                        .attr('cy', (i) => yScale(Y[i]))
-                        .attr('r', (i) => sizesPx[i] / 2)
-                        .attr('fill', (i) => colorFor(Zraw[i]))
-                        .attr('fill-opacity', 0.9)
-                        .on('mouseenter', function (ev, i) {
-                            d3.select(this).raise()
-                                .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (sizesPx[i] / 2) * 1.25)
-                                .attr('fill-opacity', 1);
-                            const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
-                            const type = i < lenSpiral ? 'spiral' : 'bulge';
-                            const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
-                            tipInner.innerHTML =
-                                `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
-                                `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
-                                `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
-                                `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
-                                `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
-                            tip.style.opacity = '1';
-                        })
-                        .on('mousemove', (ev, i) => {
-                            const [mx, my] = d3.pointer(ev, container);
-                            const offsetX = 10, offsetY = 12;
-                            tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
-                        })
-                        .on('mouseleave', function () {
-                            tip.style.opacity = '0';
-                            tip.style.transform = 'translate(-9999px, -9999px)';
-                            d3.select(this)
-                                .style('filter', null)
-                                .transition().duration(120).ease(d3.easeCubicOut)
-                                .attr('r', (i2) => sizesPx[i2] / 2)
-                                .attr('fill-opacity', 0.9);
-                        })
-                );
+                // Render every generated point; the galaxy/UMAP shape comes
+                // from the spiral + bulge distribution, no further culling.
+                g.selectAll('circle').data(idx, (i) => i).join('circle')
+                    .attr('cx', (i) => xScale(X[i]))
+                    .attr('cy', (i) => yScale(Y[i]))
+                    .attr('r', (i) => sizesPx[i] / 2)
+                    .attr('fill', (i) => colorFor(Zraw[i]))
+                    .attr('fill-opacity', 0.9)
+                    .on('mouseenter', function (ev, i) {
+                        d3.select(this).raise()
+                            .style('filter', `drop-shadow(0 0 8px ${glowColor})`)
+                            .transition().duration(120).ease(d3.easeCubicOut)
+                            .attr('r', (sizesPx[i] / 2) * 1.25)
+                            .attr('fill-opacity', 1);
+                        const r = Math.sqrt(((X[i] - cx) / a) ** 2 + ((Y[i] - cy) / b) ** 2);
+                        const type = i < lenSpiral ? 'spiral' : 'bulge';
+                        const arm = i < lenSpiral ? (armIndices[i] + 1) : null;
+                        tipInner.innerHTML =
+                            `<div style="font-weight:800;letter-spacing:.1px;"><strong>${labelOf(i)}</strong></div>` +
+                            `<div style="font-size:11px;color:var(--muted-color);margin-top:-4px;margin-bottom:2px;letter-spacing:.1px;"><strong>Type</strong> ${type}${arm ? ` (Arm ${arm})` : ''}</div>` +
+                            `<div style="padding-top:6px;border-top:1px solid var(--border-color);"><strong>Position</strong> X ${X[i].toFixed(2)} · <strong>Y</strong> ${Y[i].toFixed(2)}</div>` +
+                            `<div><strong>Distance</strong> Radius ${r.toFixed(3)} · <strong>Z</strong> ${Zraw[i].toFixed(3)}</div>` +
+                            `<div><strong>Size</strong> ${sizesPx[i].toFixed(1)} px</div>`;
+                        tip.style.opacity = '1';
+                    })
+                    .on('mousemove', (ev, i) => {
+                        const [mx, my] = d3.pointer(ev, container);
+                        const offsetX = 10, offsetY = 12;
+                        tip.style.transform = `translate(${Math.round(mx + offsetX)}px, ${Math.round(my + offsetY)}px)`;
+                    })
+                    .on('mouseleave', function () {
+                        tip.style.opacity = '0';
+                        tip.style.transform = 'translate(-9999px, -9999px)';
+                        d3.select(this)
+                            .style('filter', null)
+                            .transition().duration(120).ease(d3.easeCubicOut)
+                            .attr('r', (i2) => sizesPx[i2] / 2)
+                            .attr('fill-opacity', 0.9);
+                    });
             };
 
-            // First render + resize
-            if (window.ResizeObserver) {
-                const ro = new ResizeObserver(() => render());
-                ro.observe(container);
-            } else {
-                window.addEventListener('resize', render);
-            }
-            render();
-        };
+            ctx.describe('Decorative banner: a spiral galaxy of about 3,500 dots colored from teal through lavender to pink by distance from the core.');
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
-        } else { ensureD3(bootstrap); }
-    })();
+            return () => render();
+    });
 </script>

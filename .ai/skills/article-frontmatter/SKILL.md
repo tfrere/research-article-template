@@ -12,7 +12,8 @@ All metadata lives in `app/src/content/article.mdx` frontmatter (YAML block).
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `title` | string | required | Article title. Supports `\n` for line breaks (rendered as `<br/>`). |
-| `description` | string | `""` | Short description / subtitle shown below the title. |
+| `subtitle` | string | — | Subtitle displayed below the banner (article template) or below the title (paper template). |
+| `description` | string | `""` | Short description for SEO / meta tags. |
 | `authors` | array | `[]` | List of authors (see below). |
 | `affiliations` | array | `[]` | List of affiliations (see below). |
 | `published` | string | — | Publication date, e.g. `"Apr. 04, 2026"`. |
@@ -45,6 +46,15 @@ This renders as two lines in the Hero section. The plain-text version (for SEO /
 |-------|--------|----------|
 | `article` (default) | Grid layout: TOC rail, body, margin column | Centered hero with banner, meta columns (authors, affiliations, published + read time, PDF / Cite / links), sticky TOC, sidenotes in the margin, figure numbering, citation block, DOI, PDF export |
 | `paper` | Single centered column | No TOC sidebar, no figure numbering, no citation/DOI block, lighter footer |
+
+You can select the template at scaffold time:
+
+```bash
+npx create-research-article my-paper --template=article
+npx create-research-article my-paper --template=paper
+```
+
+Or change it later in the `article.mdx` frontmatter.
 
 ## Authors and affiliations
 
@@ -102,6 +112,7 @@ tags:
 ```yaml
 ---
 title: "Scaling Laws for\nNeural Language Models"
+subtitle: "How model size, data, and compute interact"
 description: "An empirical study of scaling behavior across model size, data, and compute"
 authors:
   - name: "Alice Martin"

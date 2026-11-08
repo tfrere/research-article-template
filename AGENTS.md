@@ -32,25 +32,39 @@ Detailed guides for common tasks live in `.ai/skills/`. Read the relevant skill 
 
 | Skill | File | When to use |
 |-------|------|-------------|
-| Create HTML embed | [`.ai/skills/create-html-embed/SKILL.md`](.ai/skills/create-html-embed/SKILL.md) | Creating D3 charts, visualizations, interactive embeds |
+| Write MDX content | [`.ai/skills/write-mdx-content/SKILL.md`](.ai/skills/write-mdx-content/SKILL.md) | Writing chapters, using components, adding math/citations/footnotes |
+| Create HTML embed | [`.ai/skills/create-html-embed/SKILL.md`](.ai/skills/create-html-embed/SKILL.md) | Building any embed (D3 chart, widget, banner) on the `Embed.mount` runtime and verifying it |
+| Design dataviz | [`.ai/skills/design-dataviz/SKILL.md`](.ai/skills/design-dataviz/SKILL.md) | Choosing and designing a chart: encodings, color, labels, uncertainty, review checklist |
 | Article frontmatter | [`.ai/skills/article-frontmatter/SKILL.md`](.ai/skills/article-frontmatter/SKILL.md) | Configuring title, authors, template variant, DOI, PDF |
 | Deploy to HF Spaces | [`.ai/skills/deploy-to-hf-spaces/SKILL.md`](.ai/skills/deploy-to-hf-spaces/SKILL.md) | Deploying, pushing, or updating a Hugging Face Space |
 
-> **Cursor users**: these skills are auto-detected via a symlink at `.cursor/skills/`.
+> **Cursor users**: these skills are also available at `.cursor/skills/` and auto-detected by the IDE.
+
+## Writing MDX content
+
+When asked to write or edit article content, add a chapter, or use components, read `.ai/skills/write-mdx-content/SKILL.md`.
+
+Key points:
+- Chapters are `.mdx` files in `app/src/content/chapters/`, imported in `article.mdx`
+- Components (`Image`, `Note`, `Sidenote`, `Quote`, `Stack`, `HtmlEmbed`, etc.) must be imported from `../../components/`
+- Math via KaTeX (`$...$` inline, `$$...$$` block), citations via `[@key]` referencing `bibliography.bib`
 
 ## Creating HTML embed charts
 
 When asked to create a chart, visualization, or D3 embed, read the skill files:
 
-1. **Workflow & quick reference**: `.ai/skills/create-html-embed/SKILL.md`
-2. **Full conventions & directives**: `.ai/skills/create-html-embed/directives.md`
+1. **Workflow**: `.ai/skills/create-html-embed/SKILL.md`
+2. **Runtime API & embed contract**: `.ai/skills/create-html-embed/runtime.md`
+3. **Chart design**: `.ai/skills/design-dataviz/SKILL.md`
 
 ### TL;DR
 
 - Embeds are self-contained `.html` files in `app/src/content/embeds/`
-- Structure: single root `<div>` + scoped `<style>` + IIFE `<script>`
-- Colors from `window.ColorPalettes`, theming via CSS variables
-- Dark mode aware, responsive (ResizeObserver), mount-guarded (`data-mounted`)
+- Structure: single root `<div>` + scoped `<style>` + `<script>` calling `Embed.mount('d3-name', setup)`
+- The runtime (`app/public/scripts/embed-runtime.js`) loads D3, reads `data` / `config`, re-renders on resize and theme changes, shows errors and signals readiness
+- Theming via CSS variables, palette colors via `ctx.colors()`, transparent root
+- Start from `.ai/skills/create-html-embed/template.html`
+- Verify with `cd app && npm run check:embed -- d3-name.html`
 - Integrated in MDX via `<HtmlEmbed src="d3-name.html" title="..." />`
 
 ## Article frontmatter

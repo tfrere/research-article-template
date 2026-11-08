@@ -22,6 +22,7 @@ node_modules/
 *.cache
 .notion-to-md
 .playwright-mcp/
+app/.embed-check/
 
 app/scripts/latex-to-mdx/output/
 app/scripts/notion-importer/output/**/*

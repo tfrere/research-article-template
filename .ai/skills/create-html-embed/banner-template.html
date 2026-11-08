@@ -1,0 +1,83 @@
+<div class="d3-banner-template"></div>
+<style>
+  .d3-banner-template {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 5 / 2;
+    overflow: hidden;
+  }
+  .d3-banner-template svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+<script>
+  Embed.mount('d3-banner-template', (ctx) => {
+    const { root } = ctx;
+    const NODE_COUNT = 140;
+    const LINK_DISTANCE = 0.12;
+    const random = d3.randomLcg(42);
+
+    // Positions live in unit space so the layout survives any container size.
+    const nodes = d3.range(NODE_COUNT).map(() => ({
+      x: random(),
+      y: random(),
+      vx: (random() - 0.5) * 0.00004,
+      vy: (random() - 0.5) * 0.00004,
+      r: 1.5 + random() * 3.5,
+      tone: random(),
+    }));
+
+    const svg = d3.select(root).append('svg').attr('preserveAspectRatio', 'none');
+    const gLinks = svg.append('g');
+    const gNodes = svg.append('g');
+    let size = { width: 980, height: 392 };
+    let colorAt = () => 'currentColor';
+
+    const draw = () => {
+      const { width, height } = size;
+      const sx = (v) => v * width;
+      const sy = (v) => v * height;
+      const links = [];
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const d = Math.hypot(nodes[i].x - nodes[j].x, (nodes[i].y - nodes[j].y) * (height / width));
+          if (d < LINK_DISTANCE) links.push({ a: nodes[i], b: nodes[j], o: 1 - d / LINK_DISTANCE });
+        }
+      }
+      gLinks.selectAll('line').data(links).join('line')
+        .attr('x1', (l) => sx(l.a.x)).attr('y1', (l) => sy(l.a.y))
+        .attr('x2', (l) => sx(l.b.x)).attr('y2', (l) => sy(l.b.y))
+        .attr('stroke', (l) => colorAt(l.a.tone))
+        .attr('stroke-opacity', (l) => 0.35 * l.o);
+      gNodes.selectAll('circle').data(nodes).join('circle')
+        .attr('cx', (n) => sx(n.x)).attr('cy', (n) => sy(n.y)).attr('r', (n) => n.r)
+        .attr('fill', (n) => colorAt(n.tone))
+        .attr('fill-opacity', 0.85);
+    };
+
+    ctx.describe('Decorative banner: a slowly drifting constellation of dots and links in the article accent colors.');
+
+    // Gentle drift; the runtime pauses it off-screen and draws a single frame
+    // for visitors who prefer reduced motion.
+    ctx.animate((t, dt) => {
+      nodes.forEach((n) => {
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
+        if (n.x < 0 || n.x > 1) n.vx *= -1;
+        if (n.y < 0 || n.y > 1) n.vy *= -1;
+      });
+      draw();
+    });
+
+    return ({ width, height }) => {
+      size = { width: width || 980, height: height || 392 };
+      svg.attr('viewBox', `0 0 ${size.width} ${size.height}`);
+      // The lightest stops vanish on a light page, so start the ramp further in.
+      const ramp = ctx.colors('sequential', 9).slice(2);
+      colorAt = (tone) => ramp[Math.min(ramp.length - 1, Math.floor(tone * ramp.length))];
+      draw();
+    };
+  }, { resize: 'size' });
+</script>
