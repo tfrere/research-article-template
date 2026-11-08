@@ -11,6 +11,11 @@ if (import.meta.env.PROD) return Astro.redirect("/");
 const current = String((ArticleMod as any).frontmatter?.banner || "banner.html");
 const banners = [
   {
+    src: "banner-gpu-cluster.html",
+    name: "GPU cluster",
+    data: "An isometric datacenter of 8 nodes x 8 GPUs training in data parallel: compute bursts inside each node, then a ring all-reduce of the gradients through the central switch, then the optimizer step.",
+  },
+  {
     src: "banner.html",
     name: "Galaxy",
     data: "The template default: a spiral galaxy of points, no article data.",

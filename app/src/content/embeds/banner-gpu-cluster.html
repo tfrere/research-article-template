@@ -1,0 +1,1029 @@
+<div class="banner-gpu-cluster"></div>
+<style>
+  .banner-gpu-cluster { width: 100%; aspect-ratio: 5 / 2; overflow: hidden; position: relative; }
+  .banner-gpu-cluster canvas { display: block; width: 100%; height: 100%; }
+</style>
+<script>
+Embed.mount('banner-gpu-cluster', (ctx) => {
+  // 8 nodes x 8 GPUs (DGX H100 style). Tensor parallel 8 inside each node over
+  // NVLink / NVSwitch, data parallel 8 across nodes. Each tensor-parallel shard
+  // averages its gradients with a ring all-reduce over the 8 nodes: 8 rings run
+  // side by side, one per GPU rail, through a single 64-port InfiniBand switch.
+  const NODES = 8;
+  const GPUS = 8;
+  const HOPS = 2 * (NODES - 1);
+  // Ring order: the plaza's perimeter, clockwise on screen from the back corner.
+  const CELLS = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [0, 1]];
+
+  // World units: one plaza cell = 1. Node footprint 0.75 and streets 0.25 both
+  // sit on the 1/8 floor grid. 2:1 dimetric projection, z scaled by KZ.
+  const KZ = 1.15;
+  const HALF = 0.375;
+  const BODY_H = 0.28;
+  const MOD_H = 0.05;
+  const TOP_Z = BODY_H + MOD_H;
+  const HUB_Z = BODY_H + 0.03;
+  const SW_HALF = 0.25;
+  const SW_H = 0.56;
+  const RING_Z = 0.76;
+  const RAIL_DZ = 0.0115;
+  // Painter's depth (u + v) of the switch: nodes below it are drawn before it.
+  const SWITCH_DEPTH = 2.01;
+  const MONO = 'ui-monospace, "IBM Plex Mono", SFMono-Regular, Menlo, Consolas, monospace';
+
+  // GPU modules on the node top: two rows of four around the NVSwitch strip.
+  const MODS = [];
+  for (let k = 0; k < GPUS; k++) {
+    const u0 = -0.33 + (k % 4) * 0.1725;
+    const v0 = k < 4 ? -0.33 : 0.06;
+    MODS.push({ u0, v0, u1: u0 + 0.1425, v1: v0 + 0.27, cu: u0 + 0.07125, cv: v0 + 0.135 });
+  }
+  const MOD_ORDER = MODS.map((m, k) => k).sort((p, q) => MODS[p].cu + MODS[p].cv - MODS[q].cu - MODS[q].cv);
+
+  // A block's cast shadow on the floor (world u, v), sun from the left.
+  const castShadow = (i, j, h, z) => {
+    const dx = 0.62 * z;
+    const dy = 0.1 * z;
+    return [[i - h, j - h], [i + h, j - h], [i + h + dx, j - h + dy], [i + h + dx, j + h + dy], [i - h + dx, j + h + dy], [i - h, j + h]];
+  };
+
+  // Everything the city draws, in the projection's units (a = 1, origin at P(0, 0, 0)):
+  // blocks, switch, ring, cast shadows, GPU halos, status lights and roof
+  // ripples. The layout centres this box, whatever the frame's size.
+  const EXTENT = (() => {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    const add = (u, v, z, r = 0) => {
+      const x = u - v;
+      const y = (u + v) * 0.5 - z * KZ;
+      x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r);
+      y0 = Math.min(y0, y - r); y1 = Math.max(y1, y + r);
+    };
+    const box = (ua, ub, va, vb, za, zb) => {
+      for (const u of [ua, ub]) for (const v of [va, vb]) for (const z of [za, zb]) add(u, v, z);
+    };
+    CELLS.forEach(([i, j]) => {
+      box(i - HALF, i + HALF, j - HALF, j + HALF, 0, TOP_Z);
+      castShadow(i, j, HALF, BODY_H).forEach(([u, v]) => add(u, v, 0));
+      MODS.forEach((m) => add(i + m.cu, j + m.cv, TOP_Z, 0.17));
+      for (let c = 0; c < NODES; c++) add(i + HALF, j + 0.02 - c * (0.31 / (NODES - 1)), 0.165, 0.0675);
+      add(i, j, HUB_Z, 0.32 * 1.414);
+    });
+    box(1 - SW_HALF, 1 + SW_HALF, 1 - SW_HALF, 1 + SW_HALF, 0, SW_H + 0.03);
+    castShadow(1, 1, SW_HALF, SW_H).forEach(([u, v]) => add(u, v, 0));
+    [[0, 0], [2, 0], [2, 2], [0, 2]].forEach(([i, j]) => {
+      add(i, j, RING_Z - 0.04, 0.12);
+      add(i, j, RING_Z + 0.04, 0.12);
+    });
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  })();
+
+  // Ring all-reduce (NCCL ring algorithm): the gradient buffer is cut into 8
+  // chunks; 7 reduce-scatter hops then 7 all-gather hops, every node sending
+  // one chunk to its clockwise neighbour per hop. COUNTS[h][r][c] = how many
+  // nodes' gradients chunk c on node r holds after h hops.
+  const mod = (x, n) => ((x % n) + n) % n;
+  const COUNTS = [];
+  const SENDS = [];
+  let held = [];
+  for (let r = 0; r < NODES; r++) held.push(new Array(NODES).fill(1));
+  COUNTS.push(held);
+  for (let h = 0; h < HOPS; h++) {
+    const rs = h < NODES - 1;
+    const s = rs ? h : h - (NODES - 1);
+    const next = held.map((row) => row.slice());
+    const sends = [];
+    for (let r = 0; r < NODES; r++) {
+      const c = rs ? mod(r - s, NODES) : mod(r + 1 - s, NODES);
+      const to = (r + 1) % NODES;
+      next[to][c] = rs ? held[to][c] + held[r][c] : held[r][c];
+      sends.push({ chunk: c, amount: held[r][c] });
+    }
+    SENDS.push(sends);
+    COUNTS.push(next);
+    held = next;
+  }
+  if (!held.every((row) => row.every((v) => v === NODES))) throw new Error('Ring all-reduce schedule does not converge.');
+  if (!COUNTS[NODES - 1].every((row, r) => row[(r + 1) % NODES] === NODES)) throw new Error('Reduce-scatter leaves a chunk unreduced.');
+
+  // One training step, in seconds: forward + backward with tensor-parallel
+  // all-reduces on NVLink, then the gradient ring all-reduce, then the
+  // optimizer step. Real data-parallel runs overlap the last two with the
+  // backward pass; they are serialised here so each one reads on its own.
+  const COMPUTE = 2.6;
+  const FWD = 1.05;
+  const HOP = 0.22;
+  const ARRIVE = 0.86;
+  const COMM = HOPS * HOP;
+  const UPDATE = 0.75;
+  const IDLE = 0.25;
+  const STEP_T = COMPUTE + COMM + UPDATE + IDLE;
+  const BURSTS = 8;
+  const BURST0 = 0.14;
+  const BURST_GAP = 0.3;
+  const BURST_LEN = 0.26;
+  const FIRST_STEP = 1024;
+  // The still (and first frame): all-gather under way, half the chunks home.
+  const T_STILL = COMPUTE + (NODES - 1 + 2.45) * HOP;
+  // The loop opens a little earlier, so the first second is the ring at work.
+  const T_START = T_STILL - 0.5;
+  // Playback speed: every motion reads this one clock, so phases stay in sync.
+  const SPEED = 0.65;
+
+  let seed = 42;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const FLICK = [];
+  for (let i = 0; i < NODES * GPUS; i++) {
+    FLICK.push({ p1: rand() * 6.283, f1: 3 + rand() * 4, p2: rand() * 6.283, f2: 7 + rand() * 6, w: 0.85 + rand() * 0.3 });
+  }
+  const JIT = CELLS.map(() => (rand() - 0.5) * 0.06);
+
+  const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+  const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
+  const ease = (x) => { x = clamp01(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(2 - 2 * x, 3) / 2; };
+  const fmtInt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  ctx.describe(
+    'Banner: distributed training of a large model as an isometric miniature city. ' + NODES + ' server nodes of ' + GPUS +
+    ' GPUs each stand around a central InfiniBand switch, ' + NODES * GPUS + ' GPUs in all. Inside each node the GPUs split every layer ' +
+    '(8-way tensor parallelism) and glow while they compute, exchanging short NVLink bursts. Across nodes, ' + NODES +
+    ' data-parallel replicas average their gradients with a ring all-reduce: packets sweep clockwise around the ring in ' +
+    (NODES - 1) + ' reduce-scatter hops that grow brighter as partial sums accumulate, then ' + (NODES - 1) +
+    ' all-gather hops, while each node\'s 8 status lights fill as reduced chunks arrive. Then the optimizer step ticks the step counter.'
+  );
+
+  const canvas = document.createElement('canvas');
+  ctx.root.appendChild(canvas);
+  const g = canvas.getContext('2d');
+
+  // --primary-color is usually oklch(): let a canvas pixel resolve any CSS color.
+  const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const rgbOf = (css) => {
+    probe.clearRect(0, 0, 1, 1);
+    probe.fillStyle = '#000';
+    probe.fillStyle = css;
+    probe.fillRect(0, 0, 1, 1);
+    const p = probe.getImageData(0, 0, 1, 1).data;
+    return [p[0], p[1], p[2]];
+  };
+  const mix = (c1, c2, t) => [c1[0] + (c2[0] - c1[0]) * t, c1[1] + (c2[1] - c1[1]) * t, c1[2] + (c2[2] - c1[2]) * t];
+  const rgba = (c, a) => 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + (a == null ? 1 : +a.toFixed(3)) + ')';
+
+  function glowSprite(c) {
+    const n = 64;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = n;
+    const s = cv.getContext('2d');
+    const gr = s.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+    gr.addColorStop(0, rgba(c, 1));
+    gr.addColorStop(0.2, rgba(c, 0.45));
+    gr.addColorStop(0.5, rgba(c, 0.12));
+    gr.addColorStop(1, rgba(c, 0));
+    s.fillStyle = gr;
+    s.fillRect(0, 0, n, n);
+    return cv;
+  }
+
+  let L = null;
+  let C = null;
+  let now = ctx.reducedMotion ? T_STILL : T_START;
+
+  // ---------- layout: everything that only depends on size ----------
+  function layout(width, height, dpr) {
+    const narrow = width < 600;
+    const fitH = (height * 0.76) / 3.3;
+    const fitW = (width * (narrow ? 0.78 : 0.5)) / 5.5;
+    const a = Math.max(16, Math.floor(Math.min(fitH, fitW) / 2) * 2);
+    // Centre the city's projected extent in the frame (the plaza centre sits
+    // a little left of it, because the shadows fall to the right).
+    const cx = Math.round(width * 0.5 - EXTENT.cx * a);
+    const oy = Math.round(height * 0.5 - EXTENT.cy * a);
+    const P = (u, v, z) => [cx + (u - v) * a, oy + (u + v) * a * 0.5 - z * a * KZ];
+    const snap = (p) => [Math.round(p[0] * 2) / 2, Math.round(p[1] * 2) / 2];
+    const Ps = (u, v, z) => snap(P(u, v, z));
+
+    const poly = (pts) => { const p = new Path2D(); pts.forEach((q, i) => (i ? p.lineTo(q[0], q[1]) : p.moveTo(q[0], q[1]))); p.closePath(); return p; };
+    const pline = (list) => {
+      const pts = new Float32Array(2 * list.length);
+      const cum = new Float32Array(list.length);
+      list.forEach((q, s) => {
+        pts[2 * s] = q[0];
+        pts[2 * s + 1] = q[1];
+        if (s) cum[s] = cum[s - 1] + Math.hypot(q[0] - list[s - 1][0], q[1] - list[s - 1][1]);
+      });
+      return { pts, cum, len: cum[list.length - 1], n: list.length - 1 };
+    };
+    const arc = (u0, v0, z0, u1, v1, z1, lift, n) => {
+      const list = [];
+      for (let s = 0; s <= n; s++) {
+        const t = s / n;
+        list.push(P(u0 + (u1 - u0) * t, v0 + (v1 - v0) * t, z0 + (z1 - z0) * t + lift * 4 * t * (1 - t)));
+      }
+      return pline(list);
+    };
+
+    const finCount = a >= 70 ? 3 : a >= 44 ? 2 : 1;
+    const nodes = CELLS.map((cell, n) => {
+      const i = cell[0];
+      const j = cell[1];
+      const tops = MODS.map((m) => poly([Ps(i + m.u0, j + m.v0, TOP_Z), Ps(i + m.u1, j + m.v0, TOP_Z), Ps(i + m.u1, j + m.v1, TOP_Z), Ps(i + m.u0, j + m.v1, TOP_Z)]));
+      const fins = MODS.map((m) => {
+        const p = new Path2D();
+        for (let f = 1; f <= finCount; f++) {
+          const u = i + m.u0 + ((m.u1 - m.u0) * f) / (finCount + 1);
+          const q0 = Ps(u, j + m.v0 + 0.025, TOP_Z);
+          const q1 = Ps(u, j + m.v1 - 0.025, TOP_Z);
+          p.moveTo(q0[0], q0[1]);
+          p.lineTo(q1[0], q1[1]);
+        }
+        return p;
+      });
+      const centers = MODS.map((m) => P(i + m.cu, j + m.cv, TOP_Z));
+      // Status lights on the right half of the side panel, one per gradient chunk.
+      const leds = [];
+      for (let c = 0; c < NODES; c++) leds.push(P(i + HALF, j + 0.02 - c * (0.31 / (NODES - 1)), 0.165));
+      const nvl = MODS.map((m) => arc(i + m.cu, j + m.cv, TOP_Z, i, j, HUB_Z, 0.07, 10));
+      // Name plates only on faces no other block hides: the plaza's outer faces.
+      const plate = j === 2 ? 'left' : i === 2 ? 'right' : null;
+      return { i, j, n, tops, fins, centers, leds, nvl, plate, hub: P(i, j, HUB_Z) };
+    });
+    const nodesBack = nodes.filter((nd) => nd.i + nd.j < SWITCH_DEPTH);
+    const nodesFront = nodes.filter((nd) => nd.i + nd.j >= SWITCH_DEPTH);
+
+    // The ring: the plaza's perimeter lifted above the node centres, a ribbon of
+    // 8 rails stacked in z (4 on small screens). A packet path climbs the tether
+    // from the sender's hub, runs along its rail and drops to the receiver.
+    const strands = a >= 56 ? GPUS : 4;
+    const dz = (RAIL_DZ * (GPUS - 1)) / (strands - 1);
+    const railZ = (k) => RING_Z + (k - (strands - 1) / 2) * dz;
+    const links = CELLS.map((p1, r) => {
+      const p2 = CELLS[(r + 1) % NODES];
+      const paths = [];
+      for (let k = 0; k < strands; k++) {
+        const z = railZ(k);
+        paths.push(pline([P(p1[0], p1[1], HUB_Z), Ps(p1[0], p1[1], z), Ps(p2[0], p2[1], z), P(p2[0], p2[1], HUB_Z)]));
+      }
+      return { paths };
+    });
+    const corners = [[0, 0], [2, 0], [2, 2], [0, 2]];
+    const loops = [];
+    for (let k = 0; k < strands; k++) loops.push(corners.map((c) => Ps(c[0], c[1], railZ(k))));
+    const stations = CELLS.map((c) => ({ top: Ps(c[0], c[1], railZ(strands - 1)), mid: Ps(c[0], c[1], RING_Z), hub: P(c[0], c[1], HUB_Z) }));
+
+    // 64 switch ports: one row of 8 rails per node, nodes 0-3 on the left face, 4-7 on the right.
+    const ports = [];
+    for (let n = 0; n < NODES; n++) {
+      const row = n % 4;
+      const z1 = SW_H - 0.1 - row * 0.07;
+      const z0 = z1 - 0.04;
+      for (let k = 0; k < GPUS; k++) {
+        const t0 = -0.2 + k * 0.052;
+        const t1 = t0 + 0.034;
+        const pts = n < 4
+          ? [Ps(1 + t0, 1 + SW_HALF, z1), Ps(1 + t1, 1 + SW_HALF, z1), Ps(1 + t1, 1 + SW_HALF, z0), Ps(1 + t0, 1 + SW_HALF, z0)]
+          : [Ps(1 + SW_HALF, 1 - t0, z1), Ps(1 + SW_HALF, 1 - t1, z1), Ps(1 + SW_HALF, 1 - t1, z0), Ps(1 + SW_HALF, 1 - t0, z0)];
+        ports.push({ n, k, path: poly(pts) });
+      }
+    }
+
+    const hudFs = width >= 1200 ? 12 : width >= 700 ? 11 : 10;
+    return {
+      width, height, dpr, a, cx, oy, P, Ps, poly, nodes, nodesBack, nodesFront, links, loops, stations, ports,
+      pw: Math.round(width * dpr), ph: Math.round(height * dpr),
+      labels: a >= 64,
+      grid: a >= 56 ? 0.125 : 0.25,
+      hair: a >= 60 ? 0.75 : 0.6,
+      bead: Math.max(1, a * 0.018),
+      led: Math.max(0.7, a * 0.0135),
+      hud: { x: Math.round(Math.max(14, width * 0.03)), y: Math.round(Math.max(14, height * 0.075)) + hudFs, fs: hudFs, full: width >= 560, strip: width >= 700 },
+    };
+  }
+
+  // ---------- static layer: floor, shadows, cable trays, blocks ----------
+  function layer() {
+    const c = document.createElement('canvas');
+    c.width = L.pw;
+    c.height = L.ph;
+    const x = c.getContext('2d');
+    x.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+    return c;
+  }
+
+  function fillPoly(c, pts, fill) {
+    c.beginPath();
+    pts.forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])));
+    c.closePath();
+    c.fillStyle = fill;
+    c.fill();
+  }
+
+  function box(c, u0, v0, u1, v1, z0, z1, T) {
+    const P = L.Ps;
+    const A = P(u0, v0, z1), B = P(u1, v0, z1), K = P(u1, v1, z1), D = P(u0, v1, z1);
+    const E = P(u1, v1, z0), F = P(u0, v1, z0), G = P(u1, v0, z0);
+    fillPoly(c, [A, B, K, D], T.top);
+    fillPoly(c, [D, K, E, F], T.left);
+    fillPoly(c, [K, B, G, E], T.right);
+    c.lineJoin = 'round';
+    c.strokeStyle = T.inner;
+    c.lineWidth = L.hair * 0.8;
+    c.beginPath();
+    c.moveTo(D[0], D[1]); c.lineTo(K[0], K[1]); c.lineTo(B[0], B[1]);
+    c.moveTo(K[0], K[1]); c.lineTo(E[0], E[1]);
+    c.stroke();
+    c.strokeStyle = T.edge;
+    c.lineWidth = L.hair;
+    c.beginPath();
+    [A, B, G, E, F, D].forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])));
+    c.closePath();
+    c.stroke();
+  }
+
+  function line(c, p, q) { c.moveTo(p[0], p[1]); c.lineTo(q[0], q[1]); }
+
+  function faceText(c, str, p, shear, size, color) {
+    c.save();
+    c.setTransform(L.dpr, L.dpr * shear, 0, L.dpr, L.dpr * p[0], L.dpr * p[1]);
+    c.font = '500 ' + size + 'px ' + MONO;
+    c.fillStyle = color;
+    c.fillText(str, 0, 0);
+    c.restore();
+  }
+
+  function drawFloor(c) {
+    const P = L.Ps;
+    const fl = layer();
+    const f = fl.getContext('2d');
+    const R0 = -2.5;
+    const R1 = 4.5;
+    f.lineWidth = L.hair * 0.8;
+    f.strokeStyle = C.grid;
+    f.beginPath();
+    for (let q = R0 + 0.125; q <= R1; q += L.grid) {
+      line(f, P(q, R0, 0), P(q, R1, 0));
+      line(f, P(R0, q, 0), P(R1, q, 0));
+    }
+    f.stroke();
+    // Curbs: the street edges, one grid line either side of each street.
+    f.strokeStyle = C.curb;
+    f.beginPath();
+    for (let m = -2; m <= 3; m++) {
+      [m + 0.375, m + 0.625].forEach((q) => {
+        line(f, P(q, R0, 0), P(q, R1, 0));
+        line(f, P(R0, q, 0), P(R1, q, 0));
+      });
+    }
+    f.stroke();
+    // Fade the floor out in an ellipse that follows the projection.
+    const o = L.P(1, 1, 0);
+    const R = Math.min(L.width * 0.56, 4.4 * L.a);
+    f.globalCompositeOperation = 'destination-in';
+    f.setTransform(L.dpr, 0, 0, L.dpr * 0.5, L.dpr * o[0], L.dpr * o[1]);
+    const gr = f.createRadialGradient(0, 0, 0, 0, 0, R);
+    gr.addColorStop(0, 'rgba(0,0,0,1)');
+    gr.addColorStop(0.45, 'rgba(0,0,0,0.8)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    f.fillStyle = gr;
+    f.fillRect(-4 * R, -4 * R, 8 * R, 8 * R);
+    c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(fl, 0, 0);
+    c.restore();
+  }
+
+  function drawShadows(c) {
+    const P = L.P;
+    c.save();
+    c.filter = 'blur(' + Math.max(1, L.a * 0.035) + 'px)';
+    c.fillStyle = C.shadow;
+    const cast = (i, j, h, z) => {
+      const pts = castShadow(i, j, h, z).map(([u, v]) => P(u, v, 0));
+      c.beginPath();
+      pts.forEach((q, k) => (k ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])));
+      c.closePath();
+      c.fill();
+    };
+    CELLS.forEach((cell) => cast(cell[0], cell[1], HALF, BODY_H));
+    cast(1, 1, SW_HALF, SW_H);
+    c.restore();
+  }
+
+  function drawTrays(c) {
+    const P = L.Ps;
+    const w = 0.035;
+    CELLS.forEach((cell) => {
+      const i = cell[0];
+      const j = cell[1];
+      const du = Math.sign(1 - i);
+      const dv = Math.sign(1 - j);
+      const len = Math.hypot(du, dv);
+      const nu = (-dv / len) * w;
+      const nv = (du / len) * w;
+      const s0 = [i + du * HALF, j + dv * HALF];
+      const s1 = [1 - du * SW_HALF, 1 - dv * SW_HALF];
+      const pts = [P(s0[0] + nu, s0[1] + nv, 0), P(s1[0] + nu, s1[1] + nv, 0), P(s1[0] - nu, s1[1] - nv, 0), P(s0[0] - nu, s0[1] - nv, 0)];
+      fillPoly(c, pts, C.tray);
+      c.strokeStyle = C.trayEdge;
+      c.lineWidth = L.hair * 0.8;
+      c.beginPath();
+      line(c, pts[0], pts[1]);
+      line(c, pts[3], pts[2]);
+      c.stroke();
+    });
+  }
+
+  function drawNode(c, nd) {
+    const P = L.Ps;
+    const i = nd.i;
+    const j = nd.j;
+    box(c, i - HALF, j - HALF, i + HALF, j + HALF, 0, BODY_H, C.node);
+    c.strokeStyle = C.detail;
+    c.lineWidth = L.hair * 0.8;
+    c.beginPath();
+    // Front panel groove, vents on the side.
+    line(c, P(i - HALF + 0.03, j + HALF, BODY_H * 0.74), P(i + HALF - 0.03, j + HALF, BODY_H * 0.74));
+    [0.055, 0.085].forEach((z) => line(c, P(i + HALF, j + HALF - 0.05, z), P(i + HALF, j - HALF + 0.05, z)));
+    c.stroke();
+    c.fillStyle = C.socket;
+    nd.leds.forEach((p) => {
+      c.beginPath();
+      c.ellipse(p[0], p[1], L.led, L.led, 0, 0, Math.PI * 2);
+      c.fill();
+    });
+    if (L.labels && nd.plate) {
+      const fs = Math.max(7, Math.min(10, L.a * 0.09));
+      if (nd.plate === 'left') faceText(c, 'node 0' + nd.n, P(i - HALF + 0.05, j + HALF, 0.075), 0.5, fs, C.label);
+      else faceText(c, 'node 0' + nd.n, P(i + HALF, j + HALF - 0.04, 0.075), -0.5, fs, C.label);
+    }
+    box(c, i - 0.33, j - 0.035, i + 0.33, j + 0.035, BODY_H, BODY_H + 0.016, C.strip);
+    MOD_ORDER.forEach((k) => {
+      const m = MODS[k];
+      box(c, i + m.u0, j + m.v0, i + m.u1, j + m.v1, BODY_H, TOP_Z, C.mod);
+      c.strokeStyle = C.fin;
+      c.lineWidth = L.hair * 0.7;
+      c.stroke(nd.fins[k]);
+    });
+  }
+
+  function drawSwitch(c) {
+    box(c, 1 - SW_HALF, 1 - SW_HALF, 1 + SW_HALF, 1 + SW_HALF, 0, SW_H, C.sw);
+    box(c, 1 - SW_HALF + 0.05, 1 - SW_HALF + 0.05, 1 + SW_HALF - 0.05, 1 + SW_HALF - 0.05, SW_H, SW_H + 0.03, C.swCap);
+    c.fillStyle = C.socket;
+    L.ports.forEach((pt) => c.fill(pt.path));
+    const P = L.Ps;
+    c.strokeStyle = C.detail;
+    c.lineWidth = L.hair * 0.8;
+    c.beginPath();
+    line(c, P(1 - SW_HALF + 0.03, 1 + SW_HALF, 0.11), P(1 + SW_HALF - 0.03, 1 + SW_HALF, 0.11));
+    line(c, P(1 + SW_HALF, 1 + SW_HALF - 0.03, 0.11), P(1 + SW_HALF, 1 - SW_HALF + 0.03, 0.11));
+    c.stroke();
+  }
+
+  // Two cached layers, so floor effects can be drawn between them.
+  function buildFloor() {
+    const st = layer();
+    const c = st.getContext('2d');
+    drawFloor(c);
+    drawShadows(c);
+    drawTrays(c);
+    return st;
+  }
+
+  // Two layers split at the switch, so each node's lights can be drawn
+  // between them: a node behind the switch gets its lights before the switch
+  // covers them (node 07's status lights face it and are partly hidden).
+  function buildBlocks(front) {
+    const st = layer();
+    const c = st.getContext('2d');
+    const items = L.nodes.map((nd) => ({ d: nd.i + nd.j, draw: () => drawNode(c, nd) }));
+    items.push({ d: SWITCH_DEPTH, draw: () => drawSwitch(c) });
+    items
+      .filter((it) => (it.d >= SWITCH_DEPTH) === front)
+      .sort((p, q) => p.d - q.d)
+      .forEach((it) => it.draw());
+    return st;
+  }
+
+  // The ring layer: tethers, the 8-rail ribbon and the station marks.
+  function buildRing() {
+    const st = layer();
+    const c = st.getContext('2d');
+    c.lineCap = 'round';
+    c.strokeStyle = C.tether;
+    c.lineWidth = L.hair;
+    c.setLineDash([2, 3]);
+    c.beginPath();
+    L.stations.forEach((s) => line(c, s.hub, s.top));
+    c.stroke();
+    c.setLineDash([]);
+    const lo = L.loops[0];
+    const hi = L.loops[L.loops.length - 1];
+    // The ribbon's face: the band between the lowest and highest rail.
+    c.fillStyle = C.band;
+    [[0, 1], [1, 2], [2, 3], [3, 0]].forEach((e) => fillPoly(c, [lo[e[0]], lo[e[1]], hi[e[1]], hi[e[0]]], C.band));
+    c.lineWidth = L.hair * 0.8;
+    c.lineJoin = 'round';
+    // Inner rails only where they sit at least 1.3 px apart; below that they alias.
+    const inner = (RAIL_DZ * (GPUS - 1) * KZ * L.a) / (L.loops.length - 1) >= 1.3;
+    L.loops.forEach((lp, k) => {
+      const edge = k === 0 || k === L.loops.length - 1;
+      if (!edge && !inner) return;
+      c.strokeStyle = edge ? C.arcEdge : C.arc;
+      c.beginPath();
+      lp.forEach((q, s) => (s ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])));
+      c.closePath();
+      c.stroke();
+    });
+    const rs = Math.max(1.6, L.a * 0.024);
+    L.stations.forEach((s) => {
+      c.fillStyle = C.page;
+      c.beginPath();
+      c.ellipse(s.mid[0], s.mid[1], rs + 1.2, rs + 1.2, 0, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = C.station;
+      c.beginPath();
+      c.ellipse(s.mid[0], s.mid[1], rs, rs, 0, 0, Math.PI * 2);
+      c.fill();
+    });
+    return st;
+  }
+
+  // ---------- time ----------
+  function stateAt(t) {
+    const k = Math.floor(t / STEP_T);
+    const tau = t - k * STEP_T;
+    const S = { tau, step: FIRST_STEP + k, phase: 'compute', hop: -1, frac: 0, x: 0 };
+    if (tau < COMPUTE) S.phase = 'compute';
+    else if (tau < COMPUTE + COMM) {
+      S.phase = 'comm';
+      const f = (tau - COMPUTE) / HOP;
+      S.hop = Math.min(HOPS - 1, Math.floor(f));
+      S.frac = f - S.hop;
+      S.x = tau - COMPUTE;
+    } else {
+      S.phase = 'update';
+      S.step += 1;
+      S.x = tau - COMPUTE - COMM;
+    }
+    return S;
+  }
+
+  // Envelope of the tensor-parallel NVLink burst running on node n (0 when none).
+  function burstAt(n, tau) {
+    for (let b = 0; b < BURSTS; b++) {
+      const x = (tau - BURST0 - b * BURST_GAP - JIT[n]) / BURST_LEN;
+      if (x >= 0 && x <= 1) return x;
+    }
+    return -1;
+  }
+
+  function gpuLevel(n, k, S) {
+    const f = FLICK[n * GPUS + k];
+    const flick = 0.07 * Math.sin(f.p1 + S.tau * f.f1) + 0.04 * Math.sin(f.p2 + S.tau * f.f2);
+    if (S.phase === 'compute') {
+      const b = burstAt(n, S.tau);
+      const dip = b < 0 ? 0 : 0.18 * Math.sin(Math.PI * b);
+      return 0.2 + smooth(S.tau / 0.35) * (0.62 * f.w + flick - dip);
+    }
+    if (S.phase === 'comm') {
+      // NCCL's reduction kernels run on the GPUs: a pulse on every arrival,
+      // stronger while partial sums are being added (reduce-scatter).
+      const since = S.frac >= ARRIVE ? (S.frac - ARRIVE) * HOP : (S.frac + 1 - ARRIVE) * HOP;
+      const pulse = S.x > ARRIVE * HOP ? Math.exp(-since / 0.07) * (S.hop < NODES - 1 || S.frac < ARRIVE ? 0.22 : 0.1) : 0;
+      return 0.36 + 0.44 * Math.exp(-S.x / 0.6) + pulse + flick * 0.4;
+    }
+    return 0.2 + 0.78 * Math.exp(-S.x / 0.3) * smooth(S.x / 0.05);
+  }
+
+  function ledLevel(n, c, S) {
+    if (S.phase === 'compute') return 1 / NODES;
+    if (S.phase === 'update') return S.x < 0.25 ? 1 : 1 - (1 - 1 / NODES) * smooth((S.x - 0.25) / 0.6);
+    const before = COUNTS[S.hop][n][c];
+    const after = COUNTS[S.hop + 1][n][c];
+    return (before + (after - before) * smooth((S.frac - ARRIVE) / 0.08)) / NODES;
+  }
+
+  // Polylines are walked by arc length: p in [0, 1] of the screen length.
+  function segAt(r, d) {
+    let s = 1;
+    while (s < r.n && r.cum[s] < d) s++;
+    return s;
+  }
+  function pointAt(r, p) {
+    const d = clamp01(p) * r.len;
+    const s = segAt(r, d);
+    const span = r.cum[s] - r.cum[s - 1] || 1;
+    const q = (d - r.cum[s - 1]) / span;
+    return [r.pts[2 * s - 2] + (r.pts[2 * s] - r.pts[2 * s - 2]) * q, r.pts[2 * s - 1] + (r.pts[2 * s + 1] - r.pts[2 * s - 1]) * q];
+  }
+
+  function spanPoints(r, p0, p1) {
+    const out = [pointAt(r, p0)];
+    const d1 = p1 * r.len;
+    for (let s = segAt(r, p0 * r.len); s < r.n && r.cum[s] < d1; s++) out.push([r.pts[2 * s], r.pts[2 * s + 1]]);
+    out.push(pointAt(r, p1));
+    return out;
+  }
+
+  function strokeSpan(r, p0, p1) {
+    p0 = clamp01(p0);
+    p1 = clamp01(p1);
+    if (p1 <= p0) return;
+    const a0 = pointAt(r, p0);
+    g.beginPath();
+    g.moveTo(a0[0], a0[1]);
+    const d1 = p1 * r.len;
+    for (let s = segAt(r, p0 * r.len); s < r.n && r.cum[s] < d1; s++) g.lineTo(r.pts[2 * s], r.pts[2 * s + 1]);
+    const a1 = pointAt(r, p1);
+    g.lineTo(a1[0], a1[1]);
+    g.stroke();
+  }
+
+  function sprite(img, p, R, alpha) {
+    if (alpha <= 0.004) return;
+    g.globalAlpha = Math.min(1, alpha);
+    g.drawImage(img, p[0] - R, p[1] - R, 2 * R, 2 * R);
+  }
+
+  function bead(p, r, core, alpha, glow, glowR) {
+    g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+    if (C.dark) sprite(glow, p, glowR, alpha * 0.55);
+    g.globalAlpha = Math.min(1, alpha);
+    g.fillStyle = core;
+    g.beginPath();
+    g.arc(p[0], p[1], r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // A packet spanning the 8 rails: a capsule from the lowest to the highest rail.
+  function capsule(p0, p1, r, alpha, glowR) {
+    g.lineCap = 'round';
+    if (C.dark) {
+      g.globalCompositeOperation = 'lighter';
+      sprite(C.glowPrim, [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2], glowR, alpha * 0.7);
+    } else {
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+      g.strokeStyle = C.page;
+      g.lineWidth = 2 * r + 2;
+      g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1] - 0.01); g.stroke();
+    }
+    g.globalAlpha = Math.min(1, alpha);
+    g.strokeStyle = C.primCore;
+    g.lineWidth = 2 * r;
+    g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1] - 0.01); g.stroke();
+  }
+
+  // Ripple on a node's roof: an iso circle around the hub.
+  function ripple(p, age, dur, color) {
+    const e = age / dur;
+    if (e < 0 || e > 1) return;
+    const rx = (0.06 + 0.26 * ease(e)) * L.a * 1.414;
+    g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+    g.globalAlpha = Math.pow(1 - e, 2.5) * (C.dark ? 0.55 : 0.45);
+    g.strokeStyle = color;
+    g.lineWidth = L.hair;
+    g.beginPath();
+    g.ellipse(p[0], p[1], rx, rx * 0.5, 0, 0, Math.PI * 2);
+    g.stroke();
+  }
+
+  function blocksLayer(img) {
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(img, 0, 0);
+    g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+  }
+
+  // Lights that sit on the nodes: GPU load, status lights, NVLink bursts.
+  function nodeLights(nodes, S) {
+    // 1. GPUs: load heats the heat-sink fins and tints the module top; bloom in dark mode.
+    g.globalCompositeOperation = C.dark ? 'lighter' : 'multiply';
+    g.fillStyle = C.glowFill;
+    const levels = [];
+    nodes.forEach((nd) => {
+      for (let k = 0; k < GPUS; k++) {
+        const lv = clamp01(gpuLevel(nd.n, k, S));
+        levels[nd.n * GPUS + k] = lv;
+        g.globalAlpha = lv * lv * C.glowTop;
+        g.fill(nd.tops[k]);
+      }
+    });
+    g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+    g.strokeStyle = C.finHot;
+    g.lineWidth = L.hair * (C.dark ? 0.9 : 0.8);
+    nodes.forEach((nd) => {
+      for (let k = 0; k < GPUS; k++) {
+        g.globalAlpha = clamp01(levels[nd.n * GPUS + k] * 1.15);
+        g.stroke(nd.fins[k]);
+      }
+    });
+    if (C.dark) {
+      nodes.forEach((nd) => {
+        for (let k = 0; k < GPUS; k++) {
+          const lv = levels[nd.n * GPUS + k];
+          sprite(C.glowPrim, nd.centers[k], L.a * 0.17, lv * lv * 0.55);
+        }
+      });
+    }
+
+    // 2. Status lights: one per gradient chunk, filled as reduced chunks arrive.
+    nodes.forEach((nd) => {
+      for (let c = 0; c < NODES; c++) {
+        const lv = ledLevel(nd.n, c, S);
+        const u = (lv * NODES - 1) / (NODES - 1);
+        const p = nd.leds[c];
+        g.globalCompositeOperation = 'source-over';
+        g.globalAlpha = 0.25 + 0.75 * u;
+        g.fillStyle = C.led;
+        g.beginPath();
+        g.ellipse(p[0], p[1], L.led, L.led, 0, 0, Math.PI * 2);
+        g.fill();
+        if (C.dark && u > 0.98) {
+          g.globalCompositeOperation = 'lighter';
+          sprite(C.glowPrim, p, L.led * 5, 0.5);
+        }
+      }
+    });
+
+    // 3. Tensor-parallel all-reduce bursts: GPUs to the NVSwitch and back.
+    if (S.phase === 'compute') {
+      nodes.forEach((nd) => {
+        const b = burstAt(nd.n, S.tau);
+        if (b < 0) return;
+        const env = Math.sin(Math.PI * b);
+        g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+        g.strokeStyle = C.coolLine;
+        g.lineWidth = L.hair;
+        if (C.dark) {
+          g.globalAlpha = env * 0.22;
+          nd.nvl.forEach((r) => strokeSpan(r, 0, 1));
+        }
+        // In: GPU to switch (in-switch reduction). Out: switch back to every GPU.
+        const out = b > 0.5;
+        const p = out ? 1 - ease((b - 0.55) / 0.45) : ease(b / 0.45);
+        if (b < 0.45 || b > 0.55) {
+          g.lineWidth = L.hair * 1.2;
+          g.globalAlpha = C.dark ? 0.75 : 0.8;
+          nd.nvl.forEach((r) => (out ? strokeSpan(r, p, p + 0.4) : strokeSpan(r, p - 0.4, p)));
+          nd.nvl.forEach((r) => bead(pointAt(r, p), L.bead * 0.75, C.coolCore, 0.95, C.glowCool, L.a * 0.07));
+        }
+        if (b > 0.4 && b < 0.75) ripple(nd.hub, b - 0.4, 0.35, C.coolLine);
+      });
+    }
+  }
+
+  // ---------- frame ----------
+  function draw(t) {
+    if (!L || !C) return;
+    const S = stateAt(t);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, L.pw, L.ph);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.drawImage(C.floor, 0, 0);
+    g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+    const commEnv = S.phase === 'comm' ? smooth(S.x / 0.3) * (1 - smooth((S.x - COMM + 0.2) / 0.3)) : 0;
+    const o = L.P(1, 1, 0);
+    // Dark mode: the ring's light spills into the streets while gradients flow.
+    if (C.dark) {
+      g.globalCompositeOperation = 'lighter';
+      g.save();
+      g.translate(o[0], o[1]);
+      g.scale(1, 0.5);
+      sprite(C.glowPrim, [0, 0], L.a * 2.6, 0.05 + 0.07 * commEnv);
+      g.restore();
+    }
+    // The step ticks: one ripple across the plaza floor.
+    if (S.phase === 'update') {
+      const e = S.x / (UPDATE + IDLE);
+      const rx = (0.5 + 2.3 * ease(e)) * L.a * 1.414;
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = Math.pow(1 - e, 2) * (C.dark ? 0.45 : 0.4);
+      g.strokeStyle = C.text;
+      g.lineWidth = L.hair;
+      g.beginPath();
+      g.ellipse(o[0], o[1], rx, rx * 0.5, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    blocksLayer(C.blocksBack);
+    nodeLights(L.nodesBack, S);
+    blocksLayer(C.blocksFront);
+    nodeLights(L.nodesFront, S);
+
+    // 4. Switch ports blink with ring traffic.
+    g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+    g.fillStyle = C.portLit;
+    L.ports.forEach((pt) => {
+      let a = 0;
+      if (S.phase === 'comm') a = 0.25 + 0.75 * Math.exp(-((S.frac + pt.k * 0.03) % 1) / 0.35);
+      else if (S.phase === 'compute') a = 0.12 * (0.5 + 0.5 * Math.sin(pt.n * 1.7 + pt.k * 2.3 + S.tau * 3));
+      if (a <= 0.01) return;
+      g.globalAlpha = a * C.portA;
+      g.fill(pt.path);
+    });
+
+    // 5. The ring: rails brighten while gradients flow.
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 0.55 + 0.45 * commEnv;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(C.ring, 0, 0);
+    g.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+
+    // 6. Ring all-reduce packets: every node sends one chunk per hop, on 8 rails.
+    // Brightness and size carry how many nodes' gradients the chunk already sums.
+    if (S.phase === 'comm') {
+      const sends = SENDS[S.hop];
+      const p = ease(S.frac / ARRIVE);
+      const travelling = S.frac < ARRIVE;
+      g.lineCap = 'round';
+      L.links.forEach((lk, r) => {
+        const amt = sends[r].amount / NODES;
+        const lum = 0.45 + 0.55 * amt;
+        if (travelling) {
+          const lo = lk.paths[0];
+          const hi = lk.paths[lk.paths.length - 1];
+          const p0 = Math.max(0, p - 0.26);
+          const tail = pointAt(lo, p0);
+          const head = pointAt(lo, p);
+          if (Math.hypot(head[0] - tail[0], head[1] - tail[1]) > 1) {
+            // Trail: the band between the lowest and highest rail, fading to the tail.
+            const gr = g.createLinearGradient(tail[0], tail[1], head[0], head[1]);
+            gr.addColorStop(0, C.primA(0));
+            gr.addColorStop(1, C.primA(lum * C.trail));
+            g.globalCompositeOperation = C.dark ? 'lighter' : 'source-over';
+            g.globalAlpha = 1;
+            g.fillStyle = gr;
+            g.strokeStyle = gr;
+            g.lineWidth = L.hair * 1.2;
+            const a = spanPoints(lo, p0, p);
+            const b = spanPoints(hi, p0, p).reverse();
+            g.beginPath();
+            a.concat(b).forEach((q, s) => (s ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])));
+            g.closePath();
+            g.fill();
+            g.stroke();
+          }
+          capsule(head, pointAt(hi, p), L.bead * (0.75 + 0.55 * amt), lum, L.a * (0.07 + 0.05 * amt));
+        }
+        const to = L.nodes[(r + 1) % NODES];
+        if (!travelling) ripple(to.hub, (S.frac - ARRIVE) * HOP, 0.34, C.primLine);
+        else if (S.hop > 0) ripple(to.hub, (S.frac + 1 - ARRIVE) * HOP, 0.34, C.primLine);
+      });
+    }
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+
+    drawHud(S);
+  }
+
+  function phaseText(S) {
+    if (S.phase === 'compute') return { text: (S.tau < FWD ? 'forward' : 'backward') + ' · tensor parallel ×8', color: C.coolText };
+    if (S.phase === 'comm') {
+      const rs = S.hop < NODES - 1;
+      const k = (rs ? S.hop : S.hop - NODES + 1) + 1;
+      return { text: 'ring all-reduce · ' + (rs ? 'reduce-scatter ' : 'all-gather ') + k + '/' + (NODES - 1), color: C.primText };
+    }
+    return { text: 'optimizer step', color: C.text };
+  }
+
+  function drawHud(S) {
+    const H = L.hud;
+    const x = H.x;
+    let y = H.y;
+    g.textBaseline = 'alphabetic';
+    g.font = '500 ' + (H.full ? H.fs + 1 : H.fs) + 'px ' + MONO;
+    g.fillStyle = C.text;
+    g.fillText('step ' + fmtInt(S.step), x, y);
+    if (!H.full) return;
+    const ph = phaseText(S);
+    y += Math.round(H.fs * 1.65);
+    g.font = '400 ' + H.fs + 'px ' + MONO;
+    g.fillStyle = ph.color;
+    g.beginPath();
+    g.arc(x + 2.5, y - H.fs * 0.33, 2.5, 0, Math.PI * 2);
+    g.fill();
+    g.fillText(ph.text, x + 10, y);
+    y += Math.round(H.fs * 1.5);
+    g.fillStyle = C.muted;
+    g.fillText(NODES + ' nodes × ' + GPUS + ' GPUs · data parallel ×' + NODES, x, y);
+    if (!H.strip) return;
+    // Step timeline: compute bar, 7 + 7 ring hops, optimizer step.
+    y += Math.round(H.fs * 1.4);
+    const wC = 46;
+    const wH = 6;
+    const gap = 5;
+    const x1 = x + wC + gap;
+    const x2 = x1 + HOPS * wH + gap;
+    let pos;
+    if (S.phase === 'compute') pos = x + wC * (S.tau / COMPUTE);
+    else if (S.phase === 'comm') pos = x1 + wH * (S.x / HOP);
+    else pos = x2 + 6 * clamp01(S.x / UPDATE);
+    g.lineWidth = 1;
+    g.strokeStyle = C.rule;
+    g.beginPath();
+    g.moveTo(x, y + 0.5); g.lineTo(x + wC, y + 0.5);
+    for (let h = 0; h < HOPS; h++) {
+      const hx = Math.round(x1 + h * wH) + 0.5;
+      g.moveTo(hx, y - (h === NODES - 1 ? 3 : 1.5)); g.lineTo(hx, y + 2.5);
+    }
+    g.stroke();
+    g.fillStyle = C.rule;
+    g.fillRect(x2 + 2, y - 1, 3, 3);
+    g.strokeStyle = S.phase === 'compute' ? C.coolText : C.primText;
+    g.fillStyle = g.strokeStyle;
+    g.beginPath();
+    g.moveTo(x, y + 0.5);
+    g.lineTo(Math.min(pos, x + wC), y + 0.5);
+    g.stroke();
+    if (S.phase !== 'compute') {
+      for (let h = 0; h < HOPS; h++) {
+        if (x1 + h * wH > pos) break;
+        g.fillRect(Math.round(x1 + h * wH), y - (h === NODES - 1 ? 3 : 1.5), 1, h === NODES - 1 ? 5.5 : 4);
+      }
+    }
+    if (S.phase === 'update') { g.fillStyle = C.text; g.fillRect(x2 + 2, y - 1, 3, 3); }
+  }
+
+  if (!ctx.reducedMotion) {
+    let t0 = null;
+    ctx.animate((time) => {
+      if (t0 === null) t0 = time;
+      now = T_START + ((time - t0) / 1000) * SPEED;
+      draw(now);
+    });
+  }
+
+  return ({ width, height }) => {
+    if (!width || !height) return;
+    // Nearest data-theme: the article root, or a themed panel on the /banners page
+    const isDark = (ctx.root.closest('[data-theme]') || document.documentElement).getAttribute('data-theme') === 'dark';
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    L = layout(width, height, dpr);
+
+    const cs = getComputedStyle(ctx.root);
+    const prop = (name, fb) => cs.getPropertyValue(name).trim() || fb;
+    const textCss = prop('--text-color', isDark ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.85)');
+    const mutedCss = prop('--muted-color', isDark ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.6)');
+    const ink = rgbOf(textCss);
+    const page = rgbOf(prop('--page-bg', isDark ? '#0f1115' : '#ffffff'));
+    const cat = ctx.colors('categorical', 4);
+    const prim = rgbOf(prop('--primary-color', cat[0]));
+    const cool = rgbOf(cat[2]);
+    const tone = (k, tint, amt) => rgba(mix(mix(page, ink, k), tint, amt));
+    const white = [255, 255, 255];
+    const tones = (t, l, r, e, inn, tint, amt) => ({ top: tone(t, tint, amt), left: tone(l, tint, amt), right: tone(r, tint, amt), edge: rgba(ink, e), inner: rgba(ink, inn) });
+    C = isDark ? {
+      dark: true,
+      node: tones(0.095, 0.06, 0.032, 0.34, 0.17, prim, 0.03),
+      mod: tones(0.13, 0.08, 0.048, 0.3, 0.15, prim, 0.02),
+      strip: tones(0.05, 0.035, 0.02, 0.26, 0.12, cool, 0.12),
+      sw: tones(0.11, 0.07, 0.04, 0.36, 0.17, cool, 0.07),
+      swCap: tones(0.15, 0.09, 0.05, 0.3, 0.15, cool, 0.07),
+      grid: rgba(ink, 0.06), curb: rgba(ink, 0.11), shadow: 'rgba(0,0,0,0.45)',
+      tray: rgba(mix(page, cool, 0.12)), trayEdge: rgba(ink, 0.12),
+      detail: rgba(ink, 0.16), fin: rgba(ink, 0.2), socket: rgba(ink, 0.14), label: rgba(ink, 0.5),
+      arc: rgba(prim, 0.2), arcEdge: rgba(prim, 0.6), band: rgba(prim, 0.07), tether: rgba(prim, 0.5),
+      glowFill: rgba(prim), glowTop: 0.3, finHot: rgba(mix(prim, white, 0.3)),
+      led: rgba(mix(prim, white, 0.2)),
+      portLit: rgba(cool), portA: 0.9,
+      coolLine: rgba(cool), coolCore: rgba(mix(cool, white, 0.45)),
+      primLine: rgba(prim), primCore: rgba(mix(prim, white, 0.4)), trail: 0.55,
+    } : {
+      dark: false,
+      node: tones(0.012, 0.065, 0.15, 0.72, 0.32, prim, 0.015),
+      mod: tones(0.03, 0.11, 0.22, 0.62, 0.28, prim, 0.01),
+      strip: tones(0.2, 0.26, 0.34, 0.6, 0.3, cool, 0.12),
+      sw: tones(0.02, 0.07, 0.15, 0.75, 0.32, cool, 0.05),
+      swCap: tones(0.05, 0.1, 0.18, 0.65, 0.3, cool, 0.05),
+      grid: rgba(ink, 0.055), curb: rgba(ink, 0.11), shadow: 'rgba(0,0,0,0.1)',
+      tray: rgba(mix(page, ink, 0.05)), trayEdge: rgba(ink, 0.18),
+      detail: rgba(ink, 0.25), fin: rgba(ink, 0.32), socket: rgba(ink, 0.16), label: rgba(ink, 0.55),
+      arc: rgba(mix(prim, ink, 0.15), 0.3), arcEdge: rgba(mix(prim, ink, 0.25), 0.85), band: rgba(prim, 0.13), tether: rgba(mix(prim, ink, 0.2), 0.6),
+      glowFill: rgba(prim), glowTop: 0.2, finHot: rgba(mix(prim, ink, 0.18)),
+      led: rgba(mix(prim, ink, 0.12)),
+      portLit: rgba(mix(cool, ink, 0.15)), portA: 1,
+      coolLine: rgba(mix(cool, ink, 0.15)), coolCore: rgba(mix(cool, ink, 0.25)),
+      primLine: rgba(mix(prim, ink, 0.12)), primCore: rgba(mix(prim, ink, 0.22)), trail: 0.6,
+    };
+    C.page = rgba(page);
+    C.text = textCss;
+    C.muted = mutedCss;
+    C.rule = rgba(ink, isDark ? 0.3 : 0.25);
+    C.primText = rgba(mix(prim, ink, isDark ? 0.1 : 0.35));
+    C.coolText = rgba(mix(cool, ink, isDark ? 0.1 : 0.35));
+    C.glowPrim = glowSprite(prim);
+    C.glowCool = glowSprite(cool);
+    C.station = C.primLine;
+    const primTrail = rgbOf(C.primLine);
+    C.primA = (al) => rgba(primTrail, al);
+    C.floor = buildFloor();
+    C.blocksBack = buildBlocks(false);
+    C.blocksFront = buildBlocks(true);
+    C.ring = buildRing();
+    draw(now);
+  };
+}, { resize: 'size', deps: [], lazy: false });
+</script>
