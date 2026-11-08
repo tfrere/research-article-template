@@ -19,7 +19,7 @@ html {
   font-weight: 600;
   font-size: clamp(22px, 2.6vw, 32px);
   line-height: 1.2;
-  margin: var(--spacing-10) 0 var(--spacing-5);
+  margin: var(--spacing-8) 0 var(--spacing-4);
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--border-color);
 }
@@ -28,7 +28,7 @@ html {
   font-weight: 700;
   font-size: clamp(18px, 2.1vw, 22px);
   line-height: 1.25;
-  margin: var(--spacing-8) 0 var(--spacing-4);
+  margin: var(--spacing-6) 0 var(--spacing-3);
 }
 
 .content-grid main h4 {
@@ -36,7 +36,12 @@ html {
   text-transform: uppercase;
   font-size: 16px;
   line-height: 1.2;
-  margin: var(--spacing-6) 0 var(--spacing-4);
+  margin: var(--spacing-5) 0 var(--spacing-3);
+}
+
+.content-grid main h2 + :is(h3, h4),
+.content-grid main h3 + h4 {
+  margin-top: 0;
 }
 
 .content-grid main a {

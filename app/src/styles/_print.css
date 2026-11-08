@@ -54,16 +54,27 @@
     --link-underline-hover: rgba(0, 0, 0, .4);
   }
 
-  /* Force single column to reduce widows/orphans and awkward breaks */
-  .content-grid {
-    grid-template-columns: 1fr !important;
+  /* Single column: the page grid keeps its named lines, all on one track */
+  :root {
+    --layout-prose: 100%;
+    --layout-content-top: 32px;
+    --layout-cols:
+      [screen-start] 0
+      [page-start toc-start toc-end outset-start body-start] minmax(0, 1fr)
+      [body-end outset-end margin-start margin-end page-end] 0
+      [screen-end];
+  }
+
+  .content-grid > main > :is(.wide, .full-width, .html-embed--wide) {
+    grid-column: body;
+    padding: 0;
+    background: none;
+    border: 0;
   }
 
   .table-of-contents,
-  .right-aside,
-  .toc-mobile-toggle,
-  .toc-mobile-backdrop,
-  .toc-mobile-sidebar {
+  .toc-topbar,
+  .toc-backdrop {
     display: none !important;
   }
 
@@ -122,7 +133,7 @@
 
 
 @media print {
-  .meta-container-cell--pdf {
+  .meta-col--res {
     display: none !important;
   }
 }

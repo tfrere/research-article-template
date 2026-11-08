@@ -1,120 +1,96 @@
 /* ============================================================================ */
-/* Layout – 3-column grid (Table of Contents / Article / Aside) */
+/* Page grid (tokens in _grid.css)                                              */
+/* ---------------------------------------------------------------------------- */
+/* .content-grid holds the TOC rail and <main> on the same row; <main> spans    */
+/* the screen and repeats the same named lines, so every block picks a column:  */
+/* body by default, .wide and .full-width break out, sidenotes go to margin.    */
 /* ============================================================================ */
 
 .content-grid {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 var(--content-padding-x);
-  margin-top: 40px;
   display: grid;
-  grid-template-columns: 260px minmax(0, 680px) 260px;
-  gap: 32px;
+  grid-template-columns: var(--layout-cols);
   align-items: start;
+  margin-top: var(--layout-content-top);
 }
 
-.content-grid>main {
-  max-width: 100%;
+.content-grid > main {
+  grid-column: screen;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: var(--layout-cols);
+  align-content: start;
+  min-width: 0;
   margin: 0;
   padding: 0;
 }
 
-.content-grid>main>*:first-child {
+.content-grid > main > * {
+  grid-column: body;
+  min-width: 0;
+}
+
+/* The first body line, the first TOC line and the first sidenote share a top edge */
+.content-grid > main > :first-child {
   margin-top: 0;
 }
 
-@media (--bp-content-collapse) {
-  .content-grid {
-    overflow: hidden;
-    display: block;
-    margin-top: var(--spacing-2);
-  }
-
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .table-of-contents {
-    position: static;
-    display: none;
-  }
-
-  .toc-mobile-toggle {
-    display: flex;
-  }
-
-  .toc-mobile-backdrop {
-    display: block;
-  }
-
-  .toc-mobile-sidebar {
-    display: flex;
-  }
-
-  .footer-inner {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .footer-inner>.footer-heading {
-    grid-column: auto;
-    margin-top: 16px;
-  }
-
-  .footer-inner {
-    display: block;
-    padding: 40px 16px;
-  }
+/* Prose measure */
+.content-grid > main > :is(p, ul, ol, h2, h3, h4, blockquote) {
+  max-width: var(--layout-prose);
 }
 
+.content-grid > main :is(p, li) {
+  font-size: var(--layout-prose-font-size);
+}
 
+/* Long references, URLs and DOIs wrap inside their column; inline citations never break */
+.sidenote,
+.footer li,
+.meta-col {
+  overflow-wrap: anywhere;
+}
+
+.content-grid main a[href^="#bib-"] {
+  white-space: nowrap;
+}
 
 /* ============================================================================ */
-/* Width helpers – slightly wider than main column, and full-width to viewport */
-/* ---------------------------------------------------------------------------- */
+/* Width helpers                                                                */
+/* ============================================================================ */
 
 .wide,
 .full-width {
   box-sizing: border-box;
   position: relative;
   z-index: var(--z-elevated);
-  background-color: var(--page-bg);
 }
 
-.wide {
-  /* Target up to ~1100px while staying within viewport minus page gutters */
-  width: min(1100px, 100vw - var(--content-padding-x) * 4);
-  margin-left: 50%;
-  transform: translateX(-50%);
-  padding: calc(var(--content-padding-x)*4);
-  border-radius: calc(var(--button-radius)*4);
-  background-color: var(--page-bg);
-  -webkit-mask:
-    linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%),
-    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
-  -webkit-mask-composite: intersect;
-  mask:
-    linear-gradient(to right, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%),
-    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
-  mask-composite: intersect;
+.content-grid > main > .wide,
+.content-grid > main > .html-embed--wide {
+  grid-column: body-start / margin-end;
 }
 
-.wide>* {
-  margin-bottom: 0 !important;
+/* <HtmlEmbed wide> follows the grid instead of its own centered 1100px box */
+.content-grid > main > .html-embed--wide {
+  width: auto;
+  margin-left: 0;
+  padding: 0;
+  transform: none;
+  border-radius: 0;
+  -webkit-mask: none;
+  mask: none;
 }
 
-.full-width {
-  /* Span the full viewport width and center relative to viewport */
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  padding: calc(var(--content-padding-x)*4);
-  border-radius: calc(var(--button-radius)*4);
-  background-color: var(--page-bg);
-  -webkit-mask:
-    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
-  mask:
-    linear-gradient(to bottom, transparent 0px, black 20px, black calc(100% - 20px), transparent 100%);
+.content-grid > main > .full-width {
+  grid-column: screen;
+  padding: var(--spacing-5);
+  background: color-mix(in srgb, var(--primary-color) 5%, var(--surface-bg));
+  border-block: 1px solid var(--border-color);
+}
+
+.full-width > * {
+  max-width: 1800px;
+  margin-inline: auto;
 }
 
 .full-width figure figcaption {
@@ -122,14 +98,13 @@
 }
 
 @media (--bp-content-collapse) {
+  .content-grid > main > :is(.wide, .html-embed--wide) {
+    grid-column: screen;
+    padding-inline: var(--layout-outer);
+  }
 
-  .wide,
-  .full-width {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-    padding: 0;
-    transform: none;
+  .content-grid > main > .full-width {
+    padding: var(--spacing-4) var(--layout-outer);
   }
 }
 
@@ -148,7 +123,7 @@
   border-radius: 50%;
   border: 1px solid var(--border-color);
   background: var(--page-bg);
-  box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,54 +132,19 @@
   color: var(--text-color);
   transition: transform 150ms ease, box-shadow 150ms ease;
 }
+
 #theme-toggle:active {
   transform: scale(0.92);
 }
 
 @media (--bp-content-collapse) {
   #theme-toggle {
-    display: none;
+    top: var(--spacing-2);
+    left: var(--spacing-2);
+    width: 36px;
+    height: 36px;
   }
 }
-
-/* ------------------------------------------------------------------------- */
-/* Hero meta bar responsiveness                                               */
-/* Two columns at collapse breakpoint, then one column below small screens    */
-/* ------------------------------------------------------------------------- */
-@media (--bp-md) {
-  header.meta .meta-container {
-    display: flex;
-    flex-wrap: wrap;
-    row-gap: 12px;
-    column-gap: 8px;
-    max-width: 100%;
-    padding: 0 var(--spacing-4);
-  }
-
-  header.meta .meta-container .meta-container-cell {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 0;
-  }
-}
-
-@media (--bp-xxs) {
-  header.meta .meta-container .meta-container-cell {
-    flex-basis: 100%;
-    text-align: center;
-  }
-
-  /* Center ordered list numbers within meta (e.g., affiliations) */
-  header.meta .affiliations {
-    list-style-position: inside;
-    padding-left: 0;
-    margin-left: 0;
-  }
-
-  header.meta .affiliations li {
-    text-align: center;
-  }
-}
-
 
 /* ------------------------------------------------------------------------- */
 /* D3 neural embed responsiveness                                            */
@@ -256,7 +196,7 @@
 /* ============================================================================ */
 /* "paper" template - academic project-page layout (single centered column)     */
 /* Activated by frontmatter `template: "paper"` -> data-template="paper"        */
-/* Reference: academic project pages like diffusion-cot.github.io               */
+/* The single column itself comes from the paper tokens in _grid.css.           */
 /* ============================================================================ */
 
 /* ---- Paper hero banner: placed between meta and content in index.astro ---- */
@@ -267,12 +207,12 @@
   padding: 0 16px;
 }
 
-.paper-hero-banner :global(.html-embed) {
+.paper-hero-banner .html-embed {
   border-radius: 8px;
   overflow: hidden;
 }
 
-.paper-hero-banner :global(.html-embed__card) {
+.paper-hero-banner .html-embed__card {
   border-radius: 8px;
 }
 
@@ -284,22 +224,14 @@
 }
 
 /* When no banner, separator is directly below meta */
-[data-template="paper"] .meta + .content-grid,
 [data-template="paper"] .hero-paper-meta + .content-grid {
   margin-top: 32px;
   border-top: 1px solid var(--border-color);
   padding-top: 40px;
 }
 
-/* ---- Content grid: single centered column, no TOC ---- */
-
-[data-template="paper"] .content-grid {
-  grid-template-columns: minmax(0, 780px);
-  justify-content: center;
-  margin-top: 0;
-}
-
-[data-template="paper"] .table-of-contents {
+[data-template="paper"] .table-of-contents,
+[data-template="paper"] .toc-topbar {
   display: none;
 }
 
@@ -315,12 +247,7 @@
   padding-bottom: 0;
 }
 
-[data-template="paper"] .content-grid > main h2 a {
-  background: none;
-}
-
-[data-template="paper"] .content-grid > main h2:first-child,
-[data-template="paper"] .content-grid > main > *:first-child h2 {
+[data-template="paper"] .content-grid > main > h2:first-child {
   margin-top: 0;
 }
 
@@ -329,6 +256,10 @@
   font-weight: 600;
   margin-top: 2em;
   margin-bottom: 0.6em;
+}
+
+[data-template="paper"] .content-grid > main :is(p, li) {
+  font-size: inherit;
 }
 
 /* ---- No figure numbering ---- */
@@ -343,15 +274,11 @@
   content: none;
 }
 
-/* ---- Footer: simple single-column block layout ---- */
+/* ---- Footer: headings above their content ---- */
 
-[data-template="paper"] .footer-inner {
-  display: block;
-  max-width: 780px;
-}
-
-[data-template="paper"] .references-block > .footer-heading,
-[data-template="paper"] .reuse-block > .footer-heading {
+[data-template="paper"] .footer-inner > * > .footer-heading {
+  grid-column: body;
+  justify-self: start;
   text-align: left;
   padding-right: 0;
   margin-top: 16px;

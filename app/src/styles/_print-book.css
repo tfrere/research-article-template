@@ -55,13 +55,11 @@
 
   #theme-toggle,
   .table-of-contents,
-  .toc-mobile-toggle,
-  .toc-mobile-backdrop,
-  .toc-mobile-sidebar,
-  .right-aside,
+  .toc-topbar,
+  .toc-backdrop,
   nav:not(.book-toc),
   .code-lang-chip,
-  .meta-container-cell--pdf,
+  .meta-col--res,
   .interactive-only,
   .html-embed__download,
   .accordion__chevron,
@@ -143,8 +141,11 @@
     padding-bottom: 25mm;
   }
 
-  .meta-container {
+  .meta-cols {
     display: flex;
+    width: auto;
+    background: none;
+    border: none;
     flex-wrap: wrap;
     gap: 5mm 15mm;
     font-size: 9.5pt;
@@ -153,12 +154,12 @@
     padding: 0;
   }
 
-  .meta-container-cell {
+  .meta-col {
     text-align: left;
     max-width: none;
   }
 
-  .meta-container-cell h3 {
+  .meta-col .meta-label {
     font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 8pt;
     text-transform: uppercase;
@@ -168,8 +169,8 @@
     font-weight: 600;
   }
 
-  .meta-container-cell p,
-  .meta-container-cell ul {
+  .meta-col p,
+  .meta-col ul {
     margin: 0;
   }
 
@@ -179,8 +180,8 @@
     border: none !important;
   }
 
-  .meta-container-cell p,
-  .meta-container-cell a {
+  .meta-col p,
+  .meta-col a {
     font-size: 11pt;
     line-height: 1.5;
   }
@@ -191,25 +192,25 @@
     font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
 
-  .authors {
+  .meta-authors {
     list-style: none;
     padding: 0;
     margin: 0;
   }
 
-  .authors li {
+  .meta-authors li {
     display: inline;
   }
 
-  .authors li::after {
+  .meta-authors li::after {
     content: ", ";
   }
 
-  .authors li:last-child::after {
+  .meta-authors li:last-child::after {
     content: "";
   }
 
-  .authors li {
+  .meta-authors li {
     padding: 0;
   }
 

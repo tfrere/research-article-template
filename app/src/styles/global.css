@@ -1,7 +1,13 @@
 @import './_variables.css';
+@import './_grid.css';
 @import './_reset.css';
 @import './_base.css';
 @import './_layout.css';
+@import './layout/_hero.css';
+@import './layout/_toc.css';
+@import './layout/_headings.css';
+@import './layout/_sidenote.css';
+@import './layout/_footer.css';
 @import './_print.css';
 @import './components/_code.css';
 @import './components/_button.css';
