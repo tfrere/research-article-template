@@ -1,0 +1,395 @@
+<div role="img" aria-label="This article woven as a tapestry: every section is a vertical warp thread, in reading order and colored by chapter. Horizontal weft bands stand for prose, code, components, and tables and math; a section's thread floats over a band in proportion to how much of that kind it holds." class="banner-tapestry">
+  <canvas class="banner-tapestry__canvas" aria-hidden="true"></canvas>
+  <span class="banner-tapestry__caption"></span>
+</div>
+<style>
+  .banner-tapestry {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 12 / 5;
+    min-height: 180px;
+  }
+  .hero-banner .banner-tapestry {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+  .banner-tapestry__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .banner-tapestry__caption {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font: 500 10px/1.2 var(--font-mono, ui-monospace, monospace);
+    letter-spacing: .02em;
+    color: var(--muted-color);
+    opacity: .85;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .banner-tapestry__caption b {
+    font-weight: 600;
+  }
+  @media print {
+    .banner-tapestry__caption { display: none; }
+  }
+</style>
+<script>
+  (() => {
+    const ROOT = 'banner-tapestry';
+    const DATA_FILE = 'article-anatomy.json';
+    const MIN_SECTION_WORDS = 40;
+    const ROWS_PER_BAND = 9;
+    // Weft bands, top to bottom: which token kinds each one counts
+    const BANDS = [
+      { label: 'prose', kinds: 'p' },
+      { label: 'code', kinds: 'c' },
+      { label: 'components', kinds: 'x' },
+      { label: 'tables, math', kinds: 'tmh' },
+    ];
+    const MS_PER_WORD = 8;
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const fetchFirstAvailable = async (paths) => {
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, { cache: 'force-cache' });
+          if (r.ok) return r.json();
+        } catch (_) {}
+      }
+      throw new Error(`${DATA_FILE} not found`);
+    };
+
+    const mount = (root) => {
+      root.dataset.mounted = 'true';
+      const canvas = root.querySelector('canvas');
+      const caption = root.querySelector(`.${ROOT}__caption`);
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+      let data = null;
+      let theme = null;
+      let model = null;
+      let layer = null;
+      let W = 0, H = 0, dpr = 1;
+      let visible = true;
+      let raf = 0, last = 0, clock = 19000;
+
+      const readTheme = () => {
+        const host = root.closest('[data-theme]') || document.documentElement;
+        const dark = host.getAttribute('data-theme') === 'dark';
+        const cs = getComputedStyle(root);
+        const got = window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10);
+        const cat = got && got.length ? got : d3.schemeTableau10;
+        const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0];
+        const hues = d3.interpolateHcl(cat[0], cat[Math.floor(cat.length / 2)]);
+        return {
+          dark,
+          ink: cs.getPropertyValue('--text-color').trim() || (dark ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.85)'),
+          bg: cs.getPropertyValue('--page-bg').trim() || (dark ? '#0f1115' : '#ffffff'),
+          primary,
+          hue: (t) => d3.color(hues(t)),
+        };
+      };
+
+      // Sections in reading order, split at chapter starts and headings
+      const sectionsOf = () => {
+        const cuts = Array.from(new Set([0, ...data.chapters.map((c) => c.start), ...data.headings.map((h) => h.at)]))
+          .filter((v) => v < data.total)
+          .sort(d3.ascending);
+        const merged = [];
+        cuts.forEach((start, i) => {
+          const end = i + 1 < cuts.length ? cuts[i + 1] : data.total;
+          const prev = merged[merged.length - 1];
+          if (prev && (end - start < MIN_SECTION_WORDS || prev.end - prev.start < MIN_SECTION_WORDS)) prev.end = end;
+          else merged.push({ start, end });
+        });
+        const chapterStarts = data.chapters.map((c) => c.start);
+        return merged.map((s) => {
+          const n = s.end - s.start;
+          const share = BANDS.map((b) => {
+            let k = 0;
+            for (let i = s.start; i < s.end; i++) if (b.kinds.includes(data.kinds[i])) k++;
+            return k / n;
+          });
+          return { ...s, n, share, chapter: d3.bisectRight(chapterStarts, s.start) - 1 };
+        });
+      };
+
+      // Weave draft: warp thread s floats over weft row j when the section holds enough
+      // of the band's kind; floats are centered in their band, longest = densest section
+      const build = () => {
+        if (!data || !W || !H) return null;
+        const sections = sectionsOf();
+        const cols = sections.length;
+        const rows = BANDS.length * ROWS_PER_BAND;
+        const bandGap = 0.9; // rows of plain weft between bands
+        const mx = W < 560 ? W * 0.04 : Math.max(W * 0.1, 84), my = H * 0.1;
+        const cw = (W - 2 * mx) / cols;
+        const ch = (H - 2 * my - 12) / (rows + bandGap * (BANDS.length - 1));
+        const maxShare = BANDS.map((_, b) => d3.max(sections, (s) => s.share[b]) || 1);
+        const over = sections.map((s) => {
+          const col = new Uint8Array(rows);
+          BANDS.forEach((_, b) => {
+            const v = s.share[b] / maxShare[b];
+            const m = v > 0 ? Math.max(1, Math.round(v * ROWS_PER_BAND)) : 0;
+            const first = Math.floor((ROWS_PER_BAND - m) / 2);
+            for (let r = 0; r < m; r++) col[b * ROWS_PER_BAND + first + r] = 1;
+          });
+          return col;
+        });
+        const rowY = (j) => my + (j + Math.floor(j / ROWS_PER_BAND) * bandGap) * ch;
+        let t = 0;
+        sections.forEach((s) => { s.t0 = t; t += s.n * MS_PER_WORD; s.t1 = t; });
+        return { sections, cols, rows, mx, my, cw, ch, over, rowY, loop: t };
+      };
+
+      // Thread volume: bright core, darker edges, across the thread
+      const yarn = (c, x0, y0, x1, y1, color, dark) => {
+        const g = c.createLinearGradient(x0, y0, x1, y1);
+        const base = d3.color(color);
+        const edge = base.darker(dark ? 0.9 : 0.6).formatRgb();
+        g.addColorStop(0, edge);
+        g.addColorStop(0.35, base.brighter(dark ? 0.25 : 0.15).formatRgb());
+        g.addColorStop(0.65, base.formatRgb());
+        g.addColorStop(1, edge);
+        return g;
+      };
+
+      const roundRect = (c, x, y, w, h, r) => {
+        r = Math.min(r, w / 2, h / 2);
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
+      };
+
+      const warpColor = (s) => theme.hue(s.chapter / Math.max(1, data.chapters.length - 1));
+      const weftColor = () => d3.color(d3.interpolateRgb(theme.bg, d3.color(theme.ink).copy({ opacity: 1 }).formatRgb())(theme.dark ? 0.24 : 0.16));
+
+      const paintLayer = () => {
+        const l = document.createElement('canvas');
+        l.width = canvas.width;
+        l.height = canvas.height;
+        const c = l.getContext('2d');
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const { sections, cols, rows, mx, cw, ch, over, rowY } = model;
+        const ww = cw * 0.8, wh = ch * 0.62;
+        const warpX = (s) => mx + s * cw + (cw - ww) / 2;
+        const weftY = (j) => rowY(j) + (ch - wh) / 2;
+        const weft = weftColor();
+
+        // 1. Warp threads, full length, under everything
+        sections.forEach((s, i) => {
+          const x = warpX(i);
+          c.beginPath();
+          roundRect(c, x, rowY(0) - ch * 0.6, ww, rowY(rows - 1) + ch * 1.6 - rowY(0), ww / 2);
+          c.fillStyle = yarn(c, x, 0, x + ww, 0, d3.interpolateRgb(theme.bg, warpColor(s).formatRgb())(0.45), theme.dark);
+          c.fill();
+        });
+        // 2. Weft rows over the warp
+        for (let j = 0; j < rows; j++) {
+          const y = weftY(j);
+          c.beginPath();
+          roundRect(c, mx - cw * 0.3, y, cols * cw + cw * 0.6, wh, wh / 2);
+          c.fillStyle = yarn(c, 0, y, 0, y + wh, weft, theme.dark);
+          c.fill();
+        }
+        // 3. Twill binding: the warp ties the weft down on a diagonal, as cloth
+        sections.forEach((s, i) => {
+          const x = warpX(i);
+          c.beginPath();
+          for (let j = 0; j < rows; j++) if (!over[i][j] && (i + j) % 4 === 0) roundRect(c, x + ww * 0.1, weftY(j) - ch * 0.08, ww * 0.8, wh + ch * 0.16, ww * 0.3);
+          c.fillStyle = yarn(c, x, 0, x + ww, 0, d3.interpolateRgb(theme.bg, warpColor(s).formatRgb())(0.6), theme.dark);
+          c.fill();
+        });
+        // 4. Floats: the warp comes back over the weft where its section holds that kind
+        sections.forEach((s, i) => {
+          const col = over[i];
+          const x = warpX(i);
+          const fill = yarn(c, x, 0, x + ww, 0, warpColor(s), theme.dark);
+          for (let j = 0; j < rows; j++) {
+            if (!col[j] || (j > 0 && col[j - 1] && Math.floor((j - 1) / ROWS_PER_BAND) === Math.floor(j / ROWS_PER_BAND))) continue;
+            let e = j;
+            while (e + 1 < rows && col[e + 1] && Math.floor((e + 1) / ROWS_PER_BAND) === Math.floor(j / ROWS_PER_BAND)) e++;
+            const y0 = weftY(j) - ch * 0.12, y1 = weftY(e) + wh + ch * 0.12;
+            c.beginPath();
+            roundRect(c, x, y0, ww, y1 - y0, ww * 0.45);
+            c.fillStyle = fill;
+            c.fill();
+            // Ply twist on the float, a few diagonal hairlines
+            c.save();
+            c.clip();
+            c.beginPath();
+            for (let y = y0 - ww; y < y1 + ww; y += Math.max(3, ww * 0.55)) { c.moveTo(x, y + ww); c.lineTo(x + ww, y); }
+            c.lineWidth = Math.max(0.5, ww * 0.06);
+            c.strokeStyle = theme.dark ? 'rgba(0,0,0,.22)' : 'rgba(0,0,0,.12)';
+            c.stroke();
+            c.restore();
+          }
+        });
+        // Band labels in the left margin
+        if (W >= 560) {
+          c.font = `500 ${Math.max(9, Math.min(11, ch * 0.9))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+          c.textAlign = 'right';
+          c.textBaseline = 'middle';
+          c.fillStyle = d3.color(theme.ink).copy({ opacity: 0.6 }).formatRgb();
+          BANDS.forEach((b, k) => {
+            const j = k * ROWS_PER_BAND + ROWS_PER_BAND / 2;
+            c.fillText(b.label, mx - cw * 0.8, rowY(Math.floor(j)) + (j % 1 ? ch : ch / 2));
+          });
+        }
+        return l;
+      };
+
+      const draw = (t) => {
+        if (!model || !theme || !layer) return;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(layer, 0, 0);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const { sections, mx, cw, ch, rows, over, rowY, loop } = model;
+        const now = t % loop;
+        const ww = cw * 0.8, wh = ch * 0.62, fade = 1800;
+
+        // Fringe: loose warp ends above and below the weave, swaying slightly
+        const top = rowY(0) - ch * 0.6, bottom = rowY(rows - 1) + ch;
+        const len = Math.min(top - 4, ch * 3.2);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(0.7, ww * 0.16);
+        sections.forEach((s, i) => {
+          const x = mx + i * cw + cw / 2;
+          ctx.beginPath();
+          for (const [y0, dir] of [[top + ww * 0.4, -1], [bottom - ww * 0.4, 1]]) {
+            for (let k = -1; k <= 1; k += 2) {
+              const l = len * (0.78 + 0.22 * Math.abs(Math.sin(i * 12.9898 + k * 78.233 + dir)));
+              const sway = Math.sin(t / 2100 + i * 0.37 + dir) * l * 0.16;
+              const x0 = x + k * ww * 0.2;
+              ctx.moveTo(x0, y0);
+              ctx.quadraticCurveTo(x0 + k * ww * 0.08 + sway * 0.2, y0 + dir * l * 0.55, x0 + k * ww * 0.12 + sway, y0 + dir * l);
+            }
+          }
+          ctx.strokeStyle = d3.interpolateRgb(theme.bg, warpColor(s).formatRgb())(0.7);
+          ctx.stroke();
+        });
+
+        // The shuttle reads the sections in order: the thread being read glows on its floats
+        const lit = d3.color(theme.dark ? '#fff' : theme.primary);
+        sections.forEach((s, i) => {
+          let glow = 0;
+          if (now >= s.t0 && now < s.t1) glow = Math.min(1, (now - s.t0) / 250);
+          else if (now >= s.t1 && now < s.t1 + fade) glow = 1 - (now - s.t1) / fade;
+          if (glow <= 0.01) return;
+          const x = mx + i * cw + (cw - ww) / 2;
+          ctx.beginPath();
+          for (let j = 0; j < rows; j++) {
+            if (!over[i][j]) continue;
+            ctx.rect(x, rowY(j) + (ch - wh) / 2 - ch * 0.12, ww, wh + ch * 0.5);
+          }
+          ctx.fillStyle = lit.copy({ opacity: (theme.dark ? 0.32 : 0.28) * glow }).formatRgb();
+          ctx.fill();
+          if (now >= s.t0 && now < s.t1) {
+            const p = (now - s.t0) / (s.t1 - s.t0);
+            const y = rowY(0) - ch * 0.4 + p * (rowY(rows - 1) + ch * 1.4 - rowY(0));
+            const R = Math.max(6, cw * 0.7);
+            const g = ctx.createRadialGradient(x + ww / 2, y, 0, x + ww / 2, y, R);
+            g.addColorStop(0, d3.color(theme.primary).copy({ opacity: theme.dark ? 0.75 : 0.6 }).formatRgb());
+            g.addColorStop(1, d3.color(theme.primary).copy({ opacity: 0 }).formatRgb());
+            ctx.fillStyle = g;
+            ctx.fillRect(x + ww / 2 - R, y - R, R * 2, R * 2);
+          }
+        });
+      };
+
+      const animating = () => visible && !reduceMotion.matches && !document.hidden;
+      const frame = (now) => {
+        raf = 0;
+        clock += Math.min(50, now - (last || now));
+        last = now;
+        draw(clock);
+        if (animating()) raf = requestAnimationFrame(frame);
+      };
+      const schedule = () => {
+        if (raf || !animating()) { if (!raf) draw(clock); return; }
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      };
+
+      const writeCaption = () => {
+        if (!caption || !model) return;
+        caption.textContent = `${model.sections.length} sections woven in reading order, each floats over the weft as much as it holds of each kind`;
+        caption.style.display = W < 560 ? 'none' : '';
+      };
+
+      const resize = () => {
+        const w = root.clientWidth, h = root.clientHeight;
+        if (!w || !h) return;
+        dpr = Math.min(3, window.devicePixelRatio || 1);
+        if (w === W && h === H && canvas.width === Math.round(w * dpr)) return;
+        W = w; H = h;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        model = build();
+        layer = paintLayer();
+        writeCaption();
+        draw(clock);
+      };
+      const retheme = () => {
+        theme = readTheme();
+        if (model) layer = paintLayer();
+        writeCaption();
+        draw(clock);
+      };
+
+      ensureD3(async () => {
+        try {
+          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
+        } catch (e) {
+          root.setAttribute('aria-label', 'Banner data unavailable');
+          return;
+        }
+        theme = readTheme();
+        resize();
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
+        else window.addEventListener('resize', resize);
+        if (window.IntersectionObserver) {
+          new IntersectionObserver((entries) => {
+            visible = entries.some((e) => e.isIntersecting);
+            schedule();
+          }).observe(root);
+        }
+        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        document.addEventListener('palettes:updated', retheme);
+        document.addEventListener('visibilitychange', schedule);
+        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
+        schedule();
+      });
+    };
+
+    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    else bootstrap();
+  })();
+</script>

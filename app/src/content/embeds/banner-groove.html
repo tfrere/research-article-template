@@ -1,0 +1,363 @@
+<div role="img" aria-label="This article pressed into a record: every word, in reading order, is a stretch of one spiral groove, as long as the word and colored by kind. Chapters are tracks separated by empty grooves, and the label shows each chapter's share of words. The record turns slowly under a needle that reads it." class="banner-groove">
+  <canvas class="banner-groove__canvas" aria-hidden="true"></canvas>
+  <span class="banner-groove__caption"></span>
+</div>
+<style>
+  .banner-groove {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 12 / 5;
+    min-height: 180px;
+  }
+  .hero-banner .banner-groove {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+  .banner-groove__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .banner-groove__caption {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font: 500 10px/1.2 var(--font-mono, ui-monospace, monospace);
+    letter-spacing: .02em;
+    color: var(--muted-color);
+    opacity: .85;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .banner-groove__caption b {
+    font-weight: 600;
+  }
+  @media print {
+    .banner-groove__caption { display: none; }
+  }
+</style>
+<script>
+  (() => {
+    const ROOT = 'banner-groove';
+    const DATA_FILE = 'article-anatomy.json';
+    const REV_MS = 16000; // one turn of the record
+    const R_OUT = 0.97, R_IN = 0.36, R_LABEL = 0.31, R_HOLE = 0.12;
+    const TRACK_GAP = 0.012; // empty groove between chapters, share of the whole groove
+    const TRAIL = 4.5; // lit groove behind the needle, in radians of groove
+    const NEEDLE_ANGLE = -0.32; // screen angle of the needle on the disc
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const fetchFirstAvailable = async (paths) => {
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, { cache: 'force-cache' });
+          if (r.ok) return r.json();
+        } catch (_) {}
+      }
+      throw new Error(`${DATA_FILE} not found`);
+    };
+
+    const mount = (root) => {
+      root.dataset.mounted = 'true';
+      const canvas = root.querySelector('canvas');
+      const caption = root.querySelector(`.${ROOT}__caption`);
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+      let data = null;
+      let theme = null;
+      let model = null;
+      let disc = null;
+      let W = 0, H = 0, dpr = 1;
+      let visible = true;
+      let raf = 0, last = 0, clock = REV_MS * 0.6;
+
+      const readTheme = () => {
+        const host = root.closest('[data-theme]') || document.documentElement;
+        const dark = host.getAttribute('data-theme') === 'dark';
+        const cs = getComputedStyle(root);
+        const got = window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10);
+        const cat = got && got.length ? got : d3.schemeTableau10;
+        const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0];
+        // Light pages need deeper inks for the same hues to hold at hairline size
+        const deepen = (c) => (dark ? d3.color(c) : d3.color(c).darker(0.55));
+        const hues = d3.interpolateHcl(cat[0], cat[Math.floor(cat.length / 2)]);
+        const ramp = (t) => deepen(hues(t)).formatHex();
+        const ink = cs.getPropertyValue('--text-color').trim() || (dark ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.85)');
+        const inkC = d3.color(ink);
+        return {
+          dark,
+          ink,
+          inkC,
+          bg: cs.getPropertyValue('--page-bg').trim() || (dark ? '#0f1115' : '#ffffff'),
+          primary,
+          ramp,
+          label: (t) => d3.color(hues(t)).formatHex(),
+          kind: {
+            p: inkC.copy({ opacity: dark ? 0.5 : 0.42 }).formatRgb(),
+            h: inkC.copy({ opacity: 1 }).formatRgb(),
+            c: deepen(primary).copy({ opacity: 0.85 }).formatRgb(),
+            x: d3.color(ramp(1)).copy({ opacity: dark ? 0.5 : 0.6 }).formatRgb(),
+            m: ramp(0.5),
+            t: d3.color(ramp(0.5)).copy({ opacity: 0.4 }).formatRgb(),
+          },
+        };
+      };
+
+      // One Archimedean spiral r = R_OUT - b * theta, words laid along it by arc length
+      const build = () => {
+        if (!data || !W || !H) return null;
+        const ry = H * 0.44;
+        const rx = Math.min(W * 0.46, ry / 0.32);
+        const turns = Math.max(14, Math.min(56, Math.round((rx * (R_OUT - R_IN)) / 6)));
+        const thetaMax = turns * Math.PI * 2;
+        const b = (R_OUT - R_IN) / thetaMax;
+        const arcAt = (th) => R_OUT * th - (b * th * th) / 2;
+        const thetaAt = (s) => (R_OUT - Math.sqrt(Math.max(0, R_OUT * R_OUT - 2 * b * s))) / b;
+        const total = arcAt(thetaMax);
+
+        const chars = d3.sum(Array.from(data.lengths), (c) => (parseInt(c, 36) || 1) + 1);
+        const gaps = data.chapters.length - 1;
+        const unit = (total * (1 - TRACK_GAP * gaps)) / chars;
+        const t0 = new Float32Array(data.total), t1 = new Float32Array(data.total);
+        const chapterStarts = new Set(data.chapters.map((c) => c.start));
+        let s = 0;
+        for (let i = 0; i < data.total; i++) {
+          if (i > 0 && chapterStarts.has(i)) s += total * TRACK_GAP;
+          const len = parseInt(data.lengths[i], 36) || 1;
+          t0[i] = thetaAt(s);
+          t1[i] = thetaAt(s + len * unit);
+          s += (len + 1) * unit;
+        }
+        const pitch = (R_OUT - R_IN) / turns;
+        return { rx, ry, cx: W / 2, cy: H / 2, turns, thetaMax, b, t0, t1, pitch };
+      };
+
+      const radiusAt = (th) => R_OUT - model.b * th;
+
+      // The record itself, drawn once in disc space (unit circle) and rotated each frame
+      const pressDisc = () => {
+        const size = Math.ceil(2 * model.rx * Math.min(2, dpr));
+        const tex = document.createElement('canvas');
+        tex.width = tex.height = size;
+        const c = tex.getContext('2d');
+        c.setTransform(size / 2, 0, 0, size / 2, size / 2, size / 2);
+        const { pitch, thetaMax, t0, t1 } = model;
+        c.lineCap = 'butt';
+
+        c.beginPath();
+        c.arc(0, 0, 1, 0, Math.PI * 2);
+        c.arc(0, 0, R_HOLE, 0, Math.PI * 2, true);
+        c.fillStyle = theme.inkC.copy({ opacity: theme.dark ? 0.045 : 0.035 }).formatRgb();
+        c.fill();
+
+        // Bare groove first: track gaps show as empty rings
+        c.beginPath();
+        for (let th = 0; th <= thetaMax; th += 0.03) {
+          const r = radiusAt(th);
+          const x = r * Math.cos(-th), y = r * Math.sin(-th);
+          if (th === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        }
+        c.lineWidth = pitch * 0.16;
+        c.strokeStyle = theme.inkC.copy({ opacity: theme.dark ? 0.22 : 0.18 }).formatRgb();
+        c.stroke();
+
+        c.lineWidth = pitch * 0.56;
+        for (const k of Object.keys(theme.kind)) {
+          c.beginPath();
+          for (let i = 0; i < data.total; i++) {
+            if (data.kinds[i] !== k) continue;
+            const r = radiusAt((t0[i] + t1[i]) / 2);
+            c.moveTo(r * Math.cos(-t0[i]), r * Math.sin(-t0[i]));
+            c.arc(0, 0, r, -t0[i], -t1[i], true);
+          }
+          c.strokeStyle = theme.kind[k];
+          c.stroke();
+        }
+
+        // Label: each chapter's share of the words, in reading order
+        let a = -Math.PI / 2;
+        data.chapters.forEach((ch, i) => {
+          const sweep = (ch.words / data.total) * Math.PI * 2;
+          c.beginPath();
+          c.arc(0, 0, R_LABEL, a, a + sweep);
+          c.arc(0, 0, R_HOLE + 0.02, a + sweep, a, true);
+          c.closePath();
+          c.fillStyle = theme.label(i / Math.max(1, data.chapters.length - 1));
+          c.fill();
+          a += sweep;
+        });
+        c.beginPath();
+        c.arc(0, 0, R_HOLE * 0.22, 0, Math.PI * 2);
+        c.fillStyle = theme.ink;
+        c.fill();
+
+        c.beginPath();
+        c.arc(0, 0, 0.995, 0, Math.PI * 2);
+        c.lineWidth = 0.006;
+        c.strokeStyle = theme.inkC.copy({ opacity: 0.3 }).formatRgb();
+        c.stroke();
+        return tex;
+      };
+
+      const draw = (t) => {
+        if (!model || !theme || !disc) return;
+        const { rx, ry, cx, cy, thetaMax, t0, t1, pitch } = model;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Clockwise turn: the needle reads the groove in reading order, then rests
+        // two turns on the run-out groove before the record starts over
+        const spin = ((t % (REV_MS * (model.turns + 2))) / REV_MS) * Math.PI * 2;
+        const needleTheta = Math.min(thetaMax, spin - NEEDLE_ANGLE);
+        const toScreen = () => ctx.setTransform(dpr * rx, 0, 0, dpr * ry, dpr * cx, dpr * cy);
+
+        toScreen();
+        ctx.rotate(spin);
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(disc, -1, -1, 2, 2);
+
+        // Words just read glow behind the needle
+        const lo = needleTheta - TRAIL;
+        const i0 = d3.bisectLeft(t1, lo), i1 = d3.bisectLeft(t0, needleTheta);
+        const accent = d3.color(theme.dark ? '#fff' : theme.ink);
+        ctx.lineWidth = pitch * 0.8;
+        for (let i = i0; i < i1; i++) {
+          const f = 1 - (needleTheta - t1[i]) / (needleTheta - lo);
+          const r = radiusAt((t0[i] + t1[i]) / 2);
+          ctx.beginPath();
+          ctx.arc(0, 0, r, -t0[i], -Math.min(t1[i], needleTheta), true);
+          ctx.strokeStyle = accent.copy({ opacity: Math.max(0, Math.min(1, f)) }).formatRgb();
+          ctx.stroke();
+        }
+
+        // Sheen: two soft light wedges fixed in screen space, as on real vinyl
+        toScreen();
+        if (ctx.createConicGradient) {
+          const g = ctx.createConicGradient(-Math.PI / 4, 0, 0);
+          const hi = theme.inkC.copy({ opacity: theme.dark ? 0.14 : 0.1 }).formatRgb();
+          const off = theme.inkC.copy({ opacity: 0 }).formatRgb();
+          [[0, hi], [0.07, off], [0.43, off], [0.5, hi], [0.57, off], [0.93, off], [1, hi]].forEach(([o, col]) => g.addColorStop(o, col));
+          ctx.beginPath();
+          ctx.arc(0, 0, 1, 0, Math.PI * 2);
+          ctx.arc(0, 0, R_LABEL, 0, Math.PI * 2, true);
+          ctx.fillStyle = g;
+          ctx.fill();
+        }
+
+        // Needle and arm, in screen space
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const nr = radiusAt(Math.max(0, needleTheta));
+        const nx = cx + rx * nr * Math.cos(NEEDLE_ANGLE), ny = cy + ry * nr * Math.sin(NEEDLE_ANGLE);
+        const px = Math.min(W - 10, cx + rx * 1.02), py = Math.max(10, cy - ry * 1.08);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(nx, ny);
+        ctx.lineWidth = Math.max(1, rx * 0.004);
+        ctx.strokeStyle = theme.inkC.copy({ opacity: 0.55 }).formatRgb();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(px, py, Math.max(3, rx * 0.012), 0, Math.PI * 2);
+        ctx.fillStyle = theme.inkC.copy({ opacity: 0.55 }).formatRgb();
+        ctx.fill();
+        const glow = ctx.createRadialGradient(nx, ny, 0, nx, ny, rx * 0.05);
+        glow.addColorStop(0, d3.color(theme.primary).copy({ opacity: theme.dark ? 0.7 : 0.5 }).formatRgb());
+        glow.addColorStop(1, d3.color(theme.primary).copy({ opacity: 0 }).formatRgb());
+        ctx.fillStyle = glow;
+        ctx.fillRect(nx - rx * 0.05, ny - rx * 0.05, rx * 0.1, rx * 0.1);
+        ctx.beginPath();
+        ctx.arc(nx, ny, Math.max(1.6, rx * 0.005), 0, Math.PI * 2);
+        ctx.fillStyle = theme.primary;
+        ctx.fill();
+      };
+
+      const animating = () => visible && !reduceMotion.matches && !document.hidden;
+      const frame = (now) => {
+        raf = 0;
+        clock += Math.min(50, now - (last || now));
+        last = now;
+        draw(clock);
+        if (animating()) raf = requestAnimationFrame(frame);
+      };
+      const schedule = () => {
+        if (raf || !animating()) { if (!raf) draw(clock); return; }
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      };
+
+      const writeCaption = () => {
+        if (!caption || !model) return;
+        const k = theme.kind;
+        const sw = (label, color) => `<b style="color:${color}">${label}</b>`;
+        caption.innerHTML = `${d3.format(',')(data.total)} words in one groove, ${data.chapters.length} chapters as tracks: ${sw('prose', theme.ink)}, ${sw('code', k.c)}, ${sw('components', k.x)}`;
+        caption.style.display = W < 560 ? 'none' : '';
+      };
+
+      const resize = () => {
+        const w = root.clientWidth, h = root.clientHeight;
+        if (!w || !h) return;
+        dpr = Math.min(3, window.devicePixelRatio || 1);
+        if (w === W && h === H && canvas.width === Math.round(w * dpr)) return;
+        W = w; H = h;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        model = build();
+        disc = pressDisc();
+        writeCaption();
+        draw(clock);
+      };
+      const retheme = () => {
+        theme = readTheme();
+        if (model) disc = pressDisc();
+        writeCaption();
+        draw(clock);
+      };
+
+      ensureD3(async () => {
+        try {
+          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
+        } catch (e) {
+          root.setAttribute('aria-label', 'Banner data unavailable');
+          return;
+        }
+        theme = readTheme();
+        resize();
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
+        else window.addEventListener('resize', resize);
+        if (window.IntersectionObserver) {
+          new IntersectionObserver((entries) => {
+            visible = entries.some((e) => e.isIntersecting);
+            schedule();
+          }).observe(root);
+        }
+        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        document.addEventListener('palettes:updated', retheme);
+        document.addEventListener('visibilitychange', schedule);
+        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
+        schedule();
+      });
+    };
+
+    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    else bootstrap();
+  })();
+</script>
