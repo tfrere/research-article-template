@@ -1,0 +1,784 @@
+<div class="d3-banned-books"></div>
+<style>
+  .d3-banned-books {
+    --bb-serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    position: relative;
+    color: var(--text-color);
+    font-family: var(--default-font-family);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .d3-banned-books * { box-sizing: border-box; }
+  .d3-banned-books .bb-sr {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+
+  /* Header */
+  .d3-banned-books .bb-kicker {
+    margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--muted-color);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .d3-banned-books .bb-kicker::before {
+    content: ""; width: 18px; height: 3px; border-radius: 2px; background: var(--bb-accent, var(--primary-color));
+  }
+  .d3-banned-books .bb-hero { display: grid; grid-template-columns: 1fr; gap: 4px 28px; align-items: end; }
+  .d3-banned-books.is-wide .bb-hero { grid-template-columns: auto 1fr; }
+  .d3-banned-books .bb-hero__num {
+    font-size: 56px; line-height: .95; font-weight: 800; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .d3-banned-books.is-wide .bb-hero__num { font-size: 84px; }
+  .d3-banned-books .bb-hero__text {
+    margin: 0; font-family: var(--bb-serif); font-size: 19px; line-height: 1.35; max-width: 34em;
+  }
+  .d3-banned-books.is-wide .bb-hero__text { font-size: 21px; padding-bottom: 4px; }
+  .d3-banned-books .bb-stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 16px 0 0; }
+  .d3-banned-books .bb-stat__n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bb-stat__l { font-size: 12px; color: var(--muted-color); }
+
+  .d3-banned-books .bb-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 18px 0 0; }
+  .d3-banned-books .bb-filter__label { font-size: 12px; font-weight: 700; margin-right: 4px; }
+  .d3-banned-books .bb-filter button {
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    padding: 5px 11px; border-radius: 8px; border: 1px solid var(--border-color);
+    background: transparent; color: var(--text-color); font-variant-numeric: tabular-nums;
+  }
+  .d3-banned-books .bb-filter button:hover { border-color: var(--muted-color); }
+  .d3-banned-books .bb-filter button[aria-pressed="true"] {
+    background: var(--text-color); border-color: var(--text-color); color: var(--surface-bg);
+  }
+  .d3-banned-books button:focus-visible,
+  .d3-banned-books [tabindex="0"]:focus-visible,
+  .d3-banned-books a:focus-visible {
+    outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 4px;
+  }
+
+  /* Panels */
+  .d3-banned-books .bb-panel { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--border-color); min-width: 0; }
+  .d3-banned-books .bb-row { display: grid; grid-template-columns: 1fr; column-gap: 36px; }
+  .d3-banned-books.is-wide .bb-row { grid-template-columns: 1fr 1fr; }
+  .d3-banned-books .bb-h { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; }
+  .d3-banned-books .bb-lead { margin: 4px 0 12px; color: var(--muted-color); font-size: 13px; }
+  .d3-banned-books .bb-lead em, .d3-banned-books .bb-book { font-family: var(--bb-serif); font-style: italic; }
+  .d3-banned-books .bb-note { margin: 8px 0 0; font-size: 12px; color: var(--muted-color); }
+  .d3-banned-books .bb-callout {
+    margin: 10px 0 0; font-size: 13px; padding-left: 10px; border-left: 3px solid var(--bb-accent, var(--primary-color));
+  }
+  .d3-banned-books svg { display: block; overflow: visible; }
+  .d3-banned-books svg text { font-family: var(--default-font-family); }
+  .d3-banned-books .grid line { stroke: var(--grid-color); }
+  .d3-banned-books .tick-label { fill: var(--tick-color); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bar, .d3-banned-books .tile { transition: opacity .12s ease; }
+  .d3-banned-books .is-hovering .bar:not(.is-hot) { opacity: .45; }
+  .d3-banned-books .is-hovering .tile:not(.is-hot) { opacity: .55; }
+  .d3-banned-books .ann-1 { font-size: 12px; font-weight: 700; fill: var(--text-color); }
+  .d3-banned-books .ann-2 { font-size: 12px; fill: var(--muted-color); }
+  .d3-banned-books .ann-line { stroke: var(--text-color); stroke-width: 1; }
+
+  /* Ranked lists */
+  .d3-banned-books .bb-rank { list-style: none; margin: 0; padding: 0; }
+  .d3-banned-books .bb-rank li {
+    display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 8px; align-items: baseline;
+    padding: 6px 0; border-bottom: 1px solid var(--border-color);
+  }
+  .d3-banned-books .bb-rank li:last-child { border-bottom: 0; }
+  .d3-banned-books .bb-rank__i { font-size: 12px; color: var(--muted-color); font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bb-rank__t { font-size: 15px; line-height: 1.25; }
+  .d3-banned-books .bb-rank__m { display: block; font-size: 12px; color: var(--muted-color); }
+  .d3-banned-books .bb-rank__n { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .d3-banned-books .bb-rank__bar { grid-column: 2 / 4; height: 4px; border-radius: 2px; background: var(--bb-track); overflow: hidden; }
+  .d3-banned-books .bb-rank__bar span { display: block; height: 100%; border-radius: 2px; background: var(--bb-accent, var(--primary-color)); }
+
+  /* Stacked shares */
+  .d3-banned-books .bb-stack { display: grid; grid-template-columns: 58px 1fr; gap: 6px 10px; align-items: center; }
+  .d3-banned-books .bb-stack__y { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .d3-banned-books .bb-stack__bar { display: flex; height: 26px; border-radius: 4px; overflow: hidden; gap: 1px; }
+  .d3-banned-books .bb-stack__seg {
+    min-width: 0; display: flex; align-items: center; padding: 0 6px; overflow: hidden;
+    font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .d3-banned-books .bb-stack__row-dim { opacity: .4; }
+  .d3-banned-books .legend { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 12px 0 0; }
+  .d3-banned-books .legend-title { font-size: 12px; font-weight: 700; }
+  .d3-banned-books .legend .items { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .d3-banned-books .legend .item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; }
+  .d3-banned-books .legend .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-color); }
+
+  /* Footer */
+  .d3-banned-books .bb-source { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--muted-color); }
+  .d3-banned-books .bb-source p { margin: 0 0 6px; }
+  .d3-banned-books .bb-source a { color: inherit; text-decoration: underline; text-decoration-color: var(--border-color); text-underline-offset: 2px; }
+  .d3-banned-books .bb-source a:hover { color: var(--text-color); }
+
+  .d3-banned-books .d3-tooltip b { font-weight: 700; }
+  .d3-banned-books .d3-tooltip .tt-m { color: var(--muted-color); }
+  .d3-banned-books .bb-error { color: var(--danger-color, #c00); font-size: 12px; white-space: pre-wrap; }
+</style>
+<script>
+  (() => {
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) { s = document.createElement('script'); s.id = 'd3-cdn-script'; s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js'; document.head.appendChild(s); }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    // US tile grid: [column, row] on a 12 x 8 grid, roughly geographic.
+    const TILES = {
+      AK: [0, 0], ME: [11, 0],
+      WI: [6, 1], VT: [10, 1], NH: [11, 1],
+      WA: [1, 2], ID: [2, 2], MT: [3, 2], ND: [4, 2], MN: [5, 2], IL: [6, 2], MI: [7, 2], NY: [9, 2], MA: [10, 2],
+      OR: [1, 3], NV: [2, 3], WY: [3, 3], SD: [4, 3], IA: [5, 3], IN: [6, 3], OH: [7, 3], PA: [8, 3], NJ: [9, 3], CT: [10, 3], RI: [11, 3],
+      CA: [1, 4], UT: [2, 4], CO: [3, 4], NE: [4, 4], MO: [5, 4], KY: [6, 4], WV: [7, 4], VA: [8, 4], MD: [9, 4], DE: [10, 4],
+      AZ: [2, 5], NM: [3, 5], KS: [4, 5], AR: [5, 5], TN: [6, 5], NC: [7, 5], SC: [8, 5], DC: [9, 5],
+      OK: [4, 6], LA: [5, 6], MS: [6, 6], AL: [7, 6], GA: [8, 6],
+      HI: [0, 7], TX: [4, 7], FL: [8, 7],
+    };
+    const STATE_NAMES = {
+      AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut',
+      DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois',
+      IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+      MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana',
+      NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York',
+      NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania',
+      RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah',
+      VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+    };
+    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const BINS = [1, 10, 100, 500, 1000, 2500];
+    const BIN_LABELS = ['1 to 9', '10 to 99', '100 to 499', '500 to 999', '1,000 to 2,499', '2,500 or more'];
+    const STATUS_KEYS = ['removed', 'restricted', 'pending'];
+    const ORIGIN_KEYS = ['administration', 'formal', 'informal', 'legislative', 'mixed', 'other'];
+
+    const bootstrap = () => {
+      const scriptEl = document.currentScript;
+      let container = scriptEl ? scriptEl.previousElementSibling : null;
+      if (!(container && container.classList && container.classList.contains('d3-banned-books'))) {
+        const candidates = Array.from(document.querySelectorAll('.d3-banned-books'))
+          .filter((el) => !(el.dataset && el.dataset.mounted === 'true'));
+        container = candidates[candidates.length - 1] || null;
+      }
+      if (!container) return;
+      if (container.dataset.mounted === 'true') return;
+      container.dataset.mounted = 'true';
+      container.setAttribute('role', 'region');
+      container.setAttribute('aria-label', 'Infographic: school book bans in the United States, 2021 to 2024');
+
+      let mountEl = container;
+      while (mountEl && !mountEl.getAttribute?.('data-datafiles') && !mountEl.getAttribute?.('data-config')) mountEl = mountEl.parentElement;
+      let providedData = null;
+      let providedConfig = null;
+      try {
+        const attr = mountEl && mountEl.getAttribute('data-datafiles');
+        if (attr && attr.trim()) providedData = attr.trim().startsWith('[') ? JSON.parse(attr)[0] : attr.trim();
+      } catch (_) {}
+      try {
+        const cfg = mountEl && mountEl.getAttribute('data-config');
+        if (cfg && cfg.trim()) providedConfig = JSON.parse(cfg);
+      } catch (_) {}
+      const ensureDataPrefix = (p) => (p && !p.includes('/')) ? `/data/${p}` : p;
+      const DATA_PATHS = providedData ? [ensureDataPrefix(providedData)] : [
+        '/data/banned-books/banned-books.json',
+        './assets/data/banned-books/banned-books.json',
+        '../assets/data/banned-books/banned-books.json',
+      ];
+
+      const fmt = d3.format(',');
+      const pct = (a, b) => {
+        const p = b ? (100 * a) / b : 0;
+        return a > 0 && p < 0.5 ? '<1%' : `${Math.round(p)}%`;
+      };
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const monthLabel = (m, short) => {
+        const [y, mm] = m.split('-');
+        const name = MONTH_NAMES[+mm - 1];
+        return `${short ? name.slice(0, 3) : name} ${y}`;
+      };
+      const shortDistrict = (d) => d.replace(/\s+(Independent School District|Public School District|Public Schools|School District|District Schools|Schools)$/i, '');
+
+      // Tooltip
+      let tip = document.createElement('div');
+      tip.className = 'd3-tooltip';
+      Object.assign(tip.style, {
+        position: 'absolute', top: '0px', left: '0px', transform: 'translate(-9999px, -9999px)', pointerEvents: 'none',
+        padding: '8px 10px', borderRadius: '8px', fontSize: '12px', lineHeight: '1.4', border: '1px solid var(--border-color)',
+        background: 'var(--surface-bg)', color: 'var(--text-color)', boxShadow: '0 4px 24px rgba(0,0,0,.18)', opacity: '0',
+        transition: 'opacity .12s ease', zIndex: '5', maxWidth: '260px',
+      });
+      const tipInner = document.createElement('div');
+      tipInner.className = 'd3-tooltip__inner';
+      tip.appendChild(tipInner);
+      const live = document.createElement('div');
+      live.className = 'bb-sr';
+      live.setAttribute('aria-live', 'polite');
+
+      const showTip = (html, x, y) => {
+        tipInner.innerHTML = html;
+        const cw = container.clientWidth;
+        const tw = tip.offsetWidth || 200;
+        const left = Math.max(0, Math.min(cw - tw, x + 14));
+        tip.style.transform = `translate(${Math.round(left)}px, ${Math.round(y + 14)}px)`;
+        tip.style.opacity = '1';
+      };
+      const hideTip = () => { tip.style.opacity = '0'; tip.style.transform = 'translate(-9999px, -9999px)'; };
+      const pointIn = (event) => d3.pointer(event, container);
+      const anchorOf = (el) => {
+        const a = el.getBoundingClientRect();
+        const c = container.getBoundingClientRect();
+        return [a.left - c.left + a.width / 2, a.top - c.top + a.height];
+      };
+      const htmlToText = (html) => html.replace(/<br\s*\/?>/g, '. ').replace(/<[^>]+>/g, '');
+
+      // One tab stop per chart; arrow keys walk through the marks.
+      const keyNav = (el, items, onItem, onClear) => {
+        let i = -1;
+        el.addEventListener('keydown', (e) => {
+          const list = items();
+          if (!list.length) return;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') i = (i + 1) % list.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') i = (i - 1 + list.length) % list.length;
+          else if (e.key === 'Home') i = 0;
+          else if (e.key === 'End') i = list.length - 1;
+          else if (e.key === 'Escape') { i = -1; onClear(); return; }
+          else return;
+          e.preventDefault();
+          onItem(list[i]);
+        });
+        el.addEventListener('blur', () => { i = -1; onClear(); });
+      };
+
+      // Theme-aware colors
+      const probe = document.createElement('span');
+      probe.style.display = 'none';
+      container.appendChild(probe);
+      const resolve = (cssVar, fallback) => {
+        probe.style.color = fallback;
+        probe.style.color = `var(${cssVar}, ${fallback})`;
+        return getComputedStyle(probe).color || fallback;
+      };
+      let C = {};
+      const readColors = () => {
+        const themed = container.closest('[data-theme]');
+        const isDark = (themed ? themed.getAttribute('data-theme') : '') === 'dark';
+        const P = window.ColorPalettes;
+        const primary = (P && P.getPrimary && P.getPrimary()) || resolve('--primary-color', '#e38a42');
+        const bg = d3.rgb(resolve('--surface-bg', isDark ? '#111' : '#f9f9f9'));
+        const txt = d3.rgb(resolve('--text-color', isDark ? '#eee' : '#222'));
+        const solidText = d3.rgb(
+          txt.r * txt.opacity + bg.r * (1 - txt.opacity),
+          txt.g * txt.opacity + bg.g * (1 - txt.opacity),
+          txt.b * txt.opacity + bg.b * (1 - txt.opacity),
+        );
+        const neutral = (t) => d3.interpolateRgb(bg, solidText)(t);
+        let seq = (P && P.getColors && P.getColors('sequential', BINS.length)) || [];
+        if (seq.length !== BINS.length) seq = d3.quantize(d3.interpolateRgb(neutral(0.12), primary), BINS.length).reverse();
+        // The palette runs dark to light: the strongest value must contrast most with the background,
+        // and in dark mode the low bins fade into the background instead of glowing.
+        if (!isDark) seq = seq.slice().reverse();
+        else seq = seq.map((c, i) => d3.interpolateRgb(bg, c)(0.4 + (0.6 * i) / (seq.length - 1)));
+        C = {
+          isDark, primary, neutral, seq,
+          empty: neutral(0.07),
+          status: { removed: seq[BINS.length - 1], restricted: seq[3], pending: seq[1] },
+          origin: {
+            administration: primary, formal: neutral(0.62), informal: neutral(0.42),
+            legislative: neutral(0.3), mixed: neutral(0.2), other: neutral(0.1),
+          },
+        };
+        container.style.setProperty('--bb-accent', primary);
+        container.style.setProperty('--bb-track', neutral(0.1));
+      };
+      const textOn = (bg) => {
+        const P = window.ColorPalettes;
+        if (P && P.getTextStyleForBackground) return P.getTextStyleForBackground(bg, { blend: 0 }).fill;
+        return d3.hsl(bg).l > 0.6 ? '#111' : '#fff';
+      };
+
+      let data = null;
+      let scope = 'all';
+      let lastWidth = 0;
+
+      // Static skeleton
+      container.innerHTML = `
+        <p class="bb-kicker">Banned books in US public schools</p>
+        <div class="bb-hero">
+          <div class="bb-hero__num"></div>
+          <p class="bb-hero__text"></p>
+        </div>
+        <div class="bb-stats"></div>
+        <div class="bb-filter" role="group" aria-label="School year"><span class="bb-filter__label">School year</span></div>
+        <section class="bb-panel bb-time">
+          <p class="bb-h" role="heading" aria-level="3"></p>
+          <p class="bb-lead"></p>
+          <svg class="bb-time__svg" tabindex="0" role="img"></svg>
+          <p class="bb-note"></p>
+        </section>
+        <div class="bb-row">
+          <section class="bb-panel bb-map">
+            <p class="bb-h" role="heading" aria-level="3"></p>
+            <p class="bb-lead"></p>
+            <svg class="bb-map__svg" tabindex="0" role="img"></svg>
+            <div class="legend"><div class="legend-title">Legend: bans per state</div><div class="items"></div></div>
+            <p class="bb-callout"></p>
+          </section>
+          <section class="bb-panel bb-titles">
+            <p class="bb-h" role="heading" aria-level="3">The most banned books</p>
+            <p class="bb-lead"></p>
+            <ol class="bb-rank"></ol>
+          </section>
+        </div>
+        <div class="bb-row">
+          <section class="bb-panel bb-authors">
+            <p class="bb-h" role="heading" aria-level="3">The most banned authors</p>
+            <p class="bb-lead"></p>
+            <ol class="bb-rank"></ol>
+          </section>
+          <section class="bb-panel bb-districts">
+            <p class="bb-h" role="heading" aria-level="3"></p>
+            <p class="bb-lead"></p>
+            <ol class="bb-rank"></ol>
+          </section>
+        </div>
+        <div class="bb-row">
+          <section class="bb-panel bb-status">
+            <p class="bb-h" role="heading" aria-level="3"></p>
+            <p class="bb-lead"></p>
+            <div class="bb-stack"></div>
+            <div class="legend"><div class="legend-title">Legend</div><div class="items"></div></div>
+          </section>
+          <section class="bb-panel bb-origin">
+            <p class="bb-h" role="heading" aria-level="3"></p>
+            <p class="bb-lead"></p>
+            <div class="bb-stack"></div>
+            <div class="legend"><div class="legend-title">Legend</div><div class="items"></div></div>
+          </section>
+        </div>
+        <footer class="bb-source"></footer>
+        <p class="bb-sr bb-summary"></p>
+      `;
+      container.appendChild(tip);
+      container.appendChild(live);
+      container.appendChild(probe);
+      const $ = (sel) => container.querySelector(sel);
+
+      const timeSvg = d3.select($('.bb-time__svg'));
+      const mapSvg = d3.select($('.bb-map__svg'));
+
+      const scopeLabel = () => (scope === 'all' ? 'all' : scope);
+      const scopePhrase = () => (scope === 'all' ? 'between July 2021 and June 2024' : `in the ${scope} school year`);
+
+      // Header
+      function renderHeader() {
+        const s = data.summary[scope];
+        $('.bb-hero__num').textContent = fmt(s.bans);
+        $('.bb-hero__text').innerHTML = `times a book was removed or restricted in a US public school ${scopePhrase()}.`;
+        const stats = [
+          [fmt(s.titles), 'distinct titles'],
+          [fmt(s.districts), 'school districts'],
+          [fmt(s.states), 'states'],
+        ];
+        if (scope === 'all') {
+          const ys = data.years.map((y) => data.summary[y].bans);
+          stats.push([`${(ys[ys.length - 1] / ys[0]).toFixed(1)}x`, `as many bans in ${data.years[data.years.length - 1]} as in ${data.years[0]}`]);
+        }
+        $('.bb-stats').innerHTML = stats.map(([n, l]) => `<div class="bb-stat"><div class="bb-stat__n">${n}</div><div class="bb-stat__l">${l}</div></div>`).join('');
+        container.querySelectorAll('.bb-filter button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scope === scope)));
+      }
+
+      // Timeline
+      const allMonths = [];
+      function renderTimeline(width) {
+        const byMonth = new Map(data.months.map((d) => [d.m, d]));
+        const W = width;
+        const H = Math.round(Math.max(220, Math.min(300, W * 0.4)));
+        const m = { top: 46, right: 4, bottom: 24, left: 40 };
+        const iw = W - m.left - m.right;
+        const ih = H - m.top - m.bottom;
+        timeSvg.attr('width', W).attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
+        timeSvg.selectAll('*').remove();
+        const g = timeSvg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+        const x = d3.scaleBand().domain(allMonths).range([0, iw]).paddingInner(0.22).paddingOuter(0.1);
+        const y = d3.scaleLinear().domain([0, d3.max(data.months, (d) => d.n)]).nice().range([ih, 0]);
+
+        const ticks = y.ticks(ih < 150 ? 3 : 4);
+        const grid = g.append('g').attr('class', 'grid');
+        grid.selectAll('line').data(ticks).join('line').attr('x1', 0).attr('x2', iw).attr('y1', y).attr('y2', y);
+        g.append('g').selectAll('text').data(ticks).join('text').attr('class', 'tick-label')
+          .attr('x', -8).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end').text(fmt);
+
+        // School-year bands with their totals
+        const step = x.step();
+        data.years.forEach((yr, i) => {
+          const first = allMonths.find((mm) => (byMonth.get(mm) || {}).year === yr) || allMonths[i * 12];
+          const x0 = x(first) - (step * x.paddingInner()) / 2;
+          const on = scope === 'all' || scope === yr;
+          if (i > 0) g.append('line').attr('x1', x0).attr('x2', x0).attr('y1', -m.top + 6).attr('y2', ih).attr('stroke', 'var(--border-color)');
+          g.append('text').attr('x', x0 + 4).attr('y', -28).attr('font-size', 12).attr('font-weight', 700)
+            .attr('fill', on ? 'var(--text-color)' : 'var(--muted-color)').text(yr);
+          g.append('text').attr('x', x0 + 4).attr('y', -12).attr('font-size', 12).attr('fill', 'var(--muted-color)')
+            .style('font-variant-numeric', 'tabular-nums').text(`${fmt(data.summary[yr].bans)} bans`);
+        });
+
+        const rows = allMonths.map((mm) => byMonth.get(mm) || { m: mm, n: 0, year: null });
+        const bars = g.append('g').attr('class', 'bars');
+        bars.selectAll('rect').data(rows).join('rect').attr('class', 'bar')
+          .attr('x', (d) => x(d.m)).attr('width', x.bandwidth())
+          .attr('y', (d) => y(d.n)).attr('height', (d) => ih - y(d.n)).attr('rx', Math.min(2, x.bandwidth() / 4))
+          .attr('fill', (d) => (scope === 'all' || d.year === scope ? C.primary : C.neutral(0.2)));
+
+        // January labels on the x axis
+        const narrow = step * 12 < 70;
+        g.append('g').selectAll('text').data(allMonths.filter((mm) => mm.endsWith('-01'))).join('text').attr('class', 'tick-label')
+          .attr('x', (d) => x(d) + x.bandwidth() / 2).attr('y', ih + 16).attr('text-anchor', 'middle')
+          .text((d) => (narrow ? d.slice(0, 4) : monthLabel(d, true)));
+        g.append('line').attr('x1', 0).attr('x2', iw).attr('y1', ih).attr('y2', ih).attr('stroke', 'var(--axis-color)').attr('stroke-opacity', 0.5);
+
+        // Annotate the two biggest months in scope, naming what drove them.
+        const inScope = rows.filter((d) => d.n > 0 && (scope === 'all' || d.year === scope));
+        const peaks = inScope.slice().sort((a, b) => b.n - a.n).slice(0, 2).sort((a, b) => b.n - a.n);
+        // Greedy placement: above the bar, then beside it, then stacked higher; never over a bar or a label.
+        const placed = [];
+        const bw = x.bandwidth();
+        const fits = (c) => {
+          if (c.x0 < -m.left + 2 || c.x1 > iw + m.right || c.y0 < 0 || c.y1 > ih) return false;
+          if (placed.some((p) => c.x0 < p.x1 && c.x1 > p.x0 && c.y0 < p.y1 + 2 && c.y1 > p.y0 - 2)) return false;
+          return rows.every((r) => x(r.m) + bw <= c.x0 || x(r.m) >= c.x1 || y(r.n) > c.y1 + 3);
+        };
+        peaks.forEach((d) => {
+          const driver = d.topDistrict && d.topDistrict.n / d.n >= 0.5
+            ? `${fmt(d.topDistrict.n)} in ${shortDistrict(d.topDistrict.district)}, ${d.topDistrict.state}`
+            : `${fmt(d.topState.n)} in ${STATE_NAMES[d.topState.state] || d.topState.state}`;
+          const bx = x(d.m);
+          const by = y(d.n);
+          const a = g.append('g').attr('class', 'ann');
+          const t = a.append('text');
+          t.append('tspan').attr('class', 'ann-1').attr('x', 0).attr('dy', '0.95em').text(`${monthLabel(d.m, true)}: ${fmt(d.n)} bans`);
+          t.append('tspan').attr('class', 'ann-2').attr('x', 0).attr('dy', '1.3em').text(driver);
+          const bb = t.node().getBBox();
+          const w = bb.width;
+          const h = bb.height;
+          const aStart = { kind: 'above', anchor: 'start', tx: bx, x0: bx, x1: bx + w };
+          const aEnd = { kind: 'above', anchor: 'end', tx: bx + bw, x0: bx + bw - w, x1: bx + bw };
+          const above = bx + bw / 2 < iw / 2 ? [aStart, aEnd] : [aEnd, aStart];
+          const cands = [
+            ...above.map((c) => ({ ...c, y0: by - 12 - h })),
+            { kind: 'left', anchor: 'end', tx: bx - 8, x0: bx - 8 - w, x1: bx - 8, y0: by - 5 },
+            { kind: 'right', anchor: 'start', tx: bx + bw + 8, x0: bx + bw + 8, x1: bx + bw + 8 + w, y0: by - 5 },
+          ];
+          for (let y0 = by - 12 - h - 6; y0 >= 0; y0 -= 6) above.forEach((c) => cands.push({ ...c, y0 }));
+          cands.forEach((c) => { c.y1 = c.y0 + h; });
+          const c = cands.find(fits) || { ...cands[0], y0: Math.max(0, cands[0].y0), y1: Math.max(0, cands[0].y0) + h };
+          placed.push(c);
+          t.attr('text-anchor', c.anchor).attr('transform', `translate(${c.tx},${c.y0})`);
+          const line = a.append('line').attr('class', 'ann-line');
+          if (c.kind === 'above') line.attr('x1', bx + bw / 2).attr('x2', bx + bw / 2).attr('y1', c.y1 + 3).attr('y2', by - 2);
+          else line.attr('x1', c.kind === 'left' ? c.x1 + 3 : c.x0 - 3).attr('x2', c.kind === 'left' ? bx - 1 : bx + bw + 1)
+            .attr('y1', c.y0 + 8).attr('y2', Math.max(c.y0 + 8, by));
+        });
+
+        // Hover targets span the full plot height
+        const tipHtml = (d) => {
+          if (!d.n) return `<b>${monthLabel(d.m)}</b><br>No dated bans`;
+          const s = STATE_NAMES[d.topState.state] || d.topState.state;
+          return `<b>${monthLabel(d.m)}</b> <span class="tt-m">(${d.year})</span><br>${fmt(d.n)} bans<br>`
+            + `<span class="tt-m">Top state:</span> ${esc(s)} (${fmt(d.topState.n)})<br>`
+            + `<span class="tt-m">Top district:</span> ${esc(d.topDistrict.district)}, ${d.topDistrict.state} (${fmt(d.topDistrict.n)})`;
+        };
+        const hot = (d) => {
+          bars.classed('is-hovering', !!d);
+          bars.selectAll('rect').classed('is-hot', (r) => d && r.m === d.m);
+        };
+        g.append('g').selectAll('rect').data(rows).join('rect')
+          .attr('x', (d) => x(d.m) - (step * x.paddingInner()) / 2).attr('width', step).attr('y', -6).attr('height', ih + 6)
+          .attr('fill', 'transparent')
+          .on('mousemove', (event, d) => { hot(d); const [px, py] = pointIn(event); showTip(tipHtml(d), px, py); })
+          .on('mouseleave', () => { hot(null); hideTip(); });
+
+        timeSvg.node().__nav = { rows, tipHtml, hot, x, y, m };
+        const ys = data.years.map((yr) => `${yr}: ${fmt(data.summary[yr].bans)}`).join(', ');
+        timeSvg.attr('aria-label', `Monthly bar chart of book bans from July 2021 to June 2024. Totals by school year: ${ys}. `
+          + `Peak months: ${peaks.map((d) => `${monthLabel(d.m)} with ${fmt(d.n)} bans`).join(' and ')}. Use arrow keys to read each month.`);
+      }
+
+      function timelineHeader() {
+        const [a, b] = [data.years[0], data.years[data.years.length - 1]];
+        const na = data.summary[a].bans;
+        const nb = data.summary[b].bans;
+        $('.bb-time .bb-h').textContent = `Bans went from ${fmt(na)} in ${a} to ${fmt(nb)} in ${b}`;
+        $('.bb-time .bb-lead').textContent = 'Bans recorded per month, by date of challenge or removal. Each school year runs July to June.';
+        const und = data.years.filter((yr) => data.summary[yr].undated > 0)
+          .map((yr) => `${fmt(data.summary[yr].undated)} in ${yr}`);
+        $('.bb-time .bb-note').textContent = und.length
+          ? `Not shown: bans dated only by term or school year (${und.join(', ')}).`
+          : '';
+      }
+
+      // Map
+      function renderMap(width) {
+        const gap = 3;
+        const tile = Math.max(22, Math.min(46, Math.floor((width - 11 * gap) / 12)));
+        const W = 12 * tile + 11 * gap;
+        const H = 8 * tile + 7 * gap;
+        mapSvg.attr('width', W).attr('height', H).attr('viewBox', `0 0 ${W} ${H}`);
+        mapSvg.selectAll('*').remove();
+        const value = (abbr) => {
+          const s = data.states[abbr];
+          if (!s) return 0;
+          return scope === 'all' ? s.total : s.byYear[scope] || 0;
+        };
+        const bin = (n) => d3.bisectRight(BINS, n) - 1;
+        const total = data.summary[scope].bans;
+        const ranked = Object.keys(TILES).map((k) => ({ k, n: value(k) })).sort((a, b) => b.n - a.n);
+        const top2 = ranked.slice(0, 2).map((d) => d.k);
+        const rows = Object.entries(TILES).map(([k, [c, r]]) => ({ k, c, r, n: value(k) }));
+
+        const g = mapSvg.append('g');
+        const cells = g.selectAll('g').data(rows).join('g').attr('class', 'tile')
+          .attr('transform', (d) => `translate(${d.c * (tile + gap)},${d.r * (tile + gap)})`);
+        cells.append('rect').attr('width', tile).attr('height', tile).attr('rx', 3)
+          .attr('fill', (d) => (d.n > 0 ? C.seq[bin(d.n)] : C.empty))
+          .attr('stroke', (d) => (top2.includes(d.k) && d.n > 0 ? 'var(--text-color)' : 'none'))
+          .attr('stroke-width', 1.5);
+        cells.append('text').attr('x', 4).attr('y', 12).attr('font-size', 11).attr('font-weight', 700)
+          .attr('fill', (d) => (d.n > 0 ? textOn(C.seq[bin(d.n)]) : 'var(--muted-color)'))
+          .text((d) => d.k);
+        if (tile >= 34) {
+          cells.filter((d) => d.n > 0).append('text').attr('x', 4).attr('y', tile - 6).attr('font-size', 11)
+            .style('font-variant-numeric', 'tabular-nums')
+            .attr('fill', (d) => textOn(C.seq[bin(d.n)]))
+            .text((d) => (d.n >= 1000 ? `${d3.format('.1f')(d.n / 1000)}k` : d.n));
+        }
+        const tipHtml = (d) => {
+          const s = data.states[d.k];
+          const name = STATE_NAMES[d.k] || d.k;
+          if (!s) return `<b>${esc(name)}</b><br><span class="tt-m">No bans recorded by PEN America</span>`;
+          const per = data.years.map((yr) => `${yr}: ${fmt(s.byYear[yr] || 0)}`).join('<br>');
+          const dist = s.districts[scope] || 0;
+          return `<b>${esc(name)}</b><br>${fmt(d.n)} bans ${scope === 'all' ? 'in total' : `in ${scope}`}`
+            + (d.n ? ` (${pct(d.n, total)} of all)` : '')
+            + `<br><span class="tt-m">${fmt(dist)} district${dist === 1 ? '' : 's'}</span><br><span class="tt-m">${per}</span>`;
+        };
+        const hot = (d) => {
+          g.classed('is-hovering', !!d);
+          cells.classed('is-hot', (r) => d && r.k === d.k);
+        };
+        cells.on('mousemove', (event, d) => { hot(d); const [px, py] = pointIn(event); showTip(tipHtml(d), px, py); })
+          .on('mouseleave', () => { hot(null); hideTip(); });
+        mapSvg.node().__nav = { rows: ranked.filter((d) => d.n > 0).map((d) => rows.find((r) => r.k === d.k)), tipHtml, hot, cells, tile, gap };
+
+        const [s1, s2] = top2.map((k) => STATE_NAMES[k]);
+        const share = pct(ranked[0].n + ranked[1].n, total);
+        $('.bb-map .bb-h').textContent = `${s1} and ${s2} account for ${share} of ${scope === 'all' ? 'all' : scope} bans`;
+        $('.bb-map .bb-lead').textContent = `${fmt(data.summary[scope].states)} states recorded at least one ban ${scopePhrase()}. Darker tiles mean more bans.`;
+        mapSvg.attr('aria-label', `Tile map of US states colored by number of bans ${scopePhrase()}. Top states: `
+          + ranked.slice(0, 5).filter((d) => d.n).map((d) => `${STATE_NAMES[d.k]} ${fmt(d.n)}`).join(', ')
+          + '. Use arrow keys to read states from most to fewest bans.');
+
+        const items = BIN_LABELS.map((l, i) => [C.seq[i], l]).concat([[C.empty, 'None recorded']]);
+        $('.bb-map .legend .items').innerHTML = items.map(([c, l]) => `<span class="item"><span class="swatch" style="background:${c}"></span><span>${l}</span></span>`).join('');
+
+        // Biggest change between the first and last school year
+        const [ya, yb] = [data.years[0], data.years[data.years.length - 1]];
+        const change = Object.entries(data.states).map(([k, s]) => ({ k, a: s.byYear[ya] || 0, b: s.byYear[yb] || 0 }));
+        const jump = change.slice().sort((p, q) => (q.b - q.a) - (p.b - p.a))[0];
+        const surge = change.filter((d) => d.k !== jump.k && d.b >= 500)
+          .sort((p, q) => (q.b + 1) / (q.a + 1) - (p.b + 1) / (p.a + 1))[0];
+        $('.bb-map .bb-callout').innerHTML = `Biggest increase: <b>${esc(STATE_NAMES[jump.k])}</b>, from ${fmt(jump.a)} bans in ${ya} to ${fmt(jump.b)} in ${yb}.`
+          + (surge ? ` <b>${esc(STATE_NAMES[surge.k])}</b> went from ${fmt(surge.a)} to ${fmt(surge.b)}.` : '');
+      }
+
+      // Ranked lists
+      const rankList = (el, items, max) => {
+        el.innerHTML = items.map((d, i) => `
+          <li>
+            <span class="bb-rank__i">${i + 1}</span>
+            <span class="bb-rank__t">${d.title}<span class="bb-rank__m">${d.meta}</span></span>
+            <span class="bb-rank__n">${fmt(d.n)}</span>
+            <span class="bb-rank__bar" aria-hidden="true"><span style="width:${(100 * d.n) / max}%"></span></span>
+          </li>`).join('');
+      };
+      function renderLists() {
+        const s = data.summary[scope];
+        const t = s.topTitles.slice(0, 10);
+        const top = t[0];
+        $('.bb-titles .bb-lead').innerHTML = `<em>${esc(top.title)}</em> by ${esc(top.author)} was banned in ${fmt(top.districts)} districts across ${top.states} states. Right: number of bans.`;
+        rankList($('.bb-titles .bb-rank'), t.map((d) => ({
+          title: `<span class="bb-book">${esc(d.title)}</span>`,
+          meta: `${esc(d.author)}, ${fmt(d.districts)} districts`,
+          n: d.n,
+        })), top.n);
+
+        const a = s.topAuthors.slice(0, 8);
+        $('.bb-authors .bb-lead').textContent = `${a[0].author}: ${fmt(a[0].n)} bans across ${a[0].titles} different titles. Right: number of bans.`;
+        rankList($('.bb-authors .bb-rank'), a.map((d) => ({ title: esc(d.author), meta: `${d.titles} title${d.titles === 1 ? '' : 's'} banned`, n: d.n })), a[0].n);
+
+        const dd = s.topDistricts.slice(0, 5);
+        $('.bb-districts .bb-h').textContent = `${dd.length === 5 ? 'Five' : dd.length} of ${fmt(s.districts)} districts account for ${pct(d3.sum(dd, (d) => d.n), s.bans)} of bans`;
+        $('.bb-districts .bb-lead').textContent = `${dd[0].district} (${dd[0].state}) alone accounts for ${pct(dd[0].n, s.bans)} of bans ${scopePhrase()}.`;
+        rankList($('.bb-districts .bb-rank'), dd.map((d) => ({ title: esc(d.district), meta: STATE_NAMES[d.state] || d.state, n: d.n })), dd[0].n);
+      }
+
+      // Stacked shares by school year
+      function renderStack(sel, keys, colors, labels, field) {
+        const rowsKeys = ['all', ...data.years];
+        const box = $(`${sel} .bb-stack`);
+        box.innerHTML = '';
+        rowsKeys.forEach((rk) => {
+          const s = data.summary[rk];
+          const counts = s[field];
+          const dim = scope !== 'all' && rk !== scope && rk !== 'all';
+          const label = rk === 'all' ? 'All years' : rk;
+          const y = document.createElement('span');
+          y.className = `bb-stack__y${dim ? ' bb-stack__row-dim' : ''}`;
+          y.textContent = label;
+          const bar = document.createElement('div');
+          bar.className = `bb-stack__bar${dim ? ' bb-stack__row-dim' : ''}`;
+          bar.setAttribute('tabindex', '0');
+          bar.setAttribute('role', 'img');
+          const parts = keys.filter((k) => counts[k] > 0);
+          bar.setAttribute('aria-label', `${label}: ` + parts.map((k) => `${labels[k]} ${pct(counts[k], s.bans)} (${fmt(counts[k])})`).join(', '));
+          parts.forEach((k) => {
+            const seg = document.createElement('span');
+            seg.className = 'bb-stack__seg';
+            const share = counts[k] / s.bans;
+            seg.style.flex = `${counts[k]} 1 0`;
+            seg.style.background = colors[k];
+            seg.style.color = textOn(colors[k]);
+            if (share >= 0.09) seg.textContent = pct(counts[k], s.bans);
+            const html = `<b>${labels[k]}</b> <span class="tt-m">(${label})</span><br>${fmt(counts[k])} of ${fmt(s.bans)} bans, ${pct(counts[k], s.bans)}`;
+            seg.addEventListener('mousemove', (event) => { const [px, py] = pointIn(event); showTip(html, px, py); });
+            seg.addEventListener('mouseleave', hideTip);
+            bar.appendChild(seg);
+          });
+          bar.addEventListener('focus', () => { const [ax, ay] = anchorOf(bar); showTip(bar.getAttribute('aria-label'), ax - 100, ay - 10); });
+          bar.addEventListener('blur', hideTip);
+          box.appendChild(y);
+          box.appendChild(bar);
+        });
+        $(`${sel} .legend .items`).innerHTML = keys
+          .filter((k) => rowsKeys.some((rk) => data.summary[rk][field][k] > 0))
+          .map((k) => `<span class="item"><span class="swatch" style="background:${colors[k]}"></span><span>${labels[k]}</span></span>`).join('');
+      }
+      function renderShares() {
+        const s = data.summary[scope];
+        const L = data.meta.labels;
+        $('.bb-status .bb-h').textContent = `${pct(s.status.pending, s.bans)} of ${scope === 'all' ? '' : `${scope} `}bans removed a book pending investigation`;
+        const removedLead = scope === 'all' || scope === data.years[data.years.length - 1]
+          ? ` PEN America only records "Restricted" (access limited, not removed) from ${data.years[data.years.length - 1]}.`
+          : '';
+        $('.bb-status .bb-lead').textContent = `Share of bans by status. "Pending investigation": the book was pulled while a challenge or review was under way.${removedLead}`;
+        renderStack('.bb-status', STATUS_KEYS, C.status, L.status, 'status');
+
+        const topOrigin = ORIGIN_KEYS.slice().sort((a, b) => s.origin[b] - s.origin[a])[0];
+        $('.bb-origin .bb-h').textContent = `${pct(s.origin[topOrigin], s.bans)} of ${scope === 'all' ? '' : `${scope} `}bans were initiated by ${topOrigin === 'administration' ? 'school administration' : L.origin[topOrigin].toLowerCase()}`;
+        $('.bb-origin .bb-lead').textContent = 'Share of bans by what set them off: a decision by school or district officials, a formal or informal challenge (typically from parents or community members), or legislative action.';
+        renderStack('.bb-origin', ORIGIN_KEYS, C.origin, L.origin, 'origin');
+      }
+
+      function renderFooter() {
+        const src = data.meta.sources.map((s) => `<a href="${s.sheet}" target="_blank" rel="noopener">${s.year}</a>`).join(', ');
+        $('.bb-source').innerHTML = `
+          <p><b>Source:</b> PEN America, <a href="https://pen.org/book-bans/pen-america-book-ban-index-data/" target="_blank" rel="noopener">Index of School Book Bans</a>, school years ${src} (public Google Sheets, retrieved ${data.meta.retrieved}).</p>
+          <p><b>Reading the numbers:</b> one ban is one title removed or restricted in one district, so a book banned in 20 districts counts 20 times. The index covers US public K-12 schools only, as documented by PEN America from news reports, public records and local sources; it is not exhaustive and excludes public libraries. The 2024-25 index is not included.</p>
+          <p><b>Processing:</b> PEN's labels changed between years and are harmonized here ("Banned from libraries and classrooms" and similar become Removed; "Administrator" becomes School administration; combined labels such as "Informal Challenge, Administration" become Challenge and administration). Titles and authors are matched ignoring case and punctuation; district names are matched across years ignoring words like "County" or "School District".</p>`;
+      }
+
+      function summaryText() {
+        const s = data.summary[scope];
+        const t = s.topTitles[0];
+        $('.bb-summary').textContent = `${fmt(s.bans)} book bans ${scopePhrase()} in US public schools, covering ${fmt(s.titles)} titles in ${fmt(s.districts)} districts and ${s.states} states. `
+          + `Most banned title: ${t.title} by ${t.author} (${fmt(t.n)} bans). Most banned author: ${s.topAuthors[0].author} (${fmt(s.topAuthors[0].n)} bans).`;
+      }
+
+      function render(force) {
+        if (!data) return;
+        const W = container.clientWidth || 640;
+        if (!force && W === lastWidth) return;
+        lastWidth = W;
+        container.classList.toggle('is-wide', W >= 800);
+        readColors();
+        renderHeader();
+        timelineHeader();
+        renderTimeline($('.bb-time').clientWidth || W);
+        renderMap($('.bb-map').clientWidth || W);
+        renderLists();
+        renderShares();
+        summaryText();
+      }
+
+      // Keyboard reading for the two SVG charts
+      keyNav($('.bb-time__svg'), () => (timeSvg.node().__nav ? timeSvg.node().__nav.rows : []), (d) => {
+        const nav = timeSvg.node().__nav;
+        nav.hot(d);
+        const r = $('.bb-time__svg').getBoundingClientRect();
+        const c = container.getBoundingClientRect();
+        const px = r.left - c.left + nav.m.left + nav.x(d.m);
+        const py = r.top - c.top + nav.m.top + nav.y(d.n) - 40;
+        const html = nav.tipHtml(d);
+        showTip(html, px, py);
+        live.textContent = htmlToText(html);
+      }, () => { const nav = timeSvg.node().__nav; if (nav) nav.hot(null); hideTip(); });
+      keyNav($('.bb-map__svg'), () => (mapSvg.node().__nav ? mapSvg.node().__nav.rows : []), (d) => {
+        const nav = mapSvg.node().__nav;
+        nav.hot(d);
+        const r = $('.bb-map__svg').getBoundingClientRect();
+        const c = container.getBoundingClientRect();
+        const px = r.left - c.left + d.c * (nav.tile + nav.gap) + nav.tile / 2;
+        const py = r.top - c.top + d.r * (nav.tile + nav.gap) + nav.tile / 2;
+        const html = nav.tipHtml(d);
+        showTip(html, px, py);
+        live.textContent = htmlToText(html);
+      }, () => { const nav = mapSvg.node().__nav; if (nav) nav.hot(null); hideTip(); });
+
+      const fetchFirstAvailable = async (paths) => {
+        for (const p of paths) {
+          try {
+            const r = await fetch(p, { cache: 'no-cache' });
+            if (r.ok) return await r.json();
+          } catch (_) {}
+        }
+        throw new Error(`Data not found: ${paths.join(', ')}`);
+      };
+
+      fetchFirstAvailable(DATA_PATHS).then((json) => {
+        data = json;
+        const first = data.months[0].m;
+        const [fy, fm] = first.split('-').map(Number);
+        for (let i = 0; i < data.years.length * 12; i++) {
+          const d = new Date(Date.UTC(fy, fm - 1 + i, 1));
+          allMonths.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+        }
+        const wanted = providedConfig && providedConfig.year;
+        if (wanted && (wanted === 'all' || data.years.includes(wanted))) scope = wanted;
+        const filter = $('.bb-filter');
+        ['all', ...data.years].forEach((k) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.scope = k;
+          b.textContent = k === 'all' ? 'All years' : k;
+          b.setAttribute('aria-pressed', String(k === scope));
+          b.addEventListener('click', () => { scope = k; render(true); });
+          filter.appendChild(b);
+        });
+        renderFooter();
+        render(true);
+        if (window.ResizeObserver) new ResizeObserver(() => render(false)).observe(container);
+        else window.addEventListener('resize', () => render(false));
+        const retheme = () => render(true);
+        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        document.addEventListener('palettes:updated', retheme);
+      }).catch((err) => {
+        const pre = document.createElement('pre');
+        pre.className = 'bb-error';
+        pre.textContent = `Banned books infographic: ${err.message}`;
+        container.appendChild(pre);
+      });
+    };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => ensureD3(bootstrap), { once: true });
+    else ensureD3(bootstrap);
+  })();
+</script>
