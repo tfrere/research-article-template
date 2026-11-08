@@ -1,0 +1,125 @@
+---
+// Dev-only preview: the 3D banned books map at article and wide width, in both themes.
+import HtmlEmbed from "../components/HtmlEmbed.astro";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import "../styles/global.css";
+
+if (import.meta.env.PROD) return Astro.redirect("/");
+
+const widths = [
+  { key: "body", name: "Article width", note: "var(--layout-body)" },
+  { key: "wide", name: "Wide", note: "body + gap + margin column" },
+];
+const themes = ["light", "dark"];
+---
+
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Infographic 3D</title>
+    <script is:inline>
+      (() => {
+        try {
+          const saved = localStorage.getItem("theme");
+          const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-theme", saved || (dark ? "dark" : "light"));
+        } catch {}
+      })();
+    </script>
+    <script type="module" src="/scripts/color-palettes.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  </head>
+  <body class="infographic-page">
+    <ThemeToggle />
+    <main>
+      <h1>Infographic 3D</h1>
+      <p class="infographic-lead">
+        <code>three-banned-books.html</code> (three.js r170 from jsDelivr), built from PEN America's Index of School Book Bans
+        (<code>assets/data/banned-books/banned-books.json</code>, regenerate with
+        <code>node scripts/build-banned-books-data.mjs</code>). Use it in MDX with
+        <code>&lt;HtmlEmbed src="three-banned-books.html" wide /&gt;</code>.
+      </p>
+      {
+        widths.map((w) => (
+          <section class="infographic-item">
+            <h2>
+              {w.name} <code>{w.note}</code>
+            </h2>
+            {themes.map((t) => (
+              <div class="infographic-theme" data-theme={t}>
+                <span class="infographic-theme__label">{t}</span>
+                <div class={`infographic-frame infographic-frame--${w.key}`}>
+                  <HtmlEmbed
+                    src="three-banned-books.html"
+                    id={`three-banned-books-${w.key}-${t}`}
+                    title="Piles of banned books, state by state"
+                    desc="Each book stands for 100 school book bans recorded by PEN America. Drag to rotate, hover or focus a pile for exact numbers; the buttons switch school year and coloring."
+                  />
+                </div>
+              </div>
+            ))}
+          </section>
+        ))
+      }
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  .infographic-page main {
+    max-width: calc(var(--layout-body) + var(--layout-gap) + var(--layout-side-max) + 96px);
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .infographic-page h1 {
+    margin: 0 0 8px;
+  }
+  .infographic-lead {
+    color: var(--muted-color);
+    margin: 0 0 40px;
+    max-width: 60em;
+  }
+  .infographic-item {
+    margin: 0 0 64px;
+  }
+  .infographic-item h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-size: 1.25rem;
+  }
+  .infographic-item h2 code {
+    font-size: .8rem;
+    font-weight: 400;
+    color: var(--muted-color);
+  }
+  .infographic-theme {
+    position: relative;
+    padding: 36px 24px 24px;
+    margin: 0 0 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--page-bg);
+    color: var(--text-color);
+    overflow-x: auto;
+  }
+  .infographic-theme__label {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    font: 500 11px/1 var(--font-mono, monospace);
+    color: var(--muted-color);
+  }
+  .infographic-frame {
+    margin: 0 auto;
+  }
+  .infographic-frame--body {
+    max-width: var(--layout-body);
+  }
+  .infographic-frame--wide {
+    max-width: calc(var(--layout-body) + var(--layout-gap) + var(--layout-side-max));
+  }
+</style>

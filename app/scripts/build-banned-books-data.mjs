@@ -230,9 +230,16 @@ const states = {};
 for (const r of all) {
   const abbr = STATES[r.state];
   if (!abbr) continue;
-  states[abbr] ||= { name: r.state, total: 0, byYear: Object.fromEntries(years.map((y) => [y, 0])), districts: {} };
+  states[abbr] ||= {
+    name: r.state,
+    total: 0,
+    byYear: Object.fromEntries(years.map((y) => [y, 0])),
+    status: Object.fromEntries(years.map((y) => [y, { removed: 0, restricted: 0, pending: 0 }])),
+    districts: {},
+  };
   states[abbr].total += 1;
   states[abbr].byYear[r.year] += 1;
+  states[abbr].status[r.year][r.status] += 1;
 }
 for (const abbr of Object.keys(states)) {
   for (const y of [...years, "all"]) {
