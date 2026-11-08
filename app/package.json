@@ -31,7 +31,9 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node ./scripts/generate-article-anatomy.mjs",
     "build": "astro build",
+    "banner:data": "node ./scripts/generate-article-anatomy.mjs",
     "preview": "astro preview --port 8080 --host",
     "export:pdf": "node ./scripts/export-pdf.mjs",
     "export:pdf:book": "node ./scripts/export-pdf-book.mjs",

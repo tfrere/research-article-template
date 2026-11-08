@@ -1,0 +1,300 @@
+<div role="img" aria-label="Every word of this article as one dot, in reading order, each chapter starting on a new line. Dot size is word length; color tells prose, headings, code, components, math and tables apart." class="banner-manuscript">
+  <canvas class="banner-manuscript__canvas" aria-hidden="true"></canvas>
+  <span class="banner-manuscript__caption"></span>
+</div>
+<style>
+  .banner-manuscript {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 12 / 5;
+    min-height: 180px;
+  }
+  .hero-banner .banner-manuscript {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+  .banner-manuscript__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .banner-manuscript__caption {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font: 500 10px/1.2 var(--font-mono, ui-monospace, monospace);
+    letter-spacing: .02em;
+    color: var(--muted-color);
+    opacity: .85;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .banner-manuscript__caption b {
+    font-weight: 600;
+  }
+  @media print {
+    .banner-manuscript__caption { display: none; }
+  }
+</style>
+<script>
+  (() => {
+    const ROOT = 'banner-manuscript';
+    const DATA_FILE = 'article-anatomy.json';
+    const LOOP_MS = 60000;
+    const TRAIL = 280; // words lit behind the reading cursor
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const fetchFirstAvailable = async (paths) => {
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, { cache: 'force-cache' });
+          if (r.ok) return r.json();
+        } catch (_) {}
+      }
+      throw new Error(`${DATA_FILE} not found`);
+    };
+
+    const mount = (root) => {
+      root.dataset.mounted = 'true';
+      const canvas = root.querySelector('canvas');
+      const caption = root.querySelector(`.${ROOT}__caption`);
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+      let data = null;
+      let theme = null;
+      let model = null;
+      let layer = null;
+      let W = 0, H = 0, dpr = 1;
+      let visible = true;
+      let raf = 0, last = 0, clock = LOOP_MS * 0.42;
+
+      const readTheme = () => {
+        const host = root.closest('[data-theme]') || document.documentElement;
+        const dark = host.getAttribute('data-theme') === 'dark';
+        const cs = getComputedStyle(root);
+        const got = window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10);
+        const cat = got && got.length ? got : d3.schemeTableau10;
+        const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0];
+        // Light pages need deeper inks for the same hues to hold at hairline size
+        const deepen = (c) => (dark ? d3.color(c) : d3.color(c).darker(0.55));
+        const hues = d3.interpolateHcl(cat[0], cat[Math.floor(cat.length / 2)]);
+        const ramp = (t) => deepen(hues(t)).formatHex();
+        const ink = cs.getPropertyValue('--text-color').trim() || (dark ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.85)');
+        const inkC = d3.color(ink);
+        return {
+          dark,
+          ink,
+          primary,
+          ramp,
+          kind: {
+            p: inkC.copy({ opacity: dark ? 0.4 : 0.34 }).formatRgb(),
+            h: inkC.copy({ opacity: 1 }).formatRgb(),
+            c: deepen(primary).copy({ opacity: 0.8 }).formatRgb(),
+            x: d3.color(ramp(1)).copy({ opacity: dark ? 0.6 : 0.8 }).formatRgb(),
+            m: d3.color(ramp(0.5)).formatHex(),
+            t: d3.color(ramp(0.5)).copy({ opacity: 0.5 }).formatRgb(),
+          },
+        };
+      };
+
+      // Typeset the word stream into newspaper columns at microscopic size:
+      // one bar per word, as long as the word, chapters and headings open a new paragraph
+      const typeset = (cw, colW, linesPerCol, cols, place) => {
+        const perLine = Math.max(8, Math.floor(colW / cw));
+        const breaks = new Set([...data.chapters.map((c) => c.start), ...data.headings.map((h) => h.at)]);
+        const headingEnd = new Set(data.headings.map((h) => h.at));
+        let line = 0, col = 0;
+        for (let i = 0; i < data.total; i++) {
+          const len = Math.min(18, parseInt(data.lengths[i], 36) || 1);
+          const prevHeading = i > 0 && data.kinds[i - 1] === 'h' && data.kinds[i] !== 'h';
+          if ((breaks.has(i) || prevHeading) && i > 0) {
+            line += col > 0 ? 1 : 0;
+            col = 0;
+            if (breaks.has(i) && !headingEnd.has(i - 1)) line += 1;
+          }
+          if (col + len > perLine) { line += 1; col = 0; }
+          if (place) place(i, line, col, len);
+          col += len + 1;
+        }
+        return line + 1;
+      };
+
+      const build = () => {
+        if (!data || !W || !H) return null;
+        const cols = Math.max(2, Math.min(8, Math.round(W / 175)));
+        const mx = W * 0.05, gutter = Math.max(10, W * 0.022);
+        const colW = (W - 2 * mx - (cols - 1) * gutter) / cols;
+        const boxH = H * 0.78;
+        const LH = 2.15; // line height in character widths
+        let lo = 0.3, hi = 8;
+        for (let k = 0; k < 24; k++) {
+          const cw = (lo + hi) / 2;
+          const linesPerCol = Math.floor(boxH / (cw * LH));
+          if (typeset(cw, colW, linesPerCol, cols) <= linesPerCol * cols) lo = cw; else hi = cw;
+        }
+        const cw = lo, lh = cw * LH;
+        const linesPerCol = Math.floor(boxH / lh);
+        const oy = (H - linesPerCol * lh) / 2 - Math.min(6, H * 0.015);
+        const x = new Float32Array(data.total), y = new Float32Array(data.total), w = new Float32Array(data.total);
+        typeset(cw, colW, linesPerCol, cols, (i, line, col, len) => {
+          const c = Math.floor(line / linesPerCol), row = line % linesPerCol;
+          x[i] = mx + c * (colW + gutter) + col * cw;
+          y[i] = oy + row * lh;
+          w[i] = len * cw;
+        });
+        const firstLine = data.chapters.map((c) => ({ x: x[c.start], y: y[c.start] }));
+        return { cw, lh, x, y, w, firstLine };
+      };
+
+      const bar = (c, i, grow = 0) => {
+        const h = model.lh * (data.kinds[i] === 'h' ? 0.62 : 0.46) + grow;
+        c.rect(model.x[i] - grow / 2, model.y[i] + (model.lh - h) / 2, model.w[i] + grow, h);
+      };
+
+      const paintLayer = () => {
+        const l = document.createElement('canvas');
+        l.width = canvas.width;
+        l.height = canvas.height;
+        const c = l.getContext('2d');
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // One path per kind keeps the static layer fast to paint
+        for (const k of Object.keys(theme.kind)) {
+          c.beginPath();
+          for (let i = 0; i < data.total; i++) if (data.kinds[i] === k) bar(c, i);
+          c.fillStyle = theme.kind[k];
+          c.fill();
+        }
+        // Chapter starts: a small square in the ramp color, in the gutter before their first line
+        const n = data.chapters.length;
+        model.firstLine.forEach((p, i) => {
+          const s = Math.max(2, model.lh * 0.7);
+          c.fillStyle = d3.color(theme.ramp(i / Math.max(1, n - 1))).formatHex();
+          c.fillRect(p.x - s - model.cw * 2, p.y + (model.lh - s) / 2, s, s);
+        });
+        return l;
+      };
+
+      const draw = (t) => {
+        if (!model || !theme || !layer) return;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(layer, 0, 0);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Reading cursor: the words just read light up, fading behind it
+        const head = ((t % LOOP_MS) / LOOP_MS) * data.total;
+        const hi = Math.floor(head);
+        const accent = d3.color(theme.primary);
+        const cursor = d3.color(theme.dark ? '#fff' : theme.ink);
+        const buckets = 8;
+        for (let b = 0; b < buckets; b++) {
+          const f = 1 - b / buckets;
+          ctx.beginPath();
+          for (let k = Math.floor((b * TRAIL) / buckets); k < Math.floor(((b + 1) * TRAIL) / buckets); k++) {
+            const i = hi - k;
+            if (i < 0) break;
+            bar(ctx, i, model.lh * 0.25 * f);
+          }
+          ctx.fillStyle = cursor.copy({ opacity: f * f }).formatRgb();
+          ctx.fill();
+        }
+        if (hi >= 0 && hi < data.total) {
+          const cx = model.x[hi] + model.w[hi], cy = model.y[hi] + model.lh / 2, R = model.lh * 5;
+          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+          g.addColorStop(0, accent.copy({ opacity: theme.dark ? 0.55 : 0.4 }).formatRgb());
+          g.addColorStop(1, accent.copy({ opacity: 0 }).formatRgb());
+          ctx.fillStyle = g;
+          ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+        }
+      };
+
+      const animating = () => visible && !reduceMotion.matches && !document.hidden;
+      const frame = (now) => {
+        raf = 0;
+        clock += Math.min(50, now - (last || now));
+        last = now;
+        draw(clock);
+        if (animating()) raf = requestAnimationFrame(frame);
+      };
+      const schedule = () => {
+        if (raf || !animating()) { if (!raf) draw(clock); return; }
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      };
+
+      const writeCaption = () => {
+        if (!caption) return;
+        const k = theme.kind;
+        const sw = (label, color) => `<b style="color:${color}">${label}</b>`;
+        caption.innerHTML = `${d3.format(',')(data.total)} words, one dot each: ${sw('prose', theme.ink)}, ${sw('code', d3.color(k.c).copy({ opacity: 1 }).formatRgb())}, ${sw('components', d3.color(theme.ramp(1)).formatHex())}, ${sw('math & tables', k.m)}`;
+        caption.style.display = W < 560 ? 'none' : '';
+      };
+
+      const resize = () => {
+        const w = root.clientWidth, h = root.clientHeight;
+        if (!w || !h) return;
+        dpr = Math.min(3, window.devicePixelRatio || 1);
+        if (w === W && h === H && canvas.width === Math.round(w * dpr)) return;
+        W = w; H = h;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        model = build();
+        layer = paintLayer();
+        writeCaption();
+        draw(clock);
+      };
+      const retheme = () => {
+        theme = readTheme();
+        if (model) layer = paintLayer();
+        writeCaption();
+        draw(clock);
+      };
+
+      ensureD3(async () => {
+        try {
+          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
+        } catch (e) {
+          root.setAttribute('aria-label', 'Banner data unavailable');
+          return;
+        }
+        theme = readTheme();
+        resize();
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
+        else window.addEventListener('resize', resize);
+        if (window.IntersectionObserver) {
+          new IntersectionObserver((entries) => {
+            visible = entries.some((e) => e.isIntersecting);
+            schedule();
+          }).observe(root);
+        }
+        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        document.addEventListener('palettes:updated', retheme);
+        document.addEventListener('visibilitychange', schedule);
+        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
+        schedule();
+      });
+    };
+
+    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    else bootstrap();
+  })();
+</script>

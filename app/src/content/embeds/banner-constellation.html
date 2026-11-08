@@ -1,0 +1,429 @@
+<div role="img" aria-label="This article drawn as a night sky, in reading order from left to right: chapters are bright stars, sections and components orbit them, every word is a grain of dust around its section, and arcs trace citations and cross-references." class="banner-constellation">
+  <canvas class="banner-constellation__canvas" aria-hidden="true"></canvas>
+  <span class="banner-constellation__caption"></span>
+</div>
+<style>
+  .banner-constellation {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 12 / 5;
+    min-height: 180px;
+  }
+  .hero-banner .banner-constellation {
+    position: absolute;
+    inset: 0;
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+  .banner-constellation__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .banner-constellation__caption {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font: 500 10px/1.2 var(--font-mono, ui-monospace, monospace);
+    letter-spacing: .02em;
+    color: var(--muted-color);
+    opacity: .75;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  @media print {
+    .banner-constellation__caption { display: none; }
+  }
+</style>
+<script>
+  (() => {
+    const ROOT = 'banner-constellation';
+    const DATA_FILE = 'article-anatomy.json';
+    const FIGURES = new Set(['HtmlEmbed', 'Image', 'Wide', 'FullWidth', 'Stack']);
+    const MS_PER_WORD = 6;
+
+    const ensureD3 = (cb) => {
+      if (window.d3 && typeof window.d3.select === 'function') return cb();
+      let s = document.getElementById('d3-cdn-script');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'd3-cdn-script';
+        s.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+        document.head.appendChild(s);
+      }
+      const onReady = () => { if (window.d3 && typeof window.d3.select === 'function') cb(); };
+      s.addEventListener('load', onReady, { once: true });
+      if (window.d3) onReady();
+    };
+
+    const fetchFirstAvailable = async (paths) => {
+      for (const p of paths) {
+        try {
+          const r = await fetch(p, { cache: 'force-cache' });
+          if (r.ok) return r.json();
+        } catch (_) {}
+      }
+      throw new Error(`${DATA_FILE} not found`);
+    };
+
+    // Graph of the article: chapter hubs, section stars, component satellites,
+    // citation stars; edges for structure, reading order, citations and links
+    const graphOf = (d) => {
+      const nodes = [];
+      const links = [];
+      const hubs = d.chapters.map((c, i) => {
+        const n = { kind: 'hub', chapter: i, start: c.start, end: c.start + c.words, words: 0 };
+        nodes.push(n);
+        return n;
+      });
+      const sections = [];
+      d.headings.forEach((h) => {
+        const hub = hubs[h.chapter];
+        // The chapter title heading is the hub itself
+        if (h.level === 2 && h.at - hub.start < 3) return;
+        const s = { kind: 'section', chapter: h.chapter, start: h.at, words: 0 };
+        nodes.push(s);
+        sections.push(s);
+        links.push({ source: hub, target: s, kind: 'tree' });
+      });
+      // Owner of a token: the last section started before it, else its hub
+      const owners = [...hubs, ...sections].sort((a, b) => a.start - b.start || (a.kind === 'hub' ? -1 : 1));
+      const starts = owners.map((o) => o.start);
+      const ownerAt = (i) => owners[Math.max(0, d3.bisectRight(starts, i) - 1)];
+      for (let i = 0; i < d.total; i++) ownerAt(i).words++;
+      owners.forEach((o, k) => { o.end = k + 1 < owners.length ? owners[k + 1].start : d.total; });
+
+      d.components.forEach((c) => {
+        const owner = ownerAt(c.at);
+        const n = { kind: FIGURES.has(c.type) ? 'figure' : 'component', chapter: owner.chapter, start: c.at, words: 0, type: c.type };
+        nodes.push(n);
+        links.push({ source: owner, target: n, kind: 'tree' });
+      });
+      for (let k = 1; k < owners.length; k++) links.push({ source: owners[k - 1], target: owners[k], kind: 'spine' });
+
+      const bib = new Map();
+      d.citations.forEach((c) => {
+        const owner = ownerAt(c.at);
+        if (!bib.has(c.key)) {
+          const n = { kind: 'citation', chapter: owner.chapter, start: c.at, words: 0, key: c.key };
+          bib.set(c.key, n);
+          nodes.push(n);
+        }
+        links.push({ source: owner, target: bib.get(c.key), kind: 'cite' });
+      });
+      d.links.forEach((l) => {
+        const a = ownerAt(l.from), b = ownerAt(l.to);
+        if (a !== b) links.push({ source: a, target: b, kind: 'ref' });
+      });
+      return { nodes, links, owners, ownerAt, hubs };
+    };
+
+    const mount = (root) => {
+      root.dataset.mounted = 'true';
+      const canvas = root.querySelector('canvas');
+      const caption = root.querySelector(`.${ROOT}__caption`);
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+      let data = null;
+      let graph = null;
+      let theme = null;
+      let model = null;
+      let dust = null;
+      let W = 0, H = 0, dpr = 1;
+      let visible = true;
+      let raf = 0, last = 0, clock = 14000;
+
+      const readTheme = () => {
+        const host = root.closest('[data-theme]') || document.documentElement;
+        const dark = host.getAttribute('data-theme') === 'dark';
+        const cs = getComputedStyle(root);
+        const cat = (window.ColorPalettes && window.ColorPalettes.getColors('categorical', 10)) || [];
+        const primary = (window.ColorPalettes && window.ColorPalettes.getPrimary()) || cat[0] || '#e8956b';
+        return {
+          dark,
+          bg: cs.getPropertyValue('--page-bg').trim() || (dark ? '#0f1115' : '#ffffff'),
+          ink: cs.getPropertyValue('--text-color').trim() || (dark ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.85)'),
+          primary,
+          chapters: chapterRamp(cat.length ? cat : d3.schemeTableau10),
+        };
+      };
+
+      // Reading order as a restrained warm-to-cool ramp between the primary and its complement
+      const chapterRamp = (cat) => {
+        const n = data ? data.chapters.length : 10;
+        const ramp = d3.interpolateHcl(cat[0], cat[Math.floor(cat.length / 2)]);
+        return d3.range(n).map((i) => d3.color(ramp(i / Math.max(1, n - 1))).formatHex());
+      };
+
+      const radiusOf = (n, unit) => {
+        if (n.kind === 'hub') return unit * (2.2 + 0.09 * Math.sqrt(n.words + 1));
+        if (n.kind === 'section') return unit * (0.9 + 0.08 * Math.sqrt(n.words + 1));
+        if (n.kind === 'figure') return unit * 0.95;
+        if (n.kind === 'citation') return unit * 1.5;
+        return unit * 0.55;
+      };
+
+      const layout = () => {
+        const { nodes, links, owners } = graph;
+        const unit = Math.max(1, Math.min(W / 420, H / 175));
+        const mx = W * 0.07, my = H * 0.14;
+        const xOf = (n) => mx + ((n.kind === 'hub' ? (n.start + n.end) / 2 : n.start) / data.total) * (W - 2 * mx);
+        const cites = d3.group(links.filter((l) => l.kind === 'cite'), (l) => l.target);
+        const citeX = (n) => d3.mean(cites.get(n) || [], (l) => xOf(l.source)) || xOf(n);
+        const rnd = d3.randomLcg(42);
+        nodes.forEach((n, i) => {
+          n.r = radiusOf(n, unit);
+          n.x = xOf(n) + (rnd() - 0.5) * 4;
+          n.y = H / 2 + (rnd() - 0.5) * H * 0.5;
+          n.vx = n.vy = 0;
+          n.phase = rnd() * Math.PI * 2;
+        });
+        const sim = d3.forceSimulation(nodes)
+          .randomSource(d3.randomLcg(7))
+          .force('x', d3.forceX((n) => (n.kind === 'citation' ? citeX(n) : xOf(n)))
+            .strength((n) => (n.kind === 'hub' ? 0.9 : n.kind === 'citation' ? 0.5 : n.kind === 'section' ? 0.22 : 0.04)))
+          .force('y', d3.forceY((n) => (n.kind === 'citation' ? H * 0.2 : H / 2))
+            .strength((n) => (n.kind === 'hub' ? 0.35 : n.kind === 'citation' ? 0.6 : 0.03)))
+          .force('link', d3.forceLink(links.filter((l) => l.kind === 'tree'))
+            .distance((l) => (l.target.kind === 'section' ? unit * 16 : unit * 7))
+            .strength(0.55))
+          .force('charge', d3.forceManyBody().strength((n) => -unit * unit * (n.kind === 'hub' ? 30 : 8)).distanceMax(unit * 70))
+          .force('collide', d3.forceCollide((n) => n.r + unit * 1.6))
+          .stop();
+        for (let i = 0; i < 320; i++) sim.tick();
+        nodes.forEach((n) => {
+          n.x = Math.max(mx * 0.4, Math.min(W - mx * 0.4, n.x));
+          n.y = Math.max(my, Math.min(H - my, n.y));
+        });
+
+        // Reading route through hubs and sections, timed by word count
+        let t = 0;
+        const route = owners.map((o) => { const s = { node: o, t0: t }; t += Math.max(1, o.words) * MS_PER_WORD; s.t1 = t; return s; });
+        return { unit, route, loop: t };
+      };
+
+      // Every word is a grain of dust around the star of its section
+      const paintDust = () => {
+        const layer = document.createElement('canvas');
+        layer.width = canvas.width;
+        layer.height = canvas.height;
+        const c = layer.getContext('2d');
+        c.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const rnd = d3.randomLcg(1234);
+        const normal = d3.randomNormal.source(rnd)(0, 1);
+        const ink = d3.color(theme.ink);
+        const fill = {
+          p: ink.copy({ opacity: theme.dark ? 0.22 : 0.2 }).formatRgb(),
+          h: ink.copy({ opacity: theme.dark ? 0.55 : 0.5 }).formatRgb(),
+          t: ink.copy({ opacity: theme.dark ? 0.3 : 0.26 }).formatRgb(),
+        };
+        const size = Math.max(0.7, model.unit * 0.55);
+        c.globalCompositeOperation = theme.dark ? 'lighter' : 'source-over';
+        for (let i = 0; i < data.total; i++) {
+          const o = graph.ownerAt(i);
+          const k = data.kinds[i];
+          const spread = model.unit * (o.kind === 'hub' ? 7 : 4) + 0.55 * Math.sqrt(o.words) * model.unit;
+          const x = o.x + normal() * spread * 1.25;
+          const y = o.y + normal() * spread;
+          if (k === 'c' || k === 'm' || k === 'x') {
+            const col = d3.color(k === 'c' ? theme.primary : theme.chapters[o.chapter % theme.chapters.length]);
+            c.fillStyle = col.copy({ opacity: theme.dark ? 0.42 : 0.5 }).formatRgb();
+          } else {
+            c.fillStyle = fill[k] || fill.p;
+          }
+          const s = size * (0.6 + Math.min(12, parseInt(data.lengths[i], 36) || 1) / 14);
+          c.fillRect(x - s / 2, y - s / 2, s, s);
+        }
+        return layer;
+      };
+
+      const glowCache = new Map();
+      const glowSprite = (color) => {
+        const key = `${color}|${theme.dark}`;
+        if (glowCache.has(key)) return glowCache.get(key);
+        const s = document.createElement('canvas');
+        s.width = s.height = 64;
+        const c = s.getContext('2d');
+        const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+        const col = d3.color(color);
+        g.addColorStop(0, col.copy({ opacity: theme.dark ? 0.55 : 0.32 }).formatRgb());
+        g.addColorStop(0.25, col.copy({ opacity: theme.dark ? 0.2 : 0.12 }).formatRgb());
+        g.addColorStop(1, col.copy({ opacity: 0 }).formatRgb());
+        c.fillStyle = g;
+        c.fillRect(0, 0, 64, 64);
+        glowCache.set(key, s);
+        return s;
+      };
+
+      const colorOf = (n) => (n.kind === 'citation' ? theme.primary : theme.chapters[n.chapter % theme.chapters.length]);
+
+      const draw = (t) => {
+        if (!model || !theme || !dust) return;
+        const { unit, route, loop } = model;
+        const { nodes, links } = graph;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(dust, 0, 0);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const ink = d3.color(theme.ink);
+        const now = t % loop;
+        const drift = (n, axis) => Math.sin(t / 7000 + n.phase + axis) * unit * 0.6;
+        const px = (n) => n.x + drift(n, 0), py = (n) => n.y + drift(n, 1.7);
+
+        // Edges: structure faint, reading spine a bit stronger, citations and cross-references as arcs
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(0.6, unit * 0.32);
+        ctx.strokeStyle = ink.copy({ opacity: theme.dark ? 0.13 : 0.12 }).formatRgb();
+        ctx.beginPath();
+        for (const l of links) {
+          if (l.kind !== 'tree') continue;
+          ctx.moveTo(px(l.source), py(l.source));
+          ctx.lineTo(px(l.target), py(l.target));
+        }
+        ctx.stroke();
+        ctx.strokeStyle = ink.copy({ opacity: theme.dark ? 0.26 : 0.24 }).formatRgb();
+        ctx.beginPath();
+        for (const l of links) {
+          if (l.kind !== 'spine') continue;
+          ctx.moveTo(px(l.source), py(l.source));
+          ctx.lineTo(px(l.target), py(l.target));
+        }
+        ctx.stroke();
+        for (const l of links) {
+          if (l.kind !== 'cite' && l.kind !== 'ref') continue;
+          const x0 = px(l.source), y0 = py(l.source), x1 = px(l.target), y1 = py(l.target);
+          // Bow every arc to the same side of its chord
+          const dx = x1 - x0, dy = y1 - y0;
+          const flip = dx < 0 ? -1 : 1;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.quadraticCurveTo((x0 + x1) / 2 + dy * 0.3 * flip, (y0 + y1) / 2 - dx * 0.3 * flip, x1, y1);
+          ctx.setLineDash(l.kind === 'cite' ? [unit * 1.2, unit * 2.2] : []);
+          ctx.strokeStyle = d3.color(theme.primary).copy({ opacity: 0.55 }).formatRgb();
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // Reading cursor: travels the spine; the section being read flares
+        let k = route.findIndex((s) => now >= s.t0 && now < s.t1);
+        if (k < 0) k = route.length - 1;
+        const step = route[k], next = route[Math.min(route.length - 1, k + 1)];
+        const p = Math.min(1, (now - step.t0) / (step.t1 - step.t0));
+        const ease = p < 0.75 ? 0 : d3.easeCubicInOut((p - 0.75) / 0.25);
+        const cx = px(step.node) + (px(next.node) - px(step.node)) * ease;
+        const cy = py(step.node) + (py(next.node) - py(step.node)) * ease;
+
+        ctx.globalCompositeOperation = theme.dark ? 'lighter' : 'source-over';
+        for (const n of nodes) {
+          const x = px(n), y = py(n);
+          const tw = 0.8 + 0.2 * Math.sin(t / 900 + n.phase * 3);
+          const flare = n === step.node ? 1 - Math.abs(p - 0.4) : 0;
+          const halo = n.r * (n.kind === 'hub' ? 7 : 5) * (1 + flare * 0.8);
+          ctx.globalAlpha = Math.min(1, tw + flare);
+          ctx.drawImage(glowSprite(colorOf(n)), x - halo, y - halo, halo * 2, halo * 2);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+
+        for (const n of nodes) {
+          const x = px(n), y = py(n);
+          ctx.beginPath();
+          ctx.arc(x, y, n.r, 0, Math.PI * 2);
+          if (n.kind === 'citation') {
+            ctx.lineWidth = Math.max(0.8, unit * 0.45);
+            ctx.strokeStyle = theme.ink;
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = n.kind === 'component' ? d3.color(colorOf(n)).copy({ opacity: 0.85 }).formatRgb() : colorOf(n);
+            ctx.fill();
+            if (n.kind === 'hub' || n.kind === 'figure') {
+              ctx.beginPath();
+              ctx.arc(x, y, n.r * (n.kind === 'hub' ? 0.42 : 0.5), 0, Math.PI * 2);
+              ctx.fillStyle = theme.dark ? 'rgba(255,255,255,.9)' : theme.bg;
+              ctx.fill();
+            }
+          }
+        }
+
+        const cr = unit * 1.1;
+        ctx.globalCompositeOperation = theme.dark ? 'lighter' : 'source-over';
+        ctx.drawImage(glowSprite(theme.primary), cx - cr * 7, cy - cr * 7, cr * 14, cr * 14);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.beginPath();
+        ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+        ctx.fillStyle = theme.primary;
+        ctx.fill();
+      };
+
+      const animating = () => visible && !reduceMotion.matches && !document.hidden;
+      const frame = (now) => {
+        raf = 0;
+        clock += Math.min(50, now - (last || now));
+        last = now;
+        draw(clock);
+        if (animating()) raf = requestAnimationFrame(frame);
+      };
+      const schedule = () => {
+        if (raf || !animating()) { if (!raf) draw(clock); return; }
+        last = 0;
+        raf = requestAnimationFrame(frame);
+      };
+
+      const resize = () => {
+        const w = root.clientWidth, h = root.clientHeight;
+        if (!w || !h) return;
+        dpr = Math.min(3, window.devicePixelRatio || 1);
+        if (w === W && h === H && canvas.width === Math.round(w * dpr)) return;
+        W = w; H = h;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        model = layout();
+        dust = paintDust();
+        if (caption) {
+          caption.textContent = `${d3.format(',')(data.total)} words, ${graph.owners.length} sections, ${data.components.length} components, in reading order`;
+          caption.style.display = W < 560 ? 'none' : '';
+        }
+        draw(clock);
+      };
+      const retheme = () => {
+        theme = readTheme();
+        glowCache.clear();
+        if (model) dust = paintDust();
+        draw(clock);
+      };
+
+      ensureD3(async () => {
+        try {
+          data = await fetchFirstAvailable([`/data/${DATA_FILE}`, `./assets/data/${DATA_FILE}`, `../assets/data/${DATA_FILE}`]);
+        } catch (e) {
+          root.setAttribute('aria-label', 'Banner data unavailable');
+          return;
+        }
+        graph = graphOf(data);
+        theme = readTheme();
+        resize();
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(root);
+        else window.addEventListener('resize', resize);
+        if (window.IntersectionObserver) {
+          new IntersectionObserver((entries) => {
+            visible = entries.some((e) => e.isIntersecting);
+            schedule();
+          }).observe(root);
+        }
+        new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        document.addEventListener('palettes:updated', retheme);
+        document.addEventListener('visibilitychange', schedule);
+        if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', schedule);
+        schedule();
+      });
+    };
+
+    const bootstrap = () => document.querySelectorAll(`.${ROOT}:not([data-mounted])`).forEach(mount);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+    else bootstrap();
+  })();
+</script>
